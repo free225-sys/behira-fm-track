@@ -636,3 +636,34 @@ button:focus,input:focus,select:focus,textarea:focus{outline:none}
 @media (prefers-reduced-motion:reduce){
   .dashboard-section-tabs button{transition:none}
 }
+
+/* Correctifs fonctionnels du socle design : registre et titres */
+.topbar>div:first-child,.topbar h1{min-width:0;max-width:100%}
+.topbar h1{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.equipment-reference{white-space:nowrap;word-break:keep-all;overflow-wrap:normal}
+.registry-title small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.registry-card{--registry-columns:minmax(310px,2fr) minmax(86px,.65fr) minmax(104px,.9fr) minmax(94px,.78fr) minmax(140px,1fr) 20px}
+.registry-head,.registry-row{grid-template-columns:var(--registry-columns)}
+
+@media (min-width:961px) and (max-width:1180px){
+  .registry-card{--registry-columns:minmax(190px,1.7fr) minmax(72px,.62fr) minmax(86px,.8fr) minmax(78px,.65fr) minmax(110px,.9fr) 14px}
+  .registry-head>span:nth-child(5){display:block}
+  .registry-row>.owner-cell{display:flex}
+  .registry-head,.registry-row{column-gap:8px}
+  .registry-row,.registry-head{padding-inline:12px}
+  .owner-cell{min-width:0}.owner-cell>span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+}
+
+@media (max-width:960px){
+  .registry-head{display:none}
+  .registry-card{border-top:1px solid var(--border);border-radius:var(--radius-md)}
+  .registry-row{grid-template-columns:minmax(0,1fr) 20px;gap:8px;align-items:start;padding:14px}
+  .registry-row>div:nth-child(2),.registry-row>div:nth-child(3),.registry-row>div:nth-child(4),.registry-row>.owner-cell{display:none}
+  .registry-title{grid-column:1;grid-row:1}
+  .registry-mobile-meta{grid-column:1;grid-row:2;display:flex;flex-wrap:wrap;gap:5px;margin:9px 0 7px 46px}
+  .registry-mobile-details{grid-column:1;grid-row:3;display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-left:46px}
+  .registry-mobile-details span{padding:8px;border-radius:7px;background:var(--surface-muted);color:#354457;font-size:9px}
+  .registry-mobile-details b{display:block;margin-bottom:3px;color:#708091;font-size:7px;text-transform:uppercase;letter-spacing:.05em}
+  .registry-row .row-arrow{grid-column:2;grid-row:1/4;align-self:center}
+}

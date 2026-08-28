@@ -29,6 +29,10 @@ const checks = [
   ['Timeline active sans halo additionnel', finalDeclaration('.detail-timeline .current>span', 'box-shadow') === 'none'],
   ['Titres mobiles compacts présents', page.includes('mobilePageTitle') && css.includes('.mobile-title{display:inline}')],
   ['Réserve navigation mobile présente', css.includes('.main-column{padding-bottom:92px}')],
+  ['Grille du registre partagée', css.includes('.registry-head,.registry-row{grid-template-columns:var(--registry-columns)}')],
+  ['Responsable visible sur desktop étroit', css.includes('@media (min-width:961px) and (max-width:1180px)') && css.includes('.registry-row>.owner-cell{display:flex}')],
+  ['Titres tronqués proprement', css.includes('.topbar h1{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}')],
+  ['Références équipement insécables', page.includes('className="equipment-reference"') && css.includes('.equipment-reference{white-space:nowrap;word-break:keep-all;overflow-wrap:normal}')],
 ]
 
 for (const [label, ok] of checks) console.log(`${ok ? '✓' : '✗'} ${label}`)
