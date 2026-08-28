@@ -1,0 +1,44 @@
+import { readFile } from 'node:fs/promises'
+import { fileURLToPath } from 'node:url'
+import path from 'node:path'
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const css = await readFile(path.join(root, 'app', 'globals.css'), 'utf8')
+const page = await readFile(path.join(root, 'app', 'page.tsx'), 'utf8')
+
+const cssWithoutComments = css.replace(/\/\*[\s\S]*?\*\//g, '')
+const rules = [...cssWithoutComments.matchAll(/([^{}]+)\{([^{}]+)\}/g)].map((match, order) => ({
+  selectors: match[1].split(',').map((selector) => selector.trim()),
+  declarations: match[2],
+  order,
+}))
+
+const finalDeclaration = (selector, property) => {
+  const candidates = rules.filter((rule) => rule.selectors.includes(selector) && new RegExp(`${property}\\s*:`).test(rule.declarations))
+  const last = candidates.at(-1)
+  return last?.declarations.match(new RegExp(`${property}\\s*:\\s*([^;}]+)`))?.[1]?.trim() ?? ''
+}
+
+const checks = [
+  ['Focus unique 2 px', css.includes('outline:2px solid var(--focus)') && !css.includes('outline:3px solid #f3a33d')],
+  ['Focus limité à la navigation clavier', css.includes('.keyboard-nav button:focus-visible') && page.includes("root.classList.add('keyboard-nav')") && page.includes("root.classList.remove('keyboard-nav')")],
+  ['Déclencheur persona sans anneau interne', !/\.persona-trigger:hover[^{}]*\{[^{}]*box-shadow/.test(css)],
+  ['Carte Direction sans double signal', finalDeclaration('.direction-case-card.active', 'box-shadow') !== 'inset 3px 0 0 var(--blue)'],
+  ['Escalade Facility Manager sans double signal', !css.includes('box-shadow:inset 3px 0 0 var(--orange)')],
+  ['Champ focalisé sans anneau CSS interne', finalDeclaration('.field input:focus', 'box-shadow') === 'none' && finalDeclaration('.field textarea:focus', 'box-shadow') === 'none'],
+  ['Timeline active sans halo additionnel', finalDeclaration('.detail-timeline .current>span', 'box-shadow') === 'none'],
+  ['Titres mobiles compacts présents', page.includes('mobilePageTitle') && css.includes('.mobile-title{display:inline}')],
+  ['Réserve navigation mobile présente', css.includes('.main-column{padding-bottom:92px}')],
+  ['Grille du registre partagée', css.includes('.registry-head,.registry-row{grid-template-columns:var(--registry-columns)}')],
+  ['Responsable visible sur desktop étroit', css.includes('@media (min-width:961px) and (max-width:1180px)') && css.includes('.registry-row>.owner-cell{display:flex}')],
+  ['Titres tronqués proprement', css.includes('.topbar h1{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}')],
+  ['Références équipement insécables', page.includes('className="equipment-reference"') && css.includes('.equipment-reference{white-space:nowrap;word-break:keep-all;overflow-wrap:normal}')],
+]
+
+for (const [label, ok] of checks) console.log(`${ok ? '✓' : '✗'} ${label}`)
+const failures = checks.filter(([, ok]) => !ok)
+if (failures.length) {
+  process.exitCode = 1
+  throw new Error(`${failures.length} contrôle(s) visuel(s) en échec`)
+}
+console.log(`\n${checks.length} contrôles statiques de bordure/focus réussis.`)
