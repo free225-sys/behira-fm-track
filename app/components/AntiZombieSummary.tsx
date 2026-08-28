@@ -2,7 +2,7 @@ import { useId } from 'react';
 
 import { normalizeAntiZombieSummary, type AntiZombieSummaryData } from './anti-zombie-contract';
 
-export function AntiZombieSummary({ data }: { data: AntiZombieSummaryData }) {
+export function AntiZombieSummary({ data, variant = 'standard' }: { data: AntiZombieSummaryData; variant?:'compact'|'standard'|'detailed' }) {
   const headingId = useId();
   const summary = normalizeAntiZombieSummary(data);
 
@@ -11,21 +11,21 @@ export function AntiZombieSummary({ data }: { data: AntiZombieSummaryData }) {
     { label:'Responsable', value:summary.responsible, priority:true, missing:summary.responsible === 'Responsable non attribué' },
     { label:'SLA / Échéance', value:summary.deadlineOrSla, priority:true, missing:summary.deadlineOrSla === 'Échéance non renseignée' },
     { label:'Acteur bloquant', value:summary.blockingActor, priority:true, missing:summary.isBlocked && summary.blockingActor === 'Acteur bloquant non renseigné' },
-    { label:'Statut', value:summary.status, state:summary.isBlocked ? 'Bloqué' : summary.isDelayed ? 'En retard' : 'État actuel' },
+    { label:'Étape actuelle', value:summary.status, state:`Dossier ${summary.dossierState.toLowerCase()}` },
     { label:'Motif du blocage ou du retard', value:summary.blockingOrDelayReason, missing:summary.blockingOrDelayReason === 'Motif non renseigné' },
-    { label:'Preuve attendue', value:summary.expectedProof, missing:summary.expectedProof === 'Preuve attendue non définie' },
+    { label:'Preuve attendue', value:summary.expectedProof, meta:summary.expectedProofState, missing:summary.expectedProof === 'Preuve attendue non définie' },
     { label:'Dernière activité', value:summary.lastActivityLabel, meta:summary.lastActivityMeta, missing:summary.lastActivityLabel === 'Historique indisponible' },
   ];
 
   return (
-    <section className="anti-zombie-summary" aria-labelledby={headingId} tabIndex={0}>
+    <section className={`anti-zombie-summary anti-zombie-${variant}`} aria-labelledby={headingId} tabIndex={0}>
       <header className="anti-zombie-summary-head">
         <span aria-hidden="true">AZ</span>
         <div>
-          <p>LECTURE ANTI-DOSSIER DORMANT</p>
+          <p>CONTINUITÉ DE TRAITEMENT</p>
           <h4 id={headingId}>Synthèse de pilotage</h4>
         </div>
-        <strong>{summary.isBlocked ? 'BLOQUÉ' : summary.isDelayed ? 'EN RETARD' : 'ACTIF'}</strong>
+        <strong>{summary.isBlocked ? 'BLOQUÉ' : summary.isDelayed ? 'EN RETARD' : 'NORMALE'}</strong>
       </header>
 
       {summary.blockingInformationIncomplete && (

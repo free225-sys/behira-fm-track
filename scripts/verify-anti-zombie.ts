@@ -67,12 +67,12 @@ const managerSource = page.slice(page.indexOf('function Manager('), page.indexOf
 const registrySource = page.slice(page.indexOf('function Registry('), page.indexOf('function Manager('));
 const detailSource = page.slice(page.indexOf('function Detail('), page.indexOf('function ' , page.indexOf('function Detail(') + 20));
 
-assert.equal((page.match(/<AntiZombieSummary\s/g) ?? []).length, 1, 'Le composant doit être intégré une seule fois.');
+assert.equal((page.match(/<AntiZombieSummary\s/g) ?? []).length, 3, 'Le composant doit être intégré dans Faustin, le registre et le dossier central.');
 assert.match(managerSource, /<AntiZombieSummary\s/, 'AntiZombieSummary doit être intégré dans Manager.');
-assert.doesNotMatch(registrySource, /<AntiZombieSummary\s/, 'Le registre ne doit pas intégrer AntiZombieSummary.');
-assert.doesNotMatch(detailSource, /<AntiZombieSummary\s/, 'Le dossier central ne doit pas intégrer AntiZombieSummary.');
+assert.match(registrySource, /<AntiZombieSummary\s/, 'Le registre doit intégrer la variante compacte.');
+assert.match(detailSource, /<AntiZombieSummary\s/, 'Le dossier central doit intégrer la variante détaillée.');
 
-for (const label of ['Statut','Responsable','Prochaine action','SLA / Échéance','Acteur bloquant','Motif du blocage ou du retard','Preuve attendue','Dernière activité']) {
+for (const label of ['Étape actuelle','Responsable','Prochaine action','SLA / Échéance','Acteur bloquant','Motif du blocage ou du retard','Preuve attendue','Dernière activité']) {
   assert.ok(component.includes(label), `Libellé manquant : ${label}`);
 }
 for (const fallback of ['Responsable non attribué','Prochaine action non renseignée','Échéance non renseignée','Aucun blocage déclaré','Motif non renseigné','Preuve attendue non définie','Historique indisponible','Informations de blocage à compléter']) {
@@ -84,8 +84,10 @@ assert.doesNotMatch(component, /title=/, 'Aucun contenu essentiel ne doit dépen
 assert.match(css, /\.anti-zombie-summary:focus-visible/, 'Le focus clavier de la synthèse doit être visible.');
 assert.match(css, /@media \(max-width:700px\)[\s\S]*?\.anti-zombie-fields/, 'La disposition mobile doit être définie.');
 assert.match(css, /\.anti-zombie-fields[\s\S]*?font-size:12px/, 'Les contenus essentiels doivent faire au moins 12 px.');
+assert.match(component, /CONTINUITÉ DE TRAITEMENT/, 'Le libellé métier validé doit remplacer le vocabulaire anti-zombie.');
+assert.match(component, /NORMALE/, 'La continuité normale doit être distinguée du statut du workflow.');
 
-console.log('✓ intégration limitée au cockpit Faustin');
+console.log('✓ intégration partagée Faustin, registre et dossier central');
 console.log('✓ huit informations visibles, valeurs de repli et alerte de blocage présentes');
 console.log('✓ contrôle statique desktop, mobile, clavier et absence de tooltip');
 console.log(`\n${cases.length + 3} contrôles AntiZombieSummary réussis.`);

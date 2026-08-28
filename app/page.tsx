@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 import { AntiZombieSummary } from './components/AntiZombieSummary';
 import type { AntiZombieSummaryData } from './components/anti-zombie-contract';
+import { WorkflowAnalytics } from './components/WorkflowAnalytics';
 import { getAuthenticatedProfileGate, resolveAuthenticatedPersona } from './lib/supabase/auth';
 import { getBrowserSupabaseClient, setSupabaseRememberPreference } from './lib/supabase/client';
 import { getSupabaseIntegrationState, isSupabaseIntegrationEnabled } from './lib/supabase/config';
@@ -13,6 +14,7 @@ import { advanceAnomalyWorkflow, uploadAnomalyProof, uploadVendorInterventionRep
 type View = 'workspace' | 'dashboard' | 'registry' | 'manager' | 'report' | 'detail';
 type Priority = 'Critique' | 'Haute' | 'Moyenne' | 'Faible';
 type Status = 'À qualifier' | 'Affectée' | 'En intervention' | 'En validation' | 'Clôturée';
+type ManagerQueue = 'qualify'|'late'|'unassigned'|'proof'|'reception'|'reservations'|'reopened';
 type PersonaId = 'faustin' | 'frederic' | 'evariste' | 'sylvain' | 'laetitia';
 type DecisionState = 'À décider' | 'Approuvée' | 'Refusée' | 'Renvoyée à Faustin';
 type AuthScreen = 'login' | 'forgot' | 'invite';
@@ -117,7 +119,7 @@ const seedAnomalies: Anomaly[] = [
 
 const personas: Persona[] = [
   { id:'faustin', name:'Faustin SIAPO', shortName:'Faustin', initials:'FS', role:'Facility Manager', scope:'Pilotage opérationnel et qualification' },
-  { id:'frederic', name:'Frédéric AMANY', shortName:'Frédéric', initials:'FA', role:'Direction · Super utilisateur métier', scope:'Arbitrages, risques et engagements' },
+  { id:'frederic', name:'Frédéric AMANY', shortName:'Administration', initials:'FA', role:'Administration · Super utilisateur métier', scope:'Arbitrages, risques et engagements' },
   { id:'evariste', name:'Évariste DJE', shortName:'Évariste', initials:'ED', role:'Agent électricité', scope:'GE-01 · toutes zones autorisées' },
   { id:'sylvain', name:'Sylvain DOUANE', shortName:'Sylvain', initials:'SD', role:'Agent eau / incendie', scope:'WILO-01 · RIA-01 · IRR-01' },
   { id:'laetitia', name:'Laetitia ATTOH', shortName:'Laetitia', initials:'LA', role:'Agente & assistante de direction', scope:'Cleaning · jardinage · suivi administratif' },
@@ -182,7 +184,7 @@ function Badge({ children, tone = 'neutral' }: { children: React.ReactNode; tone
 }
 
 const personaGroups: { label:string; ids:PersonaId[] }[] = [
-  { label:'Direction', ids:['frederic'] },
+  { label:'Administration', ids:['frederic'] },
   { label:'Management', ids:['faustin'] },
   { label:'Terrain', ids:['evariste','sylvain','laetitia'] },
 ];
@@ -287,6 +289,46 @@ function priorityTone(priority: Priority) {
 
 function statusTone(status: Status) {
   return status === 'Clôturée' ? 'success' : status === 'En intervention' ? 'blue' : status === 'En validation' ? 'purple' : status === 'Affectée' ? 'orange' : 'neutral';
+}
+
+function expectedProofFor(anomaly:Anomaly) {
+  return anomaly.asset === 'WILO-01' ? 'Photo du manomètre et rapport d’intervention' : null;
+}
+
+function canonicalResponsible(anomaly:Anomaly) {
+  if (anomaly.owner === 'Non affectée') return null;
+  return personas.some((persona) => persona.name === anomaly.owner) ? anomaly.owner : null;
+}
+
+function externalActorConcerned(anomaly:Anomaly) {
+  return anomaly.owner !== 'Non affectée' && !canonicalResponsible(anomaly) ? anomaly.owner : null;
+}
+
+function nextActionFor(anomaly:Anomaly) {
+  if (anomaly.status === 'Clôturée') return 'Aucune action — dossier clôturé';
+  if (anomaly.status === 'À qualifier' && !canonicalResponsible(anomaly)) return 'Qualifier et affecter';
+  if (anomaly.status === 'À qualifier' || anomaly.status === 'Affectée') return 'Réaliser et confirmer le diagnostic';
+  if (anomaly.status === 'En intervention') return anomaly.proof ? 'Contrôler la réception' : 'Réaliser l’intervention et déposer la preuve';
+  if (anomaly.status === 'En validation') return anomaly.proofPending || anomaly.proof ? 'Contrôler la preuve' : 'Déposer les preuves attendues';
+  return 'Prochaine action non renseignée';
+}
+
+function adaptDossierToAntiZombieSummary(anomaly:Anomaly):AntiZombieSummaryData {
+  return {
+    dossierState:anomaly.status === 'Clôturée' ? 'Clôturé' : 'Ouvert',
+    status:anomaly.status,
+    responsible:canonicalResponsible(anomaly),
+    nextAction:nextActionFor(anomaly),
+    deadline:anomaly.due,
+    slaLabel:anomaly.delayed && anomaly.status !== 'Clôturée' ? 'En retard' : 'Dans le délai',
+    isDelayed:anomaly.delayed && anomaly.status !== 'Clôturée',
+    isBlocked:false,
+    blockingActor:null,
+    blockingOrDelayReason:null,
+    expectedProof:expectedProofFor(anomaly),
+    expectedProofState:anomaly.proof ? 'Preuve déposée et acceptée' : anomaly.proofPending ? 'Preuve déposée · validation Faustin attendue' : 'Aucune preuve déposée',
+    lastHistoryActivity:null,
+  };
 }
 
 function AuthExperience({ onAuthenticate, onDemoAuthenticate, onForgot, onReset, supabaseMode, allowDemoFallback, environmentLabel }: {
@@ -515,7 +557,7 @@ export default function Home() {
   const [query, setQuery] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('Toutes');
   const [statusFilter, setStatusFilter] = useState('Tous');
-  const [managerTab, setManagerTab] = useState<'qualify' | 'late' | 'proof'>('qualify');
+  const [managerTab, setManagerTab] = useState<ManagerQueue>('qualify');
   const [toast, setToast] = useState('');
   const [mutationBusy, setMutationBusy] = useState(false);
 
@@ -857,12 +899,12 @@ export default function Home() {
     const id = `DEC-${String(19 + escalations.length).padStart(3, '0')}`;
     setEscalations((items) => [{ id, anomaly:request.id, asset:'RND-LET', title:request.subject, kind:'Risque', due:'Aujourd’hui · 16:00', risk:'Décision hors délégation Facility Manager', recommendation:'Arbitrage Direction demandé par Faustin.', state:'À décider' }, ...items]);
     setFieldRequests((items) => items.map((item) => item.id === request.id ? { ...item, status:'Transmise à Direction' } : item));
-    flash(`${id} transmise à Frédéric pour arbitrage.`);
+    flash(`${id} transmise à l’Administration pour arbitrage.`);
   };
 
   const visibleNav = navItems.filter((item) => allowedViewsByPersona[personaId].includes(item.key));
-  const pageTitle = view === 'workspace' ? `Espace ${persona.shortName}` : view === 'dashboard' ? (personaId === 'frederic' ? 'Vue consolidée Direction' : 'Tableau de bord') : view === 'registry' ? 'Registre des anomalies' : view === 'manager' ? 'Espace Facility Manager' : view === 'report' ? (personaId === 'sylvain' || personaId === 'faustin' ? 'Pilote Wilo' : 'Ronde terrain') : selected.id;
-  const mobilePageTitle = view === 'workspace' ? `Espace ${persona.shortName}` : view === 'dashboard' ? 'Tableau de bord' : view === 'registry' ? 'Registre' : view === 'manager' ? 'Pilotage FM' : view === 'report' ? (personaId === 'sylvain' || personaId === 'faustin' ? 'Pilote Wilo' : 'Ronde') : selected.id;
+  const pageTitle = view === 'workspace' ? `Espace ${persona.shortName}` : view === 'dashboard' ? (personaId === 'frederic' ? 'Vue consolidée Administration' : 'Tableau de bord') : view === 'registry' ? 'Registre des anomalies' : view === 'manager' ? 'Espace Facility Manager' : view === 'report' ? (personaId === 'sylvain' || personaId === 'faustin' ? 'Pilote Wilo' : 'Ronde terrain') : selected.id;
+  const mobilePageTitle = view === 'workspace' ? `Espace ${persona.shortName}` : view === 'dashboard' ? 'Tableau de bord' : view === 'registry' ? 'Registre' : view === 'manager' ? 'Faustin' : view === 'report' ? (personaId === 'sylvain' || personaId === 'faustin' ? 'Pilote Wilo' : 'Ronde') : selected.id;
 
   if (!authReady) return <main className="auth-loading" aria-label="Chargement de la session"><span className="brand-mark">B</span><p>Préparation de votre espace…</p></main>;
   if (passwordChangeRequirement) return <RequiredPasswordChange requirement={passwordChangeRequirement} onComplete={completeRequiredPasswordChange} onSignOut={signOutLockedSession} />;
@@ -886,7 +928,7 @@ export default function Home() {
         </header>
 
         <div className="content">
-          {view === 'workspace' && <PersonaWorkspace persona={persona} anomalies={anomalies} vendors={vendorReferences} canUploadVendorReport={effectiveCanUploadVendorReport} vendorReportBusy={mutationBusy} onVendorReport={persistVendorReport} escalations={escalations} fieldRequests={fieldRequests} onEscalationDecision={decideEscalation} onEscalateToDirection={escalateToDirection} onFieldRequest={submitFieldRequest} onOpen={(id) => openDetail(id, 'workspace')} onNavigate={navigate} flash={flash} />}
+          {view === 'workspace' && <PersonaWorkspace persona={persona} anomalies={anomalies} equipment={equipmentItems} vendors={vendorReferences} canUploadVendorReport={effectiveCanUploadVendorReport} vendorReportBusy={mutationBusy} onVendorReport={persistVendorReport} escalations={escalations} fieldRequests={fieldRequests} onEscalationDecision={decideEscalation} onEscalateToDirection={escalateToDirection} onFieldRequest={submitFieldRequest} onOpen={(id) => openDetail(id, 'workspace')} onNavigate={navigate} flash={flash} />}
           {view === 'dashboard' && <Dashboard anomalies={anomalies} equipment={equipmentItems} onOpen={openDetail} onNavigate={navigate} />}
           {view === 'registry' && <Registry anomalies={filtered} query={query} setQuery={setQuery} priority={priorityFilter} setPriority={setPriorityFilter} status={statusFilter} setStatus={setStatusFilter} onOpen={(id) => openDetail(id, 'registry')} />}
           {view === 'manager' && <Manager anomalies={anomalies} equipment={equipmentItems} tab={managerTab} setTab={setManagerTab} onOpen={(id) => openDetail(id, 'manager')} />}
@@ -900,9 +942,10 @@ export default function Home() {
   );
 }
 
-function PersonaWorkspace({ persona, anomalies, vendors, canUploadVendorReport, vendorReportBusy, onVendorReport, escalations, fieldRequests, onEscalationDecision, onEscalateToDirection, onFieldRequest, onOpen, onNavigate, flash }: {
+function PersonaWorkspace({ persona, anomalies, equipment, vendors, canUploadVendorReport, vendorReportBusy, onVendorReport, escalations, fieldRequests, onEscalationDecision, onEscalateToDirection, onFieldRequest, onOpen, onNavigate, flash }: {
   persona:Persona;
   anomalies:Anomaly[];
+  equipment:EquipmentItem[];
   vendors:OperationalVendor[];
   canUploadVendorReport:boolean;
   vendorReportBusy:boolean;
@@ -916,7 +959,7 @@ function PersonaWorkspace({ persona, anomalies, vendors, canUploadVendorReport, 
   onNavigate:(view:View)=>void;
   flash:(message:string)=>void;
 }) {
-  if (persona.id === 'frederic') return <DirectionWorkspace escalations={escalations} onDecision={onEscalationDecision} onOpen={onOpen} />;
+  if (persona.id === 'frederic') return <DirectionWorkspace anomalies={anomalies} equipment={equipment} escalations={escalations} onDecision={onEscalationDecision} onOpen={onOpen} onNavigate={onNavigate} />;
   if (persona.id === 'faustin') return <FaustinWorkspace escalations={escalations} fieldRequests={fieldRequests} onEscalate={onEscalateToDirection} onOpen={onOpen} onNavigate={onNavigate} />;
   if (persona.id === 'evariste' || persona.id === 'sylvain') return <AgentWorkspace key={persona.id} persona={persona} anomalies={anomalies} vendors={vendors} canUploadVendorReport={canUploadVendorReport} vendorReportBusy={vendorReportBusy} onVendorReport={onVendorReport} onFieldRequest={onFieldRequest} flash={flash} />;
   if (persona.id === 'laetitia') return <LaetitiaWorkspace fieldRequests={fieldRequests} onFieldRequest={onFieldRequest} flash={flash} />;
@@ -935,7 +978,7 @@ function formatMoney(value:number) {
   return `${new Intl.NumberFormat('fr-FR').format(value)} FCFA`;
 }
 
-function DirectionWorkspace({ escalations, onDecision, onOpen }: { escalations:Escalation[]; onDecision:(id:string,state:DecisionState,motive:string)=>void; onOpen:(id:string)=>void }) {
+function DirectionWorkspace({ anomalies, equipment, escalations, onDecision, onOpen, onNavigate }: { anomalies:Anomaly[]; equipment:EquipmentItem[]; escalations:Escalation[]; onDecision:(id:string,state:DecisionState,motive:string)=>void; onOpen:(id:string)=>void; onNavigate:(view:View)=>void }) {
   const [threshold, setThreshold] = useState(350000);
   const [tab, setTab] = useState<'pending'|'history'>('pending');
   const [filter, setFilter] = useState<'Tous'|Escalation['kind']>('Tous');
@@ -958,7 +1001,7 @@ function DirectionWorkspace({ escalations, onDecision, onOpen }: { escalations:E
     setMotive('');
   };
   return <>
-    <WorkspaceIntro kicker="DIRECTION · SUPER UTILISATEUR MÉTIER" title="Bonjour Frédéric" description="Décidez ce qui dépasse la délégation opérationnelle de Faustin." badge="Validation métier active" />
+    <WorkspaceIntro kicker="ADMINISTRATION · SUPER UTILISATEUR MÉTIER" title="Bonjour Frédéric" description="Décidez ce qui dépasse la délégation opérationnelle de Faustin." badge="Validation métier active" />
     <div className="authority-split" role="note"><div><span>✓</span><p><b>Validation métier Administration</b><small>Risques, coûts à partir de 350 000 FCFA et contrôle des clôtures sensibles</small></p></div><div className="technical-admin"><span>⌘</span><p><b>Utilisateurs et paramètres</b><small>Comptes, droits sensibles, zones et seuil financier configurables</small></p><Badge tone="blue">ACCÈS ADMIN</Badge></div></div>
     <AnswerStrip todo={`${escalations.filter((item) => item.state === 'À décider').length} arbitrages`} risk="2 dossiers critiques" due="1 décision avant 10:30" proof="1 clôture sensible" />
     <section className="direction-summary-grid"><article className="panel executive-metric"><span>RISQUES CRITIQUES</span><strong>2</strong><small>RIA-01 et continuité GE-01</small></article><article className="panel executive-metric"><span>COÛTS À VALIDER</span><strong>6,7 M</strong><small>FCFA · 2 engagements</small></article><article className="panel executive-metric"><span>SANTÉ BÂTIMENT</span><strong className="healthy">82/100</strong><small>Équipements 70% · sécurité 15%</small></article><article className="panel threshold-card"><label>Seuil d’approbation Administration<input aria-label="Seuil d’approbation Administration" type="number" step="50000" value={threshold} onChange={(e) => setThreshold(Number(e.target.value))} /></label><small>Les engagements ≥ {formatMoney(threshold)} sont remontés automatiquement.</small></article></section>
@@ -982,6 +1025,8 @@ function DirectionWorkspace({ escalations, onDecision, onOpen }: { escalations:E
       <article className="panel admin-users-preview"><div className="panel-head"><div><p className="design-kicker">UTILISATEURS & ACCÈS</p><h3>5 comptes internes actifs</h3><p>Faustin peut proposer ; l’Administration valide les droits sensibles.</p></div><button className="primary-button" onClick={() => {setAdminPanel('agent');setAdminConfirmation('')}}>＋ Créer un agent</button></div>{adminConfirmation && <div className="admin-inline-confirmation" role="status"><span>✓</span>{adminConfirmation}</div>}<div className="admin-user-list">{[['FS','Faustin SIAPO','Facility Manager','Tous périmètres'],['ED','Évariste DJE','Agent électricité','GE-01'],['SD','Sylvain DOUANE','Agent eau / incendie','WILO-01 · RIA-01 · IRR-01'],['LA','Laetitia ATTOH','Agente & assistante','RND-LET']].map((user) => <button key={user[1]} onClick={() => {setNewAgent({name:user[1],email:'',role:user[2],scope:user[3]});setAdminPanel('agent');setAdminConfirmation('')}}><span>{user[0]}</span><p><b>{user[1]}</b><small>{user[2]} · {user[3]}</small></p><Badge tone="success">ACTIF</Badge><em>Gérer →</em></button>)}</div></article>
       <aside className="admin-parameters"><article className="panel"><p className="design-kicker">RÉFÉRENTIEL</p><div className="parameter-value"><strong>76</strong><span>zones actives</span></div><p>Ajouter, modifier ou désactiver une zone sans intervention technique.</p><button className="secondary-button" onClick={() => {setAdminPanel('zones');setAdminConfirmation('')}}>Gérer les zones</button></article><article className="panel"><p className="design-kicker">SCORES AGENTS</p><div className="agent-score-mini"><span><b>Évariste</b>88</span><span><b>Sylvain</b>84</span><span><b>Laetitia</b>91</span></div><small>Visibles par tous les agents · détail explicatif disponible</small></article></aside>
     </section>
+    <WorkflowAnalytics items={anomalies.map((item) => ({ ...item, owner:canonicalResponsible(item) ?? 'Non affectée' }))} variant="administration" onOpenRegistry={() => onNavigate('registry')} />
+    <OperationalAnalytics equipment={equipment} variant="direction" />
     {draft && selected && <div className="demo-modal-backdrop" role="presentation"><section className="demo-modal" role="dialog" aria-modal="true" aria-labelledby="decision-dialog-title"><button className="modal-close" aria-label="Fermer" onClick={() => setDraft(null)}>×</button><Badge tone={draft.state === 'Approuvée' ? 'success' : draft.state === 'Refusée' ? 'critical' : 'orange'}>{draft.state}</Badge><h3 id="decision-dialog-title">{selected.id} · Confirmer la décision</h3><p>{selected.asset} · {selected.title}</p><label className="field">Motif obligatoire<textarea autoFocus value={motive} onChange={(e) => setMotive(e.target.value)} placeholder="Expliquez la décision et les conditions éventuelles…" /></label><div className="modal-actions"><button className="secondary-button" onClick={() => setDraft(null)}>Annuler</button><button className="primary-button" disabled={!motive.trim()} onClick={confirm}>Confirmer et notifier Faustin</button></div><small>Simulation locale · aucune donnée n’est persistée.</small></section></div>}
     {adminPanel && <div className="demo-modal-backdrop" role="presentation" onMouseDown={(event) => {if (event.target === event.currentTarget) setAdminPanel(null)}}><section className="demo-modal admin-dialog" role="dialog" aria-modal="true" aria-labelledby="admin-dialog-title"><button className="modal-close" aria-label="Fermer" onClick={() => setAdminPanel(null)}>×</button><Badge tone="blue">ADMINISTRATION</Badge>{adminPanel === 'agent' ? <form onSubmit={(event) => {event.preventDefault();setAdminPanel(null);setAdminConfirmation(`${newAgent.name || 'Le nouvel agent'} est prêt à être créé après validation finale.`)}}><h3 id="admin-dialog-title">{newAgent.name ? 'Gérer un agent' : 'Créer un nouvel agent'}</h3><p>Définissez l’identité, le rôle et le périmètre avant activation.</p><div className="admin-form-grid"><label className="field">Nom complet<input autoFocus required value={newAgent.name} onChange={(e) => setNewAgent({...newAgent,name:e.target.value})} placeholder="Prénom et nom" /></label><label className="field">Email professionnel<input required type="email" value={newAgent.email} onChange={(e) => setNewAgent({...newAgent,email:e.target.value})} placeholder="nom@entreprise.com" /></label><label className="field">Rôle<select value={newAgent.role} onChange={(e) => setNewAgent({...newAgent,role:e.target.value})}><option>Agent terrain</option><option>Facility Manager</option><option>Agente & assistante</option><option>Administration</option></select></label><label className="field">Périmètre<select value={newAgent.scope} onChange={(e) => setNewAgent({...newAgent,scope:e.target.value})}><option>WILO-01</option><option>GE-01</option><option>RIA-01 · IRR-01</option><option>RND-LET</option><option>Tous périmètres</option></select></label></div><div className="admin-rights-note"><span>⌘</span><p><b>Droits sensibles contrôlés</b><small>Le dépôt de rapports prestataires et les validations restent attribués séparément.</small></p></div><div className="modal-actions"><button type="button" className="secondary-button" onClick={() => setAdminPanel(null)}>Annuler</button><button type="submit" className="primary-button">Préparer le compte</button></div><small>Maquette interactive · aucun compte Auth n’est créé.</small></form> : <form onSubmit={(event) => {event.preventDefault();setAdminPanel(null);setAdminConfirmation(`La zone « ${newZone} » est prête à être ajoutée après validation.`);setNewZone('')}}><h3 id="admin-dialog-title">Gérer les zones</h3><p>Le référentiel contient 76 zones actives. Toute modification reste traçable.</p><div className="zone-preview-list"><span><b>Sous-sol</b>12 zones</span><span><b>Rez-de-chaussée</b>18 zones</span><span><b>Étages R+1 à R+4</b>38 zones</span><span><b>Extérieurs</b>8 zones</span></div><label className="field">Nouvelle zone<input autoFocus required value={newZone} onChange={(e) => setNewZone(e.target.value)} placeholder="Ex. Local technique R+3" /></label><div className="modal-actions"><button type="button" className="secondary-button" onClick={() => setAdminPanel(null)}>Annuler</button><button type="submit" className="primary-button">Préparer l’ajout</button></div><small>Maquette interactive · aucun référentiel n’est modifié.</small></form>}</section></div>}
   </>;
@@ -1084,6 +1129,7 @@ function InternalVendorReportPanel({ anomalies, vendors, canUpload, busy, onSubm
 }
 
 function LaetitiaWorkspace({ fieldRequests, onFieldRequest, flash }: { fieldRequests:FieldRequest[]; onFieldRequest:(request:Omit<FieldRequest,'id'|'status'>)=>void; flash:(message:string)=>void }) {
+  const [missionTab, setMissionTab] = useState<'terrain'|'administration'>('terrain');
   const [zone, setZone] = useState('Atrium restaurant');
   const [category, setCategory] = useState('Plantes / irrigation');
   const [title, setTitle] = useState('');
@@ -1103,9 +1149,9 @@ function LaetitiaWorkspace({ fieldRequests, onFieldRequest, flash }: { fieldRequ
   return <>
     <WorkspaceIntro kicker="AGENTE & ASSISTANTE DE DIRECTION" title="Bonjour Laetitia" description="Séparez clairement vos rondes terrain et votre suivi administratif." badge="Double mission" />
     <AnswerStrip todo="6 zones à parcourir" risk="1 infiltration à vérifier" due="2 devis à relancer" proof="1 autorisation attendue" />
-    <section className="laetitia-grid"><article className="panel zone-rounds"><div className="panel-head"><div><h3>Zones du jour</h3><p>Ronde RND-LET · 24 août</p></div><Badge tone="blue">4 / 6 contrôlées</Badge></div>{['Hall & accueil|Terminé','Atrium restaurant|À vérifier','Jardinières RDC|En cours','Sanitaires R+2|Terminé','Terrasse R+4|À faire','Parking sous-sol|À faire'].map((item) => {const [label,status] = item.split('|'); return <button key={label}><span className={status === 'Terminé' ? 'done' : status === 'En cours' ? 'current' : ''}>{status === 'Terminé' ? '✓' : '○'}</span><div><b>{label}</b><small>Propreté · plantes · fuite · dégradation</small></div><Badge tone={status === 'Terminé' ? 'success' : status === 'À vérifier' ? 'critical' : status === 'En cours' ? 'blue' : 'neutral'}>{status}</Badge></button>})}</article><form className="panel quick-finding" onSubmit={submit}><div className="panel-head"><div><h3>Créer un constat</h3><p>Envoi direct à Faustin pour qualification</p></div><Badge tone="orange">RAPIDE</Badge></div><label className="field">Zone<select value={zone} onChange={(e) => setZone(e.target.value)}><option>Atrium restaurant</option><option>Jardinières RDC</option><option>Terrasse R+4</option><option>Parking sous-sol</option></select></label><label className="field">Catégorie<select value={category} onChange={(e) => setCategory(e.target.value)}><option>Plantes / irrigation</option><option>Propreté</option><option>Infiltration</option><option>Dégradation</option><option>Éclairage</option></select></label><label className="field">Constat<input required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex. Terre sèche dans la jardinière nord" /></label><button type="button" className={`photo-toggle ${photo ? 'active' : ''}`} onClick={() => setPhoto((value) => !value)}><span>{photo ? '✓' : '＋'}</span><div><b>{photo ? 'Photo de zone ajoutée' : 'Ajouter une photo'}</b><small>Simulation locale · JPG</small></div></button><button className="primary-button" type="submit">Créer et transmettre à Faustin</button></form></section>
-    <section className="laetitia-admin-grid"><article className="panel"><div className="panel-head"><div><p className="design-kicker">SUIVI ADMINISTRATIF</p><h3>Devis et autorisations</h3></div><Badge tone="orange">3 À SUIVRE</Badge></div>{[['DEV-031','Hydro Services','280 000 FCFA','Validation Faustin'],['DEV-029','ATA-CI','1 650 000 FCFA','Arbitrage Administration'],['DEV-026','GreenCare','190 000 FCFA','Bon à payer']].map((item) => <button className="admin-follow-row" key={item[0]}><span>{item[0]}</span><p><b>{item[1]}</b><small>{item[2]} · {item[3]}</small></p><em>Voir →</em></button>)}</article><article className="panel"><div className="panel-head"><div><p className="design-kicker">COÛTS & PAIEMENTS</p><h3>Échéances de la semaine</h3></div></div><div className="payment-summary"><strong>2,12 M</strong><span>FCFA à contrôler</span></div><div className="payment-lines"><span><i className="done" /> 3 pièces complètes</span><span><i /> 1 autorisation attendue</span><span><i className="late" /> 1 paiement en retard</span></div><button className="secondary-button">Ouvrir le suivi financier</button></article></section>
-    <section className="panel signal-tracker"><div className="panel-head"><div><h3>Mes signalements</h3><p>Statuts visibles sans accès aux décisions techniques</p></div><Badge>{submitted.length} dossiers</Badge></div><div className="signal-list">{submitted.map((item,index) => <article key={`${item.title}-${index}`}><div><b>{item.title}</b><p>{item.zone} · {item.category}</p></div><Badge tone={item.status === 'Complément demandé' && !complementDone ? 'orange' : item.status === 'À qualifier' ? 'blue' : 'success'}>{item.status === 'Complément demandé' && complementDone ? 'Complément transmis' : item.status}</Badge>{item.status === 'Complément demandé' && !complementDone && <button onClick={() => {setComplementDone(true);flash('Complément photo transmis à Faustin — simulation locale.')}}>Ajouter la photo demandée</button>}</article>)}</div><div className="field-feed-note">{fieldRequests.filter((request) => request.from === 'Laetitia ATTOH').length} remontée(s) visible(s) dans la file de Faustin.</div></section>
+    <div className="mission-switch" role="tablist" aria-label="Fonction de Laetitia"><button type="button" role="tab" aria-selected={missionTab === 'terrain'} className={missionTab === 'terrain' ? 'active' : ''} onClick={() => setMissionTab('terrain')}><span>✓</span><b>Terrain</b><small>Rondes, constats et brouillons hors ligne</small></button><button type="button" role="tab" aria-selected={missionTab === 'administration'} className={missionTab === 'administration' ? 'active' : ''} onClick={() => setMissionTab('administration')}><span>▧</span><b>Administratif</b><small>Devis, paiements et autorisations</small></button></div>
+    {missionTab === 'terrain' && <><section className="laetitia-grid"><article className="panel zone-rounds"><div className="panel-head"><div><h3>Zones du jour</h3><p>Ronde RND-LET · 24 août</p></div><Badge tone="blue">4 / 6 contrôlées</Badge></div>{['Hall & accueil|Terminé','Atrium restaurant|À vérifier','Jardinières RDC|En cours','Sanitaires R+2|Terminé','Terrasse R+4|À faire','Parking sous-sol|À faire'].map((item) => {const [label,status] = item.split('|'); return <button key={label}><span className={status === 'Terminé' ? 'done' : status === 'En cours' ? 'current' : ''}>{status === 'Terminé' ? '✓' : '○'}</span><div><b>{label}</b><small>Propreté · plantes · fuite · dégradation</small></div><Badge tone={status === 'Terminé' ? 'success' : status === 'À vérifier' ? 'critical' : status === 'En cours' ? 'blue' : 'neutral'}>{status}</Badge></button>})}</article><form className="panel quick-finding" onSubmit={submit}><div className="panel-head"><div><h3>Créer un constat</h3><p>Envoi direct à Faustin pour qualification</p></div><Badge tone="orange">RAPIDE</Badge></div><label className="field">Zone<select value={zone} onChange={(e) => setZone(e.target.value)}><option>Atrium restaurant</option><option>Jardinières RDC</option><option>Terrasse R+4</option><option>Parking sous-sol</option></select></label><label className="field">Catégorie<select value={category} onChange={(e) => setCategory(e.target.value)}><option>Plantes / irrigation</option><option>Propreté</option><option>Infiltration</option><option>Dégradation</option><option>Éclairage</option></select></label><label className="field">Constat<input required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex. Terre sèche dans la jardinière nord" /></label><button type="button" className={`photo-toggle ${photo ? 'active' : ''}`} onClick={() => setPhoto((value) => !value)}><span>{photo ? '✓' : '＋'}</span><div><b>{photo ? 'Photo de zone ajoutée' : 'Ajouter une photo'}</b><small>Simulation locale · JPG</small></div></button><button className="primary-button" type="submit">Créer et transmettre à Faustin</button></form></section><section className="panel signal-tracker"><div className="panel-head"><div><h3>Mes signalements</h3><p>Statuts visibles sans accès aux décisions techniques</p></div><Badge>{submitted.length} dossiers</Badge></div><div className="signal-list">{submitted.map((item,index) => <article key={`${item.title}-${index}`}><div><b>{item.title}</b><p>{item.zone} · {item.category}</p></div><Badge tone={item.status === 'Complément demandé' && !complementDone ? 'orange' : item.status === 'À qualifier' ? 'blue' : 'success'}>{item.status === 'Complément demandé' && complementDone ? 'Complément transmis' : item.status}</Badge>{item.status === 'Complément demandé' && !complementDone && <button onClick={() => {setComplementDone(true);flash('Complément photo transmis à Faustin — simulation locale.')}}>Ajouter la photo demandée</button>}</article>)}</div><div className="field-feed-note">{fieldRequests.filter((request) => request.from === 'Laetitia ATTOH').length} remontée(s) visible(s) dans la file de Faustin.</div></section></>}
+    {missionTab === 'administration' && <><section className="mission-permission-note"><span>i</span><div><b>Fonction administrative, sans décision technique</b><p>Laetitia prépare et suit les pièces. Faustin et l’Administration conservent leurs validations respectives.</p></div></section><section className="laetitia-admin-grid"><article className="panel"><div className="panel-head"><div><p className="design-kicker">SUIVI ADMINISTRATIF</p><h3>Devis et autorisations</h3></div><Badge tone="orange">3 À SUIVRE</Badge></div>{[['DEV-031','Hydro Services','280 000 FCFA','Validation Faustin'],['DEV-029','ATA-CI','1 650 000 FCFA','Arbitrage Administration'],['DEV-026','GreenCare','190 000 FCFA','Bon à payer']].map((item) => <button className="admin-follow-row" key={item[0]}><span>{item[0]}</span><p><b>{item[1]}</b><small>{item[2]} · {item[3]}</small></p><em>Voir →</em></button>)}</article><article className="panel"><div className="panel-head"><div><p className="design-kicker">COÛTS & PAIEMENTS</p><h3>Échéances de la semaine</h3></div></div><div className="payment-summary"><strong>2,12 M</strong><span>FCFA à contrôler</span></div><div className="payment-lines"><span><i className="done" /> 3 pièces complètes</span><span><i /> 1 autorisation attendue</span><span><i className="late" /> 1 paiement en retard</span></div><button className="secondary-button">Ouvrir le suivi financier</button></article></section></>}
   </>;
 }
 
@@ -1171,7 +1217,8 @@ function OperationalAnalytics({ equipment, variant = 'direction' }: { equipment:
       <article className="panel analytics-card agent-chart-card">
         <div className="analytics-card-head"><div><span>ÉQUIPE TERRAIN</span><h4>Performance des agents</h4></div><Badge tone="neutral">MÉTHODE À VALIDER</Badge></div>
         <div className="agent-score-chart" aria-label="Scores globaux de démonstration des agents">{agentPerformance.map((agent) => <div className="agent-score-row" key={agent.name}><span><b>{agent.name}</b><small>Score global</small></span><div className="agent-score-track" role="progressbar" aria-label={`${agent.name}, score global de démonstration, ${agent.score} sur 100`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={agent.score}><i style={{width:`${agent.score}%`}} /></div><strong>{agent.score}</strong></div>)}</div>
-        <p className="analytics-note">Période, échantillon, variation et facteurs explicatifs restent à définir. Ces scores aident au pilotage et ne constituent jamais une sanction automatique.</p>
+        <div className="agent-score-method"><span><b>Période observée</b>Non disponible</span><span><b>Échantillon</b>Non raccordé</span><span><b>Méthode proposée</b>Délais · réactivité · qualité des preuves</span><span><b>Variation / fraîcheur</b>Indisponibles</span></div>
+        <p className="analytics-note">Valeurs de démonstration uniquement. Le détail explicatif devra présenter facteurs positifs et négatifs avant validation ; aucune sanction automatique n’est autorisée.</p>
       </article>
     </div>
   </section>;
@@ -1182,8 +1229,8 @@ function Dashboard({ anomalies, equipment, onOpen, onNavigate, readOnly = false 
   const lateCount = anomalies.filter((a) => a.delayed && a.status !== 'Clôturée').length;
   const openCount = anomalies.filter((a) => a.status !== 'Clôturée').length;
   return <>
-    <section className="hero-row"><div><p className="direction-kicker">{readOnly ? 'CONSULTATION AUTORISÉE' : 'PILOTAGE DIRECTION'}</p><h2>Situation du bâtiment</h2><p>{readOnly ? 'Indicateurs et registre accessibles sans action de modification.' : 'Les cinq angles de décision pour aujourd’hui.'}</p></div><span className="health-pill"><i /> Site opérationnel à 92%</span></section>
-    <section className="direction-grid" aria-label="Tableau de bord Direction en cinq blocs">
+    <section className="hero-row"><div><p className="direction-kicker">{readOnly ? 'CONSULTATION AUTORISÉE' : 'PILOTAGE ADMINISTRATION'}</p><h2>Situation du bâtiment</h2><p>{readOnly ? 'Indicateurs et registre accessibles sans action de modification.' : 'Les cinq angles de décision pour aujourd’hui.'}</p></div><span className="health-pill"><i /> Site opérationnel à 92%</span></section>
+    <section className="direction-grid" aria-label="Tableau de bord Administration en cinq blocs">
       <article className="panel direction-block todo-block">
         <div className="direction-head"><span className="direction-number">01</span><div><h3>À faire aujourd’hui</h3><p>Actions qui débloquent le workflow</p></div><Badge tone="orange">{openCount} ouvertes</Badge></div>
         <div className="todo-summary"><strong>5</strong><span>actions prioritaires<br />avant 17:00</span></div>
@@ -1228,31 +1275,33 @@ function Dashboard({ anomalies, equipment, onOpen, onNavigate, readOnly = false 
 }
 
 function Registry({ anomalies, query, setQuery, priority, setPriority, status, setStatus, onOpen }: { anomalies:Anomaly[]; query:string; setQuery:(v:string)=>void; priority:string; setPriority:(v:string)=>void; status:string; setStatus:(v:string)=>void; onOpen:(id:string)=>void }) {
+  const [expandedId, setExpandedId] = useState<string|null>(null);
   return <>
     <section className="section-heading"><div><h2>Registre central</h2><p>{anomalies.length} anomalie{anomalies.length > 1 ? 's' : ''} correspondant à vos critères</p></div><button className="secondary-button">⇩ Exporter</button></section>
     <section className="filter-bar"><label className="search-box"><span>⌕</span><input aria-label="Rechercher dans le registre" placeholder="Rechercher par équipement, anomalie…" value={query} onChange={(e) => setQuery(e.target.value)} /></label><label>Priorité<select value={priority} onChange={(e) => setPriority(e.target.value)}><option>Toutes</option><option>Critique</option><option>Haute</option><option>Moyenne</option><option>Faible</option></select></label><label>Statut<select value={status} onChange={(e) => setStatus(e.target.value)}><option>Tous</option><option>À qualifier</option><option>Affectée</option><option>En intervention</option><option>En validation</option><option>Clôturée</option></select></label>{(query || priority !== 'Toutes' || status !== 'Tous') && <button className="clear-button" onClick={() => {setQuery('');setPriority('Toutes');setStatus('Tous')}}>Effacer</button>}</section>
-    <section className="registry-card"><div className="registry-head"><span>Anomalie</span><span>Priorité</span><span>Statut</span><span>Échéance</span><span>Responsable</span><span /></div>{anomalies.length === 0 ? <div className="empty-state"><span>⌕</span><h3>Aucun résultat</h3><p>Essayez d’élargir vos critères de recherche.</p></div> : anomalies.map((a) => <button className="registry-row" key={a.id} onClick={() => onOpen(a.id)}><div className="registry-title"><span className={`asset-square ${priorityTone(a.priority)}`}>{a.asset.split('-')[0].slice(0,2)}</span><div><b>{a.title}</b><small>{a.id} · {a.asset} · {a.location}</small></div></div><div><Badge tone={priorityTone(a.priority)}>{a.priority}</Badge></div><div><Badge tone={statusTone(a.status)}>{a.status}</Badge></div><div className={a.delayed && a.status !== 'Clôturée' ? 'late-text' : ''}>{a.delayed && a.status !== 'Clôturée' && <b>EN RETARD</b>}<span>{a.due}</span></div><div className="owner-cell"><span className="mini-avatar">{a.owner === 'Non affectée' ? '—' : a.owner.split(' ').map((w) => w[0]).join('').slice(0,2)}</span>{a.owner}</div><div className="registry-mobile-meta"><Badge tone={priorityTone(a.priority)}>{a.priority}</Badge><Badge tone={statusTone(a.status)}>{a.status}</Badge>{a.delayed && a.status !== 'Clôturée' && <Badge tone="critical">EN RETARD</Badge>}</div><div className="registry-mobile-details"><span><b>Échéance</b>{a.due}</span><span><b>Responsable</b>{a.owner}</span></div><span className="row-arrow">›</span></button>)}</section>
+    <section className="registry-card"><div className="registry-head"><span>Anomalie</span><span>Priorité</span><span>Étape</span><span>Échéance</span><span>Responsable</span><span /></div>{anomalies.length === 0 ? <div className="empty-state"><span>⌕</span><h3>Aucun résultat</h3><p>Essayez d’élargir vos critères de recherche.</p></div> : anomalies.map((a) => <article className={`registry-entry ${expandedId === a.id ? 'is-expanded' : ''}`} key={a.id}><button className="registry-row" onClick={() => onOpen(a.id)}><div className="registry-title"><span className={`asset-square ${priorityTone(a.priority)}`}>{a.asset.split('-')[0].slice(0,2)}</span><div><b>{a.title}</b><small>{a.id} · {a.asset} · {a.location}</small></div></div><div><Badge tone={priorityTone(a.priority)}>{a.priority}</Badge></div><div><Badge tone={statusTone(a.status)}>{a.status}</Badge></div><div className={a.delayed && a.status !== 'Clôturée' ? 'late-text' : ''}>{a.delayed && a.status !== 'Clôturée' && <b>EN RETARD</b>}<span>{a.due}</span></div><div className="owner-cell"><span className="mini-avatar">{canonicalResponsible(a) ? canonicalResponsible(a)!.split(' ').map((w) => w[0]).join('').slice(0,2) : '—'}</span><span>{canonicalResponsible(a) ?? 'Non attribué'}{externalActorConcerned(a) && <small>Acteur externe : {externalActorConcerned(a)}</small>}</span></div><div className="registry-mobile-meta"><Badge tone={priorityTone(a.priority)}>{a.priority}</Badge><Badge tone={statusTone(a.status)}>{a.status}</Badge>{a.delayed && a.status !== 'Clôturée' && <Badge tone="critical">EN RETARD</Badge>}</div><div className="registry-mobile-details"><span><b>Échéance</b>{a.due}</span><span><b>Responsable interne</b>{canonicalResponsible(a) ?? 'Non attribué'}{externalActorConcerned(a) && <small>Acteur externe : {externalActorConcerned(a)}</small>}</span></div><span className="row-arrow">›</span></button><button type="button" className="registry-summary-toggle" aria-expanded={expandedId === a.id} onClick={() => setExpandedId((current) => current === a.id ? null : a.id)}>{expandedId === a.id ? 'Masquer la continuité de traitement' : 'Afficher la continuité de traitement'} <span>{expandedId === a.id ? '−' : '+'}</span></button>{expandedId === a.id && <AntiZombieSummary data={adaptDossierToAntiZombieSummary(a)} variant="compact" />}</article>)}</section>
   </>;
 }
 
-function adaptFaustinDossierToAntiZombieSummary(anomaly: Anomaly, queue: 'qualify'|'late'|'proof'): AntiZombieSummaryData {
-  return {
-    status:anomaly.status,
-    responsible:anomaly.owner === 'Non affectée' ? null : anomaly.owner,
-    nextAction:queue === 'proof' ? 'Obtenir la preuve' : 'Confirmer le diagnostic',
-    deadline:anomaly.due,
-    slaLabel:anomaly.delayed && anomaly.status !== 'Clôturée' ? 'En retard' : null,
-    isDelayed:anomaly.delayed && anomaly.status !== 'Clôturée',
-    isBlocked:false,
-    blockingActor:null,
-    blockingOrDelayReason:null,
-    expectedProof:anomaly.asset === 'WILO-01' ? 'Photo du manomètre et rapport d’intervention' : null,
-    lastHistoryActivity:null,
+function Manager({ anomalies, equipment, tab, setTab, onOpen }: { anomalies:Anomaly[]; equipment:EquipmentItem[]; tab:ManagerQueue; setTab:(v:ManagerQueue)=>void; onOpen:(id:string)=>void }) {
+  const groups:Record<ManagerQueue,Anomaly[]> = {
+    qualify:anomalies.filter((a) => a.status === 'À qualifier'),
+    late:anomalies.filter((a) => a.delayed && a.status !== 'Clôturée'),
+    unassigned:anomalies.filter((a) => !canonicalResponsible(a) && a.status !== 'Clôturée'),
+    proof:anomalies.filter((a) => a.proofPending),
+    reception:[],
+    reservations:[],
+    reopened:[],
   };
-}
-
-function Manager({ anomalies, equipment, tab, setTab, onOpen }: { anomalies:Anomaly[]; equipment:EquipmentItem[]; tab:'qualify'|'late'|'proof'; setTab:(v:'qualify'|'late'|'proof')=>void; onOpen:(id:string)=>void }) {
-  const groups = { qualify: anomalies.filter((a) => a.status === 'À qualifier'), late: anomalies.filter((a) => a.delayed && a.status !== 'Clôturée'), proof: anomalies.filter((a) => !a.proof && ['En intervention','En validation'].includes(a.status)) };
+  const queueMeta:Record<ManagerQueue,{label:string;short:string}> = {
+    qualify:{label:'À qualifier',short:'AQ'},
+    late:{label:'En retard',short:'SLA'},
+    unassigned:{label:'Sans responsable',short:'SR'},
+    proof:{label:'Preuves à vérifier',short:'PV'},
+    reception:{label:'Réceptions',short:'RC'},
+    reservations:{label:'Réserves',short:'RS'},
+    reopened:{label:'Dossiers rouverts',short:'RO'},
+  };
   const active = groups[tab];
   const [selectedId, setSelectedId] = useState('ANO-0241');
   const [branch, setBranch] = useState<'internal'|'cost'|'external'>('cost');
@@ -1261,6 +1310,7 @@ function Manager({ anomalies, equipment, tab, setTab, onOpen }: { anomalies:Anom
   const focus = active.find((item) => item.id === selectedId) ?? active[0] ?? anomalies[0];
   const amountValue = Number(amount || 0);
   const overThreshold = amountValue >= 350000;
+  const branchLocked = focus.status === 'À qualifier' && !canonicalResponsible(focus);
   const priorityCode:Record<Priority,string> = { Critique:'C', Haute:'H', Moyenne:'M', Faible:'F' };
 
   return <div className="manager-pilot">
@@ -1285,7 +1335,7 @@ function Manager({ anomalies, equipment, tab, setTab, onOpen }: { anomalies:Anom
         <span className="kpi-icon red">SLA</span><div><strong>{groups.late.length}</strong><small>En retard</small></div>
       </button>
       <button type="button" aria-pressed={tab === 'proof'} className={tab === 'proof' ? 'active' : ''} onClick={() => {setTab('proof');setDecisionDone(false)}}>
-        <span className="kpi-icon blue">PV</span><div><strong>{groups.proof.length}</strong><small>Preuves manquantes</small></div>
+        <span className="kpi-icon blue">PV</span><div><strong>{groups.proof.length}</strong><small>Preuves à vérifier</small></div>
       </button>
       <div className="completion" aria-label="Score de traitement 86 sur 100">
         <div><span>Score traitement</span><b>86/100</b></div>
@@ -1294,21 +1344,20 @@ function Manager({ anomalies, equipment, tab, setTab, onOpen }: { anomalies:Anom
       </div>
     </section>
 
+    <WorkflowAnalytics items={anomalies.map((item) => ({ ...item, owner:canonicalResponsible(item) ?? 'Non affectée' }))} variant="manager" />
     <OperationalAnalytics equipment={equipment} variant="manager" />
 
     <section className="fm-decision-layout">
       <article className="panel fm-inbox">
         <div className="queue-tabs" role="tablist" aria-label="Files de travail">
-          <button type="button" role="tab" aria-selected={tab === 'qualify'} className={tab === 'qualify' ? 'active' : ''} onClick={() => setTab('qualify')}>À qualifier <span>{groups.qualify.length}</span></button>
-          <button type="button" role="tab" aria-selected={tab === 'late'} className={tab === 'late' ? 'active' : ''} onClick={() => setTab('late')}>Retards <span>{groups.late.length}</span></button>
-          <button type="button" role="tab" aria-selected={tab === 'proof'} className={tab === 'proof' ? 'active' : ''} onClick={() => setTab('proof')}>Preuves <span>{groups.proof.length}</span></button>
+          {(Object.keys(queueMeta) as ManagerQueue[]).map((key) => <button type="button" role="tab" key={key} aria-selected={tab === key} className={tab === key ? 'active' : ''} onClick={() => setTab(key)}>{queueMeta[key].label} <span>{groups[key].length}</span></button>)}
         </div>
         <div className="fm-inbox-list">
           {active.length ? active.map((item) => <button type="button" key={item.id} aria-pressed={focus.id === item.id} className={focus.id === item.id ? 'active' : ''} onClick={() => {setSelectedId(item.id);setDecisionDone(false)}}>
             <span className={`queue-mark ${priorityTone(item.priority)}`} aria-label={`Priorité ${item.priority}`}>{priorityCode[item.priority]}</span>
-            <div><span>{item.asset} · {item.id}</span><b>{item.title}</b><small>{item.owner} · échéance {item.due}</small></div>
+            <div><span>{item.asset} · {item.id}</span><b>{item.title}</b><small>{canonicalResponsible(item) ?? 'Responsable non attribué'} · échéance {item.due}</small>{externalActorConcerned(item) && <small>Acteur externe concerné : {externalActorConcerned(item)}</small>}</div>
             <Badge tone={priorityTone(item.priority)}>{item.priority}</Badge>
-          </button>) : <div className="empty-state compact"><span>✓</span><h3>File à jour</h3><p>Aucune action dans cette catégorie.</p></div>}
+          </button>) : <div className="empty-state compact"><span>{['reception','reservations','reopened'].includes(tab) ? '⌁' : '✓'}</span><h3>{['reception','reservations','reopened'].includes(tab) ? 'Donnée non raccordée' : 'File à jour'}</h3><p>{['reception','reservations','reopened'].includes(tab) ? 'La source métier canonique de cette file doit encore être raccordée.' : 'Aucune action dans cette catégorie.'}</p></div>}
         </div>
       </article>
 
@@ -1318,27 +1367,28 @@ function Manager({ anomalies, equipment, tab, setTab, onOpen }: { anomalies:Anom
           <button type="button" className="secondary-button" onClick={() => onOpen(focus.id)}>Voir le dossier complet</button>
         </div>
 
-        <AntiZombieSummary data={adaptFaustinDossierToAntiZombieSummary(focus, tab)} />
+        <AntiZombieSummary data={adaptDossierToAntiZombieSummary(focus)} variant="standard" />
 
-        <div className="fm-section-title"><div><span>1</span><p><b>Choisir la branche de traitement</b><small>Une décision explicite oriente le reste du dossier.</small></p></div></div>
-        <div className="branch-selector" aria-label="Branche de traitement">
-          <button type="button" aria-pressed={branch === 'internal'} className={branch === 'internal' ? 'active' : ''} onClick={() => {setBranch('internal');setAmount('0')}}><span>A</span><b>Interne sans coût</b><small>Action dans le périmètre agent</small></button>
-          <button type="button" aria-pressed={branch === 'cost'} className={branch === 'cost' ? 'active' : ''} onClick={() => setBranch('cost')}><span>B</span><b>Interne avec coût</b><small>Achat ou petite prestation</small></button>
-          <button type="button" aria-pressed={branch === 'external'} className={branch === 'external' ? 'active' : ''} onClick={() => setBranch('external')}><span>C</span><b>Intervention externe</b><small>Devis et prestataire</small></button>
+        <div className="fm-section-title"><div><span>1</span><p><b>{branchLocked ? 'Préparer la qualification et l’affectation' : 'Choisir la branche de traitement'}</b><small>{branchLocked ? 'Le diagnostic agent doit être enregistré avant le choix de la branche.' : 'Une décision explicite oriente le reste du dossier.'}</small></p></div></div>
+        <div className={`branch-selector ${branchLocked ? 'is-locked' : ''}`} aria-label="Branche de traitement" aria-disabled={branchLocked}>
+          <button type="button" disabled={branchLocked} aria-pressed={branch === 'internal'} className={branch === 'internal' ? 'active' : ''} onClick={() => {setBranch('internal');setAmount('0')}}><span>A</span><b>Interne sans coût</b><small>Action dans le périmètre agent</small></button>
+          <button type="button" disabled={branchLocked} aria-pressed={branch === 'cost'} className={branch === 'cost' ? 'active' : ''} onClick={() => setBranch('cost')}><span>B</span><b>Interne avec coût</b><small>Achat ou petite prestation</small></button>
+          <button type="button" disabled={branchLocked} aria-pressed={branch === 'external'} className={branch === 'external' ? 'active' : ''} onClick={() => setBranch('external')}><span>C</span><b>Intervention externe</b><small>Devis et entreprise référencée</small></button>
         </div>
+        {branchLocked && <div className="branch-lock-note" role="note"><span>⌁</span><div><b>Choix de branche indisponible à cette étape</b><small>Action actuelle : qualifier, affecter, puis attendre le diagnostic confirmé.</small></div></div>}
 
         <div className="fm-decision-fields">
-          <label className="field">Responsable<select defaultValue={focus.asset === 'WILO-01' || focus.asset === 'RIA-01' ? 'Sylvain DOUANE' : 'Évariste DJE'}><option>Sylvain DOUANE</option><option>Évariste DJE</option><option>Laetitia ATTOH</option></select></label>
-          <label className="field">Échéance<input type="date" defaultValue="2026-08-28" /></label>
-          <label className="field">Coût estimé (FCFA)<input type="number" min="0" step="10000" value={amount} onChange={(event) => setAmount(event.target.value)} disabled={branch === 'internal'} /></label>
+          <label className="field proposed-field">Nouveau responsable proposé<small>Valeur actuelle : {canonicalResponsible(focus) ?? 'Responsable non attribué'}</small>{externalActorConcerned(focus) && <small>Acteur externe concerné : {externalActorConcerned(focus)}</small>}<select key={`owner-${focus.id}`} defaultValue={focus.asset === 'WILO-01' || focus.asset === 'RIA-01' ? 'Sylvain DOUANE' : 'Évariste DJE'}><option>Sylvain DOUANE</option><option>Évariste DJE</option><option>Laetitia ATTOH</option></select></label>
+          <label className="field proposed-field">Nouvelle échéance proposée<small>Valeur actuelle : {focus.due}</small><input key={`due-${focus.id}`} type="datetime-local" defaultValue="2026-08-28T12:00" /></label>
+          <label className="field proposed-field">Coût estimé proposé (FCFA)<small>Non enregistré</small><input type="number" min="0" step="10000" value={amount} onChange={(event) => setAmount(event.target.value)} disabled={branchLocked || branch === 'internal'} /></label>
         </div>
 
-        <div className={`authority-result ${overThreshold ? 'escalate' : 'delegated'}`} role="status">
-          <span>{overThreshold ? '↑' : '✓'}</span><div><b>{overThreshold ? 'Validation de l’Administration requise' : 'Décision dans la délégation de Faustin'}</b><small>{overThreshold ? `${formatMoney(amountValue)} dépasse ou atteint le seuil de 350 000 FCFA.` : `${formatMoney(amountValue)} reste sous le seuil validé.`}</small></div>
+        <div className={`authority-result ${branchLocked ? 'pending' : overThreshold ? 'escalate' : 'delegated'}`} role="status">
+          <span>{branchLocked ? '⌁' : overThreshold ? '↑' : '✓'}</span><div><b>{branchLocked ? 'Qualification requise avant arbitrage financier' : overThreshold ? 'Validation de l’Administration requise' : 'Décision dans la délégation de Faustin'}</b><small>{branchLocked ? 'Le seuil de 350 000 FCFA sera appliqué après le diagnostic et le choix de la branche.' : overThreshold ? `${formatMoney(amountValue)} dépasse ou atteint le seuil de 350 000 FCFA.` : `${formatMoney(amountValue)} reste sous le seuil validé.`}</small></div>
         </div>
-        <label className="field">Décision motivée<textarea defaultValue={overThreshold ? 'Intervention à soumettre avec devis et justification de continuité de service.' : 'Intervention autorisée pour rétablir le fonctionnement et éviter une récidive.'} /></label>
-        <div className="fm-decision-actions"><small>Maquette interactive · aucune écriture en base</small><button type="button" className="secondary-button" onClick={() => setDecisionDone(false)}>Enregistrer le brouillon</button><button type="button" className="primary-button" onClick={() => setDecisionDone(true)}>{overThreshold ? 'Soumettre à l’Administration' : 'Décider et affecter'}</button></div>
-        {decisionDone && <div className="inline-success" role="status"><span>✓</span><p><b>{overThreshold ? 'Arbitrage prêt à être soumis' : 'Décision prête à être enregistrée'}</b><small>Le dossier possède maintenant un responsable, une prochaine action et une échéance.</small></p></div>}
+        <label className="field">{branchLocked ? 'Note de qualification' : 'Décision motivée'}<textarea defaultValue={branchLocked ? 'Affectation proposée pour réaliser et confirmer le diagnostic terrain.' : overThreshold ? 'Intervention à soumettre avec devis et justification de continuité de service.' : 'Intervention autorisée pour rétablir le fonctionnement et éviter une récidive.'} /></label>
+        <div className="fm-decision-actions"><small>Proposition de maquette · la synthèse conserve les valeurs actuelles tant qu’aucune transaction n’est confirmée</small><button type="button" className="secondary-button" onClick={() => setDecisionDone(false)}>Conserver en brouillon</button><button type="button" className="primary-button" onClick={() => setDecisionDone(true)}>{branchLocked ? 'Préparer l’affectation' : overThreshold ? 'Soumettre à l’Administration' : 'Préparer la décision'}</button></div>
+        {decisionDone && <div className="inline-success" role="status"><span>✓</span><p><b>Proposition préparée</b><small>Elle reste distincte de l’état actuel du dossier jusqu’à son enregistrement côté serveur.</small></p></div>}
       </article>
     </section>
   </div>;
@@ -1364,9 +1414,20 @@ function Detail({ anomaly, onBack, onStatus, onProof, onVerify, readOnly = false
     {anomaly.priority === 'Critique' && !anomaly.proof && <section className="critical-banner dossier-critical"><span>!</span><div><b>Clôture verrouillée jusqu’à l’acceptation de la preuve</b><p>{anomaly.proofPending ? 'Une preuve a été déposée et attend le contrôle de Faustin.' : 'La matrice des preuves exige une pièce conforme avant clôture.'}</p></div>{!readOnly && !anomaly.proofPending && <button disabled={busy} onClick={chooseProof}>＋ Ajouter une preuve</button>}</section>}
     <nav className="dossier-tabs" aria-label="Sections du dossier"><button className={section === 'overview' ? 'active' : ''} onClick={() => setSection('overview')}>Vue d’ensemble</button><button className={section === 'finance' ? 'active' : ''} onClick={() => setSection('finance')}>Coûts & décision</button><button className={section === 'evidence' ? 'active' : ''} onClick={() => setSection('evidence')}>Preuves <span>{anomaly.proof ? '1' : '0'}</span></button><button className={section === 'history' ? 'active' : ''} onClick={() => setSection('history')}>Historique</button></nav>
 
-    {section === 'overview' && <section className="dossier-overview">
-      <div className="dossier-main-stack"><article className="panel dossier-steering"><div className="panel-head"><div><p className="design-kicker">PILOTAGE DU DOSSIER</p><h3>Ce qui doit se passer ensuite</h3></div><Badge tone={statusTone(anomaly.status)}>{anomaly.status}</Badge></div><div className="steering-grid"><div className={anomaly.owner === 'Non affectée' ? 'missing' : ''}><span>Responsable</span><b>{anomaly.owner}</b><small>{anomaly.owner === 'Non affectée' ? 'À définir par Faustin' : 'Responsable actuel'}</small></div><div><span>Prochaine action</span><b>{anomaly.status === 'À qualifier' ? 'Qualifier et affecter' : anomaly.status === 'En intervention' ? 'Terminer l’intervention' : 'Contrôler le dossier'}</b><small>Action attendue</small></div><div className={anomaly.delayed ? 'missing' : ''}><span>Échéance</span><b>{anomaly.due}</b><small>{anomaly.delayed ? 'Justification requise' : 'Délai suivi'}</small></div><div className={!anomaly.proof ? 'missing' : ''}><span>Preuve attendue</span><b>{anomaly.proof ? 'Acceptée' : anomaly.asset === 'WILO-01' ? 'Photo manomètre + rapport' : 'Selon le type de dossier'}</b><small>Matrice de preuves</small></div></div></article><article className="panel dossier-description"><div className="panel-head"><div><h3>Constat d’origine</h3><p>Enregistré directement depuis la ronde terrain</p></div><span>{anomaly.reported}</span></div><p>{anomaly.description}</p><div className="source-trace"><span>R</span><div><b>{anomaly.asset === 'WILO-01' ? 'Ronde Wilo quotidienne' : 'Constat terrain'}</b><small>Source traçable · aucune importation de reporting</small></div></div></article></div>
-      <aside className="dossier-side-stack"><article className="panel next-step-card"><p className="design-kicker">ACTION PRIORITAIRE</p><h3>{anomaly.status === 'À qualifier' ? 'Décision requise par Faustin' : 'Suivre l’action affectée'}</h3><p>{anomaly.status === 'À qualifier' ? 'Choisir la branche, le responsable et l’échéance avant de quitter le dossier.' : `Relancer ${anomaly.owner} si l’échéance n’est pas tenue.`}</p><button className="primary-button">{anomaly.status === 'À qualifier' ? 'Ouvrir la décision' : 'Relancer le responsable'}</button></article><article className="panel recurrence-card"><div><span>↻</span><p><b>Récurrence détectée</b><small>2 événements similaires sur 30 jours</small></p></div><p>Une action préventive sera proposée après clôture.</p></article></aside>
+    {section === 'overview' && <section className="dossier-three-zone">
+      <aside className="dossier-identity-column">
+        <article className="panel dossier-identity-card"><p className="design-kicker">IDENTITÉ & RISQUE</p><div className="identity-priority"><Badge tone={priorityTone(anomaly.priority)}>{anomaly.priority}</Badge><Badge tone={statusTone(anomaly.status)}>{anomaly.status}</Badge></div><dl><div><dt>Équipement</dt><dd>{anomaly.asset}</dd></div><div><dt>Zone</dt><dd>{anomaly.location}</dd></div><div><dt>Origine</dt><dd>{anomaly.asset === 'WILO-01' ? 'Ronde Wilo quotidienne' : 'Constat terrain'}</dd></div><div><dt>Responsable interne actuel</dt><dd className={!canonicalResponsible(anomaly) ? 'missing-value' : ''}>{canonicalResponsible(anomaly) ?? 'Responsable non attribué'}</dd></div>{externalActorConcerned(anomaly) && <div><dt>Acteur externe concerné</dt><dd>{externalActorConcerned(anomaly)}</dd></div>}<div><dt>Constaté le</dt><dd>{anomaly.reported}</dd></div></dl></article>
+        <article className="panel dossier-source-card"><span>R</span><div><b>Saisie directe</b><small>Source traçable · aucun import de reporting</small></div></article>
+      </aside>
+      <div className="dossier-activity-column">
+        <article className="panel dossier-description"><div className="panel-head"><div><p className="design-kicker">CONSTAT D’ORIGINE</p><h3>Situation observée</h3></div><span>{anomaly.reported}</span></div><p>{anomaly.description}</p></article>
+        <article className="panel dossier-diagnostic-card"><div className="panel-head"><div><p className="design-kicker">DIAGNOSTIC & INTERVENTION</p><h3>Progression métier</h3></div><Badge tone={statusTone(anomaly.status)}>{workflow[currentStep]}</Badge></div><div className="diagnostic-state"><span>⌁</span><div><b>{anomaly.status === 'À qualifier' || anomaly.status === 'Affectée' ? 'Diagnostic technique attendu' : 'Diagnostic enregistré dans le cycle'}</b><p>{anomaly.status === 'À qualifier' || anomaly.status === 'Affectée' ? 'Aucun diagnostic canonique n’est disponible dans la projection actuelle.' : 'Consultez l’historique pour les détails attribués et horodatés.'}</p></div></div><div className="compact-workflow">{workflow.map((item,index) => <span key={item} className={index < currentStep ? 'done' : index === currentStep ? 'current' : ''}><i>{index < currentStep ? '✓' : index+1}</i>{item}</span>)}</div></article>
+      </div>
+      <aside className="dossier-decision-column">
+        <AntiZombieSummary data={adaptDossierToAntiZombieSummary(anomaly)} variant="detailed" />
+        <article className="panel next-step-card"><p className="design-kicker">ACTION PRINCIPALE</p><h3>{nextActionFor(anomaly)}</h3><p>{!canonicalResponsible(anomaly) ? 'Faustin doit d’abord attribuer un responsable interne autorisé.' : `Responsable interne actuel : ${canonicalResponsible(anomaly)}.`}</p>{externalActorConcerned(anomaly) && <small>Acteur externe concerné : {externalActorConcerned(anomaly)}</small>}<button className="primary-button">{anomaly.status === 'À qualifier' ? 'Ouvrir la qualification' : anomaly.status === 'Clôturée' ? 'Consulter la clôture' : 'Poursuivre le traitement'}</button></article>
+        <article className="panel recurrence-card"><div><span>↻</span><p><b>Récurrence à confirmer</b><small>Historique insuffisant</small></p></div><p>Aucune récurrence n’est affirmée sans événements métier datés.</p></article>
+      </aside>
     </section>}
 
     {section === 'finance' && <section className="dossier-two-columns"><article className="panel finance-decision-card"><div className="panel-head"><div><p className="design-kicker">BRANCHE DE TRAITEMENT</p><h3>{estimatedCost ? 'Intervention avec coût' : 'Intervention interne sans coût'}</h3></div><Badge tone={overThreshold ? 'orange' : 'success'}>{overThreshold ? 'ADMINISTRATION' : 'DÉLÉGATION FM'}</Badge></div><div className="finance-amount"><span>Coût estimé</span><strong>{formatMoney(estimatedCost)}</strong><small>Seuil d’approbation : 350 000 FCFA</small></div><div className={`authority-result ${overThreshold ? 'escalate' : 'delegated'}`}><span>{overThreshold ? '↑' : '✓'}</span><div><b>{overThreshold ? 'Arbitrage de l’Administration' : 'Faustin peut décider'}</b><small>{overThreshold ? 'Le montant dépasse la délégation validée.' : 'Le montant reste sous le seuil validé.'}</small></div></div><div className="decision-audit"><span><b>Décision</b>{overThreshold ? 'À soumettre' : 'Autorisée dans la délégation'}</span><span><b>Motif</b>Continuité de service et prévention de récidive</span><span><b>Urgence</b>Non déclarée</span></div></article><aside className="panel quote-card"><p className="design-kicker">PIÈCES FINANCIÈRES</p><h3>Devis et engagement</h3><div className="quote-file"><span>▧</span><p><b>{estimatedCost ? 'DEVIS-INTERVENTION.pdf' : 'Aucun devis requis'}</b><small>{estimatedCost ? 'Reçu · à contrôler' : 'Branche interne sans coût'}</small></p></div><button className="secondary-button">Ajouter une pièce</button></aside></section>}
@@ -1375,6 +1436,17 @@ function Detail({ anomaly, onBack, onStatus, onProof, onVerify, readOnly = false
 
     {section === 'history' && <section className="panel dossier-history"><div className="panel-head"><div><h3>Historique complet</h3><p>Chaque action, auteur et date restent traçables</p></div><Badge>6 ÉTAPES</Badge></div><div className="history-grid">{workflow.map((item,index) => <article key={item} className={index < currentStep ? 'done' : index === currentStep ? 'current' : ''}><span>{index < currentStep ? '✓' : index+1}</span><div><b>{item}</b><small>{index === 0 ? anomaly.reported : index < currentStep ? 'Étape validée et historisée' : index === currentStep ? 'Étape actuelle du dossier' : 'En attente'}</small></div><em>{index < currentStep ? 'TERMINÉ' : index === currentStep ? 'EN COURS' : 'À VENIR'}</em></article>)}</div></section>}
   </>;
+}
+
+function MeasureRange({ label, value, min, max, unit }: { label:string; value:number; min:number; max:number; unit:string }) {
+  const valid = Number.isFinite(value);
+  const inRange = valid && value >= min && value <= max;
+  const position = valid ? Math.max(0,Math.min(100,((value - min) / Math.max(.01,max - min)) * 100)) : 0;
+  return <article className={`measure-range ${!valid ? 'unknown' : inRange ? 'in-range' : 'out-range'}`}>
+    <div><span>{label}</span><b>{valid ? `${value.toLocaleString('fr-FR')} ${unit}` : 'Valeur non renseignée'}</b><em>{valid ? inRange ? 'DANS LA PLAGE' : 'HORS PLAGE' : 'À COMPLÉTER'}</em></div>
+    <div className="measure-range-track" aria-label={`${label} : ${valid ? value : 'valeur absente'} ${unit}, plage attendue ${min} à ${max} ${unit}`}><i style={{'--measure-position':`${position}%`} as React.CSSProperties} /></div>
+    <small><span>Minimum {min} {unit}</span><span>Maximum {max} {unit}</span></small>
+  </article>;
 }
 
 function Report({ persona, onNavigate }: { persona:Persona; onNavigate:(v:View)=>void }) {
@@ -1433,7 +1505,7 @@ function Report({ persona, onNavigate }: { persona:Persona; onNavigate:(v:View)=
 
         {step === 0 && <div className="wilo-fields"><div className="context-grid"><div><span>Agent</span><b>{persona.name}</b><small>{persona.role}</small></div><div><span>Début</span><b>09:42</b><small>27 août 2026</small></div><div><span>Dernière ronde</span><b>Hier · 08:11</b><small>1 anomalie ouverte</small></div></div><label className="field">Type de ronde<select defaultValue="Quotidienne"><option>Quotidienne</option><option>Après intervention</option><option>Contrôle exceptionnel</option></select></label><div className="wilo-callout"><span>i</span><p><b>Point d’attention transmis</b><small>Vérifier la récidive du défaut pompe P1 et la pression de refoulement.</small></p></div></div>}
 
-        {step === 1 && <div className="wilo-fields"><div className="measure-grid"><label><span>Pression réseau</span><div><input value={pressure} inputMode="decimal" onChange={(event) => setPressure(event.target.value)} /><b>bar</b></div><small>Plage attendue : 3,0 à 4,5 bar</small></label><label><span>Niveau bâche</span><div><input value={tankLevel} inputMode="numeric" onChange={(event) => setTankLevel(event.target.value)} /><b>%</b></div><small>Minimum attendu : 40 %</small></label></div>{hasPressureAlert && <div className="measure-alert"><span>!</span><div><b>Écart détecté automatiquement</b><small>La pression saisie est inférieure au seuil. Un constat sera proposé à Faustin.</small></div></div>}<label className="field">Stabilité du manomètre<select><option>Stable</option><option>Oscillation légère</option><option>Oscillation importante</option></select></label></div>}
+        {step === 1 && <div className="wilo-fields"><div className="measure-grid"><label><span>Pression réseau</span><div><input value={pressure} inputMode="decimal" onChange={(event) => setPressure(event.target.value)} /><b>bar</b></div><small>Plage attendue : 3,0 à 4,5 bar</small></label><label><span>Niveau bâche</span><div><input value={tankLevel} inputMode="numeric" onChange={(event) => setTankLevel(event.target.value)} /><b>%</b></div><small>Plage de contrôle : 40 à 100 %</small></label></div><div className="measure-range-grid"><MeasureRange label="Pression réseau" value={pressureValue} min={3} max={4.5} unit="bar" /><MeasureRange label="Niveau de bâche" value={Number(tankLevel)} min={40} max={100} unit="%" /></div>{hasPressureAlert && <div className="measure-alert"><span>!</span><div><b>Écart détecté automatiquement</b><small>La pression saisie est inférieure au seuil. Un constat sera proposé à Faustin.</small></div></div>}<label className="field">Stabilité du manomètre<select><option>Stable</option><option>Oscillation légère</option><option>Oscillation importante</option></select></label></div>}
 
         {step === 2 && <div className="wilo-fields"><div className="check-grid">{[['auto','Mode automatique actif','Commande générale'],['p1','Pompe P1 disponible','Pompe prioritaire'],['p2','Pompe P2 disponible','Pompe de secours'],['leak','Absence de fuite active','Collecteur et raccords']].map(([key,title,detail]) => <button type="button" key={key} className={checks[key] ? 'checked' : 'unchecked'} onClick={() => setCheck(key)}><span>{checks[key] ? '✓' : '!'}</span><p><b>{title}</b><small>{detail}</small></p><em>{checks[key] ? 'Conforme' : 'À signaler'}</em></button>)}</div></div>}
 
@@ -1446,7 +1518,7 @@ function Report({ persona, onNavigate }: { persona:Persona; onNavigate:(v:View)=
 
       <aside className="wilo-aside">
         <article className="panel next-action-card"><p className="design-kicker">À SURVEILLER</p><span className="next-action-icon">!</span><h3>Pompe P1 indisponible</h3><p>Deuxième défaut en sept jours. Le réarmement provisoire ne permet pas la clôture.</p><div><span>Responsable pressenti</span><b>Sylvain DOUANE</b></div></article>
-        <article className="panel score-explain-card"><div><span>SCORE WILO</span><b>78/100</b></div><ul><li><i className="down" /> Pression sous le seuil <b>-8</b></li><li><i className="down" /> Défaut P1 récurrent <b>-10</b></li><li><i className="up" /> Maintenance à jour <b>+6</b></li></ul><button type="button">Voir le détail du calcul</button></article>
+        <article className="panel score-explain-card"><div><span>SCORE WILO</span><b>78/100</b></div><div className="score-freshness"><span><b>État</b>Surveillance</span><span><b>Variation</b>Indisponible</span><span><b>Fraîcheur</b>Non synchronisée</span></div><ul><li><i className="down" /> Pression sous le seuil <b>-8</b></li><li><i className="down" /> Défaut P1 récurrent <b>-10</b></li><li><i className="up" /> Maintenance à jour <b>+6</b></li></ul><p className="analytics-note">Score de maquette : la date de calcul et l’historique réel ne sont pas encore disponibles.</p><button type="button">Voir le détail du calcul</button></article>
       </aside>
     </section>
 

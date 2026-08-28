@@ -23,7 +23,7 @@ requireAll('Modules initiaux', page, [
   'GE-01', 'WILO-01', 'RIA-01', 'ASC-A1', 'ASC-A2', 'IRR-01', 'RND-LET',
 ])
 requireAll('Référentiel prestataires sans accès direct', page, ['DMC', 'ATA-CI', 'SECURISYS', 'ALTA-VENTURE', 'Aucun accès direct pour les prestataires'])
-requireAll('Décisions Direction', page, ['Approuver', 'Refuser', 'Renvoyer à Faustin', 'CAPEX', 'OPEX'])
+requireAll('Décisions Administration', page, ['Approuver', 'Refuser', 'Renvoyer à Faustin', 'CAPEX', 'OPEX'])
 requireAll('Parcours terrain et preuve', page, [
   'Soumettre à l’Administration', 'Réarmement provisoire', 'Ajouter une preuve', 'Déposer pour validation de Faustin',
 ])
@@ -44,7 +44,7 @@ requireAll('Listbox persona accessible', page, [
   'aria-haspopup="listbox"', 'role="listbox"', 'role="option"', 'aria-selected',
   "event.key === 'ArrowDown'", "event.key === 'ArrowUp'", "event.key === 'Enter'", "event.key === 'Escape'", "event.key === 'Tab'",
 ])
-requireAll('Groupes de personas', page, ["label:'Direction'", "label:'Management'", "label:'Terrain'"])
+requireAll('Groupes de personas', page, ["label:'Administration'", "label:'Management'", "label:'Terrain'"])
 checks.push({
   label:'Matrice de dépôt nominative visible',
   ok:page.includes('Évariste et Sylvain sont les seuls agents internes habilités') && !page.includes("personaId:'readonly'"),
@@ -67,7 +67,16 @@ checks.push({
   missing:page.includes('Importer un rapport de ronde') ? ['ancien import encore présent'] : [],
 })
 requireAll('Délégation et dossier cible', page, [
-  '350 000 FCFA', 'Décision dans la délégation de Faustin', 'AntiZombieSummary', 'dossier-workflow',
+  '350 000 FCFA', 'Décision dans la délégation de Faustin', 'AntiZombieSummary', 'dossier-workflow', 'dossier-three-zone',
+])
+requireAll('Clôture design des cockpits', page, [
+  'WorkflowAnalytics', 'Sans responsable', 'Preuves à vérifier', 'Réceptions', 'Réserves', 'Dossiers rouverts',
+])
+requireAll('Double mission Laetitia', page, [
+  'mission-switch', 'Rondes, constats et brouillons hors ligne', 'Devis, paiements et autorisations',
+])
+requireAll('Mesures Wilo explicables', page, [
+  'MeasureRange', 'DANS LA PLAGE', 'HORS PLAGE', 'Variation</b>Indisponible', 'Fraîcheur</b>Non synchronisée',
 ])
 requireAll('Verrou critique et retour Direction', page, [
   "selected.priority === 'Critique' && !selected.proof", 'retour envoyé à Faustin', 'Confirmer et notifier Faustin',

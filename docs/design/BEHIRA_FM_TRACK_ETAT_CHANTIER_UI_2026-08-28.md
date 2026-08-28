@@ -1,73 +1,81 @@
-# BEHIRA FM Track — État du chantier UI au checkpoint
+# BEHIRA FM Track — État du chantier UI
 
-Date : 28 août 2026  
-État : codage en pause après finalisation de la modification atomique en cours
+Date : 28 août 2026
 
-## Fichiers modifiés depuis le dernier checkpoint
+État : **volet design terminé et prêt pour validation métier**
 
-- `app/page.tsx` : ajout des composants de visualisation et raccordement aux écrans Direction et Faustin.
-- `app/globals.css` : tokens de séries et styles responsive des visualisations.
-- `docs/design/DESIGN.md` : nouvelle source de vérité fonctionnelle UI.
-- `docs/design/BEHIRA_FM_TRACK_AUDIT_UI_2026-08-28.md` : audit recalibré et matrice de conformité.
-- `docs/design/BEHIRA_FM_TRACK_DIRECTION_ARTISTIQUE.md` : lien vers la nouvelle source de vérité.
-- `docs/design/BEHIRA_FM_TRACK_PLAN_IMPLEMENTATION_UI_RECALE.md` : ordre de réalisation corrigé.
-- `AGENTS.md` : ordre de lecture des documents UI mis à jour.
+Publication : **non effectuée**
 
-## Composants créés ou adaptés
+## Verdict
 
-- `ScoreRing` : représentation accessible du score bâtiment.
-- `OperationalAnalytics` : score bâtiment, causes, état historique insuffisant, comparaison des équipements et scores agents déjà présents.
-- `Dashboard` : insertion du bloc analytique Direction.
-- `Manager` : insertion du même bloc dans le cockpit Faustin et réception de la liste des équipements.
+Le système visuel, les principaux écrans par rôle et leurs comportements responsive sont suffisamment cohérents pour clôturer le chantier de conception. La prochaine phase n'est plus une refonte graphique : elle concerne le raccordement des données canoniques, les transactions métier et la recette avec l'Administration et Faustin.
 
-## Écrans concernés
+## Écrans finalisés
 
-- Tableau de bord Direction.
-- Centre de décision de Faustin.
+- cockpit Administration : arbitrages, seuil, utilisateurs, scores et lecture du flux ;
+- cockpit Faustin : KPI, pipeline, gravité, continuité, décision et délégation ;
+- registre : comparaison compacte et synthèse de continuité dépliable ;
+- dossier central : identité/risque, activité/diagnostic, décision/continuité ;
+- espaces Évariste et Sylvain : actions terrain et dépôt interne de rapports prestataires ;
+- pilote Wilo : saisie, plages attendues, hors ligne et score explicable ;
+- espace Laetitia : séparation nette Terrain / Administratif ;
+- authentification et sélection des personas de démonstration ;
+- responsive desktop, tablette et mobile.
 
-Aucun autre écran n’a été refondu dans cette modification atomique.
+## Composants structurants
 
-## Règles métier touchées
+- `AntiZombieSummary`, renommé visuellement « Continuité de traitement », partagé entre Faustin, le registre et le dossier ;
+- `WorkflowAnalytics` pour le pipeline, la gravité et les signaux de continuité ;
+- `OperationalAnalytics` pour les scores et tendances ;
+- `MeasureRange` pour rendre les mesures Wilo lisibles et explicables ;
+- listbox de persona accessible et navigation adaptée à chaque rôle.
 
-Aucune. Les changements ajoutent uniquement de la présentation et des filtres locaux. Aucun statut, rôle, permission, seuil, validation, preuve, responsabilité, workflow, mutation Supabase ou comportement hors ligne n’a changé.
+## Principes confirmés
 
-## Terminé
+- bleu nuit BEHIRA, accent orange, fonds clairs, bordures fines et ombres minimales ;
+- aucune double bordure colorée ;
+- états exprimés par un texte en plus de la couleur ;
+- priorité donnée à la prochaine action, au responsable interne, à l'échéance et au blocage ;
+- un prestataire reste un acteur externe concerné, jamais le responsable interne du dossier ;
+- données absentes signalées explicitement, sans valeur inventée ;
+- seuil Administration conservé à 350 000 FCFA ;
+- verrou critique avec preuve conservé ;
+- aucune logique métier, permission, migration ou donnée Supabase modifiée dans cette clôture.
 
-- Composants compilables et accessibles.
-- Score ring courant et facteurs issus des données de maquette existantes.
-- Comparaison des scores équipements.
-- Présentation des scores agents déjà présents avec avertissement de non-sanction.
-- Sélecteur 7/30/90 jours avec état honnête « données historiques insuffisantes ».
-- Responsive codé et réduction de mouvement prévue.
-- Audit, DESIGN et plan recalibrés.
-
-## Partiel
-
-- Data visualization globale : le catalogue complet reste à réaliser.
-- Pilote Faustin : files complémentaires, pipeline et anti-zombie partagé absents.
-- Cockpit Administration : pipeline, heatmap et arbitrages enrichis absents.
-- Scores : période, échantillon, méthode, variation et fraîcheur non alimentés.
-
-## Absent ou non commencé
-
-- `AntiZombieSummary` partagé.
-- Dossier central desktop en trois zones.
-- Pipeline métier graphique.
-- Répartition par gravité.
-- Ouvertures / clôtures réelles.
-- Heatmap des 76 zones.
-- Plages attendues Wilo.
-- Séparation Terrain / Administratif de Laetitia.
-
-## Publication
-
-Le code du checkpoint n’est pas publié. La version actuellement en ligne reste la version UI-0/UI-1 précédemment validée. Toute reprise attend une validation explicite.
-
-## Tests exécutés
+## Contrôles réalisés
 
 - lint : réussi ;
 - compilation de production : réussie ;
-- 28 contrôles personas : réussis ;
-- 20 contrôles d’authentification : réussis ;
-- préparation Supabase : réussie ;
-- 9 contrôles statiques de bordures et focus : réussis.
+- contrôles `AntiZombieSummary` : 11/11 ;
+- contrôles personas et responsive : 31/31 ;
+- contrôles d'authentification : 20/20 ;
+- audit statique bordures/focus : 9/9 ;
+- revue réelle dans le navigateur : 1440, 768 et 390 px ;
+- navigation clavier : focus visible de 2 px ;
+- console navigateur : aucune erreur ;
+- absence de débordement horizontal global confirmée sur mobile et tablette.
+
+## Limites volontairement affichées
+
+Ces points ne bloquent pas la clôture du design, mais devront être raccordés lors des lots fonctionnels :
+
+- historique canonique et dernière activité réelle ;
+- prochaine action, blocage et preuve attendue issus du futur modèle cible ;
+- files Réceptions, Réserves et Dossiers rouverts ;
+- tendances historiques, délai moyen et heatmap des 76 zones ;
+- calcul serveur des scores et fraîcheur des données ;
+- persistance des propositions de qualification et de décision.
+
+## Captures de référence
+
+- `outputs/design/BEHIRA_cloture_design_faustin_desktop.png`
+- `outputs/design/BEHIRA_cloture_design_administration_desktop.png`
+- `outputs/design/BEHIRA_cloture_design_registre_desktop.png`
+- `outputs/design/BEHIRA_cloture_design_dossier_desktop.png`
+- `outputs/design/BEHIRA_cloture_design_faustin_mobile.png`
+- `outputs/design/BEHIRA_cloture_design_laetitia_mobile.png`
+- `outputs/design/BEHIRA_cloture_design_wilo_mobile.png`
+
+## Décision de passage
+
+Après validation visuelle par le porteur de projet, le chantier peut passer au **raccordement fonctionnel du modèle anti-dossier-zombie**, sans nouvelle refonte globale de l'interface.
