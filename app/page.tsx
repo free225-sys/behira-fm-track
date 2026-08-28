@@ -1174,24 +1174,90 @@ function Manager({ anomalies, tab, setTab, onOpen }: { anomalies:Anomaly[]; tab:
   const focus = active.find((item) => item.id === selectedId) ?? active[0] ?? anomalies[0];
   const amountValue = Number(amount || 0);
   const overThreshold = amountValue >= 350000;
-  return <>
-    <section className="manager-command-hero"><div><p className="eyebrow-light">CENTRE DE DÉCISION · FACILITY MANAGER</p><h2>Décider, affecter, débloquer</h2><p>Chaque dossier doit ressortir avec un responsable, une prochaine action et une échéance.</p></div><div className="delegation-chip"><span>DÉLÉGATION ACTIVE</span><b>&lt; 350 000 FCFA</b><small>Au-delà : validation Administration</small></div></section>
-    <section className="manager-kpis manager-kpis-target"><button className={tab === 'qualify' ? 'active' : ''} onClick={() => {setTab('qualify');setDecisionDone(false)}}><span className="kpi-icon amber">?</span><div><strong>{groups.qualify.length}</strong><small>À qualifier</small></div></button><button className={tab === 'late' ? 'active' : ''} onClick={() => {setTab('late');setDecisionDone(false)}}><span className="kpi-icon red">!</span><div><strong>{groups.late.length}</strong><small>En retard</small></div></button><button className={tab === 'proof' ? 'active' : ''} onClick={() => {setTab('proof');setDecisionDone(false)}}><span className="kpi-icon blue">⌁</span><div><strong>{groups.proof.length}</strong><small>Preuves manquantes</small></div></button><div className="completion"><div><span>Score traitement</span><b>86/100</b></div><div className="completion-bar"><i style={{width:'86%'}} /></div><small>Délais 88 · réactivité 91 · preuves 79</small></div></section>
+  const priorityCode:Record<Priority,string> = { Critique:'C', Haute:'H', Moyenne:'M', Faible:'F' };
+
+  return <div className="manager-pilot">
+    <section className="manager-command-hero">
+      <div className="manager-heading-copy">
+        <p className="eyebrow-light">CENTRE DE DÉCISION · FACILITY MANAGER</p>
+        <h2>Décider, affecter, débloquer</h2>
+        <p>Chaque dossier ressort avec un responsable, une prochaine action et une échéance.</p>
+      </div>
+      <div className="delegation-chip" aria-label="Délégation financière active">
+        <span>DÉLÉGATION ACTIVE</span>
+        <b>&lt; 350 000 FCFA</b>
+        <small>Au-delà : validation de l’Administration</small>
+      </div>
+    </section>
+
+    <section className="manager-kpis manager-kpis-target" aria-label="Indicateurs opérationnels">
+      <button type="button" aria-pressed={tab === 'qualify'} className={tab === 'qualify' ? 'active' : ''} onClick={() => {setTab('qualify');setDecisionDone(false)}}>
+        <span className="kpi-icon amber">AQ</span><div><strong>{groups.qualify.length}</strong><small>À qualifier</small></div>
+      </button>
+      <button type="button" aria-pressed={tab === 'late'} className={tab === 'late' ? 'active' : ''} onClick={() => {setTab('late');setDecisionDone(false)}}>
+        <span className="kpi-icon red">SLA</span><div><strong>{groups.late.length}</strong><small>En retard</small></div>
+      </button>
+      <button type="button" aria-pressed={tab === 'proof'} className={tab === 'proof' ? 'active' : ''} onClick={() => {setTab('proof');setDecisionDone(false)}}>
+        <span className="kpi-icon blue">PV</span><div><strong>{groups.proof.length}</strong><small>Preuves manquantes</small></div>
+      </button>
+      <div className="completion" aria-label="Score de traitement 86 sur 100">
+        <div><span>Score traitement</span><b>86/100</b></div>
+        <div className="completion-bar" aria-hidden="true"><i style={{width:'86%'}} /></div>
+        <small>Délais 88 · réactivité 91 · preuves 79</small>
+      </div>
+    </section>
+
     <section className="fm-decision-layout">
-      <article className="panel fm-inbox"><div className="queue-tabs"><button className={tab === 'qualify' ? 'active' : ''} onClick={() => setTab('qualify')}>À qualifier <span>{groups.qualify.length}</span></button><button className={tab === 'late' ? 'active' : ''} onClick={() => setTab('late')}>Retards <span>{groups.late.length}</span></button><button className={tab === 'proof' ? 'active' : ''} onClick={() => setTab('proof')}>Preuves <span>{groups.proof.length}</span></button></div><div className="fm-inbox-list">{active.length ? active.map((item) => <button key={item.id} className={focus.id === item.id ? 'active' : ''} onClick={() => {setSelectedId(item.id);setDecisionDone(false)}}><span className={`queue-mark ${priorityTone(item.priority)}`}>!</span><div><span>{item.asset} · {item.id}</span><b>{item.title}</b><small>{item.owner} · échéance {item.due}</small></div><Badge tone={priorityTone(item.priority)}>{item.priority}</Badge></button>) : <div className="empty-state compact"><span>✓</span><h3>File à jour</h3><p>Aucune action dans cette catégorie.</p></div>}</div></article>
+      <article className="panel fm-inbox">
+        <div className="queue-tabs" role="tablist" aria-label="Files de travail">
+          <button type="button" role="tab" aria-selected={tab === 'qualify'} className={tab === 'qualify' ? 'active' : ''} onClick={() => setTab('qualify')}>À qualifier <span>{groups.qualify.length}</span></button>
+          <button type="button" role="tab" aria-selected={tab === 'late'} className={tab === 'late' ? 'active' : ''} onClick={() => setTab('late')}>Retards <span>{groups.late.length}</span></button>
+          <button type="button" role="tab" aria-selected={tab === 'proof'} className={tab === 'proof' ? 'active' : ''} onClick={() => setTab('proof')}>Preuves <span>{groups.proof.length}</span></button>
+        </div>
+        <div className="fm-inbox-list">
+          {active.length ? active.map((item) => <button type="button" key={item.id} aria-pressed={focus.id === item.id} className={focus.id === item.id ? 'active' : ''} onClick={() => {setSelectedId(item.id);setDecisionDone(false)}}>
+            <span className={`queue-mark ${priorityTone(item.priority)}`} aria-label={`Priorité ${item.priority}`}>{priorityCode[item.priority]}</span>
+            <div><span>{item.asset} · {item.id}</span><b>{item.title}</b><small>{item.owner} · échéance {item.due}</small></div>
+            <Badge tone={priorityTone(item.priority)}>{item.priority}</Badge>
+          </button>) : <div className="empty-state compact"><span>✓</span><h3>File à jour</h3><p>Aucune action dans cette catégorie.</p></div>}
+        </div>
+      </article>
+
       <article className="panel fm-decision-card">
-        <div className="fm-decision-head"><div><div><Badge tone={priorityTone(focus.priority)}>{focus.priority}</Badge><span>{focus.id} · {focus.asset}</span></div><h3>{focus.title}</h3><p>{focus.location}</p></div><button className="secondary-button" onClick={() => onOpen(focus.id)}>Voir le dossier complet</button></div>
-        <div className="anti-zombie-strip"><span className={focus.owner === 'Non affectée' ? 'missing' : ''}><b>Responsable</b>{focus.owner}</span><span><b>Prochaine action</b>{tab === 'proof' ? 'Obtenir la preuve' : 'Confirmer le diagnostic'}</span><span><b>Échéance</b>{focus.due}</span><span className={!focus.proof ? 'missing' : ''}><b>Preuve</b>{focus.proof ? 'Disponible' : 'À obtenir'}</span></div>
+        <div className="fm-decision-head">
+          <div><div><Badge tone={priorityTone(focus.priority)}>{focus.priority}</Badge><span>{focus.id} · {focus.asset}</span></div><h3>{focus.title}</h3><p>{focus.location}</p></div>
+          <button type="button" className="secondary-button" onClick={() => onOpen(focus.id)}>Voir le dossier complet</button>
+        </div>
+
+        <div className="anti-zombie-strip" aria-label="Complétude du dossier">
+          <span className={focus.owner === 'Non affectée' ? 'missing' : ''}><b>Responsable</b>{focus.owner}</span>
+          <span><b>Prochaine action</b>{tab === 'proof' ? 'Obtenir la preuve' : 'Confirmer le diagnostic'}</span>
+          <span><b>SLA / Échéance</b>{focus.due}</span>
+          <span className={!focus.proof ? 'missing' : ''}><b>Preuve</b>{focus.proof ? 'Disponible' : 'À obtenir'}</span>
+        </div>
+
         <div className="fm-section-title"><div><span>1</span><p><b>Choisir la branche de traitement</b><small>Une décision explicite oriente le reste du dossier.</small></p></div></div>
-        <div className="branch-selector"><button className={branch === 'internal' ? 'active' : ''} onClick={() => {setBranch('internal');setAmount('0')}}><span>A</span><b>Interne sans coût</b><small>Action dans le périmètre agent</small></button><button className={branch === 'cost' ? 'active' : ''} onClick={() => setBranch('cost')}><span>B</span><b>Interne avec coût</b><small>Achat ou petite prestation</small></button><button className={branch === 'external' ? 'active' : ''} onClick={() => setBranch('external')}><span>C</span><b>Intervention externe</b><small>Devis et prestataire</small></button></div>
-        <div className="fm-decision-fields"><label className="field">Responsable<select defaultValue={focus.asset === 'WILO-01' || focus.asset === 'RIA-01' ? 'Sylvain DOUANE' : 'Évariste DJE'}><option>Sylvain DOUANE</option><option>Évariste DJE</option><option>Laetitia ATTOH</option></select></label><label className="field">Échéance<input type="date" defaultValue="2026-08-28" /></label><label className="field">Coût estimé (FCFA)<input type="number" min="0" step="10000" value={amount} onChange={(event) => setAmount(event.target.value)} disabled={branch === 'internal'} /></label></div>
-        <div className={`authority-result ${overThreshold ? 'escalate' : 'delegated'}`}><span>{overThreshold ? '↑' : '✓'}</span><div><b>{overThreshold ? 'Validation de l’Administration requise' : 'Décision dans la délégation de Faustin'}</b><small>{overThreshold ? `${formatMoney(amountValue)} dépasse ou atteint le seuil de 350 000 FCFA.` : `${formatMoney(amountValue)} reste sous le seuil validé.`}</small></div></div>
+        <div className="branch-selector" aria-label="Branche de traitement">
+          <button type="button" aria-pressed={branch === 'internal'} className={branch === 'internal' ? 'active' : ''} onClick={() => {setBranch('internal');setAmount('0')}}><span>A</span><b>Interne sans coût</b><small>Action dans le périmètre agent</small></button>
+          <button type="button" aria-pressed={branch === 'cost'} className={branch === 'cost' ? 'active' : ''} onClick={() => setBranch('cost')}><span>B</span><b>Interne avec coût</b><small>Achat ou petite prestation</small></button>
+          <button type="button" aria-pressed={branch === 'external'} className={branch === 'external' ? 'active' : ''} onClick={() => setBranch('external')}><span>C</span><b>Intervention externe</b><small>Devis et prestataire</small></button>
+        </div>
+
+        <div className="fm-decision-fields">
+          <label className="field">Responsable<select defaultValue={focus.asset === 'WILO-01' || focus.asset === 'RIA-01' ? 'Sylvain DOUANE' : 'Évariste DJE'}><option>Sylvain DOUANE</option><option>Évariste DJE</option><option>Laetitia ATTOH</option></select></label>
+          <label className="field">Échéance<input type="date" defaultValue="2026-08-28" /></label>
+          <label className="field">Coût estimé (FCFA)<input type="number" min="0" step="10000" value={amount} onChange={(event) => setAmount(event.target.value)} disabled={branch === 'internal'} /></label>
+        </div>
+
+        <div className={`authority-result ${overThreshold ? 'escalate' : 'delegated'}`} role="status">
+          <span>{overThreshold ? '↑' : '✓'}</span><div><b>{overThreshold ? 'Validation de l’Administration requise' : 'Décision dans la délégation de Faustin'}</b><small>{overThreshold ? `${formatMoney(amountValue)} dépasse ou atteint le seuil de 350 000 FCFA.` : `${formatMoney(amountValue)} reste sous le seuil validé.`}</small></div>
+        </div>
         <label className="field">Décision motivée<textarea defaultValue={overThreshold ? 'Intervention à soumettre avec devis et justification de continuité de service.' : 'Intervention autorisée pour rétablir le fonctionnement et éviter une récidive.'} /></label>
-        <div className="fm-decision-actions"><small>Maquette interactive · aucune écriture en base</small><button className="secondary-button" onClick={() => setDecisionDone(false)}>Enregistrer le brouillon</button><button className="primary-button" onClick={() => setDecisionDone(true)}>{overThreshold ? 'Soumettre à l’Administration' : 'Décider et affecter'}</button></div>
-        {decisionDone && <div className="inline-success"><span>✓</span><p><b>{overThreshold ? 'Arbitrage prêt à être soumis' : 'Décision prête à être enregistrée'}</b><small>Le dossier possède maintenant un responsable, une prochaine action et une échéance.</small></p></div>}
+        <div className="fm-decision-actions"><small>Maquette interactive · aucune écriture en base</small><button type="button" className="secondary-button" onClick={() => setDecisionDone(false)}>Enregistrer le brouillon</button><button type="button" className="primary-button" onClick={() => setDecisionDone(true)}>{overThreshold ? 'Soumettre à l’Administration' : 'Décider et affecter'}</button></div>
+        {decisionDone && <div className="inline-success" role="status"><span>✓</span><p><b>{overThreshold ? 'Arbitrage prêt à être soumis' : 'Décision prête à être enregistrée'}</b><small>Le dossier possède maintenant un responsable, une prochaine action et une échéance.</small></p></div>}
       </article>
     </section>
-  </>;
+  </div>;
 }
 
 function Detail({ anomaly, onBack, onStatus, onProof, onVerify, readOnly = false, canVerify = false, busy = false }: { anomaly:Anomaly; onBack:()=>void; onStatus:(s:Status)=>void; onProof:(file:File)=>void; onVerify:()=>void; readOnly?:boolean; canVerify?:boolean; busy?:boolean }) {

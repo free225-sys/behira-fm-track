@@ -1,6 +1,48 @@
 @import 'tailwindcss';
 
-:root { --navy:#0d2340; --blue:#235ea7; --bg:#f4f6f8; --text:#172133; --muted:#596777; --line:#e2e7ec; --orange:#ee8b2d; --red:#d64545; --green:#30956a; }
+:root {
+  --background:#f4f6f8;
+  --surface:#ffffff;
+  --surface-muted:#f7f9fb;
+  --surface-emphasis:#edf5fc;
+  --foreground:#172133;
+  --foreground-muted:#596777;
+  --border:#dce3ea;
+  --border-strong:#c7d2dd;
+  --brand:#235ea7;
+  --brand-foreground:#ffffff;
+  --brand-strong:#0d2340;
+  --focus-ring:#276fba;
+  --success:#30956a;
+  --warning:#b85d17;
+  --danger:#c83f48;
+  --info:#235ea7;
+  --space-1:4px;
+  --space-2:8px;
+  --space-3:12px;
+  --space-4:16px;
+  --space-5:20px;
+  --space-6:24px;
+  --control-height:40px;
+  --radius-sm:8px;
+  --radius-md:12px;
+  --radius-lg:16px;
+  --radius-round:999px;
+  --shadow-soft:0 8px 24px rgba(13,35,64,.06);
+  --shadow-float:0 18px 48px rgba(13,35,64,.14);
+
+  /* Aliases historiques maintenus pendant la migration progressive. */
+  --navy:var(--brand-strong);
+  --blue:var(--brand);
+  --bg:var(--background);
+  --text:var(--foreground);
+  --muted:var(--foreground-muted);
+  --line:var(--border);
+  --orange:#ee8b2d;
+  --red:var(--danger);
+  --green:var(--success);
+  --focus:var(--focus-ring);
+}
 * { box-sizing:border-box; }
 body { margin:0; background:var(--bg); color:var(--text); font-family:var(--font-geist-sans),Arial,sans-serif; }
 button { font:inherit; }
@@ -102,7 +144,7 @@ h1 { margin:0; font-size:24px; }
 @media (max-width:430px){.persona-select{width:160px}.workspace-intro{display:block}.workspace-mode{width:max-content;max-width:none;margin-top:10px}.direction-summary-grid,.agent-equipment-grid{grid-template-columns:1fr}.threshold-card{grid-column:auto}.answer-strip{grid-template-columns:1fr}.answer-strip>div{border-right:0;border-bottom:1px solid var(--line)}.answer-strip>div:last-child{border-bottom:0}.answer-strip>div:nth-child(-n+2){border-bottom:1px solid var(--line)}.task-actions,.case-actions,.modal-actions{grid-template-columns:1fr}.case-actions .primary-button{grid-column:auto}.direction-case{padding:15px}.case-top{align-items:flex-start}.case-top>div{align-items:flex-start;flex-direction:column}.field-request-list article>div:last-child{grid-template-columns:1fr}.signal-list article{grid-template-columns:1fr}.signal-list article>.badge{width:max-content}.vendor-list>button{grid-template-columns:32px 1fr}.vendor-list>button>.badge{grid-column:2;width:max-content}.zone-rounds>button{grid-template-columns:26px 1fr}.zone-rounds>button>.badge{grid-column:2;width:max-content}.topbar h1{max-width:110px}}
 
 /* P2 design polish */
-:root{--radius-sm:9px;--radius-md:13px;--shadow-soft:0 10px 32px rgba(13,35,64,.09);--focus:#276fba}
+/* Les tokens P2 historiques sont désormais consolidés dans le bloc :root principal. */
 body{overflow-x:hidden}.main-column,.content,.topbar>div:first-child{min-width:0}
 button:focus,input:focus,select:focus,textarea:focus{outline:none}
 .keyboard-nav button:focus-visible,.keyboard-nav input:focus-visible,.keyboard-nav select:focus-visible,.keyboard-nav textarea:focus-visible,.keyboard-nav [role="option"]:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
@@ -205,3 +247,116 @@ button:focus,input:focus,select:focus,textarea:focus{outline:none}
 @media (max-width:900px){.manager-command-hero{align-items:flex-start}.manager-kpis-target{grid-template-columns:1fr 1fr}.manager-kpis-target>div{grid-column:1/-1}.fm-decision-fields,.dossier-two-columns,.laetitia-admin-grid{grid-template-columns:1fr}.dossier-workflow{display:flex;overflow-x:auto}.dossier-workflow>div{min-width:120px}.admin-preview-grid{grid-template-columns:1fr}.admin-parameters{grid-template-columns:1fr 1fr}}
 @media (max-width:700px){.manager-command-hero{display:block;padding-block:20px}.manager-command-hero h2{font-size:21px}.delegation-chip{min-width:0;margin-top:14px}.manager-kpis-target{grid-template-columns:1fr 1fr}.fm-decision-head{display:block;padding:16px}.fm-decision-head>.secondary-button{width:100%;margin-top:13px}.anti-zombie-strip{grid-template-columns:1fr 1fr;margin:13px 16px}.fm-section-title{padding-inline:16px}.branch-selector{display:flex;overflow-x:auto;padding-inline:16px}.branch-selector button{min-width:145px}.fm-decision-fields{padding-inline:16px}.authority-result{margin-inline:16px}.fm-decision-card>.field{margin-inline:16px}.fm-decision-actions{display:grid;grid-template-columns:1fr 1fr;padding:14px 16px}.fm-decision-actions>small{grid-column:1/-1}.inline-success{margin-inline:16px}.dossier-hero{display:block}.dossier-hero .detail-actions{display:grid;grid-template-columns:1fr 1fr;margin-top:14px}.dossier-hero .detail-actions select,.dossier-hero .detail-actions button{width:100%;min-width:0}.dossier-tabs{width:100%}.steering-grid,.dossier-side-stack,.admin-parameters{grid-template-columns:1fr}.dossier-steering,.dossier-description,.finance-decision-card,.quote-card,.proof-matrix-card,.dossier-history{padding:16px}.proof-requirement{align-items:flex-start;flex-wrap:wrap}.proof-requirement .primary-button{width:100%}.admin-users-preview>.panel-head{display:block}.admin-users-preview>.panel-head button{width:100%;margin-top:12px}.admin-user-list>button{grid-template-columns:34px minmax(0,1fr) auto}.admin-user-list>button .badge{display:none}.admin-user-list em{grid-column:2}.admin-form-grid,.zone-preview-list{grid-template-columns:1fr}.laetitia-admin-grid{display:block}.laetitia-admin-grid>.panel+ .panel{margin-top:14px}}
 @media (max-width:430px){.manager-kpis-target{grid-template-columns:1fr 1fr}.anti-zombie-strip{grid-template-columns:1fr}.fm-decision-actions{grid-template-columns:1fr}.branch-selector button{min-width:132px}.dossier-workflow>div{min-width:105px}.dossier-tabs button{padding-inline:8px;font-size:8px}.dossier-side-stack{display:block}.dossier-side-stack>article+article{margin-top:14px}.history-grid article{grid-template-columns:30px minmax(0,1fr)}.history-grid em{grid-column:2}.admin-user-list>button{grid-template-columns:34px minmax(0,1fr)}.admin-user-list em{grid-column:2}}
+
+/* UI-0 — fondations sémantiques / UI-1 — pilote Centre de décision Faustin */
+.manager-pilot{display:grid;gap:var(--space-4);color:var(--foreground)}
+.manager-pilot .manager-command-hero{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:var(--space-5);margin:0;padding:22px 24px;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--surface);color:var(--foreground);box-shadow:none}
+.manager-pilot .manager-command-hero h2{margin:5px 0 6px;font-size:24px;line-height:1.2;letter-spacing:-.025em}
+.manager-pilot .manager-command-hero .eyebrow-light{color:var(--brand)!important;font-size:10px!important;letter-spacing:.1em}
+.manager-pilot .manager-command-hero .manager-heading-copy>p:last-child{max-width:640px;margin:0;color:var(--foreground-muted);font-size:12px;line-height:1.55}
+.manager-pilot .delegation-chip{min-width:240px;padding:13px 15px;border:0;border-radius:var(--radius-md);background:var(--surface-emphasis);color:var(--brand-strong)}
+.manager-pilot .delegation-chip span{color:var(--brand);font-size:9px;letter-spacing:.09em}
+.manager-pilot .delegation-chip b{margin:5px 0 3px;font-size:17px}
+.manager-pilot .delegation-chip small{color:var(--foreground-muted);font-size:10px}
+
+.manager-pilot .manager-kpis-target{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(240px,1.35fr);gap:0;margin:0;padding:0;overflow:hidden;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);box-shadow:none}
+.manager-pilot .manager-kpis-target>button{min-height:76px;gap:11px;padding:13px 15px;border:0;border-radius:0;background:var(--surface);color:var(--foreground)}
+.manager-pilot .manager-kpis-target>button+button{border-left:1px solid var(--border)}
+.manager-pilot .manager-kpis-target>button:hover{background:var(--surface-muted)}
+.manager-pilot .manager-kpis-target>button.active{border-color:transparent;background:var(--surface-emphasis);box-shadow:none}
+.manager-pilot .manager-kpis-target strong{font-size:22px;line-height:1}
+.manager-pilot .manager-kpis-target small{color:var(--foreground-muted);font-size:10px}
+.manager-pilot .kpi-icon{width:34px;height:34px;border-radius:var(--radius-sm);font-size:8px;letter-spacing:.02em}
+.manager-pilot .completion{display:flex;flex-direction:column;justify-content:center;padding:12px 16px;border-left:1px solid var(--border)}
+.manager-pilot .completion>div:first-child{font-size:10px}
+.manager-pilot .completion>div b{font-size:13px}
+.manager-pilot .completion>small{font-size:9px}
+
+.manager-pilot .fm-decision-layout{display:grid;grid-template-columns:minmax(320px,.72fr) minmax(0,1.28fr);gap:var(--space-4)}
+.manager-pilot .fm-inbox,.manager-pilot .fm-decision-card{border-color:var(--border);border-radius:var(--radius-md);box-shadow:none}
+.manager-pilot .queue-tabs{gap:4px;padding:6px 8px;border-bottom:1px solid var(--border);background:var(--surface-muted)}
+.manager-pilot .queue-tabs button{min-height:36px;padding:8px 10px;border:0;border-radius:var(--radius-sm);background:transparent;color:var(--foreground-muted);font-size:10px}
+.manager-pilot .queue-tabs button.active{border:0;background:var(--surface);color:var(--brand);box-shadow:none}
+.manager-pilot .queue-tabs button span{font-size:8px}
+.manager-pilot .fm-inbox-list>button{grid-template-columns:36px minmax(0,1fr) auto;gap:11px;min-height:78px;padding:14px 15px;border:0;border-bottom:1px solid var(--border);background:var(--surface)}
+.manager-pilot .fm-inbox-list>button:hover{background:var(--surface-muted)}
+.manager-pilot .fm-inbox-list>button.active{background:var(--surface-emphasis);box-shadow:none}
+.manager-pilot .fm-inbox-list>button>div span,.manager-pilot .fm-inbox-list>button>div small{color:var(--foreground-muted);font-size:9px}
+.manager-pilot .fm-inbox-list>button>div b{margin:4px 0;font-size:11px;line-height:1.35}
+.manager-pilot .queue-mark{width:34px;height:34px;border-radius:var(--radius-sm);font-size:8px;letter-spacing:.02em}
+
+.manager-pilot .fm-decision-head{padding:19px 20px;border-bottom:1px solid var(--border)}
+.manager-pilot .fm-decision-head>div>div>span{font-size:9px}
+.manager-pilot .fm-decision-head h3{margin:9px 0 4px;font-size:17px;line-height:1.3}
+.manager-pilot .fm-decision-head p{font-size:10px}
+.manager-pilot .secondary-button,.manager-pilot .primary-button{min-height:var(--control-height);border-radius:var(--radius-sm)}
+.manager-pilot .secondary-button{border-color:var(--border-strong);background:var(--surface)}
+
+.manager-pilot .anti-zombie-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:16px 20px;border:0;border-radius:0;background:transparent;overflow:visible}
+.manager-pilot .anti-zombie-strip>span{min-width:0;padding:11px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-muted);color:#405266;font-size:9px;line-height:1.35}
+.manager-pilot .anti-zombie-strip>span.missing{border-color:#ead9c7;background:#fff8f1;color:#8c4a17}
+.manager-pilot .anti-zombie-strip b{margin-bottom:5px;color:#657689;font-size:8px}
+.manager-pilot .fm-section-title{padding:0 20px}
+.manager-pilot .fm-section-title>div>span{width:30px;height:30px;border-radius:var(--radius-sm);font-size:10px}
+.manager-pilot .fm-section-title b{font-size:11px}
+.manager-pilot .fm-section-title small{font-size:9px}
+
+.manager-pilot .branch-selector{gap:8px;padding:13px 20px}
+.manager-pilot .branch-selector button{min-height:104px;padding:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface)}
+.manager-pilot .branch-selector button:hover{background:var(--surface-muted)}
+.manager-pilot .branch-selector button.active{border-color:var(--brand);background:var(--surface-emphasis);box-shadow:none}
+.manager-pilot .branch-selector button>span{font-size:9px}
+.manager-pilot .branch-selector b{font-size:10px}
+.manager-pilot .branch-selector small{font-size:9px;line-height:1.45}
+.manager-pilot .fm-decision-fields{gap:10px;padding:0 20px}
+.manager-pilot .field{gap:7px;color:#526173;font-size:10px}
+.manager-pilot .field input,.manager-pilot .field select{height:var(--control-height);padding-inline:11px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);background:var(--surface);font-size:11px}
+.manager-pilot .field textarea{min-height:96px;padding:11px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);font-size:11px;line-height:1.5}
+.manager-pilot .field input:disabled{background:var(--surface-muted);color:var(--foreground-muted)}
+.manager-pilot .authority-result{gap:11px;margin:14px 20px;padding:12px;border-radius:var(--radius-sm)}
+.manager-pilot .authority-result b{font-size:10px}
+.manager-pilot .authority-result small{font-size:9px;line-height:1.45}
+.manager-pilot .fm-decision-card>.field{margin:0 20px}
+.manager-pilot .fm-decision-actions{gap:8px;margin-top:16px;padding:14px 20px;border-top:1px solid var(--border);background:var(--surface-muted)}
+.manager-pilot .fm-decision-actions>small{font-size:9px}
+.manager-pilot .inline-success{margin:0 20px 18px;padding:12px;border-radius:var(--radius-sm)}
+.manager-pilot .inline-success b{font-size:10px}
+.manager-pilot .inline-success small{font-size:9px;line-height:1.45}
+
+@media (max-width:1180px){
+  .manager-pilot .fm-decision-layout{grid-template-columns:1fr}
+}
+@media (max-width:900px){
+  .manager-pilot .manager-kpis-target{grid-template-columns:repeat(3,1fr)}
+  .manager-pilot .completion{grid-column:1/-1;border-top:1px solid var(--border);border-left:0}
+  .manager-pilot .fm-decision-fields{grid-template-columns:1fr}
+}
+@media (max-width:700px){
+  .manager-pilot{gap:12px}
+  .manager-pilot .manager-command-hero{display:block;padding:18px}
+  .manager-pilot .manager-command-hero h2{font-size:21px}
+  .manager-pilot .delegation-chip{min-width:0;margin-top:14px}
+  .manager-pilot .manager-kpis-target{grid-template-columns:repeat(3,1fr)}
+  .manager-pilot .manager-kpis-target>button{display:block;min-height:84px;padding:11px 6px;text-align:center}
+  .manager-pilot .manager-kpis-target>button+button{border-left:1px solid var(--border)}
+  .manager-pilot .kpi-icon{margin:0 auto 6px}
+  .manager-pilot .fm-decision-head{display:block;padding:16px}
+  .manager-pilot .fm-decision-head>.secondary-button{width:100%;margin-top:13px}
+  .manager-pilot .anti-zombie-strip{grid-template-columns:1fr 1fr;margin:13px 16px}
+  .manager-pilot .fm-section-title{padding-inline:16px}
+  .manager-pilot .branch-selector{display:flex;overflow-x:auto;padding-inline:16px}
+  .manager-pilot .branch-selector button{min-width:152px}
+  .manager-pilot .fm-decision-fields{padding-inline:16px}
+  .manager-pilot .authority-result{margin-inline:16px}
+  .manager-pilot .fm-decision-card>.field{margin-inline:16px}
+  .manager-pilot .fm-decision-actions{display:grid;grid-template-columns:1fr 1fr;padding:14px 16px}
+  .manager-pilot .fm-decision-actions>small{grid-column:1/-1}
+  .manager-pilot .inline-success{margin-inline:16px}
+}
+@media (max-width:430px){
+  .manager-pilot .manager-kpis-target{grid-template-columns:repeat(3,1fr)}
+  .manager-pilot .manager-kpis-target small{font-size:9px}
+  .manager-pilot .anti-zombie-strip{grid-template-columns:1fr}
+  .manager-pilot .fm-decision-actions{grid-template-columns:1fr}
+  .manager-pilot .fm-decision-actions .secondary-button,.manager-pilot .fm-decision-actions .primary-button{width:100%}
+}
