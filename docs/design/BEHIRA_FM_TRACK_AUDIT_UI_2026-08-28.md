@@ -308,3 +308,59 @@ Conformément à la passation design, aucune refonte visuelle n’est engagée a
 - usage de « Administration » pour le rôle et de « Frédéric AMANY » pour l’utilisateur connecté ;
 - migration progressive sans modification métier.
 
+## 11. Recalage du 28 août 2026 — état contrôlé
+
+Le chantier a été mis en pause après finalisation technique de la modification atomique en cours. Aucun nouveau lot d’écran n’a été lancé.
+
+### 11.1 État du code au checkpoint
+
+| Élément | État | Observation |
+| --- | --- | --- |
+| Tokens sémantiques UI-0 | Déjà conforme | Couleurs, surfaces, bordures, espacements, rayons, focus et séries de visualisation consolidés. |
+| Pilote Faustin UI-1 | Partiellement conforme | File et décision lisibles ; la synthèse actuelle ne contient pas encore les huit champs anti-zombie et n’est pas partagée. |
+| Score ring bâtiment | Partiellement conforme | Score courant de maquette, composition et causes visibles ; fraîcheur et variation réelles absentes. |
+| Tendances 7/30/90 jours | Partiellement conforme | Sélecteur présent ; état « données historiques insuffisantes » affiché sans fabriquer de courbe. |
+| Scores équipements | Partiellement conforme | Comparaison visuelle des valeurs déjà présentes dans le référentiel de démonstration ; variation et fraîcheur absentes. |
+| Scores agents | Partiellement conforme | Valeurs déjà présentes représentées ; période, échantillon, méthode, variation et facteurs restent à valider. La non-sanction automatique est explicitée. |
+| Responsive des visualisations | Déjà conforme au niveau statique | Breakpoints 1180, 700 et 430 px prévus ; validation visuelle finale suspendue avec le chantier. |
+
+### 11.2 Matrice des nouvelles exigences
+
+| Exigence | État | Écart principal |
+| --- | --- | --- |
+| A. Anti-dossier-zombie partagé | Partiellement conforme | Faustin affiche responsable, prochaine action, échéance et preuve. Manquent statut, acteur bloquant, motif et dernière activité ; aucun composant partagé. |
+| B. Data visualization | Partiellement conforme | Score ring, comparaisons équipements/agents et état historique insuffisant présents. Pipeline, gravité, ouvertures/clôtures, retards/coûts, heatmap, sparklines justifiées et plages Wilo absents. |
+| C. Pilote Faustin complet | Partiellement conforme | À qualifier, retards et preuves présents. Sans responsable, réceptions, réserves, rouverts, pipeline, gravité, délai moyen et tendances réelles manquent. |
+| D. Dossier central en trois zones | À adapter | Le dossier est structuré par onglets et deux colonnes ; la troisième zone décisionnelle permanente reste à créer. |
+| E. Cockpit Administration | Partiellement conforme | Santé, risques, coûts, seuil et arbitrages existent. Pipeline, coûts à arbitrer enrichis, comparaison explicable et zones récurrentes manquent. |
+| F. Wilo enrichi | Partiellement conforme | Cinq étapes, alertes et hors ligne existent. Plages attendues, variation et fraîcheur du score manquent. |
+| G. Laetitia Terrain / Administratif | À adapter | Les deux fonctions existent dans le produit, mais ne sont pas encore séparées par onglets ou contrôle segmenté. |
+| H. Scores de performance explicables | Partiellement conforme | Mention de non-sanction ajoutée ; période, échantillon, méthode, variation et facteurs doivent être alimentés et validés. |
+
+### 11.3 Vérification des règles métier
+
+Les changements du checkpoint ne modifient pas :
+
+- les rôles et permissions ;
+- le cycle Constat → Qualification → Décision → Intervention → Preuve → Clôture ;
+- le seuil de délégation de 350 000 FCFA ;
+- les validations de l’Administration ou de Faustin ;
+- le verrou critique et la gestion des preuves ;
+- le fonctionnement hors ligne des rondes ;
+- les responsabilités de Frédéric, Faustin, Évariste, Sylvain ou Laetitia.
+
+Les nouveaux états React concernent uniquement des filtres de présentation. Aucun appel API, schéma Supabase, mutation ou droit n’a été ajouté.
+
+### 11.4 Tests du checkpoint
+
+- lint : réussi ;
+- compilation de production : réussie ;
+- 28 contrôles personas : réussis ;
+- 20 contrôles d’authentification : réussis ;
+- préparation Supabase : réussie, sans secret exposé ni schéma modifié ;
+- 9 contrôles statiques de bordures et focus : réussis ;
+- validation visuelle publiée : non exécutée, conformément à la pause demandée.
+
+### 11.5 Décision de reprise
+
+Le plan précédent est remplacé par `BEHIRA_FM_TRACK_PLAN_IMPLEMENTATION_UI_RECALE.md`. La prochaine proposition est un lot atomique consacré au composant partagé anti-dossier-zombie et à sa première intégration dans Faustin. Aucun codage supplémentaire ne doit démarrer sans validation explicite.

@@ -1,6 +1,6 @@
 # BEHIRA FM Track — Direction artistique et système UX/UI
 
-**Statut :** source de vérité pour les évolutions d’interface  
+**Statut :** direction artistique, à lire avec `DESIGN.md` qui porte le recalage fonctionnel du 28 août 2026  
 **Objet :** recalibrer la direction visuelle d’un produit déjà engagé, sans casser son identité ni sa logique métier.
 
 ## 1. Décision de design

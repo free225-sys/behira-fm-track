@@ -887,7 +887,7 @@ export default function Home() {
           {view === 'workspace' && <PersonaWorkspace persona={persona} anomalies={anomalies} vendors={vendorReferences} canUploadVendorReport={effectiveCanUploadVendorReport} vendorReportBusy={mutationBusy} onVendorReport={persistVendorReport} escalations={escalations} fieldRequests={fieldRequests} onEscalationDecision={decideEscalation} onEscalateToDirection={escalateToDirection} onFieldRequest={submitFieldRequest} onOpen={(id) => openDetail(id, 'workspace')} onNavigate={navigate} flash={flash} />}
           {view === 'dashboard' && <Dashboard anomalies={anomalies} equipment={equipmentItems} onOpen={openDetail} onNavigate={navigate} />}
           {view === 'registry' && <Registry anomalies={filtered} query={query} setQuery={setQuery} priority={priorityFilter} setPriority={setPriorityFilter} status={statusFilter} setStatus={setStatusFilter} onOpen={(id) => openDetail(id, 'registry')} />}
-          {view === 'manager' && <Manager anomalies={anomalies} tab={managerTab} setTab={setManagerTab} onOpen={(id) => openDetail(id, 'manager')} />}
+          {view === 'manager' && <Manager anomalies={anomalies} equipment={equipmentItems} tab={managerTab} setTab={setManagerTab} onOpen={(id) => openDetail(id, 'manager')} />}
           {view === 'report' && <Report persona={persona} onNavigate={navigate} />}
           {view === 'detail' && <Detail key={`${selected.id}-${selected.status}-${selected.proof}-${selected.proofPending}`} anomaly={selected} readOnly={personaId === 'frederic'} canVerify={personaId === 'faustin' && session.mode === 'supabase'} busy={mutationBusy} onBack={() => navigate(previousView)} onStatus={(status) => void persistWorkflowStatus(status)} onProof={(file) => void persistProof(file)} onVerify={() => void verifyProof()} />}
         </div>
@@ -1107,6 +1107,74 @@ function LaetitiaWorkspace({ fieldRequests, onFieldRequest, flash }: { fieldRequ
   </>;
 }
 
+const agentPerformance = [
+  { name:'Évariste', score:88 },
+  { name:'Sylvain', score:84 },
+  { name:'Laetitia', score:91 },
+];
+
+function ScoreRing({ value }: { value:number }) {
+  const radius = 52;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference * (1 - value / 100);
+  return <div className="building-score-ring" aria-label={`Score de santé du bâtiment ${value} sur 100`}>
+    <svg viewBox="0 0 128 128" role="img" aria-labelledby="building-score-title building-score-desc">
+      <title id="building-score-title">Score de santé du bâtiment</title>
+      <desc id="building-score-desc">Le score actuel est de {value} sur 100.</desc>
+      <circle className="score-ring-track" cx="64" cy="64" r={radius} />
+      <circle className="score-ring-value" cx="64" cy="64" r={radius} strokeDasharray={circumference} strokeDashoffset={offset} />
+    </svg>
+    <div><strong>{value}</strong><span>/100</span><small>État global</small></div>
+  </div>;
+}
+
+function OperationalAnalytics({ equipment, variant = 'direction' }: { equipment:EquipmentItem[]; variant?:'direction'|'manager' }) {
+  const [period, setPeriod] = useState<'7j'|'30j'|'90j'>('30j');
+  const [equipmentFilter, setEquipmentFilter] = useState<'all'|'watch'>('all');
+  const visibleEquipment = (equipmentFilter === 'watch' ? equipment.filter((item) => item.health < 90) : equipment).slice(0,6);
+  const periodLabel = period === '7j' ? '7 jours' : period === '30j' ? '30 jours' : '90 jours';
+  return <section className={`operational-analytics analytics-${variant}`} aria-labelledby={`${variant}-analytics-title`}>
+    <div className="analytics-heading">
+      <div><p className="design-kicker">SCORES & TENDANCES</p><h3 id={`${variant}-analytics-title`}>Santé et performance</h3><p>Lecture dynamique des équipements et du traitement des anomalies.</p></div>
+      <Badge tone="blue">DONNÉES DE DÉMONSTRATION</Badge>
+    </div>
+    <div className="analytics-grid">
+      <article className="panel analytics-card building-health-card">
+        <div className="analytics-card-head"><div><span>SANTÉ BÂTIMENT</span><h4>Score global actuel</h4></div><Badge tone="neutral">FRAÎCHEUR À CONFIRMER</Badge></div>
+        <div className="building-health-content">
+          <ScoreRing value={82} />
+          <div className="score-components" aria-label="Composition du score bâtiment">
+            <span><i className="series-1" /><b>70%</b> Équipements</span>
+            <span><i className="series-2" /><b>15%</b> Sécurité</span>
+            <span><i className="series-3" /><b>10%</b> Zones</span>
+            <span><i className="series-4" /><b>5%</b> Continuité</span>
+          </div>
+        </div>
+        <div className="score-causes"><span><b>Facteur négatif</b> RIA-01 à 61/100</span><span><b>Facteur positif</b> IRR-01 à 98/100</span></div>
+        <p className="analytics-note">Le score est plafonné si un équipement vital devient indisponible. La variation sera affichée après constitution de l’historique.</p>
+      </article>
+
+      <article className="panel analytics-card trend-card">
+        <div className="analytics-card-head"><div><span>ÉVOLUTION</span><h4>Score du bâtiment</h4></div><div className="chart-switch" aria-label="Période du graphique">{(['7j','30j','90j'] as const).map((item) => <button type="button" key={item} aria-pressed={period === item} onClick={() => setPeriod(item)}>{item === '7j' ? '7 jours' : item === '30j' ? '30 jours' : '90 jours'}</button>)}</div></div>
+        <div className="insufficient-chart" role="status" aria-live="polite"><span>⌁</span><div><b>Données historiques insuffisantes</b><p>Aucune tendance fiable ne peut encore être calculée sur {periodLabel}.</p></div></div>
+        <p className="analytics-note">Action requise : enregistrer un instantané quotidien du score avant d’afficher une variation ou une tendance.</p>
+      </article>
+
+      <article className="panel analytics-card equipment-chart-card">
+        <div className="analytics-card-head"><div><span>PARC TECHNIQUE</span><h4>Scores par équipement</h4></div><div className="chart-switch" aria-label="Filtre des équipements"><button type="button" aria-pressed={equipmentFilter === 'all'} onClick={() => setEquipmentFilter('all')}>Tous</button><button type="button" aria-pressed={equipmentFilter === 'watch'} onClick={() => setEquipmentFilter('watch')}>À surveiller</button></div></div>
+        <div className="horizontal-score-chart" aria-live="polite">{visibleEquipment.map((item) => <div className="score-bar-row" key={item.code}><span><b>{item.code}</b><small>{item.label}</small></span><div className="score-bar-track" role="progressbar" aria-label={`${item.label}, ${item.health} sur 100`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={item.health}><i className={item.health < 70 ? 'danger' : item.health < 90 ? 'warning' : 'success'} style={{width:`${item.health}%`}} /></div><strong>{item.health}</strong></div>)}</div>
+        <div className="chart-legend"><span><i className="success" /> Sain ≥ 90</span><span><i className="warning" /> Surveillance 70–89</span><span><i className="danger" /> Critique &lt; 70</span></div>
+      </article>
+
+      <article className="panel analytics-card agent-chart-card">
+        <div className="analytics-card-head"><div><span>ÉQUIPE TERRAIN</span><h4>Performance des agents</h4></div><Badge tone="neutral">MÉTHODE À VALIDER</Badge></div>
+        <div className="agent-score-chart" aria-label="Scores globaux de démonstration des agents">{agentPerformance.map((agent) => <div className="agent-score-row" key={agent.name}><span><b>{agent.name}</b><small>Score global</small></span><div className="agent-score-track" role="progressbar" aria-label={`${agent.name}, score global de démonstration, ${agent.score} sur 100`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={agent.score}><i style={{width:`${agent.score}%`}} /></div><strong>{agent.score}</strong></div>)}</div>
+        <p className="analytics-note">Période, échantillon, variation et facteurs explicatifs restent à définir. Ces scores aident au pilotage et ne constituent jamais une sanction automatique.</p>
+      </article>
+    </div>
+  </section>;
+}
+
 function Dashboard({ anomalies, equipment, onOpen, onNavigate, readOnly = false }: { anomalies: Anomaly[]; equipment:EquipmentItem[]; onOpen:(id:string, from?:View)=>void; onNavigate:(view:View)=>void; readOnly?:boolean }) {
   const urgent = anomalies.filter((a) => a.priority === 'Critique' || a.priority === 'Haute').filter((a) => a.status !== 'Clôturée').slice(0,3);
   const lateCount = anomalies.filter((a) => a.delayed && a.status !== 'Clôturée').length;
@@ -1152,6 +1220,7 @@ function Dashboard({ anomalies, equipment, onOpen, onNavigate, readOnly = false 
         </div>
       </article>
     </section>
+    <OperationalAnalytics equipment={equipment} />
     <section className="panel equipment-panel"><div className="panel-head"><div><h3>État du parc technique</h3><p>Indice de santé calculé sur les anomalies ouvertes</p></div><Badge tone="success">{equipment.length} modules suivis</Badge></div><div className="equipment-grid">{equipment.map((item) => <div className="equipment-card" key={item.code}><div className="equipment-top"><span className="equipment-icon">{item.code.slice(0,2)}</span><Badge tone={item.health < 70 ? 'critical' : item.health < 90 ? 'orange' : 'success'}>{item.state}</Badge></div><strong>{item.code}</strong><p>{item.label}</p><div className="health-line"><i style={{width:`${item.health}%`}} className={item.health < 70 ? 'bad' : item.health < 90 ? 'watch' : ''} /></div><small>Indice {item.health}/100</small></div>)}</div></section>
   </>;
 }
@@ -1164,7 +1233,7 @@ function Registry({ anomalies, query, setQuery, priority, setPriority, status, s
   </>;
 }
 
-function Manager({ anomalies, tab, setTab, onOpen }: { anomalies:Anomaly[]; tab:'qualify'|'late'|'proof'; setTab:(v:'qualify'|'late'|'proof')=>void; onOpen:(id:string)=>void }) {
+function Manager({ anomalies, equipment, tab, setTab, onOpen }: { anomalies:Anomaly[]; equipment:EquipmentItem[]; tab:'qualify'|'late'|'proof'; setTab:(v:'qualify'|'late'|'proof')=>void; onOpen:(id:string)=>void }) {
   const groups = { qualify: anomalies.filter((a) => a.status === 'À qualifier'), late: anomalies.filter((a) => a.delayed && a.status !== 'Clôturée'), proof: anomalies.filter((a) => !a.proof && ['En intervention','En validation'].includes(a.status)) };
   const active = groups[tab];
   const [selectedId, setSelectedId] = useState('ANO-0241');
@@ -1206,6 +1275,8 @@ function Manager({ anomalies, tab, setTab, onOpen }: { anomalies:Anomaly[]; tab:
         <small>Délais 88 · réactivité 91 · preuves 79</small>
       </div>
     </section>
+
+    <OperationalAnalytics equipment={equipment} variant="manager" />
 
     <section className="fm-decision-layout">
       <article className="panel fm-inbox">

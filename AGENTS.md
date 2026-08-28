@@ -2,8 +2,10 @@
 
 Avant toute intervention sur l’interface, lire intégralement :
 
+- `docs/design/DESIGN.md`
 - `docs/design/BEHIRA_FM_TRACK_DIRECTION_ARTISTIQUE.md`
 - `docs/design/BEHIRA_FM_TRACK_CRITERES_VALIDATION_UI.md`
+- `docs/design/BEHIRA_FM_TRACK_PLAN_IMPLEMENTATION_UI_RECALE.md`
 
 Ces documents constituent la source de vérité UX/UI du projet.
 
