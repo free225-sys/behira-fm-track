@@ -1,0 +1,54 @@
+{
+  "name": "sites-project",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "vinext dev",
+    "build": "vinext build",
+    "start": "vinext start",
+    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
+    "verify:lot0": "node scripts/verify-lot0.mjs",
+    "verify:personas": "node scripts/verify-personas.mjs",
+    "verify:auth": "node scripts/verify-auth.mjs",
+    "verify:supabase": "node scripts/verify-supabase-readiness.mjs",
+    "test:fm-track": "node scripts/verify-fm-track-connection.mjs",
+    "types:supabase": "supabase gen types typescript --local --schema public",
+    "setup:auth:local": "pwsh -NoProfile -File supabase/scripts/setup-local-auth.ps1",
+    "test:auth:local": "node scripts/verify-local-auth.mjs",
+    "test:first-password:local": "node scripts/verify-first-password-change.mjs",
+    "test:workflow:local": "node scripts/verify-operational-workflow.mjs",
+    "preflight:preprod": "node scripts/preflight-preproduction.mjs",
+    "test:db": "pwsh -NoProfile -File supabase/tests/run.ps1",
+    "audit:visual": "node scripts/audit-visual-styles.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.112.4",
+    "next": "^16.3.2",
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "1.37.1",
+    "@cloudflare/workers-types": "4.20260515.1",
+    "@openai/sites-vite-plugin": "^0.1.0 || ^0.2.0",
+    "@tailwindcss/postcss": "4.2.1",
+    "@types/node": "22.19.19",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.2",
+    "@vitejs/plugin-rsc": "0.5.26",
+    "eslint": "9.39.4",
+    "eslint-config-next": "^16.3.2",
+    "react-server-dom-webpack": "19.2.6",
+    "supabase": "^2.115.0",
+    "tailwindcss": "4.2.1",
+    "typescript": "5.9.3",
+    "vinext": "1.0.0-beta.3",
+    "vite": "8.0.13",
+    "wrangler": "4.92.0"
+  },
+  "type": "module"
+}
