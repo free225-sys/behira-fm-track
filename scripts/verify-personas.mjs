@@ -87,7 +87,7 @@ requireAll('Verrou critique et retour Direction', page, [
 ])
 requireAll('Badges structurés', page, ['badge-icon', 'badge-label'])
 requireAll('Focus P2 et protection navigation mobile', css, [
-  'outline:2px solid var(--focus)', '.keyboard-nav button:focus-visible', '.main-column{padding-bottom:92px}', '.persona-popover{position:fixed',
+  'outline:2px solid var(--focus-ring)', '.keyboard-nav button:focus-visible', '.main-column{padding-bottom:92px}', '.persona-popover{position:fixed',
 ])
 checks.push({
   label: 'Sélecteur natif persona supprimé',

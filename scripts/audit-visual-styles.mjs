@@ -20,10 +20,10 @@ const finalDeclaration = (selector, property) => {
 }
 
 const checks = [
-  ['Focus unique 2 px', css.includes('outline:2px solid var(--focus)') && !css.includes('outline:3px solid #f3a33d')],
+  ['Focus unique 2 px', css.includes('outline:2px solid var(--focus-ring)') && !css.includes('outline:3px solid #f3a33d')],
   ['Focus limité à la navigation clavier', css.includes('.keyboard-nav button:focus-visible') && page.includes("root.classList.add('keyboard-nav')") && page.includes("root.classList.remove('keyboard-nav')")],
   ['Déclencheur persona sans anneau interne', !/\.persona-trigger:hover[^{}]*\{[^{}]*box-shadow/.test(css)],
-  ['Carte Direction sans double signal', finalDeclaration('.direction-case-card.active', 'box-shadow') !== 'inset 3px 0 0 var(--blue)'],
+  ['Carte Direction sans double signal', finalDeclaration('.direction-case-card.active', 'box-shadow') !== 'inset 3px 0 0 var(--brand)'],
   ['Escalade Facility Manager sans double signal', !css.includes('box-shadow:inset 3px 0 0 var(--orange)')],
   ['Champ focalisé sans anneau CSS interne', finalDeclaration('.field input:focus', 'box-shadow') === 'none' && finalDeclaration('.field textarea:focus', 'box-shadow') === 'none'],
   ['Timeline active sans halo additionnel', finalDeclaration('.detail-timeline .current>span', 'box-shadow') === 'none'],

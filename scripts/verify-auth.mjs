@@ -21,7 +21,7 @@ const checks = [
   ['Déverrouillage Auth confirmé', page.includes('updateUser({ password:newPassword, currentPassword })') && page.includes('gate.mustChangePassword')],
   ['Persona imposé par RLS', page.includes('resolveAuthenticatedPersona') && page.includes("session.mode === 'demo'")],
   ['Responsive 390 / 768 / 1440', ['max-width:430px','max-width:900px','.auth-shell'].every((value) => css.includes(value))],
-  ['Focus clavier unique', css.includes('.keyboard-nav .password-control:focus-within') && css.includes('outline:2px solid var(--focus)') && css.includes('border-color:#d5dee7;box-shadow:none')],
+  ['Focus clavier unique', css.includes('.keyboard-nav .password-control:focus-within') && css.includes('outline:2px solid var(--focus-ring)') && css.includes('border-color:#d5dee7;box-shadow:none')],
   ['Aucun secret Supabase', !/(SUPABASE_(URL|KEY)|anon[_-]?key|service[_-]?role)/i.test(page)],
 ];
 
