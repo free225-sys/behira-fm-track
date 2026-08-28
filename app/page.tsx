@@ -2,6 +2,8 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 
+import { AntiZombieSummary } from './components/AntiZombieSummary';
+import type { AntiZombieSummaryData } from './components/anti-zombie-contract';
 import { getAuthenticatedProfileGate, resolveAuthenticatedPersona } from './lib/supabase/auth';
 import { getBrowserSupabaseClient, setSupabaseRememberPreference } from './lib/supabase/client';
 import { getSupabaseIntegrationState, isSupabaseIntegrationEnabled } from './lib/supabase/config';
@@ -1233,6 +1235,22 @@ function Registry({ anomalies, query, setQuery, priority, setPriority, status, s
   </>;
 }
 
+function adaptFaustinDossierToAntiZombieSummary(anomaly: Anomaly, queue: 'qualify'|'late'|'proof'): AntiZombieSummaryData {
+  return {
+    status:anomaly.status,
+    responsible:anomaly.owner === 'Non affectée' ? null : anomaly.owner,
+    nextAction:queue === 'proof' ? 'Obtenir la preuve' : 'Confirmer le diagnostic',
+    deadline:anomaly.due,
+    slaLabel:anomaly.delayed && anomaly.status !== 'Clôturée' ? 'En retard' : null,
+    isDelayed:anomaly.delayed && anomaly.status !== 'Clôturée',
+    isBlocked:false,
+    blockingActor:null,
+    blockingOrDelayReason:null,
+    expectedProof:anomaly.asset === 'WILO-01' ? 'Photo du manomètre et rapport d’intervention' : null,
+    lastHistoryActivity:null,
+  };
+}
+
 function Manager({ anomalies, equipment, tab, setTab, onOpen }: { anomalies:Anomaly[]; equipment:EquipmentItem[]; tab:'qualify'|'late'|'proof'; setTab:(v:'qualify'|'late'|'proof')=>void; onOpen:(id:string)=>void }) {
   const groups = { qualify: anomalies.filter((a) => a.status === 'À qualifier'), late: anomalies.filter((a) => a.delayed && a.status !== 'Clôturée'), proof: anomalies.filter((a) => !a.proof && ['En intervention','En validation'].includes(a.status)) };
   const active = groups[tab];
@@ -1300,12 +1318,7 @@ function Manager({ anomalies, equipment, tab, setTab, onOpen }: { anomalies:Anom
           <button type="button" className="secondary-button" onClick={() => onOpen(focus.id)}>Voir le dossier complet</button>
         </div>
 
-        <div className="anti-zombie-strip" aria-label="Complétude du dossier">
-          <span className={focus.owner === 'Non affectée' ? 'missing' : ''}><b>Responsable</b>{focus.owner}</span>
-          <span><b>Prochaine action</b>{tab === 'proof' ? 'Obtenir la preuve' : 'Confirmer le diagnostic'}</span>
-          <span><b>SLA / Échéance</b>{focus.due}</span>
-          <span className={!focus.proof ? 'missing' : ''}><b>Preuve</b>{focus.proof ? 'Disponible' : 'À obtenir'}</span>
-        </div>
+        <AntiZombieSummary data={adaptFaustinDossierToAntiZombieSummary(focus, tab)} />
 
         <div className="fm-section-title"><div><span>1</span><p><b>Choisir la branche de traitement</b><small>Une décision explicite oriente le reste du dossier.</small></p></div></div>
         <div className="branch-selector" aria-label="Branche de traitement">

@@ -67,7 +67,7 @@ checks.push({
   missing:page.includes('Importer un rapport de ronde') ? ['ancien import encore présent'] : [],
 })
 requireAll('Délégation et dossier cible', page, [
-  '350 000 FCFA', 'Décision dans la délégation de Faustin', 'anti-zombie-strip', 'dossier-workflow',
+  '350 000 FCFA', 'Décision dans la délégation de Faustin', 'AntiZombieSummary', 'dossier-workflow',
 ])
 requireAll('Verrou critique et retour Direction', page, [
   "selected.priority === 'Critique' && !selected.proof", 'retour envoyé à Faustin', 'Confirmer et notifier Faustin',
