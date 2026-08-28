@@ -72,6 +72,10 @@ requireAll('Délégation et dossier cible', page, [
 requireAll('Clôture design des cockpits', page, [
   'WorkflowAnalytics', 'Sans responsable', 'Preuves à vérifier', 'Réceptions', 'Réserves', 'Dossiers rouverts',
 ])
+requireAll('Navigation analytique du tableau de bord', appSource, [
+  'dashboard-section-tabs', 'Vue d’ensemble', 'Actions & risques', 'Santé & scores', 'Parc technique',
+  'scroll-snap-type:x proximity', 'PILOTAGE FACILITY MANAGER', 'Disponibilité technique 92%',
+])
 requireAll('Double mission Laetitia', page, [
   'mission-switch', 'Rondes, constats et brouillons hors ligne', 'Devis, paiements et autorisations',
 ])

@@ -904,7 +904,7 @@ export default function Home() {
 
   const visibleNav = navItems.filter((item) => allowedViewsByPersona[personaId].includes(item.key));
   const pageTitle = view === 'workspace' ? `Espace ${persona.shortName}` : view === 'dashboard' ? (personaId === 'frederic' ? 'Vue consolidée Administration' : 'Tableau de bord') : view === 'registry' ? 'Registre des anomalies' : view === 'manager' ? 'Espace Facility Manager' : view === 'report' ? (personaId === 'sylvain' || personaId === 'faustin' ? 'Pilote Wilo' : 'Ronde terrain') : selected.id;
-  const mobilePageTitle = view === 'workspace' ? `Espace ${persona.shortName}` : view === 'dashboard' ? 'Tableau de bord' : view === 'registry' ? 'Registre' : view === 'manager' ? 'Faustin' : view === 'report' ? (personaId === 'sylvain' || personaId === 'faustin' ? 'Pilote Wilo' : 'Ronde') : selected.id;
+  const mobilePageTitle = view === 'workspace' ? `Espace ${persona.shortName}` : view === 'dashboard' ? 'Pilotage' : view === 'registry' ? 'Registre' : view === 'manager' ? 'Faustin' : view === 'report' ? (personaId === 'sylvain' || personaId === 'faustin' ? 'Pilote Wilo' : 'Ronde') : selected.id;
 
   if (!authReady) return <main className="auth-loading" aria-label="Chargement de la session"><span className="brand-mark">B</span><p>Préparation de votre espace…</p></main>;
   if (passwordChangeRequirement) return <RequiredPasswordChange requirement={passwordChangeRequirement} onComplete={completeRequiredPasswordChange} onSignOut={signOutLockedSession} />;
@@ -929,7 +929,7 @@ export default function Home() {
 
         <div className="content">
           {view === 'workspace' && <PersonaWorkspace persona={persona} anomalies={anomalies} equipment={equipmentItems} vendors={vendorReferences} canUploadVendorReport={effectiveCanUploadVendorReport} vendorReportBusy={mutationBusy} onVendorReport={persistVendorReport} escalations={escalations} fieldRequests={fieldRequests} onEscalationDecision={decideEscalation} onEscalateToDirection={escalateToDirection} onFieldRequest={submitFieldRequest} onOpen={(id) => openDetail(id, 'workspace')} onNavigate={navigate} flash={flash} />}
-          {view === 'dashboard' && <Dashboard anomalies={anomalies} equipment={equipmentItems} onOpen={openDetail} onNavigate={navigate} />}
+          {view === 'dashboard' && <Dashboard anomalies={anomalies} equipment={equipmentItems} audience={personaId === 'frederic' ? 'administration' : 'facility'} onOpen={openDetail} onNavigate={navigate} />}
           {view === 'registry' && <Registry anomalies={filtered} query={query} setQuery={setQuery} priority={priorityFilter} setPriority={setPriorityFilter} status={statusFilter} setStatus={setStatusFilter} onOpen={(id) => openDetail(id, 'registry')} />}
           {view === 'manager' && <Manager anomalies={anomalies} equipment={equipmentItems} tab={managerTab} setTab={setManagerTab} onOpen={(id) => openDetail(id, 'manager')} />}
           {view === 'report' && <Report persona={persona} onNavigate={navigate} />}
@@ -1224,13 +1224,21 @@ function OperationalAnalytics({ equipment, variant = 'direction' }: { equipment:
   </section>;
 }
 
-function Dashboard({ anomalies, equipment, onOpen, onNavigate, readOnly = false }: { anomalies: Anomaly[]; equipment:EquipmentItem[]; onOpen:(id:string, from?:View)=>void; onNavigate:(view:View)=>void; readOnly?:boolean }) {
+function Dashboard({ anomalies, equipment, audience = 'facility', onOpen, onNavigate, readOnly = false }: { anomalies: Anomaly[]; equipment:EquipmentItem[]; audience?:'administration'|'facility'; onOpen:(id:string, from?:View)=>void; onNavigate:(view:View)=>void; readOnly?:boolean }) {
+  const [dashboardTab, setDashboardTab] = useState<'overview'|'actions'|'health'|'equipment'>('overview');
   const urgent = anomalies.filter((a) => a.priority === 'Critique' || a.priority === 'Haute').filter((a) => a.status !== 'Clôturée').slice(0,3);
   const lateCount = anomalies.filter((a) => a.delayed && a.status !== 'Clôturée').length;
   const openCount = anomalies.filter((a) => a.status !== 'Clôturée').length;
+  const dashboardTabs = [
+    { id:'overview' as const, icon:'01', label:'Vue d’ensemble', detail:'5 angles du jour', count:'Synthèse' },
+    { id:'actions' as const, icon:'02', label:'Actions & risques', detail:`${openCount} ouverts · ${lateCount} retards`, count:'À traiter' },
+    { id:'health' as const, icon:'03', label:'Santé & scores', detail:'Bâtiment · équipements · agents', count:'82/100' },
+    { id:'equipment' as const, icon:'04', label:'Parc technique', detail:`${equipment.length} modules suivis`, count:'Équipements' },
+  ];
   return <>
-    <section className="hero-row"><div><p className="direction-kicker">{readOnly ? 'CONSULTATION AUTORISÉE' : 'PILOTAGE ADMINISTRATION'}</p><h2>Situation du bâtiment</h2><p>{readOnly ? 'Indicateurs et registre accessibles sans action de modification.' : 'Les cinq angles de décision pour aujourd’hui.'}</p></div><span className="health-pill"><i /> Site opérationnel à 92%</span></section>
-    <section className="direction-grid" aria-label="Tableau de bord Administration en cinq blocs">
+    <section className="hero-row dashboard-hero"><div><p className="direction-kicker">{readOnly ? 'CONSULTATION AUTORISÉE' : audience === 'administration' ? 'PILOTAGE ADMINISTRATION' : 'PILOTAGE FACILITY MANAGER'}</p><h2>Situation du bâtiment</h2><p>{readOnly ? 'Indicateurs et registre accessibles sans action de modification.' : audience === 'administration' ? 'Synthèse décisionnelle, risques, coûts et performance.' : 'Priorités opérationnelles, santé du parc et actions attendues.'}</p></div><span className="health-pill"><i /> Disponibilité technique 92%</span></section>
+    <nav className="dashboard-section-tabs" role="tablist" aria-label="Sections du tableau de bord">{dashboardTabs.map((item) => <button key={item.id} type="button" role="tab" aria-selected={dashboardTab === item.id} aria-controls={`dashboard-panel-${item.id}`} id={`dashboard-tab-${item.id}`} className={dashboardTab === item.id ? 'active' : ''} onClick={() => setDashboardTab(item.id)}><span className="dashboard-tab-index">{item.icon}</span><span className="dashboard-tab-copy"><b>{item.label}</b><small>{item.detail}</small></span><em>{item.count}</em></button>)}</nav>
+    {(dashboardTab === 'overview' || dashboardTab === 'actions') && <section id={`dashboard-panel-${dashboardTab}`} role="tabpanel" aria-labelledby={`dashboard-tab-${dashboardTab}`} className={`direction-grid dashboard-tab-panel ${dashboardTab === 'actions' ? 'actions-view' : ''}`} aria-label="Tableau de bord en cinq angles de décision">
       <article className="panel direction-block todo-block">
         <div className="direction-head"><span className="direction-number">01</span><div><h3>À faire aujourd’hui</h3><p>Actions qui débloquent le workflow</p></div><Badge tone="orange">{openCount} ouvertes</Badge></div>
         <div className="todo-summary"><strong>5</strong><span>actions prioritaires<br />avant 17:00</span></div>
@@ -1245,20 +1253,20 @@ function Dashboard({ anomalies, equipment, onOpen, onNavigate, readOnly = false 
         <button className="text-action" onClick={() => onNavigate('registry')}>Voir la cartographie des risques →</button>
       </article>
 
-      <article className="panel direction-block costs-block">
+      {dashboardTab === 'overview' && <article className="panel direction-block costs-block">
         <div className="direction-head"><span className="direction-number">03</span><div><h3>Coûts</h3><p>Projection maintenance · août</p></div></div>
         <div className="cost-main"><span>Budget engagé</span><strong>8 450 000 <small>FCFA</small></strong></div>
         <div className="cost-progress"><i /></div>
         <div className="cost-details"><div><span>Estimé fin de mois</span><b>10 200 000 FCFA</b></div><div className="cost-gap"><span>Écart projeté</span><b>+1 750 000 FCFA</b></div></div>
         <small className="cost-note">77% du plafond mensuel de 11 M FCFA engagé</small>
-      </article>
+      </article>}
 
-      <article className="panel direction-block performance-block">
+      {dashboardTab === 'overview' && <article className="panel direction-block performance-block">
         <div className="direction-head"><span className="direction-number">04</span><div><h3>Performance</h3><p>Qualité de service</p></div></div>
         <div className="performance-score"><strong>89%</strong><span>interventions dans les délais</span></div>
         <div className="performance-bar"><i /></div>
         <div className="performance-facts"><span><b>24</b> clôturées ce mois</span><span><b>92%</b> disponibilité technique</span></div>
-      </article>
+      </article>}
 
       <article className="panel direction-block decisions-block">
         <div className="direction-head"><span className="direction-number">05</span><div><h3>Décisions recommandées</h3><p>Arbitrages proposés selon le niveau de risque</p></div><Badge tone="critical">3 décisions</Badge></div>
@@ -1268,9 +1276,9 @@ function Dashboard({ anomalies, equipment, onOpen, onNavigate, readOnly = false 
           <button onClick={() => onOpen('ANO-0231','dashboard')}><span className="decision-priority blue">3</span><div><b>Valider la preuve GE-01</b><small>Test de démarrage concluant · clôture possible</small></div><span>{readOnly ? 'Consulter →' : 'Valider →'}</span></button>
         </div>
       </article>
-    </section>
-    <OperationalAnalytics equipment={equipment} />
-    <section className="panel equipment-panel"><div className="panel-head"><div><h3>État du parc technique</h3><p>Indice de santé calculé sur les anomalies ouvertes</p></div><Badge tone="success">{equipment.length} modules suivis</Badge></div><div className="equipment-grid">{equipment.map((item) => <div className="equipment-card" key={item.code}><div className="equipment-top"><span className="equipment-icon">{item.code.slice(0,2)}</span><Badge tone={item.health < 70 ? 'critical' : item.health < 90 ? 'orange' : 'success'}>{item.state}</Badge></div><strong>{item.code}</strong><p>{item.label}</p><div className="health-line"><i style={{width:`${item.health}%`}} className={item.health < 70 ? 'bad' : item.health < 90 ? 'watch' : ''} /></div><small>Indice {item.health}/100</small></div>)}</div></section>
+    </section>}
+    {dashboardTab === 'health' && <section id="dashboard-panel-health" role="tabpanel" aria-labelledby="dashboard-tab-health" className="dashboard-tab-panel"><OperationalAnalytics equipment={equipment} /></section>}
+    {dashboardTab === 'equipment' && <section id="dashboard-panel-equipment" role="tabpanel" aria-labelledby="dashboard-tab-equipment" className="dashboard-tab-panel"><section className="panel equipment-panel dashboard-equipment-panel"><div className="panel-head"><div><p className="design-kicker">PARC TECHNIQUE</p><h3>État des équipements suivis</h3><p>Lecture comparative des indices de santé et des états opérationnels.</p></div><Badge tone="success">{equipment.length} modules suivis</Badge></div><div className="equipment-grid">{equipment.map((item) => <div className="equipment-card" key={item.code}><div className="equipment-top"><span className="equipment-icon">{item.code.slice(0,2)}</span><Badge tone={item.health < 70 ? 'critical' : item.health < 90 ? 'orange' : 'success'}>{item.state}</Badge></div><strong>{item.code}</strong><p>{item.label}</p><div className="health-line"><i style={{width:`${item.health}%`}} className={item.health < 70 ? 'bad' : item.health < 90 ? 'watch' : ''} /></div><small>Indice {item.health}/100</small></div>)}</div></section></section>}
   </>;
 }
 

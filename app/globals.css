@@ -588,3 +588,51 @@ button:focus,input:focus,select:focus,textarea:focus{outline:none}
 @media (prefers-reduced-motion:reduce){
   .measure-range-track i{transition:none}
 }
+
+/* Revue visuelle — navigation analytique et densité des écrans */
+.dashboard-hero{margin-bottom:16px}
+.dashboard-section-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:0 0 16px;padding:5px;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--surface-muted)}
+.dashboard-section-tabs button{min-width:0;min-height:68px;display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 11px;border:0;border-radius:var(--radius-md);background:transparent;color:var(--foreground);text-align:left;cursor:pointer}
+.dashboard-section-tabs button:hover{background:rgba(255,255,255,.68)}
+.dashboard-section-tabs button.active{background:var(--surface);color:var(--brand-strong);box-shadow:0 3px 12px rgba(13,35,64,.07)}
+.dashboard-tab-index{width:32px;height:32px;display:grid;place-items:center;border-radius:var(--radius-sm);background:var(--surface);color:var(--foreground-muted);font-size:9px;font-weight:850}
+.dashboard-section-tabs button.active .dashboard-tab-index{background:#fff0e1;color:#b95c17}
+.dashboard-tab-copy{min-width:0}.dashboard-tab-copy b,.dashboard-tab-copy small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dashboard-tab-copy b{font-size:11px}.dashboard-tab-copy small{margin-top:3px;color:var(--foreground-muted);font-size:9px}
+.dashboard-section-tabs em{padding:4px 7px;border-radius:var(--radius-round);background:var(--surface);color:var(--foreground-muted);font-size:8px;font-style:normal;font-weight:750;white-space:nowrap}.dashboard-section-tabs button.active em{background:var(--surface-emphasis);color:var(--brand)}
+.dashboard-tab-panel{min-height:320px}.dashboard-tab-panel.actions-view .todo-block{grid-column:span 7}.dashboard-tab-panel.actions-view .risks-block{grid-column:span 5}.dashboard-tab-panel.actions-view .decisions-block{grid-column:span 12}
+.dashboard-equipment-panel{margin-top:0}.dashboard-equipment-panel .panel-head{align-items:center}.dashboard-equipment-panel .equipment-card{background:var(--surface);box-shadow:0 2px 10px rgba(13,35,64,.03)}
+
+.chart-switch{border:1px solid var(--border);background:var(--surface)}
+.chart-switch button{min-height:32px;padding-inline:11px}
+.chart-switch button[aria-pressed="true"]{background:var(--brand);color:white}
+
+@media (min-width:801px){
+  .registry-entry:not(.is-expanded){position:relative}
+  .registry-entry:not(.is-expanded) .registry-row{min-height:84px;padding-bottom:25px}
+  .registry-entry:not(.is-expanded) .registry-summary-toggle{position:absolute;right:42px;bottom:5px;width:auto;justify-content:flex-end;padding:3px 7px;border:0;border-radius:var(--radius-round);background:transparent;font-size:8px}
+  .registry-entry:not(.is-expanded) .registry-summary-toggle:hover{background:var(--surface-emphasis)}
+  .registry-entry:not(.is-expanded) .registry-summary-toggle span{width:17px;height:17px;font-size:10px}
+}
+
+.direction-head p,.compact-actions small,.decision-list button>div small,.cost-note{font-size:9px}
+.report-layout .workflow-card{box-shadow:none}
+
+@media (max-width:1100px){
+  .dashboard-section-tabs{grid-template-columns:1fr 1fr}
+  .dashboard-tab-panel.actions-view .todo-block,.dashboard-tab-panel.actions-view .risks-block{grid-column:span 6}
+}
+@media (max-width:800px){
+  .dashboard-section-tabs{display:flex;flex-direction:row;overflow-x:auto;scroll-snap-type:x proximity;overscroll-behavior-x:contain;scrollbar-width:none;padding:5px}
+  .dashboard-section-tabs::-webkit-scrollbar{display:none}
+  .dashboard-section-tabs button{flex:0 0 215px;min-width:215px;scroll-snap-align:start}
+  .dashboard-tab-panel.actions-view .todo-block,.dashboard-tab-panel.actions-view .risks-block,.dashboard-tab-panel.actions-view .decisions-block{grid-column:auto}
+  .registry-summary-toggle{position:static;width:100%;justify-content:space-between;padding:7px 14px}
+}
+@media (max-width:430px){
+  .dashboard-section-tabs{margin-inline:-4px}
+  .dashboard-section-tabs button{flex-basis:262px;min-width:262px;grid-template-columns:31px minmax(0,1fr)}
+  .dashboard-section-tabs em{grid-column:2;justify-self:start}
+}
+@media (prefers-reduced-motion:reduce){
+  .dashboard-section-tabs button{transition:none}
+}
