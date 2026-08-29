@@ -30,7 +30,8 @@ const checks = [
   ['Titres mobiles compacts présents', page.includes('mobilePageTitle') && css.includes('.mobile-title{display:inline}')],
   ['Réserve navigation mobile présente', css.includes('.main-column{padding-bottom:92px}')],
   ['Grille du registre partagée', css.includes('.registry-head,.registry-row{grid-template-columns:var(--registry-columns)}')],
-  ['Responsable visible sur desktop étroit', css.includes('@media (min-width:961px) and (max-width:1180px)') && css.includes('.registry-row>.owner-cell{display:flex}')],
+  ['Registre en cartes sous 1280 px avec responsable visible', css.includes('@media (max-width:1279px)') && css.includes('.registry-row>.owner-cell{display:none}') && css.includes('.registry-mobile-details{grid-column:1;grid-row:3;display:grid')],
+  ['Continuité du traitement au plancher 12 px', finalDeclaration('.registry-entry:not(.is-expanded) .registry-summary-toggle', 'font-size') === 'var(--font-size-label)'],
   ['Titres tronqués proprement', css.includes('.topbar h1{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}')],
   ['Références équipement insécables', page.includes('className="equipment-reference"') && css.includes('.equipment-reference{white-space:nowrap;word-break:keep-all;overflow-wrap:normal}')],
 ]
