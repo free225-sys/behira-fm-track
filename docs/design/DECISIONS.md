@@ -2,6 +2,98 @@
 
 Ne jamais supprimer ni réécrire une décision actée. Toute évolution doit prendre la forme d'une nouvelle entrée qui complète ou remplace explicitement une décision antérieure.
 
+## DEC-013 — Accent de marque teal (clôture DEC-001)
+
+- **Date :** 29 août 2026
+- **Auteur :** Revue design, à valider par Wilkam
+- **Statut :** **Proposé — implémenté dans le miroir**
+- **Périmètre :** tokens de marque `--mark`, `--teal`, `--accent`
+- **Contexte :** DEC-001 laissait `--orange #ee8b2d` et `--mark #f3a33c` ouverts. Le spécimen cible remplace l’orange de marque par une rampe teal, distincte du triplet `warning`.
+- **Décision ou question :**
+  - `--mark: #20b2aa` — glyphe B, distinct de `--brand` ;
+  - `--teal: #0e6a66` — accent courant ;
+  - `--accent` alias de `--teal` ;
+  - `--orange` alias de `--teal` (compatibilité) ;
+  - le triplet `warning` reste inchangé (retards, haute priorité).
+- **Fichiers concernés :** `app/globals.css`, `app/design-system/page.tsx`, `scripts/audit-visual-styles.mjs`
+- **Impacts attendus :** B teal, AZ teal, kicker login teal. Pas de changement métier.
+- **Contrôles attendus :** `pnpm audit:visual`, contraste B navy/mark ≥ 4,5:1, recette visuelle avant publication.
+- **Suite proposée :** validation Wilkam puis publication.
+
+## DEC-012 — Pastilles d’état et flux pleine largeur
+
+
+- **Date :** 29 août 2026
+- **Auteur :** Revue design externe, à valider par Wilkam
+- **Statut :** **Proposé — implémenté dans le miroir**
+- **Périmètre :** Badge de dossier, Flux opérationnel (À traiter)
+- **Contexte :** Le rail 3 px + icône (DESIGN-008) restait illisible en file et en tête de dossier. Le flux était coincé dans la colonne décision, d’où un défilement horizontal du pipeline.
+- **Décision ou question :**
+  - le badge d’état redevient une **pastille** (fond / bordure / encre du triplet), **sans icône ni rail** ;
+  - le flux opérationnel passe **sous** le couple file + décision, pleine largeur ;
+  - les comptages restent hors badge (DEC-011).
+- **Fichiers concernés :** `app/globals.css`, `app/page.tsx`, `app/components/WorkflowAnalytics.tsx`, `scripts/audit-visual-styles.mjs`
+- **Impacts attendus :** pastilles lisibles ; pipeline sans scroll à 1440. Aucun rôle, droit, donnée ou workflow.
+- **Contrôles attendus :** `pnpm audit:visual`, `pnpm verify:personas`, recette À traiter 1440 / 1024 / 768.
+- **Suite proposée :** validation Wilkam.
+
+## DEC-011 — Santé & performance sur Accueil
+
+
+- **Date :** 29 août 2026
+- **Auteur :** Revue design externe, à valider par Wilkam
+- **Statut :** **Proposé — implémenté dans le miroir**
+- **Périmètre :** Accueil Facility Manager, À traiter, badges de comptage
+- **Contexte :** DEC-007 place la santé après les files sur À traiter. Le bloc y concurrençait la file. Les badges de comptage (`3 AGENTS`, `ACTION REQUISE`) n’étaient pas des états de dossier : le rail + icône les rendaient illisibles dans les cartes KPI.
+- **Décision ou question :**
+  - **Santé & performance vit sur Accueil** du Facility Manager ;
+  - **À traiter** reste exclusivement opérationnel (DEC-007) ;
+  - le Facility Manager atterrit toujours sur À traiter (DEC-009) ;
+  - la carte « alertes critiques » ouvre À traiter ;
+  - le Badge à rail est réservé à l’état d’un dossier (priorité, étape, hors délégation). Les comptages utilisent `.panel-count`. Les mentions de fraîcheur / maquette utilisent `.mockup-label`.
+- **Fichiers concernés :** `app/page.tsx`, `app/globals.css`, `scripts/audit-visual-styles.mjs`
+- **Impacts attendus :** Accueil = état du bâtiment ; À traiter = file. Aucun rôle, droit, donnée ou workflow.
+- **Contrôles attendus :** `pnpm audit:visual`, `pnpm verify:personas`, recette Accueil 1440 / 768 / 375, badges dossier toujours visibles dans le registre et la file.
+- **Suite proposée :** après validation Wilkam, passer à Adopté.
+
+## DEC-010 — Couches du système de design
+
+
+- **Date :** 29 août 2026
+- **Auteur :** Revue design externe, à valider par Wilkam
+- **Statut :** **Proposé — implémenté dans le miroir**
+- **Périmètre :** Tokens `:root`, chrome, mouvement, spécimen designer
+- **Contexte :** Les tokens de lot 1 existent mais le chrome, le glyphe B, les durées et l’empilement restaient en hexadécimal dispersé. La DA demandait `--brand-foreground`. DEC-001 (orange vs glyphe) n’est pas tranché. Les ~500 hex hors `:root` sur les écrans métier ne sont **pas** migrés ici.
+- **Décision ou question :**
+  - déclarer les couches manquantes **sans nouvelle teinte** : `--brand-foreground`, `--chrome` / `--on-chrome*`, `--mark` (`#f3a33c`, distinct de `--orange` `#ee8b2d`), `--motion-*`, `--z-*`, `--space-8` ;
+  - le bandeau consomme `--chrome`, pas un navy parallèle ;
+  - `--mark` et `--orange` restent deux tokens jusqu’à DEC-001 ;
+  - un spécimen vit à `/design-system`, **hors catalogue DEC-008** ;
+  - le lot « 498 hex restants » n’est pas ouvert.
+- **Fichiers concernés :** `app/globals.css`, `app/design-system/page.tsx`, `app/page.tsx` (lien login), `scripts/audit-visual-styles.mjs`
+- **Impacts attendus :** aucun changement de teinte perçu sur le produit ; spécimen consultable. Aucun rôle, droit, donnée ou workflow.
+- **Contrôles attendus :** `pnpm audit:visual`, `pnpm verify:personas`, recette du spécimen à 1440 / 375, bandeau identique.
+- **Suite proposée :** trancher DEC-001, puis migrer les hex métier par surface (registre, dossier, rondes), pas en une fois.
+
+## DEC-009 — Une bande navy, un en-tête de page
+
+
+- **Date :** 29 août 2026
+- **Auteur :** Revue design externe, à valider par Wilkam
+- **Statut :** **Proposé — implémenté dans le miroir, arbitrage Wilkam requis pour adoption**
+- **Périmètre :** Chrome applicatif, titres de page, landing Facility Manager
+- **Contexte :** DEC-008 a unifié le catalogue et le `<h1>`, mais a laissé deux bandes navy empilées (navigation 64 px + topbar 68 à 78 px) et un second titre dans le contenu (`Bonjour …`, `Dossiers à traiter`, `Situation du bâtiment`). DESIGN-011 avait déjà identifié cette duplication. Le Facility Manager atterrit sur `manager` (À traiter) sans que cela soit consigné.
+- **Décision ou question :**
+  - le bandeau de navigation reste la **seule** bande navy, conformément à DEC-004 ;
+  - l'en-tête de page (titre, sous-titre, persona, actions) passe sur `var(--surface)` ;
+  - un écran n'a qu'un titre visible : le `<h1>` issu du catalogue DEC-008 ; les H2 d'accueil, du hero À traiter et du hero Pilotage sont retirés ;
+  - le hero À traiter conserve la phrase de contexte et le pastille de délégation, sans second titre ;
+  - **le Facility Manager atterrit sur À traiter**, pas sur Accueil. Le logo continue de renvoyer vers Accueil (DEC-008).
+- **Fichiers concernés :** `app/page.tsx`, `app/globals.css`, `scripts/audit-visual-styles.mjs`
+- **Impacts attendus :** chrome navy ramené à 64–68 px ; premier dossier plus haut sur portable ; vocabulaire menu = H1 sans écho dans la page. Aucun changement de rôle, droit, donnée ou workflow.
+- **Contrôles attendus :** `pnpm audit:visual`, `pnpm verify:personas`, recette 1440 / 1024 / 768 / 375, premier dossier entier à 1366×768, contraste du topbar clair, pastille Démo toujours visible.
+- **Suite proposée :** après validation Wilkam, passer le statut à Adopté. Le lot tokens (hex hors `:root`) reste le suivant.
+
 ## DEC-008 — Navigation et en-tête stabilisés
 
 - **Date :** 29 août 2026

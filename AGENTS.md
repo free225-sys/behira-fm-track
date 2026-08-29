@@ -15,6 +15,40 @@ Avant toute intervention sur l’interface, lire intégralement :
 
 Ces documents constituent la source de vérité UX/UI du projet.
 
+## Système de design — obligatoire pour tout agent
+
+Le spécimen vivant **`/design-system`** (`app/design-system/page.tsx`) et les tokens `:root` de `app/globals.css` lient tout chantier UI. Les primitives sont dans `app/components/ui` (`Button`, `IconButton`, `Badge`, `Field`, `Card`).
+
+Avant d’écrire ou de modifier une surface :
+
+1. Lire `docs/design/DESIGN.md` §11 (tokens) et `docs/design/DECISIONS.md` (DEC-003, DEC-006, DEC-013).
+2. Consulter le spécimen `/design-system` — hors navigation produit.
+3. Réutiliser un token ou une primitive existante. **Ne pas inventer de teinte, de rayon ou de composant parallèle.**
+4. Consigner toute exception dans `docs/design/FROM-DESIGN.md` (journal append-only).
+
+### Tokens de marque (DEC-013)
+
+| Token | Valeur | Usage |
+| --- | --- | --- |
+| `--brand` | `#235ea7` | Action principale |
+| `--brand-strong` / `--chrome` | `#0d2340` | Bandeau, titres forts |
+| `--mark` | `#20b2aa` | Glyphe B uniquement |
+| `--teal` | `#0e6a66` | Accent courant |
+| `--accent` | alias `--teal` | Idem |
+| `--orange` | alias `--teal` | Compatibilité — ne plus l’étendre |
+| Triplets `warning` / `danger` | inchangés | États métier, **pas** la marque |
+
+Pas de thème sombre (DEC-006). Plancher typographique 12 px (DEC-003). Contraste ≥ 4,5:1 à 12 px.
+
+### Contrats visuels en vigueur
+
+- Une seule bande navy : le chrome de navigation.
+- Badges : capsule + sceau circulaire (`Badge` dans `app/components/ui/badge.tsx`).
+- Compteurs de file : onglet actif = carte interne + monogramme inversé, sans rail.
+- Santé & performance : Accueil Facility Manager, pas À traiter.
+- Flux opérationnel : pleine largeur, hors colonne de décision.
+- Contrôles : `pnpm audit:visual` et `pnpm verify:personas` doivent rester verts.
+
 ## Direction retenue
 
 - Utiliser **Ui / shadcn-inspired** pour la structure générale, les surfaces, la navigation, les cartes, les formulaires, la lisibilité et la hiérarchie.

@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 import { AntiZombieSummary } from './components/AntiZombieSummary';
 import type { AntiZombieSummaryData } from './components/anti-zombie-contract';
+import { Badge, Button, Card, Field, IconButton } from './components/ui';
 import { WorkflowAnalytics } from './components/WorkflowAnalytics';
 import { getAuthenticatedProfileGate, resolveAuthenticatedPersona } from './lib/supabase/auth';
 import { getBrowserSupabaseClient, setSupabaseRememberPreference } from './lib/supabase/client';
@@ -200,11 +201,6 @@ const fallbackEquipment: EquipmentItem[] = [
   { code:'DEMO-ESP', label:'Irrigation', health:98, state:'Sain' },
   { code:'DEMO-RND', label:'Rondes & constats', health:93, state:'Sain' },
 ];
-
-function Badge({ children, tone = 'neutral' }: { children: React.ReactNode; tone?: string }) {
-  const icons: Record<string,string> = { critical:'!', high:'!', orange:'◆', medium:'•', low:'•', success:'✓', blue:'↗', purple:'⌁', neutral:'○' };
-  return <span className={`badge badge-${tone}`}><span className="badge-icon" aria-hidden="true">{icons[tone] ?? '•'}</span><span className="badge-label">{children}</span></span>;
-}
 
 const personaGroups: { label:string; ids:PersonaId[] }[] = [
   { label:'Administration', ids:['administration'] },
@@ -446,7 +442,7 @@ function AuthExperience({ onAuthenticate, onDemoAuthenticate, onForgot, onReset,
       <div className="auth-brand"><span className="brand-mark">B</span><span>BEHIRA<small>FM / GB TRACK</small></span></div>
       <div className="auth-brand-copy"><span className="auth-kicker">PILOTAGE TECHNIQUE & MAINTENANCE</span><h1>Une vision claire du bâtiment, jusqu’à la preuve.</h1><p>Centralisez les constats, priorisez les risques et suivez chaque intervention jusqu’à sa clôture.</p></div>
       <div className="auth-cycle"><span>Constat</span><i>→</i><span>Qualification</span><i>→</i><span>Décision</span><i>→</i><span>Intervention</span><i>→</i><span>Preuve</span><i>→</i><span>Clôture</span></div>
-      <small className="auth-local-note">{supabaseMode ? `${environmentLabel} prêt · mode démonstration conservé` : 'Prototype local · authentification et données simulées'}</small>
+      <small className="auth-local-note">{supabaseMode ? `${environmentLabel} prêt · mode démonstration conservé` : 'Prototype local · authentification et données simulées'} · <a href="/design-system">Système de design</a></small>
     </section>
 
     <section className="auth-main">
@@ -459,7 +455,7 @@ function AuthExperience({ onAuthenticate, onDemoAuthenticate, onForgot, onReset,
             <label className="auth-field">Mot de passe<span className="password-control"><input type={showPassword ? 'text' : 'password'} autoComplete="current-password" value={password} onChange={(event) => {setPassword(event.target.value);setStatus('idle')}} aria-invalid={status === 'error'} aria-describedby="auth-message" /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}>{showPassword ? 'Masquer' : 'Afficher'}</button></span></label>
             <div className="auth-form-options"><label className="check-control"><input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} /><span>Se souvenir de moi</span></label><button type="button" className="auth-link" onClick={() => switchScreen('forgot')}>Mot de passe oublié ?</button></div>
             {message && <div id="auth-message" className={`auth-message ${status}`} role={status === 'error' ? 'alert' : 'status'}><span>{status === 'error' ? '!' : status === 'success' ? '✓' : '•'}</span>{message}</div>}
-            <button className="primary-button auth-submit" type="submit" disabled={status === 'loading' || status === 'success'}>{status === 'loading' ? 'Connexion…' : status === 'success' ? 'Connecté ✓' : 'Se connecter'}</button>
+            <Button className="auth-submit" type="submit" disabled={status === 'loading' || status === 'success'}>{status === 'loading' ? 'Connexion…' : status === 'success' ? 'Connecté ✓' : 'Se connecter'}</Button>
           </form>
           {!supabaseMode && <button type="button" className="invite-link" onClick={() => switchScreen('invite')}>Première connexion ? Activer une invitation</button>}
         </>}
@@ -487,7 +483,7 @@ function AuthExperience({ onAuthenticate, onDemoAuthenticate, onForgot, onReset,
       <aside className="demo-accounts" aria-label="Comptes de démonstration">
         <div><span>{supabaseMode ? 'MODE DÉMONSTRATION DE SECOURS' : 'COMPTES DE DÉMONSTRATION'}</span><p>Profils fictifs en <code>.invalid</code> · {supabaseMode ? 'séparés de Supabase Auth et sans écriture distante' : 'session simulée'}.</p></div>
         {!supabaseMode && <p className="demo-password"><span>Mot de passe</span><b>{DEMO_PASSWORD}</b></p>}
-        {(!supabaseMode || allowDemoFallback) && <div className="demo-account-grid">{demoAccounts.map((account) => {const person = personas.find((item) => item.id === account.personaId)!; return <button type="button" key={account.email} onClick={() => {if (supabaseMode) void openDemoAccount(account); else {chooseAccount(account);switchScreen('login')}}}><span>{person.initials}</span><div><b>{person.name}</b><small>{account.email}</small><em>{account.destination}</em></div><i>{supabaseMode ? 'Ouvrir la démo' : 'Utiliser'}</i></button>})}</div>}
+        {(!supabaseMode || allowDemoFallback) && <div className="demo-account-grid">{demoAccounts.map((account) => {const person = personas.find((item) => item.id === account.personaId)!; const selected = email.trim().toLowerCase() === account.email.toLowerCase(); return <button type="button" key={account.email} className={selected ? 'is-selected' : ''} aria-pressed={selected} onClick={() => {if (supabaseMode) void openDemoAccount(account); else {chooseAccount(account);switchScreen('login')}}}><span>{person.initials}</span><div><b>{person.name}</b><small>{account.email}</small><em>{account.destination}</em></div><i>{supabaseMode ? 'Ouvrir la démo' : 'Utiliser'}</i></button>})}</div>}
         <div className="demo-reset"><p><b>{supabaseMode ? environmentLabel : 'Session locale uniquement'}</b><br />{supabaseMode ? 'Une connexion réelle impose le rôle du profil métier protégé par RLS. Le mode démo reste local.' : 'La sécurité réelle sera assurée par Supabase Auth et les politiques RLS.'}</p><button type="button" onClick={resetInterface}>Réinitialiser la démonstration</button></div>
       </aside>
     </section>
@@ -1016,20 +1012,20 @@ export default function Home() {
       <main className="main-column">
         <header className="topbar">
           <div className="topbar-title"><h1>{pageTitle}</h1><p>{pageSubtitle}</p></div>
-          <div className="top-actions">{session.mode === 'demo' ? <PersonaSwitcher value={personaId} onChange={changePersona} /> : <div className={`authenticated-persona data-${dataState}`} title={`${session.email} · ${dataState === 'live' ? `données ${supabaseIntegration.environmentLabel}` : 'données de repli'}`}><span>{persona.initials}</span><p><b>{persona.name}</b><small>{dataState === 'live' ? `${supabaseIntegration.environmentLabel} · ${referenceCounts.anomalies} anomalies visibles` : dataState === 'loading' ? `Connexion à ${supabaseIntegration.environmentLabel}…` : `Mode de repli · ${persona.role}`}</small></p></div>}<button className="icon-button" aria-label="Notifications">●<span className="notification-dot" /></button><button className="auth-signout-top" onClick={() => setSignOutConfirm(true)} aria-label="Se déconnecter">↪</button>{showRoundCta && <button className="primary-button top-create" onClick={() => navigate('report')}>＋ Nouvelle ronde</button>}</div>
+          <div className="top-actions">{session.mode === 'demo' ? <PersonaSwitcher value={personaId} onChange={changePersona} /> : <div className={`authenticated-persona data-${dataState}`} title={`${session.email} · ${dataState === 'live' ? `données ${supabaseIntegration.environmentLabel}` : 'données de repli'}`}><span>{persona.initials}</span><p><b>{persona.name}</b><small>{dataState === 'live' ? `${supabaseIntegration.environmentLabel} · ${referenceCounts.anomalies} anomalies visibles` : dataState === 'loading' ? `Connexion à ${supabaseIntegration.environmentLabel}…` : `Mode de repli · ${persona.role}`}</small></p></div>}<IconButton aria-label="Notifications"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3.2a3.4 3.4 0 0 0-3.4 3.4v1.1c0 .9-.3 1.8-.9 2.5l-.5.6c-.4.4-.2 1.2.4 1.2h9.8c.6 0 .8-.8.4-1.2l-.5-.6a4 4 0 0 1-.9-2.5V6.6A3.4 3.4 0 0 0 10 3.2Z"/><path d="M8.2 15.2a1.8 1.8 0 0 0 3.6 0"/></svg><span className="notification-dot" /></IconButton><button className="auth-signout-top" onClick={() => setSignOutConfirm(true)} aria-label="Se déconnecter"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 4.5H5.5A1.5 1.5 0 0 0 4 6v8a1.5 1.5 0 0 0 1.5 1.5H8"/><path d="M8.5 10H16m0 0-2.4-2.4M16 10l-2.4 2.4"/></svg></button>{showRoundCta && <Button className="top-create" onClick={() => navigate('report')}>＋ Nouvelle ronde</Button>}</div>
         </header>
 
         <div className="content">
           {view === 'workspace' && <PersonaWorkspace persona={persona} anomalies={anomalies} equipment={equipmentItems} vendors={vendorReferences} canUploadVendorReport={effectiveCanUploadVendorReport} vendorReportBusy={mutationBusy} onVendorReport={persistVendorReport} escalations={escalations} fieldRequests={fieldRequests} onEscalationDecision={decideEscalation} onEscalateToDirection={escalateToDirection} onFieldRequest={submitFieldRequest} onOpen={(id) => openDetail(id, 'workspace')} onNavigate={navigate} flash={flash} />}
           {view === 'dashboard' && <Dashboard anomalies={anomalies} equipment={equipmentItems} audience={personaId === 'administration' ? 'administration' : 'facility'} onOpen={openDetail} onNavigate={navigate} />}
           {view === 'registry' && <Registry anomalies={filtered} query={query} setQuery={setQuery} priority={priorityFilter} setPriority={setPriorityFilter} status={statusFilter} setStatus={setStatusFilter} onOpen={(id) => openDetail(id, 'registry')} />}
-          {view === 'manager' && <Manager anomalies={anomalies} equipment={equipmentItems} tab={managerTab} setTab={setManagerTab} onOpen={(id) => openDetail(id, 'manager')} />}
+          {view === 'manager' && <Manager anomalies={anomalies} tab={managerTab} setTab={setManagerTab} onOpen={(id) => openDetail(id, 'manager')} />}
           {view === 'report' && <Report persona={persona} onNavigate={navigate} />}
           {view === 'detail' && <Detail key={`${selected.id}-${selected.status}-${selected.proof}-${selected.proofPending}`} anomaly={selected} readOnly={personaId === 'administration'} canVerify={personaId === 'facility' && session.mode === 'supabase'} busy={mutationBusy} onBack={() => navigate(previousView)} onStatus={(status) => void persistWorkflowStatus(status)} onProof={(file) => void persistProof(file)} onVerify={() => void verifyProof()} />}
         </div>
       </main>
       {toast && <div className={`toast ${/impossible|non enregistrée/i.test(toast) ? 'toast-error' : ''}`} role="status"><span>{/impossible|non enregistrée/i.test(toast) ? '!' : '✓'}</span>{toast}</div>}
-      {signOutConfirm && <div className="signout-backdrop" role="presentation" onMouseDown={(event) => {if (event.target === event.currentTarget) setSignOutConfirm(false)}}><section className="signout-dialog" role="dialog" aria-modal="true" aria-labelledby="signout-title"><span className="signout-icon">↪</span><h2 id="signout-title">Se déconnecter ?</h2><p>{session.mode === 'supabase' ? `La session ${supabaseIntegration.environmentLabel} sera fermée. Les données métier de démonstration resteront disponibles.` : 'La session simulée sera supprimée de cet appareil. Les données de démonstration resteront disponibles.'}</p><div><button ref={signOutCancelRef} className="secondary-button" onClick={() => setSignOutConfirm(false)}>Annuler</button><button className="primary-button" onClick={() => void signOut()}>Se déconnecter</button></div><button className="reset-session-link" onClick={resetDemo}>Déconnecter et réinitialiser toute la démo</button></section></div>}
+      {signOutConfirm && <div className="signout-backdrop" role="presentation" onMouseDown={(event) => {if (event.target === event.currentTarget) setSignOutConfirm(false)}}><section className="signout-dialog" role="dialog" aria-modal="true" aria-labelledby="signout-title"><span className="signout-icon">↪</span><h2 id="signout-title">Se déconnecter ?</h2><p>{session.mode === 'supabase' ? `La session ${supabaseIntegration.environmentLabel} sera fermée. Les données métier de démonstration resteront disponibles.` : 'La session simulée sera supprimée de cet appareil. Les données de démonstration resteront disponibles.'}</p><div><Button ref={signOutCancelRef} variant="secondary" onClick={() => setSignOutConfirm(false)}>Annuler</Button><Button onClick={() => void signOut()}>Se déconnecter</Button></div><button className="reset-session-link" onClick={resetDemo}>Déconnecter et réinitialiser toute la démo</button></section></div>}
     </div>
   );
 }
@@ -1052,14 +1048,14 @@ function PersonaWorkspace({ persona, anomalies, equipment, vendors, canUploadVen
   flash:(message:string)=>void;
 }) {
   if (persona.id === 'administration') return <DirectionWorkspace anomalies={anomalies} equipment={equipment} escalations={escalations} onDecision={onEscalationDecision} onOpen={onOpen} onNavigate={onNavigate} />;
-  if (persona.id === 'facility') return <FacilityManagerWorkspace escalations={escalations} fieldRequests={fieldRequests} onEscalate={onEscalateToDirection} onOpen={onOpen} onNavigate={onNavigate} />;
+  if (persona.id === 'facility') return <FacilityManagerWorkspace anomalies={anomalies} equipment={equipment} escalations={escalations} fieldRequests={fieldRequests} onEscalate={onEscalateToDirection} onOpen={onOpen} onNavigate={onNavigate} />;
   if (persona.id === 'electricite' || persona.id === 'eau_incendie') return <AgentWorkspace key={persona.id} persona={persona} anomalies={anomalies} vendors={vendors} canUploadVendorReport={canUploadVendorReport} vendorReportBusy={vendorReportBusy} onVendorReport={onVendorReport} onFieldRequest={onFieldRequest} flash={flash} />;
   if (persona.id === 'rondes_assistance') return <RoundsAssistanceWorkspace fieldRequests={fieldRequests} onFieldRequest={onFieldRequest} flash={flash} />;
   return null;
 }
 
-function WorkspaceIntro({ kicker, title, description, badge }: { kicker:string; title:string; description:string; badge:string }) {
-  return <section className="workspace-intro"><div><p className="direction-kicker">{kicker}</p><h2>{title}</h2><p>{description}</p></div><span className="workspace-mode"><i /> {badge}</span></section>;
+function WorkspaceIntro({ kicker, description, badge }: { kicker:string; description:string; badge:string }) {
+  return <section className="workspace-intro"><div><p className="direction-kicker">{kicker}</p><p>{description}</p></div><span className="workspace-mode"><i /> {badge}</span></section>;
 }
 
 function AnswerStrip({ todo, risk, due, proof }: { todo:string; risk:string; due:string; proof:string }) {
@@ -1093,7 +1089,7 @@ function DirectionWorkspace({ anomalies, equipment, escalations, onDecision, onO
     setMotive('');
   };
   return <>
-    <WorkspaceIntro kicker="ADMINISTRATION · SUPER UTILISATEUR MÉTIER" title="Bonjour Administration" description="Décidez ce qui dépasse la délégation opérationnelle de Facility Manager." badge="Validation métier active" />
+    <WorkspaceIntro kicker="ADMINISTRATION · SUPER UTILISATEUR MÉTIER" description="Décidez ce qui dépasse la délégation opérationnelle de Facility Manager." badge="Validation métier active" />
     <div className="authority-split" role="note"><div><span>✓</span><p><b>Validation métier Administration</b><small>Risques, coûts à partir de 400 000 FCFA et contrôle des clôtures sensibles</small></p></div><div className="technical-admin"><span>⌘</span><p><b>Utilisateurs et paramètres</b><small>Comptes, droits sensibles, zones et seuil financier configurables</small></p><Badge tone="blue">ACCÈS ADMIN</Badge></div></div>
     <AnswerStrip todo={`${escalations.filter((item) => item.state === 'À décider').length} arbitrages`} risk="2 dossiers critiques" due="1 décision avant 10:30" proof="1 clôture sensible" />
     <section className="direction-summary-grid"><article className="panel executive-metric"><span>RISQUES CRITIQUES</span><strong>2</strong><small>DEMO-SSI et continuité DEMO-GE</small></article><article className="panel executive-metric"><span>COÛTS À VALIDER</span><strong>6,7 M</strong><small>FCFA · 2 engagements</small></article><article className="panel executive-metric"><span>SANTÉ BÂTIMENT</span><strong className="healthy">82/100</strong><small>Équipements 70% · sécurité 15%</small></article><article className="panel threshold-card"><label>Seuil d’approbation Administration<input aria-label="Seuil d’approbation Administration" type="number" step="50000" value={threshold} onChange={(e) => setThreshold(Number(e.target.value))} /></label><small>Les engagements ≥ {formatMoney(threshold)} sont remontés automatiquement.</small></article></section>
@@ -1124,15 +1120,17 @@ function DirectionWorkspace({ anomalies, equipment, escalations, onDecision, onO
   </>;
 }
 
-function FacilityManagerWorkspace({ escalations, fieldRequests, onEscalate, onOpen, onNavigate }: { escalations:Escalation[]; fieldRequests:FieldRequest[]; onEscalate:(request:FieldRequest)=>void; onOpen:(id:string)=>void; onNavigate:(view:View)=>void }) {
+function FacilityManagerWorkspace({ anomalies, equipment, escalations, fieldRequests, onEscalate, onOpen, onNavigate }: { anomalies:Anomaly[]; equipment:EquipmentItem[]; escalations:Escalation[]; fieldRequests:FieldRequest[]; onEscalate:(request:FieldRequest)=>void; onOpen:(id:string)=>void; onNavigate:(view:View)=>void }) {
   const responses = escalations.filter((item) => item.state !== 'À décider');
+  const pendingRequests = fieldRequests.filter((item) => item.status === 'À traiter par Facility Manager').length;
   return <>
-    <WorkspaceIntro kicker="FACILITY MANAGER" title="Bonjour Facility Manager" description="Qualifiez, affectez, relancez et préparez les arbitrages Direction." badge="Pilotage opérationnel" />
+    <WorkspaceIntro kicker="FACILITY MANAGER" description="L’état du bâtiment d’abord. Qualifiez, affectez et relancez depuis À traiter." badge="Pilotage opérationnel" />
+    <ManagerHealthOverview anomalies={anomalies} equipment={equipment} onNavigate={onNavigate} />
     <AnswerStrip todo="2 qualifications" risk="DEMO-SSI critique" due="DEMO-ASC-2 en retard" proof="2 dossiers" />
-    <section className="facility-personal-grid"><article className="panel"><div className="panel-head"><div><h3>Remontées terrain</h3><p>Demandes reçues des agents et de Agente Rondes & Assistance</p></div><Badge tone="orange">{fieldRequests.filter((item) => item.status === 'À traiter par Facility Manager').length} à traiter</Badge></div><div className="field-request-list">{fieldRequests.map((request) => {
+    <section className="facility-personal-grid"><article className="panel"><div className="panel-head"><div><h3>Remontées terrain</h3><p>Demandes reçues des agents et de Agente Rondes & Assistance</p></div><span className="panel-count">{pendingRequests} à traiter</span></div><div className="field-request-list">{fieldRequests.map((request) => {
       const exceedsDelegation = /deuxième|critique|coût|sécurité/i.test(`${request.subject} ${request.note}`);
       return <article key={request.id}><div><Badge tone={request.status === 'Transmise à Direction' ? 'blue' : 'orange'}>{request.status}</Badge><span>{request.id} · {request.from}</span>{exceedsDelegation && request.status === 'À traiter par Facility Manager' && <Badge tone="critical">Hors délégation</Badge>}</div><h4>{request.subject}</h4><p>{request.note}</p>{request.status === 'À traiter par Facility Manager' ? <div><button className="primary-button qualify-action" onClick={() => onNavigate('manager')}>Qualifier maintenant</button><button className={`escalate-action ${exceedsDelegation ? 'is-recommended' : ''}`} onClick={() => onEscalate(request)}>Soumettre à l’Administration</button></div> : <small>En attente de décision de l’Administration.</small>}</article>;
-    })}</div></article><article className="panel"><div className="panel-head"><div><h3>Retours de l’Administration</h3><p>Décisions métier reçues après arbitrage</p></div><Badge tone="success">{responses.length} réponse{responses.length > 1 ? 's' : ''}</Badge></div><div className="direction-return-list">{responses.length ? responses.map((item) => <button key={item.id} onClick={() => item.anomaly.startsWith('ANO-') && onOpen(item.anomaly)}><span className={`return-mark ${item.state === 'Approuvée' ? 'ok' : item.state === 'Refusée' ? 'no' : 'back'}`}>{item.state === 'Approuvée' ? '✓' : item.state === 'Refusée' ? '×' : '↩'}</span><div><b>{item.id} · {item.asset}</b><p>{item.state} — {item.motive}</p></div></button>) : <div className="empty-state compact"><span>⌁</span><h3>Aucun retour reçu</h3><p>Les décisions de l’Administration apparaîtront ici.</p></div>}</div></article></section>
+    })}</div></article><article className="panel"><div className="panel-head"><div><h3>Retours de l’Administration</h3><p>Décisions métier reçues après arbitrage</p></div><span className="panel-count">{responses.length} réponse{responses.length > 1 ? 's' : ''}</span></div><div className="direction-return-list">{responses.length ? responses.map((item) => <button key={item.id} onClick={() => item.anomaly.startsWith('ANO-') && onOpen(item.anomaly)}><span className={`return-mark ${item.state === 'Approuvée' ? 'ok' : item.state === 'Refusée' ? 'no' : 'back'}`}>{item.state === 'Approuvée' ? '✓' : item.state === 'Refusée' ? '×' : '↩'}</span><div><b>{item.id} · {item.asset}</b><p>{item.state} — {item.motive}</p></div></button>) : <div className="empty-state compact"><span>⌁</span><h3>Aucun retour reçu</h3><p>Les décisions de l’Administration apparaîtront ici.</p></div>}</div></article></section>
     <button className="workspace-next" onClick={() => onNavigate('manager')}>Ouvrir le poste de pilotage complet <span>→</span></button>
   </>;
 }
@@ -1172,7 +1170,7 @@ function AgentWorkspace({ persona, anomalies, vendors, canUploadVendorReport, ve
     setAction(null); setNote('');
   };
   return <>
-    <WorkspaceIntro kicker={persona.role.toUpperCase()} title={`Bonjour ${persona.shortName}`} description={`Votre périmètre aujourd’hui : ${persona.scope}.`} badge="Vue terrain limitée" />
+    <WorkspaceIntro kicker={persona.role.toUpperCase()} description={`Votre périmètre aujourd’hui : ${persona.scope}.`} badge="Vue terrain limitée" />
     <AnswerStrip todo={`${tasks.filter((task) => !['Terminé'].includes(task.status)).length} actions`} risk={agentKey === 'eau_incendie' ? 'DEMO-SSI critique' : 'DEMO-ASC-2 en retard'} due={agentKey === 'eau_incendie' ? 'Contrôle avant 10:30' : 'Ronde GE avant 10:00'} proof={`${tasks.filter((task) => task.status !== 'Terminé' && !task.proof).length} requises`} />
     <section className="agent-equipment-grid">{(agentKey === 'electricite' ? [{code:'DEMO-GE',label:'Mode AUTO',value:'À confirmer',tone:'orange'},{code:'DEMO-ASC-1',label:'Disponibilité',value:'Opérationnel',tone:'success'},{code:'DEMO-ASC-2',label:'Disponibilité',value:'Dégradée',tone:'critical'}] : [{code:'DEMO-EAU',label:'Redondance P1/P2',value:'P1 en défaut',tone:'orange'},{code:'DEMO-SSI',label:'Pression réseau',value:'Instable',tone:'critical'},{code:'DEMO-EAU',label:'Fuite active',value:'Non',tone:'success'}]).map((item,index) => <article className="panel equipment-glance" key={`${item.code}-${index}`}><span>{item.code}</span><b>{item.value}</b><Badge tone={item.tone}>{item.label}</Badge></article>)}</section>
     {agentKey === 'eau_incendie' && <section className="provisional-rule"><span>↻</span><div><b>Réarmement = rétablissement provisoire</b><p>L’anomalie reste ouverte jusqu’au diagnostic, à l’intervention corrective et à la preuve validée par Facility Manager.</p></div></section>}
@@ -1239,11 +1237,11 @@ function RoundsAssistanceWorkspace({ fieldRequests, onFieldRequest, flash }: { f
     setTitle(''); setPhoto(false);
   };
   return <>
-    <WorkspaceIntro kicker="AGENTE & ASSISTANTE DE DIRECTION" title="Bonjour Agente Rondes & Assistance" description="Séparez clairement vos rondes terrain et votre suivi administratif." badge="Double mission" />
+    <WorkspaceIntro kicker="AGENTE & ASSISTANTE DE DIRECTION" description="Séparez clairement vos rondes terrain et votre suivi administratif." badge="Double mission" />
     <AnswerStrip todo="6 zones à parcourir" risk="1 infiltration à vérifier" due="2 devis à relancer" proof="1 autorisation attendue" />
     <div className="mission-switch" role="tablist" aria-label="Fonction de Agente Rondes & Assistance"><button type="button" role="tab" aria-selected={missionTab === 'terrain'} className={missionTab === 'terrain' ? 'active' : ''} onClick={() => setMissionTab('terrain')}><span>✓</span><b>Terrain</b><small>Rondes, constats et brouillons hors ligne</small></button><button type="button" role="tab" aria-selected={missionTab === 'administration'} className={missionTab === 'administration' ? 'active' : ''} onClick={() => setMissionTab('administration')}><span>▧</span><b>Administratif</b><small>Devis, paiements et autorisations</small></button></div>
-    {missionTab === 'terrain' && <><section className="rondes_assistance-grid"><article className="panel zone-rounds"><div className="panel-head"><div><h3>Zones du jour</h3><p>Ronde DEMO-RND · 24 août</p></div><Badge tone="blue">4 / 6 contrôlées</Badge></div>{['Hall & accueil|Terminé','Atrium restaurant|À vérifier','Jardinières RDC|En cours','Sanitaires R+2|Terminé','Terrasse R+4|À faire','Parking sous-sol|À faire'].map((item) => {const [label,status] = item.split('|'); return <button key={label}><span className={status === 'Terminé' ? 'done' : status === 'En cours' ? 'current' : ''}>{status === 'Terminé' ? '✓' : '○'}</span><div><b>{label}</b><small>Propreté · plantes · fuite · dégradation</small></div><Badge tone={status === 'Terminé' ? 'success' : status === 'À vérifier' ? 'critical' : status === 'En cours' ? 'blue' : 'neutral'}>{status}</Badge></button>})}</article><form className="panel quick-finding" onSubmit={submit}><div className="panel-head"><div><h3>Créer un constat</h3><p>Envoi direct à Facility Manager pour qualification</p></div><Badge tone="orange">RAPIDE</Badge></div><label className="field">Zone<select value={zone} onChange={(e) => setZone(e.target.value)}><option>Atrium restaurant</option><option>Jardinières RDC</option><option>Terrasse R+4</option><option>Parking sous-sol</option></select></label><label className="field">Catégorie<select value={category} onChange={(e) => setCategory(e.target.value)}><option>Plantes / irrigation</option><option>Propreté</option><option>Infiltration</option><option>Dégradation</option><option>Éclairage</option></select></label><label className="field">Constat<input required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex. Terre sèche dans la jardinière nord" /></label><button type="button" className={`photo-toggle ${photo ? 'active' : ''}`} onClick={() => setPhoto((value) => !value)}><span>{photo ? '✓' : '＋'}</span><div><b>{photo ? 'Photo de zone ajoutée' : 'Ajouter une photo'}</b><small>Simulation locale · JPG</small></div></button><button className="primary-button" type="submit">Créer et transmettre à Facility Manager</button></form></section><section className="panel signal-tracker"><div className="panel-head"><div><h3>Mes signalements</h3><p>Statuts visibles sans accès aux décisions techniques</p></div><Badge>{submitted.length} dossiers</Badge></div><div className="signal-list">{submitted.map((item,index) => <article key={`${item.title}-${index}`}><div><b>{item.title}</b><p>{item.zone} · {item.category}</p></div><Badge tone={item.status === 'Complément demandé' && !complementDone ? 'orange' : item.status === 'À qualifier' ? 'blue' : 'success'}>{item.status === 'Complément demandé' && complementDone ? 'Complément transmis' : item.status}</Badge>{item.status === 'Complément demandé' && !complementDone && <button onClick={() => {setComplementDone(true);flash('Complément photo transmis à Facility Manager — simulation locale.')}}>Ajouter la photo demandée</button>}</article>)}</div><div className="field-feed-note">{fieldRequests.filter((request) => request.from === 'Agente Rondes & Assistance Démo').length} remontée(s) visible(s) dans la file de Facility Manager.</div></section></>}
-    {missionTab === 'administration' && <><section className="mission-permission-note"><span>i</span><div><b>Fonction administrative, sans décision technique</b><p>Agente Rondes & Assistance prépare et suit les pièces. Facility Manager et l’Administration conservent leurs validations respectives.</p></div></section><section className="rondes_assistance-admin-grid"><article className="panel"><div className="panel-head"><div><p className="design-kicker">SUIVI ADMINISTRATIF</p><h3>Devis et autorisations</h3></div><Badge tone="orange">3 À SUIVRE</Badge></div>{[['DEV-031','PREST-EAU','280 000 FCFA','Validation Facility Manager'],['DEV-029','PREST-ASC','950 000 FCFA','Arbitrage Administration'],['DEV-026','PREST-ESP','190 000 FCFA','Bon à payer']].map((item) => <button className="admin-follow-row" key={item[0]}><span>{item[0]}</span><p><b>{item[1]}</b><small>{item[2]} · {item[3]}</small></p><em>Voir →</em></button>)}</article><article className="panel"><div className="panel-head"><div><p className="design-kicker">COÛTS & PAIEMENTS</p><h3>Échéances de la semaine</h3></div></div><div className="payment-summary"><strong>2,12 M</strong><span>FCFA à contrôler</span></div><div className="payment-lines"><span><i className="done" /> 3 pièces complètes</span><span><i /> 1 autorisation attendue</span><span><i className="late" /> 1 paiement en retard</span></div><button className="secondary-button">Ouvrir le suivi financier</button></article></section></>}
+    {missionTab === 'terrain' && <><section className="rondes_assistance-grid"><article className="panel zone-rounds"><div className="panel-head"><div><h3>Zones du jour</h3><p>Ronde DEMO-RND · 24 août</p></div><span className="panel-count">4 / 6 contrôlées</span></div>{['Hall & accueil|Terminé','Atrium restaurant|À vérifier','Jardinières RDC|En cours','Sanitaires R+2|Terminé','Terrasse R+4|À faire','Parking sous-sol|À faire'].map((item) => {const [label,status] = item.split('|'); return <button key={label}><span className={status === 'Terminé' ? 'done' : status === 'En cours' ? 'current' : ''}>{status === 'Terminé' ? '✓' : '○'}</span><div><b>{label}</b><small>Propreté · plantes · fuite · dégradation</small></div><Badge tone={status === 'Terminé' ? 'success' : status === 'À vérifier' ? 'critical' : status === 'En cours' ? 'blue' : 'neutral'}>{status}</Badge></button>})}</article><form className="panel quick-finding" onSubmit={submit}><div className="panel-head"><div><h3>Créer un constat</h3><p>Envoi direct à Facility Manager pour qualification</p></div><Badge tone="orange">RAPIDE</Badge></div><label className="field">Zone<select value={zone} onChange={(e) => setZone(e.target.value)}><option>Atrium restaurant</option><option>Jardinières RDC</option><option>Terrasse R+4</option><option>Parking sous-sol</option></select></label><label className="field">Catégorie<select value={category} onChange={(e) => setCategory(e.target.value)}><option>Plantes / irrigation</option><option>Propreté</option><option>Infiltration</option><option>Dégradation</option><option>Éclairage</option></select></label><label className="field">Constat<input required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex. Terre sèche dans la jardinière nord" /></label><button type="button" className={`photo-toggle ${photo ? 'active' : ''}`} onClick={() => setPhoto((value) => !value)}><span>{photo ? '✓' : '＋'}</span><div><b>{photo ? 'Photo de zone ajoutée' : 'Ajouter une photo'}</b><small>Simulation locale · JPG</small></div></button><button className="primary-button" type="submit">Créer et transmettre à Facility Manager</button></form></section><section className="panel signal-tracker"><div className="panel-head"><div><h3>Mes signalements</h3><p>Statuts visibles sans accès aux décisions techniques</p></div><Badge>{submitted.length} dossiers</Badge></div><div className="signal-list">{submitted.map((item,index) => <article key={`${item.title}-${index}`}><div><b>{item.title}</b><p>{item.zone} · {item.category}</p></div><Badge tone={item.status === 'Complément demandé' && !complementDone ? 'orange' : item.status === 'À qualifier' ? 'blue' : 'success'}>{item.status === 'Complément demandé' && complementDone ? 'Complément transmis' : item.status}</Badge>{item.status === 'Complément demandé' && !complementDone && <button onClick={() => {setComplementDone(true);flash('Complément photo transmis à Facility Manager — simulation locale.')}}>Ajouter la photo demandée</button>}</article>)}</div><div className="field-feed-note">{fieldRequests.filter((request) => request.from === 'Agente Rondes & Assistance Démo').length} remontée(s) visible(s) dans la file de Facility Manager.</div></section></>}
+    {missionTab === 'administration' && <><section className="mission-permission-note"><span>i</span><div><b>Fonction administrative, sans décision technique</b><p>Agente Rondes & Assistance prépare et suit les pièces. Facility Manager et l’Administration conservent leurs validations respectives.</p></div></section><section className="rondes_assistance-admin-grid"><article className="panel"><div className="panel-head"><div><p className="design-kicker">SUIVI ADMINISTRATIF</p><h3>Devis et autorisations</h3></div><span className="panel-count is-alert">3 à suivre</span></div>{[['DEV-031','PREST-EAU','280 000 FCFA','Validation Facility Manager'],['DEV-029','PREST-ASC','950 000 FCFA','Arbitrage Administration'],['DEV-026','PREST-ESP','190 000 FCFA','Bon à payer']].map((item) => <button className="admin-follow-row" key={item[0]}><span>{item[0]}</span><p><b>{item[1]}</b><small>{item[2]} · {item[3]}</small></p><em>Voir →</em></button>)}</article><article className="panel"><div className="panel-head"><div><p className="design-kicker">COÛTS & PAIEMENTS</p><h3>Échéances de la semaine</h3></div></div><div className="payment-summary"><strong>2,12 M</strong><span>FCFA à contrôler</span></div><div className="payment-lines"><span><i className="done" /> 3 pièces complètes</span><span><i /> 1 autorisation attendue</span><span><i className="late" /> 1 paiement en retard</span></div><button className="secondary-button">Ouvrir le suivi financier</button></article></section></>}
   </>;
 }
 
@@ -1276,11 +1274,11 @@ function OperationalAnalytics({ equipment, variant = 'direction' }: { equipment:
   return <section className={`operational-analytics analytics-${variant}`} aria-labelledby={`${variant}-analytics-title`}>
     <div className="analytics-heading">
       <div><p className="design-kicker">SCORES & TENDANCES</p><h3 id={`${variant}-analytics-title`}>Santé et performance</h3><p>Lecture dynamique des équipements et du traitement des anomalies.</p></div>
-      <Badge tone="blue">DONNÉES DE DÉMONSTRATION</Badge>
+      <span className="mockup-label">Données de démonstration</span>
     </div>
     <div className="analytics-grid">
       <article className="panel analytics-card building-health-card">
-        <div className="analytics-card-head"><div><span>SANTÉ BÂTIMENT</span><h4>Score global actuel</h4></div><Badge tone="neutral">FRAÎCHEUR À CONFIRMER</Badge></div>
+        <div className="analytics-card-head"><div><span>SANTÉ BÂTIMENT</span><h4>Score global actuel</h4></div><span className="mockup-label">Fraîcheur à confirmer</span></div>
         <div className="building-health-content">
           <ScoreRing value={82} />
           <div className="score-components" aria-label="Composition du score bâtiment">
@@ -1307,7 +1305,7 @@ function OperationalAnalytics({ equipment, variant = 'direction' }: { equipment:
       </article>
 
       <article className="panel analytics-card agent-chart-card">
-        <div className="analytics-card-head"><div><span>ÉQUIPE TERRAIN</span><h4>Performance des agents</h4></div><Badge tone="neutral">MÉTHODE À VALIDER</Badge></div>
+        <div className="analytics-card-head"><div><span>ÉQUIPE TERRAIN</span><h4>Performance des agents</h4></div><span className="mockup-label">Méthode à valider</span></div>
         <div className="agent-score-chart" aria-label="Scores globaux de démonstration des agents">{agentPerformance.map((agent) => <div className="agent-score-row" key={agent.name}><span><b>{agent.name}</b><small>Score global</small></span><div className="agent-score-track" role="progressbar" aria-label={`${agent.name}, score global de démonstration, ${agent.score} sur 100`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={agent.score}><i style={{width:`${agent.score}%`}} /></div><strong>{agent.score}</strong></div>)}</div>
         <div className="agent-score-method"><span><b>Période observée</b>Non disponible</span><span><b>Échantillon</b>Non raccordé</span><span><b>Méthode proposée</b>Délais · réactivité · qualité des preuves</span><span><b>Variation / fraîcheur</b>Indisponibles</span></div>
         <p className="analytics-note">Valeurs de démonstration uniquement. Le détail explicatif devra présenter facteurs positifs et négatifs avant validation ; aucune sanction automatique n’est autorisée.</p>
@@ -1317,44 +1315,51 @@ function OperationalAnalytics({ equipment, variant = 'direction' }: { equipment:
 }
 
 function ManagerOperationalContext() {
-  return <section className="manager-command-hero" aria-labelledby="manager-operational-title">
+  return <section className="manager-command-hero" aria-label="Contexte opérationnel">
     <div className="manager-heading-copy">
-      <p className="eyebrow-light">PRIORITÉS OPÉRATIONNELLES</p>
-      <h2 id="manager-operational-title">Dossiers à traiter</h2>
-      <p>Commencez par les dossiers qui exigent une qualification, une relance ou une vérification de preuve.</p>
+      <p className="design-kicker">Contexte</p>
+      <p>Qualifier, relancer un retard ou vérifier une preuve. Le ruban filtre la liste ; toute décision avec coût reste sous le seuil de délégation.</p>
     </div>
-    <div className="delegation-chip" aria-label="Délégation financière active"><span>DÉLÉGATION ACTIVE</span><b>&lt; 400 000 FCFA</b><small>Au-delà : validation de l’Administration</small></div>
+    <div className="delegation-chip" aria-label="Délégation financière active, moins de 400 000 FCFA">
+      <span>Délégation active</span>
+      <b>{'< 400 000 FCFA'}</b>
+      <small>Au-delà : validation de l’Administration</small>
+    </div>
   </section>;
 }
 
-function ManagerHealthOverview({ anomalies, equipment }: { anomalies:Anomaly[]; equipment:EquipmentItem[] }) {
+function ManagerHealthOverview({ anomalies, equipment, onNavigate }: { anomalies:Anomaly[]; equipment:EquipmentItem[]; onNavigate?:(view:View)=>void }) {
   const criticalCount = anomalies.filter((item) => item.priority === 'Critique' && item.status !== 'Clôturée').length;
   const watchedEquipment = equipment.filter((item) => item.health < 90).length;
   const averageEquipmentHealth = equipment.length ? Math.round(equipment.reduce((total,item) => total + item.health,0) / equipment.length) : 0;
   const averageAgentScore = Math.round(agentPerformance.reduce((total,item) => total + item.score,0) / agentPerformance.length);
 
-  return <section className="manager-health-overview manager-health-overview-secondary" aria-labelledby="manager-health-title">
+  return <section className="manager-health-overview workspace-health" aria-labelledby="manager-health-title">
     <header className="manager-health-heading">
-      <div><p className="design-kicker">SANTÉ &amp; PERFORMANCE</p><h2 id="manager-health-title">Vue d’ensemble du bâtiment</h2><p>Ces indicateurs consolident l’état du bâtiment, du parc technique et de l’équipe après les priorités opérationnelles.</p></div>
+      <div><p className="design-kicker">SANTÉ & PERFORMANCE</p><h2 id="manager-health-title">Vue d’ensemble du bâtiment</h2><p>État du bâtiment, du parc technique et de l’équipe. Les dossiers à traiter restent dans À traiter.</p></div>
+      {onNavigate ? <button type="button" className="health-link" onClick={() => onNavigate('manager')}>Ouvrir À traiter →</button> : null}
     </header>
     <div className="manager-health-kpis">
       <article className="panel manager-health-card manager-building-score">
-        <div><span>SANTÉ BÂTIMENT</span><h3>Score global</h3><Badge tone="orange">SURVEILLANCE</Badge></div>
+        <div><span>SANTÉ BÂTIMENT</span><h3>Score global</h3><p className="kpi-status is-watch">Surveillance</p></div>
         <ScoreRing value={82} />
       </article>
-      <article className="panel manager-health-card manager-critical-health">
-        <div className="manager-health-card-head"><span>ALERTES CRITIQUES</span><Badge tone="critical">ACTION REQUISE</Badge></div>
-        <strong>{criticalCount}</strong><p>dossier{criticalCount > 1 ? 's' : ''} critique{criticalCount > 1 ? 's' : ''} actif{criticalCount > 1 ? 's' : ''}</p>
+      <button type="button" className="panel manager-health-card manager-critical-health is-action" onClick={() => onNavigate?.('manager')} aria-label={`${criticalCount} alerte${criticalCount > 1 ? 's' : ''} critique${criticalCount > 1 ? 's' : ''} active${criticalCount > 1 ? 's' : ''}. Ouvrir À traiter.`}>
+        <span>ALERTES CRITIQUES</span>
+        <strong className="is-danger">{criticalCount}</strong>
+        <p>dossier{criticalCount > 1 ? 's' : ''} critique{criticalCount > 1 ? 's' : ''} actif{criticalCount > 1 ? 's' : ''}</p>
         <div className="manager-health-progress danger" role="progressbar" aria-label={`${criticalCount} alertes critiques actives`} aria-valuemin={0} aria-valuemax={Math.max(anomalies.length,1)} aria-valuenow={criticalCount}><i style={{width:`${Math.min(100,(criticalCount / Math.max(anomalies.length,1)) * 100)}%`}} /></div>
-      </article>
+      </button>
       <article className="panel manager-health-card">
-        <div className="manager-health-card-head"><span>PARC TECHNIQUE</span><Badge tone={watchedEquipment ? 'orange' : 'success'}>{watchedEquipment ? 'À SURVEILLER' : 'OPÉRATIONNEL'}</Badge></div>
-        <strong>{averageEquipmentHealth}<small>/100</small></strong><p>{equipment.length} modules suivis · {watchedEquipment} sous surveillance</p>
+        <span>PARC TECHNIQUE</span>
+        <strong>{averageEquipmentHealth}<small>/100</small></strong>
+        <p>{equipment.length} modules suivis · <b className="kpi-status is-watch">{watchedEquipment} à surveiller</b></p>
         <div className="manager-health-progress" role="progressbar" aria-label={`Santé moyenne du parc technique ${averageEquipmentHealth} sur 100`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={averageEquipmentHealth}><i style={{width:`${averageEquipmentHealth}%`}} /></div>
       </article>
       <article className="panel manager-health-card">
-        <div className="manager-health-card-head"><span>ÉQUIPE TERRAIN</span><Badge tone="blue">3 AGENTS</Badge></div>
-        <strong>{averageAgentScore}<small>/100</small></strong><p>Score moyen de démonstration · méthode à valider</p>
+        <span>ÉQUIPE TERRAIN</span>
+        <strong>{averageAgentScore}<small>/100</small></strong>
+        <p>3 agents · score moyen de démonstration</p>
         <div className="manager-health-progress" role="progressbar" aria-label={`Score moyen de démonstration des agents ${averageAgentScore} sur 100`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={averageAgentScore}><i style={{width:`${averageAgentScore}%`}} /></div>
       </article>
     </div>
@@ -1373,11 +1378,11 @@ function Dashboard({ anomalies, equipment, audience = 'facility', onOpen, onNavi
     { id:'equipment' as const, icon:'04', label:'Parc technique', detail:`${equipment.length} modules suivis`, count:'Équipements' },
   ];
   return <>
-    <section className="hero-row dashboard-hero"><div><p className="direction-kicker">{readOnly ? 'CONSULTATION AUTORISÉE' : audience === 'administration' ? 'PILOTAGE ADMINISTRATION' : 'PILOTAGE FACILITY MANAGER'}</p><h2>Situation du bâtiment</h2><p>{readOnly ? 'Indicateurs et registre accessibles sans action de modification.' : audience === 'administration' ? 'Synthèse décisionnelle, risques, coûts et performance.' : 'Priorités opérationnelles, santé du parc et actions attendues.'}</p></div><span className="health-pill"><i /> Disponibilité technique 92%</span></section>
+    <section className="hero-row dashboard-hero"><div><p className="direction-kicker">{readOnly ? 'CONSULTATION AUTORISÉE' : audience === 'administration' ? 'PILOTAGE ADMINISTRATION' : 'PILOTAGE FACILITY MANAGER'}</p><p>{readOnly ? 'Indicateurs et registre accessibles sans action de modification.' : audience === 'administration' ? 'Synthèse décisionnelle, risques, coûts et performance.' : 'Priorités opérationnelles, santé du parc et actions attendues.'}</p></div><span className="health-pill"><i /> Disponibilité technique 92%</span></section>
     <nav className="dashboard-section-tabs" role="tablist" aria-label="Sections du tableau de bord">{dashboardTabs.map((item) => <button key={item.id} type="button" role="tab" aria-selected={dashboardTab === item.id} aria-controls={`dashboard-panel-${item.id}`} id={`dashboard-tab-${item.id}`} className={dashboardTab === item.id ? 'active' : ''} onClick={() => setDashboardTab(item.id)}><span className="dashboard-tab-index">{item.icon}</span><span className="dashboard-tab-copy"><b>{item.label}</b><small>{item.detail}</small></span><em>{item.count}</em></button>)}</nav>
     {(dashboardTab === 'overview' || dashboardTab === 'actions') && <section id={`dashboard-panel-${dashboardTab}`} role="tabpanel" aria-labelledby={`dashboard-tab-${dashboardTab}`} className={`direction-grid dashboard-tab-panel ${dashboardTab === 'actions' ? 'actions-view' : ''}`} aria-label="Tableau de bord en cinq angles de décision">
       <article className="panel direction-block todo-block">
-        <div className="direction-head"><span className="direction-number">01</span><div><h3>À faire aujourd’hui</h3><p>Actions qui débloquent le workflow</p></div><Badge tone="orange">{openCount} ouvertes</Badge></div>
+        <div className="direction-head"><span className="direction-number">01</span><div><h3>À faire aujourd’hui</h3><p>Actions qui débloquent le workflow</p></div><span className="panel-count is-alert">{openCount} ouvertes</span></div>
         <div className="todo-summary"><strong>5</strong><span>actions prioritaires<br />avant 17:00</span></div>
         <div className="compact-actions">{urgent.slice(0,2).map((a) => <button key={a.id} onClick={() => onOpen(a.id,'dashboard')}><span className={`risk-dot ${a.priority === 'Critique' ? 'critical' : ''}`} /><div><b>{a.asset} · {a.title}</b><small>{a.status} · échéance {a.due}</small></div><span>›</span></button>)}</div>
         <button className="text-action" onClick={() => onNavigate(readOnly ? 'registry' : 'manager')}>{readOnly ? 'Consulter le registre →' : 'Ouvrir la file de Facility Manager →'}</button>
@@ -1406,7 +1411,7 @@ function Dashboard({ anomalies, equipment, audience = 'facility', onOpen, onNavi
       </article>}
 
       <article className="panel direction-block decisions-block">
-        <div className="direction-head"><span className="direction-number">05</span><div><h3>Décisions recommandées</h3><p>Arbitrages proposés selon le niveau de risque</p></div><Badge tone="critical">3 décisions</Badge></div>
+        <div className="direction-head"><span className="direction-number">05</span><div><h3>Décisions recommandées</h3><p>Arbitrages proposés selon le niveau de risque</p></div><span className="panel-count is-danger">3 décisions</span></div>
         <div className="decision-list">
           <button onClick={() => onOpen('ANO-0241','dashboard')}><span className="decision-priority critical">1</span><div><b>Qualifier DEMO-SSI en priorité critique</b><small>Sécurité incendie · décision requise avant 10:30</small></div><span>{readOnly ? 'Consulter →' : 'Décider →'}</span></button>
           <button onClick={() => onOpen('ANO-0238','dashboard')}><span className="decision-priority warning">2</span><div><b>Relancer le prestataire DEMO-ASC-2</b><small>Intervention en retard · impact usagers</small></div><span>{readOnly ? 'Consulter →' : 'Relancer →'}</span></button>
@@ -1415,7 +1420,7 @@ function Dashboard({ anomalies, equipment, audience = 'facility', onOpen, onNavi
       </article>
     </section>}
     {dashboardTab === 'health' && <section id="dashboard-panel-health" role="tabpanel" aria-labelledby="dashboard-tab-health" className="dashboard-tab-panel"><OperationalAnalytics equipment={equipment} /></section>}
-    {dashboardTab === 'equipment' && <section id="dashboard-panel-equipment" role="tabpanel" aria-labelledby="dashboard-tab-equipment" className="dashboard-tab-panel"><section className="panel equipment-panel dashboard-equipment-panel"><div className="panel-head"><div><p className="design-kicker">PARC TECHNIQUE</p><h3>État des équipements suivis</h3><p>Lecture comparative des indices de santé et des états opérationnels.</p></div><Badge tone="success">{equipment.length} modules suivis</Badge></div><div className="equipment-grid">{equipment.map((item) => <div className="equipment-card" key={item.code}><div className="equipment-top"><span className="equipment-icon">{item.code.slice(0,2)}</span><Badge tone={item.health < 70 ? 'critical' : item.health < 90 ? 'orange' : 'success'}>{item.state}</Badge></div><strong>{item.code}</strong><p>{item.label}</p><div className="health-line"><i style={{width:`${item.health}%`}} className={item.health < 70 ? 'bad' : item.health < 90 ? 'watch' : ''} /></div><small>Indice {item.health}/100</small></div>)}</div></section></section>}
+    {dashboardTab === 'equipment' && <section id="dashboard-panel-equipment" role="tabpanel" aria-labelledby="dashboard-tab-equipment" className="dashboard-tab-panel"><section className="panel equipment-panel dashboard-equipment-panel"><div className="panel-head"><div><p className="design-kicker">PARC TECHNIQUE</p><h3>État des équipements suivis</h3><p>Lecture comparative des indices de santé et des états opérationnels.</p></div><span className="panel-count">{equipment.length} modules suivis</span></div><div className="equipment-grid">{equipment.map((item) => <div className="equipment-card" key={item.code}><div className="equipment-top"><span className="equipment-icon">{item.code.slice(0,2)}</span><Badge tone={item.health < 70 ? 'critical' : item.health < 90 ? 'orange' : 'success'}>{item.state}</Badge></div><strong>{item.code}</strong><p>{item.label}</p><div className="health-line"><i style={{width:`${item.health}%`}} className={item.health < 70 ? 'bad' : item.health < 90 ? 'watch' : ''} /></div><small>Indice {item.health}/100</small></div>)}</div></section></section>}
   </>;
 }
 
@@ -1428,7 +1433,7 @@ function Registry({ anomalies, query, setQuery, priority, setPriority, status, s
   </>;
 }
 
-function Manager({ anomalies, equipment, tab, setTab, onOpen }: { anomalies:Anomaly[]; equipment:EquipmentItem[]; tab:ManagerQueue; setTab:(v:ManagerQueue)=>void; onOpen:(id:string)=>void }) {
+function Manager({ anomalies, tab, setTab, onOpen }: { anomalies:Anomaly[]; tab:ManagerQueue; setTab:(v:ManagerQueue)=>void; onOpen:(id:string)=>void }) {
   const groups:Record<ManagerQueue,Anomaly[]> = {
     qualify:anomalies.filter((a) => a.status === 'À qualifier'),
     late:anomalies.filter((a) => a.delayed && a.status !== 'Clôturée'),
@@ -1438,14 +1443,14 @@ function Manager({ anomalies, equipment, tab, setTab, onOpen }: { anomalies:Anom
     reservations:[],
     reopened:[],
   };
-  const queueMeta:Record<ManagerQueue,{label:string;short:string}> = {
-    qualify:{label:'À qualifier',short:'AQ'},
-    late:{label:'En retard',short:'SLA'},
-    unassigned:{label:'Sans responsable',short:'SR'},
-    proof:{label:'Preuves à vérifier',short:'PV'},
-    reception:{label:'Réceptions',short:'RC'},
-    reservations:{label:'Réserves',short:'RS'},
-    reopened:{label:'Dossiers rouverts',short:'RO'},
+  const queueMeta:Record<ManagerQueue,{label:string;short:string;tone:string;pending?:boolean}> = {
+    qualify:{label:'À qualifier',short:'AQ',tone:'amber'},
+    late:{label:'En retard',short:'SLA',tone:'red'},
+    unassigned:{label:'Sans responsable',short:'SR',tone:'orange'},
+    proof:{label:'Preuves à vérifier',short:'PV',tone:'blue'},
+    reception:{label:'Réceptions',short:'RC',tone:'neutral',pending:true},
+    reservations:{label:'Réserves',short:'RS',tone:'neutral',pending:true},
+    reopened:{label:'Dossiers rouverts',short:'RO',tone:'neutral',pending:true},
   };
   const active = groups[tab];
   const [selectedId, setSelectedId] = useState('ANO-0241');
@@ -1471,17 +1476,17 @@ function Manager({ anomalies, equipment, tab, setTab, onOpen }: { anomalies:Anom
       <button type="button" role="tab" aria-selected={tab === 'proof'} aria-controls="manager-queue-panel" className={tab === 'proof' ? 'active' : ''} onClick={() => {setTab('proof');setDecisionDone(false)}}>
         <span className="kpi-icon blue">PV</span><div><strong>{groups.proof.length}</strong><small>Preuves à vérifier</small></div>
       </button>
-      <div className="completion" aria-label="Score de traitement 86 sur 100">
-        <div><span>Score traitement</span><b>86/100</b></div>
+      <div className="completion" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={86} aria-label="Score de traitement 86 sur 100">
+        <div className="completion-head"><span>Score traitement</span><b>86<small>/100</small></b></div>
         <div className="completion-bar" aria-hidden="true"><i style={{width:'86%'}} /></div>
-        <small>Délais 88 · réactivité 91 · preuves 79</small>
+        <p>Délais 88 · réactivité 91 · preuves 79</p>
       </div>
     </section>
 
-    <section className="fm-decision-layout">
+    <section className={`fm-decision-layout ${focus ? '' : 'is-empty'}`}>
       <article className="panel fm-inbox">
         <div className="queue-tabs" role="tablist" aria-label="Files de travail">
-          {(Object.keys(queueMeta) as ManagerQueue[]).map((key) => <button type="button" role="tab" key={key} aria-selected={tab === key} aria-controls="manager-queue-panel" className={tab === key ? 'active' : ''} onClick={() => {setTab(key);setDecisionDone(false)}}>{queueMeta[key].label} <span>{groups[key].length}</span></button>)}
+          {(Object.keys(queueMeta) as ManagerQueue[]).map((key) => <button type="button" role="tab" key={key} title={queueMeta[key].label} aria-selected={tab === key} aria-controls="manager-queue-panel" className={[tab === key ? 'active' : '', queueMeta[key].pending ? 'is-pending' : ''].filter(Boolean).join(' ')} onClick={() => {setTab(key);setDecisionDone(false)}}><b>{queueMeta[key].short}</b><span>{groups[key].length}</span><small>{queueMeta[key].label}</small></button>)}
         </div>
         <div className="fm-inbox-list" id="manager-queue-panel" aria-live="polite">
           {active.length ? active.map((item) => <button type="button" key={item.id} aria-pressed={focus.id === item.id} className={focus.id === item.id ? 'active' : ''} onClick={() => {setSelectedId(item.id);setDecisionDone(false)}}>
@@ -1493,10 +1498,10 @@ function Manager({ anomalies, equipment, tab, setTab, onOpen }: { anomalies:Anom
       </article>
 
       <div className="fm-right-column">
-      {focus ? <article className="panel fm-decision-card">
+      {focus ? <Card className="fm-decision-card">
         <div className="fm-decision-head">
           <div><div><Badge tone={priorityTone(focus.priority)}>{focus.priority}</Badge><span>{focus.id} · {focus.asset}</span></div><h3>{focus.title}</h3><p>{focus.location}</p></div>
-          <button type="button" className="secondary-button" onClick={() => onOpen(focus.id)}>Voir le dossier complet</button>
+          <Button variant="secondary" onClick={() => onOpen(focus.id)}>Voir le dossier complet</Button>
         </div>
 
         <AntiZombieSummary data={adaptDossierToAntiZombieSummary(focus)} variant="standard" />
@@ -1518,14 +1523,13 @@ function Manager({ anomalies, equipment, tab, setTab, onOpen }: { anomalies:Anom
         <div className={`authority-result ${branchLocked ? 'pending' : overThreshold ? 'escalate' : 'delegated'}`} role="status">
           <span>{branchLocked ? '⌁' : overThreshold ? '↑' : '✓'}</span><div><b>{branchLocked ? 'Qualification requise avant arbitrage financier' : overThreshold ? 'Validation de l’Administration requise' : 'Décision dans la délégation de Facility Manager'}</b><small>{branchLocked ? 'Le seuil de 400 000 FCFA sera appliqué après le diagnostic et le choix de la branche.' : overThreshold ? `${formatMoney(amountValue)} dépasse ou atteint le seuil de 400 000 FCFA.` : `${formatMoney(amountValue)} reste sous le seuil validé.`}</small></div>
         </div>
-        <label className="field">{branchLocked ? 'Note de qualification' : 'Décision motivée'}<textarea defaultValue={branchLocked ? 'Affectation proposée pour réaliser et confirmer le diagnostic terrain.' : overThreshold ? 'Intervention à soumettre avec devis et justification de continuité de service.' : 'Intervention autorisée pour rétablir le fonctionnement et éviter une récidive.'} /></label>
-        <div className="fm-decision-actions"><small>Proposition de maquette · la synthèse conserve les valeurs actuelles tant qu’aucune transaction n’est confirmée</small><button type="button" className="secondary-button" onClick={() => setDecisionDone(false)}>Conserver en brouillon</button><button type="button" className="primary-button" onClick={() => setDecisionDone(true)}>{branchLocked ? 'Préparer l’affectation' : overThreshold ? 'Soumettre à l’Administration' : 'Préparer la décision'}</button></div>
+        <Field label={branchLocked ? 'Note de qualification' : 'Décision motivée'}><textarea defaultValue={branchLocked ? 'Affectation proposée pour réaliser et confirmer le diagnostic terrain.' : overThreshold ? 'Intervention à soumettre avec devis et justification de continuité de service.' : 'Intervention autorisée pour rétablir le fonctionnement et éviter une récidive.'} /></Field>
+        <div className="fm-decision-actions"><small>Proposition de maquette · la synthèse conserve les valeurs actuelles tant qu’aucune transaction n’est confirmée</small><Button variant="secondary" onClick={() => setDecisionDone(false)}>Conserver en brouillon</Button><Button onClick={() => setDecisionDone(true)}>{branchLocked ? 'Préparer l’affectation' : overThreshold ? 'Soumettre à l’Administration' : 'Préparer la décision'}</Button></div>
         {decisionDone && <div className="inline-success" role="status"><span>✓</span><p><b>Proposition préparée</b><small>Elle reste distincte de l’état actuel du dossier jusqu’à son enregistrement côté serveur.</small></p></div>}
-      </article> : <article className="panel fm-empty-detail" role="status"><span>⌁</span><div><h3>Aucun dossier dans cette file</h3><p>Choisissez un autre compteur pour afficher les dossiers correspondants.</p></div></article>}
-      <WorkflowAnalytics items={anomalies.map((item) => ({ ...item, owner:canonicalResponsible(item) ?? 'Non affectée' }))} variant="manager" />
+      </Card> : null}
       </div>
     </section>
-    <ManagerHealthOverview anomalies={anomalies} equipment={equipment} />
+    <WorkflowAnalytics items={anomalies.map((item) => ({ ...item, owner:canonicalResponsible(item) ?? 'Non affectée' }))} variant="manager" />
   </div>;
 }
 
@@ -1569,7 +1573,7 @@ function Detail({ anomaly, onBack, onStatus, onProof, onVerify, readOnly = false
 
     {section === 'evidence' && <section className="dossier-two-columns"><article className="panel evidence-panel"><div className="panel-head"><div><h3>Preuves du dossier</h3><p>Pièces adaptées au type d’intervention</p></div>{!readOnly && !anomaly.proofPending && <button disabled={busy} onClick={chooseProof}>＋ Ajouter</button>}</div>{anomaly.proof ? <div className="evidence-file"><span>▧</span><div><b>Preuve d’intervention acceptée</b><small>Fichier privé · contrôle Facility Manager terminé</small></div><Badge tone="success">ACCEPTÉE</Badge></div> : anomaly.proofPending ? <div className="evidence-file"><span>▧</span><div><b>Preuve reçue</b><small>Contrôle Facility Manager requis</small></div><Badge tone="orange">À VALIDER</Badge>{canVerify && <button className="primary-button" disabled={busy} onClick={onVerify}>Valider</button>}</div> : <div className="proof-requirement"><span>⌁</span><div><b>{anomaly.asset === 'DEMO-EAU' ? 'Photo du manomètre et rapport d’intervention' : 'Preuve définie selon le type de dossier'}</b><p>La clôture reste impossible tant que la pièce obligatoire n’est pas acceptée.</p></div>{!readOnly && <button className="primary-button" onClick={chooseProof}>Déposer</button>}</div>}</article><aside className="panel proof-matrix-card"><p className="design-kicker">MATRICE APPLIQUÉE</p><h3>{anomaly.asset}</h3><ul><li><span>✓</span>Photo après intervention</li><li><span>{anomaly.asset === 'DEMO-EAU' ? '✓' : '○'}</span>Valeur de contrôle finale</li><li><span>○</span>Rapport ou PV signé</li></ul></aside></section>}
 
-    {section === 'history' && <section className="panel dossier-history"><div className="panel-head"><div><h3>Historique complet</h3><p>Chaque action, auteur et date restent traçables</p></div><Badge>6 ÉTAPES</Badge></div><div className="history-grid">{workflow.map((item,index) => <article key={item} className={index < currentStep ? 'done' : index === currentStep ? 'current' : ''}><span>{index < currentStep ? '✓' : index+1}</span><div><b>{item}</b><small>{index === 0 ? anomaly.reported : index < currentStep ? 'Étape validée et historisée' : index === currentStep ? 'Étape actuelle du dossier' : 'En attente'}</small></div><em>{index < currentStep ? 'TERMINÉ' : index === currentStep ? 'EN COURS' : 'À VENIR'}</em></article>)}</div></section>}
+    {section === 'history' && <section className="panel dossier-history"><div className="panel-head"><div><h3>Historique complet</h3><p>Chaque action, auteur et date restent traçables</p></div><span className="panel-count">6 étapes</span></div><div className="history-grid">{workflow.map((item,index) => <article key={item} className={index < currentStep ? 'done' : index === currentStep ? 'current' : ''}><span>{index < currentStep ? '✓' : index+1}</span><div><b>{item}</b><small>{index === 0 ? anomaly.reported : index < currentStep ? 'Étape validée et historisée' : index === currentStep ? 'Étape actuelle du dossier' : 'En attente'}</small></div><em>{index < currentStep ? 'TERMINÉ' : index === currentStep ? 'EN COURS' : 'À VENIR'}</em></article>)}</div></section>}
   </>;
 }
 
@@ -1598,7 +1602,7 @@ function Report({ persona, onNavigate }: { persona:Persona; onNavigate:(v:View)=
   if (!surpresseurAccess) {
     const isRoundsAssistance = persona.id === 'rondes_assistance';
     return <>
-      <section className="section-heading round-heading"><div><p className="design-kicker">SAISIE DIRECTE · MAQUETTE CIBLE</p><h2>{isRoundsAssistance ? 'Ronde cleaning & jardinage' : 'Ronde technique'}</h2><p>Un constat terrain est enregistré dans l’application puis transmis à Facility Manager pour qualification.</p></div><Badge tone="blue">AUCUN IMPORT</Badge></section>
+      <section className="section-heading round-heading"><div><p className="design-kicker">SAISIE DIRECTE · MAQUETTE CIBLE</p><h2>{isRoundsAssistance ? 'Ronde cleaning & jardinage' : 'Ronde technique'}</h2><p>Un constat terrain est enregistré dans l’application puis transmis à Facility Manager pour qualification.</p></div><span className="mockup-label">Aucun import</span></section>
       <section className="quick-round-layout">
         <form className="panel quick-round-card" onSubmit={(event) => { event.preventDefault(); setSubmitted(true); }}>
           <div className="round-card-head"><span className="round-icon">{isRoundsAssistance ? 'R' : 'GE'}</span><div><b>{isRoundsAssistance ? 'DEMO-RND' : 'DEMO-GE'}</b><small>{isRoundsAssistance ? 'Périmètre cleaning et jardinage' : 'Périmètre électrique autorisé'}</small></div><span className="mockup-label">MAQUETTE</span></div>
@@ -1621,7 +1625,7 @@ function Report({ persona, onNavigate }: { persona:Persona; onNavigate:(v:View)=
   return <>
     <section className="surpresseur-hero">
       <div className="surpresseur-identity"><span className="surpresseur-monogram">WI</span><div><p className="design-kicker">MODULE PILOTE · SURPRESSEUR</p><h2>Ronde Surpresseur · DEMO-EAU</h2><p>Sous-sol · Local surpresseur · Fréquence quotidienne</p></div></div>
-      <div className="surpresseur-health"><span>Score santé</span><strong>78<small>/100</small></strong><Badge tone="orange">SURVEILLANCE</Badge></div>
+      <div className="surpresseur-health"><span>Score santé</span><strong>78<small>/100</small></strong><p className="kpi-status is-watch">Surveillance</p></div>
     </section>
 
     <section className={`sync-banner ${online ? 'is-online' : ''}`} role="status">

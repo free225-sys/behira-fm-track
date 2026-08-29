@@ -39,7 +39,7 @@ export function WorkflowAnalytics({ items, variant = 'manager', onOpenRegistry }
   return <section className={`workflow-analytics workflow-${variant}`} aria-labelledby={`workflow-title-${variant}`}>
     <div className="workflow-analytics-heading">
       <div><p className="design-kicker">FLUX OPÉRATIONNEL</p><h3 id={`workflow-title-${variant}`}>{variant === 'administration' ? 'Exposition et progression des dossiers' : 'Où le traitement doit avancer'}</h3><p>Lecture calculée uniquement à partir des dossiers actuellement visibles.</p></div>
-      <span className="data-origin-badge">DONNÉES COURANTES</span>
+      <span className="mockup-label">Données courantes</span>
     </div>
     <div className="workflow-analytics-grid">
       <article className="panel workflow-pipeline-card">

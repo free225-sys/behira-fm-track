@@ -5,7 +5,8 @@ import path from 'node:path'
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const page = await readFile(path.join(root, 'app', 'page.tsx'), 'utf8')
 const css = await readFile(path.join(root, 'app', 'globals.css'), 'utf8')
-const appSource = `${page}\n${css}`
+const badge = await readFile(path.join(root, 'app', 'components', 'ui', 'badge.tsx'), 'utf8')
+const appSource = `${page}\n${css}\n${badge}`
 
 const checks = []
 const requireAll = (label, source, values) => {
@@ -59,7 +60,7 @@ requireAll('Polish Direction et Facility Manager', page, [
   'decision-filters', 'direction-focus', 'Qualifier maintenant', 'qualify-action', 'escalate-action',
 ])
 requireAll('Pilote Surpresseur et saisie directe', page, [
-  'MODULE PILOTE · SURPRESSEUR', 'Mode hors ligne actif', 'Ronde Surpresseur prête à synchroniser', 'AUCUN IMPORT',
+  'MODULE PILOTE · SURPRESSEUR', 'Mode hors ligne actif', 'Ronde Surpresseur prête à synchroniser', 'Aucun import',
 ])
 checks.push({
   label:'Aucun parcours d’import de reporting',
@@ -85,7 +86,7 @@ requireAll('Mesures Surpresseur explicables', page, [
 requireAll('Verrou critique et retour Direction', page, [
   "selected.priority === 'Critique' && !selected.proof", 'retour envoyé à Facility Manager', 'Confirmer et notifier Facility Manager',
 ])
-requireAll('Badges structurés', page, ['badge-icon', 'badge-label'])
+requireAll('Badges structurés', appSource, ['badge-icon', 'badge-label'])
 requireAll('Focus P2 et protection navigation mobile', css, [
   'outline:2px solid var(--focus-ring)', '.keyboard-nav button:focus-visible', '.main-column{padding-bottom:92px}', '.persona-popover{position:fixed',
 ])

@@ -6,6 +6,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const css = await readFile(path.join(root, 'app', 'globals.css'), 'utf8')
 const page = await readFile(path.join(root, 'app', 'page.tsx'), 'utf8')
 const workflow = await readFile(path.join(root, 'app', 'components', 'WorkflowAnalytics.tsx'), 'utf8')
+const specimen = await readFile(path.join(root, 'app', 'design-system', 'page.tsx'), 'utf8')
+const badge = await readFile(path.join(root, 'app', 'components', 'ui', 'badge.tsx'), 'utf8')
 
 const cssWithoutComments = css.replace(/\/\*[\s\S]*?\*\//g, '')
 const rules = [...cssWithoutComments.matchAll(/([^{}]+)\{([^{}]+)\}/g)].map((match, order) => ({
@@ -40,30 +42,48 @@ const checks = [
   ['Nomenclature principale DEC-008 stable', ['Accueil','À traiter','Rondes','Registre','Pilotage'].every((label) => page.includes(`label:'${label}'`)) && !page.includes('navigationLabel =')],
   ['Logo renvoyant vers Accueil', page.includes("className=\"brand\" onClick={() => navigate('workspace')}")],
   ['CTA de ronde limité à l’Accueil autorisé', page.includes("const showRoundCta = view === 'workspace' && canStartRound") && !page.includes("personaId !== 'administration' && <button className=\"primary-button top-create\"")],
+  ['En-tête de page sur surface claire', css.includes('.topbar { min-height:56px; padding:10px clamp(24px,4vw,54px); background:var(--surface);') && !css.includes('background:#16345a')],
+  ['Accueil sans titre jumeau', page.includes('function WorkspaceIntro({ kicker, description, badge }') && !page.includes('<h2>{title}</h2>') && !page.includes('Bonjour Facility Manager')],
+  ['Hero À traiter sans second titre', page.includes('aria-label="Contexte opérationnel"') && !page.includes('id="manager-operational-title"') && !page.includes('Dossiers à traiter')],
+  ['Landing Facility Manager sur À traiter', page.includes("facility:'manager'")],
+  ['Hero Facility Manager sans bande navy collée', !css.includes('border-top:1px solid #21456f;border-radius:0;background:#16345a;color:white')],
   ['Menu Plus prêt pour le catalogue groupé', page.includes("const navigationGroups: NavigationGroup[] = ['Mon travail','Le bâtiment','Pilotage','Administration']") && page.includes('overflowIsActive ? \'active\'') && page.includes('groupItems = overflowNav.filter') && page.includes("event.key === 'ArrowDown' || event.key === 'ArrowUp'") && page.includes('moreNavTriggerRef.current?.focus()')],
   ['Environnement de démonstration visible', page.includes('className="persona-mode-label"') && page.includes('Mode démonstration') && !css.includes('.persona-mode-label{display:none}')],
   ['Triplets sémantiques déclarés', ['success','warning','danger','info','neutral'].every((role) => css.includes(`--${role}-surface:`) && css.includes(`--${role}-border:`) && css.includes(`--${role}-text:`))],
   ['Encres sémantiques consommées', css.includes('background:var(--danger-surface)') && css.includes('color:var(--danger-text)') && css.includes('background:var(--warning-surface)') && css.includes('color:var(--warning-text)') && css.includes('background:var(--success-surface)') && css.includes('color:var(--success-text)')],
   ['Badges immunisés contre les encres de conteneur', ['critical','high','orange','medium','blue','low','neutral','success','purple'].every((variant) => css.includes(`.badge.badge-${variant}`))],
-  ['Badges immunisés contre les dispositions de conteneur', finalDeclaration('.badge.badge-critical', 'display') === 'inline-flex' && finalDeclaration('.badge.badge-critical', 'border-left-width') === '3px'],
+  ['Badges immunisés contre les dispositions de conteneur', finalDeclaration('.badge.badge-critical', 'display') === 'inline-flex' && finalDeclaration('.badge.badge-critical', 'border-radius') === 'var(--radius-round)' && finalDeclaration('.badge .badge-icon', 'display') === 'grid'],
+  ['Badges capsule à sceau', finalDeclaration('.badge.badge-critical', 'background') === 'var(--danger-text)' && finalDeclaration('.badge .badge-icon', 'border-radius') === '50%' && finalDeclaration('.badge .badge-icon', 'background') === 'var(--surface)'],
+  ['Flux opérationnel hors colonne décision', /<\/section>\s*<WorkflowAnalytics[\s\S]*?variant="manager"/.test(page)],
   ['Aucun mécanisme de thème sombre (DEC-006)', !/prefers-color-scheme|data-theme/.test(cssWithoutComments)],
   ['Bandeau des rondes borné au retrait mobile', css.includes('@media (max-width:700px){.surpresseur-hero{margin-left:-16px;margin-right:-16px;padding-left:16px;padding-right:16px}')],
   ['Étapes de ronde défilables sur mobile', css.includes('.surpresseur-progress{max-width:100%;overscroll-behavior-inline:contain;scrollbar-width:thin}') && css.includes('.surpresseur-progress button{flex:0 0 112px}')],
   ['Champs métier longs compressibles', css.includes('.field,.two-fields>*{min-width:0}') && css.includes('.field select,.field input,.field textarea{width:100%;max-width:100%}')],
   ['DEC-003 maintenue à 12 px', css.includes('--font-size-label:12px') && css.includes('.manager-pilot{display:grid;gap:var(--space-4);color:var(--foreground);font-variant-numeric:tabular-nums}')],
-  ['DEC-007 priorité opérationnelle avant la santé', page.indexOf('className="manager-kpis manager-kpis-target dashboard-section-tabs"') < page.indexOf('<ManagerHealthOverview anomalies={anomalies} equipment={equipment} />') && page.indexOf('className="fm-decision-layout"') < page.indexOf('<ManagerHealthOverview anomalies={anomalies} equipment={equipment} />')],
+  ['DEC-007 À traiter sans bloc santé', page.includes('fm-decision-layout') && page.includes('function Manager({ anomalies, tab, setTab, onOpen }') && !/function Manager\([\s\S]*?<ManagerHealthOverview/.test(page)],
+  ['Santé & performance sur Accueil FM', page.includes('<ManagerHealthOverview anomalies={anomalies} equipment={equipment} onNavigate={onNavigate} />') && page.indexOf('function FacilityManagerWorkspace') < page.indexOf('<ManagerHealthOverview anomalies={anomalies} equipment={equipment} onNavigate={onNavigate} />')],
   ['File Facility Manager élargie', css.includes('grid-template-columns:minmax(400px,.88fr) minmax(0,1.12fr)')],
   ['Ticket actif identifié par deux canaux', css.includes('.fm-inbox-list>button.active{border-left-color:var(--brand);background:var(--surface-emphasis)')],
   ['Pipeline renforcé et connecté', css.includes('.workflow-pipeline b{display:block;color:var(--foreground);font-size:28px') && css.includes('.workflow-pipeline>div:not(:last-child)::after')],
   ['Gravité représentée par des barres accessibles', workflow.includes('className="severity-bars"') && workflow.includes('role="progressbar"') && css.includes('.severity-bar-track')],
   ['Cartes Facility Manager sans ombre lourde', css.includes('.manager-pilot .panel{box-shadow:none}') && css.includes('.anti-zombie-summary{margin:16px 20px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);box-shadow:none')],
   ['Ruban de compteurs relié à la file', page.includes('manager-kpis manager-kpis-target dashboard-section-tabs') && page.includes('aria-controls="manager-queue-panel"') && page.includes('id="manager-queue-panel"')],
-  ['Compteur actif surface et encre de marque', css.includes('.manager-kpis-target.dashboard-section-tabs>button.active{border-color:transparent;background:var(--surface);color:var(--brand-strong)')],
+  ['Compteur actif surface et encre de marque', css.includes('.manager-kpis-target.dashboard-section-tabs>button.active{border-color:transparent;background:var(--surface);color:var(--brand-strong)') && css.includes('button.active .kpi-icon.amber') && !css.includes('box-shadow:inset 3px 0 0 var(--brand)')],
+  ['Monogrammes de file au triplet', css.includes('.dashboard-section-tabs .kpi-icon.amber{\n  background:var(--warning-surface);\n  color:var(--warning-text);\n}') && css.includes('.dashboard-section-tabs .kpi-icon.red{\n  background:var(--danger-surface);\n  color:var(--danger-text);\n}')],
+  ['Glyphes de badge distincts', badge.includes("critical: '!'") && badge.includes("high: '▲'") && badge.includes("success: '✓'")],
+  ['Focus du ruban non clippé', css.includes('overflow:visible') && css.includes('.manager-kpis.manager-kpis-target.dashboard-section-tabs')],
+  ['Sept files visibles dans la liste', ['À qualifier','En retard','Sans responsable','Preuves à vérifier','Réceptions','Réserves','Dossiers rouverts'].every((label) => page.includes(`label:'${label}'`)) && page.includes('className="queue-tabs"')],
   ['Branches de décision interactives', page.includes('className={`branch-selector ${branchLocked ? \'is-locked\' : \'\'}`}') && css.includes('.manager-pilot .branch-selector button.active{border-color:var(--brand);background:var(--surface-emphasis)')],
   ['Zébrure anti-dossier-zombie maintenue', css.includes('.anti-zombie-fields>div:nth-child(n+5){border-top:1px solid var(--border);background:var(--surface-muted)')],
   ['Historique insuffisant explicitement encadré', workflow.includes('className="compact-insufficient-state"') && css.includes('.compact-insufficient-state{min-height:116px;display:flex;align-items:center;gap:11px;padding:14px;border:1px dashed var(--border-strong)')],
   ['Bandeau Surpresseur aligné sur le retrait grand écran', css.includes('.surpresseur-hero{margin-inline:calc(clamp(32px,3.2vw,60px)*-1);padding-inline:clamp(32px,3.2vw,60px)}')],
   ['Badge Administration non compressible', css.includes('.authority-split .badge{flex:0 0 auto;min-width:max-content}')],
+  ['Tokens chrome et marque-foreground déclarés', ['--brand-foreground:', '--chrome:', '--on-chrome:', '--mark:', '--motion-bar:', '--z-sticky:'].every((token) => css.includes(token))],
+  ['Bandeau consomme le chrome tokenisé', css.includes('background:var(--chrome)') && css.includes('color:var(--on-chrome-idle)') && css.includes('border-bottom-color:var(--chrome-accent)')],
+  ['Glyphe B distinct du teal courant (DEC-013)', css.includes('--mark:#20b2aa') && css.includes('--teal:#0e6a66') && css.includes('background:var(--mark)') && css.includes('--accent:var(--teal)')],
+  ['Durées d’animation tokenisées', css.includes('transition:width var(--motion-bar) var(--ease-standard)') && css.includes('transition:stroke-dashoffset var(--motion-ring) var(--ease-standard)')],
+  ['Spécimen hors navigation produit', specimen.includes('Système de design · hors navigation produit') && page.includes('href="/design-system"') && !page.includes("label:'Système de design'")],
+  ['Primitives UI partagées', page.includes("from './components/ui'") && specimen.includes("from '../components/ui'") && page.includes('<IconButton') && page.includes('<Card className="fm-decision-card">')],
 ]
 
 for (const [label, ok] of checks) console.log(`${ok ? '✓' : '✗'} ${label}`)

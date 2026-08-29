@@ -129,3 +129,22 @@ Un échantillon insuffisant rend le score non interprétable. Le système ne doi
 - Aucun changement implicite de rôle, permission, workflow, seuil, preuve ou responsabilité.
 - Tests existants réussis avant chaque publication.
 - Chaque lot documente précisément ce qui est complet, partiel ou absent.
+
+## 11. Système de tokens (DEC-010)
+
+Source unique : `:root` dans `app/globals.css`. Spécimen vivant : `/design-system` (hors navigation produit).
+
+| Couche | Tokens | Règle |
+| --- | --- | --- |
+| Surfaces | `--background` `--surface` `--surface-muted` `--surface-emphasis` | Canvas clair, cartes par bordure |
+| Encres | `--foreground` `--foreground-muted` `--brand-foreground` | Texte ≥ 12 px à 4,5:1 |
+| Marque | `--brand` `--brand-strong` `--mark` `--teal` `--accent` | DEC-013 : `--mark #20b2aa` (glyphe B) ≠ `--teal #0e6a66` (accent). `--accent` alias de `--teal`. `--orange` alias de compatibilité vers `--teal`. Le triplet `warning` reste distinct. |
+| Chrome | `--chrome` `--on-chrome*` `--chrome-accent` `--chrome-rule` | Seule bande navy |
+| Triplets | `--{role}-surface/border/text` | Encre dédiée, rôle pour barres |
+| Score | `--score-part-1…4` | Rampe séquentielle, pas d’état |
+| Type | `--font-size-label…display` | Plancher 12 px |
+| Mouvement | `--motion-fast/bar/ring` | Uniquement au changement de valeur |
+| Empilement | `--z-sticky` … `--z-modal` | Pas de z-index magique |
+
+Ne pas déclarer de thème sombre. Ne pas migrer les hex métier restants sans lot dédié par surface.
+

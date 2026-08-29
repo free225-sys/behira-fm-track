@@ -8,6 +8,21 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 | id | date | sujet | attendu de | bloque |
 | --- | --- | --- | --- | --- |
+| DESIGN-032 | 2026-08-29 | Bandeau contexte lisible ; score KPI teal | Wilkam | — |
+| DESIGN-031 | 2026-08-29 | Ruban 3 files lisible ; accent teal (DEC-013) | Wilkam | DEC-013 |
+| DESIGN-030 | 2026-08-29 | Onglets compact : 4 files + 3 codes + score à droite | Wilkam | — |
+| DESIGN-029 | 2026-08-29 | 7 files dans le ruban ; file inbox sans onglets coupés | Wilkam | — |
+| DESIGN-028 | 2026-08-29 | Accessibilité visuelle : contraste, glyphes, focus | Wilkam | — |
+| DESIGN-027 | 2026-08-29 | Onglet actif : carte interne + monogramme AQ/SLA/PV inversé | Wilkam | — |
+| DESIGN-026 | 2026-08-29 | Ruban files : une bordure ; actif = surface + rail gauche | Wilkam | — |
+| DESIGN-025 | 2026-08-29 | Badges capsule + sceau circulaire (forme certifiée) | Wilkam | — |
+| DESIGN-024 | 2026-08-29 | CSS badges consolidé : pastille unique, tokens, ellipsis | Wilkam | — |
+| DESIGN-023 | 2026-08-29 | Flux pleine largeur ; badges pastille sans icône | Wilkam | — |
+| DESIGN-022 | 2026-08-29 | Santé & performance sur Accueil ; badges de comptage retirés | Wilkam | — |
+| DESIGN-021 | 2026-08-29 | Primitives UI : Button, IconButton, Badge, Field, Card | Wilkam / Dev Lead | lots 4–6 |
+| DESIGN-020 | 2026-08-29 | Socle de tokens approfondi + spécimen `/design-system` | Wilkam | DEC-001 |
+| DESIGN-019 | 2026-08-29 | Personnalisation login + en-tête clair | Wilkam | — |
+| DESIGN-018 | 2026-08-29 | Une bande navy + titres uniques (DEC-009) | Wilkam / Dev Lead | publication du shell |
 | DESIGN-015 | 2026-08-29 | **GO PUBLICATION** sur `b517167` — socle design clos | — | — |
 | DESIGN-014 | 2026-08-29 | Recette de clôture sur `0c0d9f7` : DESIGN-013 clos, trois régressions nouvelles | Dev Lead | publication |
 | DESIGN-013 | 2026-08-29 | Recette de `ec3ec06` : contrastes validés, trois débordements à 375 px | Dev Lead | publication |
@@ -26,7 +41,179 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 ---
 
+## DESIGN-029 — Files sans masquage
+
+- **Date :** 29 août 2026
+- **Auteur :** Revue design
+- **Statut :** Livré dans le miroir
+- **Périmètre :** À traiter, ruban + inbox
+
+Les 7 files tiennent dans le ruban (flex + wrap). Plus d’onglets dans la liste : un titre d’file + le décompte. Réceptions / Réserves / Rouverts restent visibles, en attente de raccord.
+
+---
+
+## DESIGN-028 — Accessibilité visuelle
+
+
+- **Date :** 29 août 2026
+- **Auteur :** Revue design
+- **Statut :** Livré dans le miroir
+- **Périmètre :** ruban files, badges, carte santé cliquable
+
+Monogrammes AQ/SLA/PV au triplet (≥ 4,5:1). Focus clavier non clippé. Critique `!` ≠ Haute `▲`. Survol ≠ sélection (carte blanche vs monogramme inversé). `prefers-reduced-motion` respecté.
+
+---
+
+## DESIGN-027 — Onglet actif sans rail
+
+
+- **Date :** 29 août 2026
+- **Auteur :** Revue design
+- **Statut :** Livré dans le miroir
+- **Périmètre :** ruban files, À traiter
+
+Le rail gauche est retiré. L’onglet cliqué devient une **carte blanche interne** ; le code AQ / SLA / PV passe en **monogramme marque** (fond brand, glyphe blanc). Deux canaux, aucun trait sur le périmètre du ruban.
+
+---
+
+## DESIGN-026 — Ruban des files, une bordure
+
+
+- **Date :** 29 août 2026
+- **Auteur :** Revue design
+- **Statut :** Livré dans le miroir
+- **Périmètre :** `.manager-kpis-target` (À traiter)
+
+Le trait navy sous l’onglet se superposait à la bordure du ruban. Une seule bordure autour du groupe. L’onglet cliqué : fond `surface` sur piste `surface-muted` + rail gauche 3 px `brand` (deux canaux, aucun trait bas).
+
+---
+
+## DESIGN-025 — Forme certifiée des badges
+
+
+- **Date :** 29 août 2026
+- **Auteur :** Revue design
+- **Statut :** Livré dans le miroir
+- **Périmètre :** `.badge`
+
+Capsule pleine (encre du triplet, texte `var(--surface)`), sceau circulaire blanc à droite. Icône colorée dans le sceau. Contraste blanc / `*-text` ≥ 4,5:1. Pas de teinte nouvelle.
+
+---
+
+## DESIGN-024 — CSS des badges consolidé
+
+
+- **Date :** 29 août 2026
+- **Auteur :** Revue design
+- **Statut :** Livré dans le miroir
+- **Périmètre :** `app/globals.css` — `.badge`
+
+Une seule déclaration canonique en fin de feuille : pastille 22 px, triplet sémantique, sans icône ni rail. Les hex de focus Direction et liste agents passent aux tokens. En file, le libellé long s’ellipse (`max-width: 11em`).
+
+---
+
+## DESIGN-023 — Flux pleine largeur, pastilles sans icône
+
+
+- **Date :** 29 août 2026
+- **Auteur :** Revue design
+- **Statut :** Livré dans le miroir — **arbitrage Wilkam** (DEC-012)
+- **Périmètre :** `WorkflowAnalytics` sur À traiter, `.badge`
+
+Le flux sort de la colonne décision. Pipeline en 6 colonnes fluides, sans scroll desktop. Badge : pastille triplet, icône masquée, plus de rail 3 px.
+
+---
+
+## DESIGN-022 — Santé sur Accueil, badges d’état seulement
+
+
+- **Date :** 29 août 2026
+- **Auteur :** Revue design
+- **Statut :** Livré dans le miroir — **arbitrage Wilkam** (DEC-011)
+- **Périmètre :** Accueil FM, À traiter, badges
+
+Le bloc Santé & performance quitte À traiter (DEC-007) pour Accueil. Les pastilles `SURVEILLANCE`, `ACTION REQUISE`, `3 AGENTS` n’étaient pas des états de dossier : le statut passe en texte coloré (`.kpi-status`) et les comptages en `.panel-count`. Le Badge à rail reste pour priorité, étape, retard, hors délégation.
+
+---
+
+## DESIGN-021 — Primitives UI intégrées (lots 2–3)
+
+
+- **Date :** 29 août 2026
+- **Auteur :** Revue design
+- **Statut :** Livré dans le miroir — extraction minimale, pas une refonte
+- **Périmètre :** `app/components/ui/*`, login, en-tête, cockpit Facility Manager, spécimen
+
+Suit `ESTIMATION_REFACTOR_COMPOSANTS.md` : tokens déjà là (lot 1), puis Button / IconButton, puis Card sur le cockpit FM. Badge sort de `page.tsx`. Field sur le formulaire de décision FM uniquement.
+
+Les classes CSS existantes (`primary-button`, `panel`, `badge`, `field`) restent la peau. Aucun shadcn installé — la DA dit *inspired*, pas un second kit. Les ~100 autres boutons métier ne sont pas migrés.
+
+---
+
+## DESIGN-020 — Approfondir le système de design
+
+
+- **Date :** 29 août 2026
+- **Auteur :** Revue design
+- **Statut :** Livré dans le miroir — **arbitrage Wilkam** (DEC-010)
+- **Périmètre :** `app/globals.css` (`:root` + chrome), `app/design-system/page.tsx`, lien depuis le login
+
+Le socle avait des tokens, pas de couches. Ce lot ajoute chrome, encres sur navy, glyphe vs orange, mouvement et z-index — **mêmes valeurs qu’avant**, nommées. Le spécimen `/design-system` n’entre pas dans le menu produit.
+
+`--mark` `#f3a33c` (glyphe B) et `--orange` `#ee8b2d` restent distincts jusqu’à DEC-001. Pas de thème sombre (DEC-006). Les hex métier restants ne sont pas migrés.
+
+---
+
+## DESIGN-019 — Personnalisation login et en-tête clair
+
+
+- **Date :** 29 août 2026
+- **Auteur :** Revue design
+- **Statut :** Livré dans le miroir, à recetter sur l’aperçu
+- **Périmètre :** écran de connexion, pastille DÉMO, actions d’en-tête
+
+Le panneau gauche de connexion n’est plus un dégradé + cercles décoratifs : navy `--brand-strong` plat, kicker orange, cycle sans encadré. Le compte démo actif est marqué. Sur l’en-tête clair, la pastille DÉMO passe au triplet warning (lisible sur blanc). Cloche et déconnexion : SVG, plus de glyphes.
+
+---
+
+## DESIGN-018 — Une bande navy, plus de H2 jumeau
+
+
+- **Date :** 29 août 2026
+- **Auteur :** Revue design
+- **Statut :** Livré dans le miroir — **arbitrage Wilkam requis** (DEC-009)
+- **Périmètre :** `app/page.tsx`, `app/globals.css`, `scripts/audit-visual-styles.mjs`, `docs/design/DECISIONS.md`
+
+DEC-008 a aligné le menu et le `<h1>`. Il restait deux bandes navy (132 à 146 px) et un second titre dans le contenu. Ce lot ferme ces deux écarts sans toucher aux rôles, droits ou données.
+
+### Ce qui change
+
+| Surface | Avant | Après |
+| --- | --- | --- |
+| Bandeau | navy 64–68 px | inchangé — seule bande de marque |
+| Topbar | navy 68–78 px, texte blanc, persona sombre | `var(--surface)`, texte `--foreground`, persona clair |
+| Chrome navy total desktop | 132–146 px | **64–68 px** |
+| Accueil | H1 Accueil + H2 « Bonjour … » | H1 + kicker + phrase de contexte |
+| À traiter | H1 + H2 « Dossiers à traiter » | H1 + phrase + pastille de délégation |
+| Pilotage | H1 + H2 « Situation du bâtiment » | H1 + kicker + phrase |
+| Landing FM | `manager`, non consigné | consigné : **À traiter**. Le logo va à Accueil. |
+
+Le hero À traiter n'est plus collé sous le topbar par marge négative navy. C'est une carte compacte sur la surface de page.
+
+### Ce qui ne change pas
+
+Pastille Démo, `aria-current`, catalogue DEC-008, CTA « Nouvelle ronde » limité à l'Accueil, SVG de navigation, plancher 12 px, triplets sémantiques, DEC-006 (pas de thème sombre).
+
+### Contrôles
+
+Cinq assertions ajoutées à `scripts/audit-visual-styles.mjs` : topbar claire, pas de H2 jumeau, hero sans second titre, landing FM, plus de bande navy collée.
+
+- **Suite proposée :** recette 1440 / 1024 / 768 / 375, premier dossier visible à 1366×768, puis adoption DEC-009. Ensuite le lot tokens (hex hors `:root`).
+
+---
+
 ## DESIGN-017 — Badges de statut : nouvelle forme à rail latéral
+
 
 **Date :** 29 août 2026 · **Auteur :** Designer · **Nature :** livraison, appliquée sur `app/globals.css`
 
