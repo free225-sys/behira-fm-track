@@ -2,6 +2,44 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-011 — P3 Coûts fondé sur les montants réellement documentés
+
+- **Date :** 30 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté et vérifié localement — non publié
+- **Périmètre :** destination Coûts en lecture opérationnelle Facility Manager et vue globale Administration
+
+Le lot P3 applique DEC-014 sans créer de donnée financière. La destination **Coûts** est groupée sous **Pilotage** dans le menu **Plus** et reste absente des profils terrain. Elle consomme les arbitrages existants au moyen d'un adaptateur explicite vers `CostsWorkspaceItem`.
+
+`Escalation.amount` est présenté comme un **montant de décision**. Il n'est jamais assimilé silencieusement à un budget, un engagement ou un paiement. Les trois montants présents totalisent 5 250 000 FCFA ; deux arbitrages sans montant restent visibles et sont exclus du total. Le seuil commun `DECISION_THRESHOLD_FCFA` vaut 400 000 FCFA conformément à DEC-014.
+
+Les anciens agrégats statiques de Pilotage — budget engagé, estimation mensuelle et écart projeté — sont retirés du bloc Coûts. La synthèse affiche désormais uniquement le total des montants documentés, le nombre de dossiers chiffrés et le nombre de dossiers au-dessus du seuil, avec l'état explicite **Budget, engagé et payé : données insuffisantes**. Les libellés « engagement » dispersés dans le poste Administration sont remplacés, dans ce périmètre, par « montant de décision » ou « dossiers chiffrés ».
+
+La section financière du dossier n'emploie plus une estimation déduite arbitrairement du code équipement : elle reçoit le montant de l'arbitrage relié à l'anomalie, ou affiche **Non renseigné**. Le faux nom de devis est supprimé. Le seuil Administration n'est plus éditable localement et silencieusement ; sa modification attend le lot P5 et une source canonique historisée.
+
+### Contrat d'accès et d'action
+
+- Facility Manager : lecture opérationnelle et ouverture d'un dossier déjà autorisé ;
+- Administration : lecture globale et ouverture du dossier ; l'arbitrage reste dans l'Accueil Administration existant ;
+- profils terrain : aucune destination, donnée financière ou action ajoutée ;
+- aucune décision nouvelle n'est accordée depuis la vue Coûts.
+
+### Contrôles réalisés
+
+- total documenté : 5 250 000 FCFA sur trois dossiers ;
+- filtres : montants renseignés, au-dessus du seuil et montants non renseignés ;
+- recherche « batteries » : un résultat exact ;
+- accès Administration et Facility Manager présent dans **Plus** ; accès Agent Électricité absent ;
+- lien Pilotage → Coûts et retour Dossier → Coûts fonctionnels ;
+- rendu 390, 768 et 1024 px vérifié sans perte d'information ;
+- `pnpm audit:visual` : 69/69 contrôles réussis ;
+- `pnpm verify:personas` : 34/34 contrôles réussis ;
+- `pnpm lint`, `pnpm build` et vérification des polices : réussis.
+
+Le lot ne crée aucune route réseau autonome : `/couts` reste réservé pour le futur découpage du routeur. Il ne modifie ni API, donnée, permission réelle, Supabase ou configuration de déploiement. Le coût facultatif saisi dans un rapport prestataire n'est pas agrégé ici, car le miroir ne conserve pas actuellement une collection canonique de ces rapports.
+
+- **Suite proposée :** P4 Utilisateurs et droits, sous forme de contrat et de démonstration sans traitement d'administration dans le navigateur.
+
 ## DEV-010 — P2 Équipements après validation des six arbitrages DEC-002
 
 - **Date :** 30 août 2026

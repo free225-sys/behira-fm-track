@@ -7,7 +7,8 @@ const page = await readFile(path.join(root, 'app', 'page.tsx'), 'utf8')
 const css = await readFile(path.join(root, 'app', 'globals.css'), 'utf8')
 const badge = await readFile(path.join(root, 'app', 'components', 'ui', 'badge.tsx'), 'utf8')
 const equipmentWorkspace = await readFile(path.join(root, 'app', 'components', 'EquipmentWorkspace.tsx'), 'utf8')
-const appSource = `${page}\n${css}\n${badge}\n${equipmentWorkspace}`
+const costsWorkspace = await readFile(path.join(root, 'app', 'components', 'CostsWorkspace.tsx'), 'utf8')
+const appSource = `${page}\n${css}\n${badge}\n${equipmentWorkspace}\n${costsWorkspace}`
 
 const checks = []
 const requireAll = (label, source, values) => {
@@ -32,8 +33,8 @@ requireAll('Parcours terrain et preuve', page, [
 requireAll('Cycle métier', page, ['Constat', 'Qualification', 'Décision', 'Intervention', 'Preuve', 'Clôture'])
 requireAll('États opérationnels', page, ['Critique', 'En retard', 'PREUVE MANQUANTE', 'Terminées'])
 requireAll('Droits visibles par persona', page, [
-  "['workspace','dashboard','registry','equipment','manager','report']",
-  "['workspace','dashboard','registry','equipment']",
+  "['workspace','dashboard','registry','equipment','costs','manager','report']",
+  "['workspace','dashboard','registry','equipment','costs']",
   "['workspace','report']",
   "personaId === 'electricite' || personaId === 'eau_incendie'",
   "Cleaning · jardinage · suivi administratif",
@@ -81,6 +82,10 @@ requireAll('Navigation analytique du tableau de bord', appSource, [
 requireAll('Destination Équipements limitée à Administration et Facility Manager', appSource, [
   "key:'equipment'", "secondary:true", 'EquipmentWorkspace', 'Parc technique',
   'Fraîcheur du score', 'Facteurs explicatifs', 'Données insuffisantes',
+])
+requireAll('Destination Coûts limitée à Administration et Facility Manager', appSource, [
+  "key:'costs'", "label:'Coûts'", 'CostsWorkspace', 'Coûts documentés',
+  'Montant engagé', 'Montant payé', 'Données insuffisantes', 'DECISION_THRESHOLD_FCFA',
 ])
 requireAll('Double mission Agente Rondes & Assistance', page, [
   'mission-switch', 'Rondes, constats et brouillons hors ligne', 'Devis, paiements et autorisations',

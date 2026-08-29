@@ -9,6 +9,7 @@ const workflow = await readFile(path.join(root, 'app', 'components', 'WorkflowAn
 const specimen = await readFile(path.join(root, 'app', 'design-system', 'page.tsx'), 'utf8')
 const badge = await readFile(path.join(root, 'app', 'components', 'ui', 'badge.tsx'), 'utf8')
 const equipmentWorkspace = await readFile(path.join(root, 'app', 'components', 'EquipmentWorkspace.tsx'), 'utf8')
+const costsWorkspace = await readFile(path.join(root, 'app', 'components', 'CostsWorkspace.tsx'), 'utf8')
 
 const cssWithoutComments = css.replace(/\/\*[\s\S]*?\*\//g, '')
 const rules = [...cssWithoutComments.matchAll(/([^{}]+)\{([^{}]+)\}/g)].map((match, order) => ({
@@ -87,7 +88,12 @@ const checks = [
   ['Spécimen hors navigation produit', specimen.includes('Système de design · hors navigation produit') && page.includes('href="/design-system"') && !page.includes("label:'Système de design'")],
   ['Primitives UI partagées', page.includes("from './components/ui'") && specimen.includes("from '../components/ui'") && page.includes('<IconButton') && page.includes('<Card className="fm-decision-card">')],
   ['Destination Équipements sur primitives et tokens', equipmentWorkspace.includes("from './ui'") && equipmentWorkspace.includes('<Card') && css.includes('.equipment-workspace-hero') && css.includes('background:var(--surface-muted)') && css.includes('.equipment-destination-card{min-width:0;padding:var(--space-4);box-shadow:none}')],
-  ['Équipements dans Plus sans étendre les profils terrain', page.includes("key:'equipment'") && page.includes('secondary:true') && page.includes("facility:['workspace','dashboard','registry','equipment','manager','report']") && page.includes("administration:['workspace','dashboard','registry','equipment']") && !page.includes("electricite:['workspace','report','equipment']")],
+  ['Équipements dans Plus sans étendre les profils terrain', page.includes("key:'equipment'") && page.includes('secondary:true') && page.includes("facility:['workspace','dashboard','registry','equipment','costs','manager','report']") && page.includes("administration:['workspace','dashboard','registry','equipment','costs']") && !page.includes("electricite:['workspace','report','equipment']")],
+  ['Destination Coûts sur primitives et tokens', costsWorkspace.includes("from './ui'") && costsWorkspace.includes('<Card') && costsWorkspace.includes('<Field') && costsWorkspace.includes('<Button') && css.includes('.costs-workspace-hero') && css.includes('.costs-case-card{min-width:0;padding:var(--space-4);box-shadow:none}')],
+  ['Coûts dans Plus sans étendre les profils terrain', page.includes("key:'costs'") && page.includes("label:'Coûts'") && page.includes("facility:['workspace','dashboard','registry','equipment','costs','manager','report']") && page.includes("administration:['workspace','dashboard','registry','equipment','costs']") && !page.includes("electricite:['workspace','report','costs']")],
+  ['Coûts sans budget ou paiement inventé', costsWorkspace.includes('BUDGET · ENGAGÉ · PAYÉ') && costsWorkspace.includes('Aucune source canonique disponible') && costsWorkspace.includes('Un montant soumis à décision n’est pas considéré comme engagé ou payé') && !page.includes('Budget engagé</span><strong>6 200 000')],
+  ['Montant du dossier raccordé à l’arbitrage existant', page.includes('decisionAmount={escalations.find') && !page.includes("const estimatedCost = anomaly.asset") && page.includes('Pièce financière non reliée') && !page.includes('DEVIS-INTERVENTION.pdf')],
+  ['Seuil financier unique et non modifiable silencieusement', page.includes('const DECISION_THRESHOLD_FCFA = 400_000') && page.includes('const threshold = DECISION_THRESHOLD_FCFA') && !page.includes('setThreshold(Number')],
 ]
 
 for (const [label, ok] of checks) console.log(`${ok ? '✓' : '✗'} ${label}`)

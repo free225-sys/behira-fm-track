@@ -2,7 +2,7 @@
 
 - **Date :** 30 août 2026
 - **Auteur :** Dev Lead
-- **Statut :** Validé par Wilkam le 30 août 2026 — P2 Équipements ouvert
+- **Statut :** Validé par Wilkam le 30 août 2026 — P2 Équipements et P3 Coûts livrés localement
 - **Références :** DEC-002, DEC-008, DEV-003 et DEV-009
 
 ## 1. Objet du lot
@@ -12,6 +12,8 @@ Ce document ferme la première étape du lot produit DEC-002 : nommer les destin
 DEC-008 complète DEC-002 : la navigation principale reste **Accueil · À traiter · Rondes · Registre · Pilotage**. Les actions **Signaler une anomalie** et **Nouvelle ronde** restent contextuelles. Les futures destinations autonomes sont filtrées par les droits avant d'être placées dans le menu **Plus**, sous les groupes de DEC-002.
 
 La validation du 30 août 2026 est consignée dans **DEC-014** : Équipements est réservé à l'Administration et au Facility Manager ; Coûts est opérationnel pour le Facility Manager et global pour l'Administration ; la création/désactivation d'utilisateurs revient à l'Administration, avec proposition seulement pour le Facility Manager ; le seuil de référence est fixé à 400 000 FCFA ; les quatre destinations restent dans **Plus** et leurs chemins futurs sont réservés.
+
+P3 applique cette décision en donnant à `Escalation.amount` le libellé strict de **montant de décision**. Les états engagé, payé et budget restent insuffisants tant qu'une source canonique n'existe pas. Le total affiché est uniquement la somme transparente des montants visibles ; le coût facultatif d'un rapport prestataire n'est pas agrégé, faute de collection canonique dans le miroir.
 
 ## 2. Catalogue principal déjà implémenté
 

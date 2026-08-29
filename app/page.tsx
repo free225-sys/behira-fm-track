@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 import { AntiZombieSummary } from './components/AntiZombieSummary';
 import type { AntiZombieSummaryData } from './components/anti-zombie-contract';
+import { CostsWorkspace } from './components/CostsWorkspace';
 import { EquipmentWorkspace } from './components/EquipmentWorkspace';
 import { Badge, Button, Card, Field, IconButton } from './components/ui';
 import { WorkflowAnalytics } from './components/WorkflowAnalytics';
@@ -13,7 +14,7 @@ import { getSupabaseIntegrationState, isSupabaseIntegrationEnabled } from './lib
 import { loadOperationalSnapshot, type OperationalVendor } from './lib/supabase/data';
 import { advanceAnomalyWorkflow, uploadAnomalyProof, uploadVendorInterventionReport, verifyLatestAnomalyProof } from './lib/supabase/mutations';
 
-type View = 'workspace' | 'dashboard' | 'registry' | 'equipment' | 'manager' | 'report' | 'detail';
+type View = 'workspace' | 'dashboard' | 'registry' | 'equipment' | 'costs' | 'manager' | 'report' | 'detail';
 type Priority = 'Critique' | 'Haute' | 'Moyenne' | 'Faible';
 type Status = 'À qualifier' | 'Affectée' | 'En intervention' | 'En validation' | 'Clôturée';
 type ManagerQueue = 'qualify'|'late'|'unassigned'|'proof'|'reception'|'reservations'|'reopened';
@@ -140,8 +141,8 @@ const demoAccounts: DemoAccount[] = [
 ];
 
 const allowedViewsByPersona: Record<PersonaId, View[]> = {
-  facility:['workspace','dashboard','registry','equipment','manager','report'],
-  administration:['workspace','dashboard','registry','equipment'],
+  facility:['workspace','dashboard','registry','equipment','costs','manager','report'],
+  administration:['workspace','dashboard','registry','equipment','costs'],
   electricite:['workspace','report'],
   eau_incendie:['workspace','report'],
   rondes_assistance:['workspace','report'],
@@ -182,6 +183,7 @@ const navItems: NavigationItem[] = [
   { key:'registry', label:'Registre', subtitle:'Consultez et recherchez l’ensemble des dossiers.', group:'Le bâtiment' },
   { key:'equipment', label:'Équipements', subtitle:'Santé et informations disponibles du parc technique.', group:'Le bâtiment', secondary:true },
   { key:'dashboard', label:'Pilotage', subtitle:'Performance opérationnelle du site.', group:'Pilotage' },
+  { key:'costs', label:'Coûts', subtitle:'Montants documentés, seuil et arbitrages financiers.', group:'Pilotage', secondary:true },
 ];
 const navigationGroups: NavigationGroup[] = ['Mon travail','Le bâtiment','Pilotage','Administration'];
 
@@ -192,6 +194,7 @@ function NavigationIcon({ view }: { view:NavigationItem['key'] }) {
     {view === 'dashboard' && <><path {...common} d="M4 13h6v7H4zM14 4h6v16h-6zM4 4h6v5H4z"/></>}
     {view === 'registry' && <><path {...common} d="M8 6h12M8 12h12M8 18h12"/><path {...common} d="M4 6h.01M4 12h.01M4 18h.01"/></>}
     {view === 'equipment' && <><path {...common} d="M5 7.5 12 4l7 3.5v9L12 20l-7-3.5z"/><path {...common} d="m5 7.5 7 3.5 7-3.5M12 11v9"/></>}
+    {view === 'costs' && <><circle {...common} cx="12" cy="12" r="8"/><path {...common} d="M15 8.5h-4a2 2 0 0 0 0 4h2a2 2 0 0 1 0 4H9M12 6.5v2M12 16.5v2"/></>}
     {view === 'manager' && <><circle {...common} cx="12" cy="12" r="8"/><path {...common} d="M12 8v4l3 2"/></>}
     {view === 'report' && <><path {...common} d="M7 4h10v16H7zM9.5 4V2.8h5V4"/><path {...common} d="m9.5 12 1.7 1.7 3.6-4"/></>}
   </svg>;
@@ -205,6 +208,8 @@ const fallbackEquipment: EquipmentItem[] = [
   { code:'DEMO-ESP', label:'Irrigation', health:98, state:'Sain' },
   { code:'DEMO-RND', label:'Rondes & constats', health:93, state:'Sain' },
 ];
+
+const DECISION_THRESHOLD_FCFA = 400_000;
 
 const personaGroups: { label:string; ids:PersonaId[] }[] = [
   { label:'Administration', ids:['administration'] },
@@ -1023,12 +1028,13 @@ export default function Home() {
 
         <div className="content">
           {view === 'workspace' && <PersonaWorkspace persona={persona} anomalies={anomalies} equipment={equipmentItems} vendors={vendorReferences} canUploadVendorReport={effectiveCanUploadVendorReport} vendorReportBusy={mutationBusy} onVendorReport={persistVendorReport} escalations={escalations} fieldRequests={fieldRequests} onEscalationDecision={decideEscalation} onEscalateToDirection={escalateToDirection} onFieldRequest={submitFieldRequest} onOpen={(id) => openDetail(id, 'workspace')} onNavigate={navigate} flash={flash} />}
-          {view === 'dashboard' && <Dashboard anomalies={anomalies} equipment={equipmentItems} audience={personaId === 'administration' ? 'administration' : 'facility'} onOpen={openDetail} onNavigate={navigate} />}
+          {view === 'dashboard' && <Dashboard anomalies={anomalies} equipment={equipmentItems} escalations={escalations} audience={personaId === 'administration' ? 'administration' : 'facility'} onOpen={openDetail} onNavigate={navigate} />}
           {view === 'registry' && <Registry anomalies={filtered} query={query} setQuery={setQuery} priority={priorityFilter} setPriority={setPriorityFilter} status={statusFilter} setStatus={setStatusFilter} onOpen={(id) => openDetail(id, 'registry')} />}
           {view === 'equipment' && <EquipmentWorkspace equipment={equipmentItems} />}
+          {view === 'costs' && <CostsWorkspace items={escalations.map((item) => ({ id:item.id, anomaly:item.anomaly, asset:item.asset, title:item.title, kind:item.kind, amount:item.amount ?? null, due:item.due, state:item.state }))} audience={personaId === 'administration' ? 'administration' : 'facility'} threshold={DECISION_THRESHOLD_FCFA} onOpenDossier={(id) => openDetail(id, 'costs')} />}
           {view === 'manager' && <Manager anomalies={anomalies} tab={managerTab} setTab={setManagerTab} onOpen={(id) => openDetail(id, 'manager')} />}
           {view === 'report' && <Report persona={persona} onNavigate={navigate} />}
-          {view === 'detail' && <Detail key={`${selected.id}-${selected.status}-${selected.proof}-${selected.proofPending}`} anomaly={selected} readOnly={personaId === 'administration'} canVerify={personaId === 'facility' && session.mode === 'supabase'} busy={mutationBusy} onBack={() => navigate(previousView)} onStatus={(status) => void persistWorkflowStatus(status)} onProof={(file) => void persistProof(file)} onVerify={() => void verifyProof()} />}
+          {view === 'detail' && <Detail key={`${selected.id}-${selected.status}-${selected.proof}-${selected.proofPending}`} anomaly={selected} decisionAmount={escalations.find((item) => item.anomaly === selected.id)?.amount ?? null} readOnly={personaId === 'administration'} canVerify={personaId === 'facility' && session.mode === 'supabase'} busy={mutationBusy} onBack={() => navigate(previousView)} onStatus={(status) => void persistWorkflowStatus(status)} onProof={(file) => void persistProof(file)} onVerify={() => void verifyProof()} />}
         </div>
       </main>
       {toast && <div className={`toast ${/impossible|non enregistrée/i.test(toast) ? 'toast-error' : ''}`} role="status"><span>{/impossible|non enregistrée/i.test(toast) ? '!' : '✓'}</span>{toast}</div>}
@@ -1074,7 +1080,7 @@ function formatMoney(value:number) {
 }
 
 function DirectionWorkspace({ anomalies, equipment, escalations, onDecision, onOpen, onNavigate }: { anomalies:Anomaly[]; equipment:EquipmentItem[]; escalations:Escalation[]; onDecision:(id:string,state:DecisionState,motive:string)=>void; onOpen:(id:string)=>void; onNavigate:(view:View)=>void }) {
-  const [threshold, setThreshold] = useState(400000);
+  const threshold = DECISION_THRESHOLD_FCFA;
   const [tab, setTab] = useState<'pending'|'history'>('pending');
   const [filter, setFilter] = useState<'Tous'|Escalation['kind']>('Tous');
   const [selectedCaseId, setSelectedCaseId] = useState('DEC-018');
@@ -1088,6 +1094,8 @@ function DirectionWorkspace({ anomalies, equipment, escalations, onDecision, onO
   const activeItems = filter === 'Tous' ? stateItems : stateItems.filter((item) => item.kind === filter);
   const focusItem = activeItems.find((item) => item.id === selectedCaseId) ?? activeItems[0];
   const selected = draft ? escalations.find((item) => item.id === draft.id) : null;
+  const documentedCostItems = escalations.filter((item) => item.amount !== undefined);
+  const documentedCostTotal = documentedCostItems.reduce((total,item) => total + (item.amount ?? 0),0);
   const filters: Array<'Tous'|Escalation['kind']> = ['Tous','Risque','Coût','Arbitrage','Clôture sensible'];
   const confirm = () => {
     if (!draft || !motive.trim()) return;
@@ -1099,7 +1107,7 @@ function DirectionWorkspace({ anomalies, equipment, escalations, onDecision, onO
     <WorkspaceIntro kicker="ADMINISTRATION · SUPER UTILISATEUR MÉTIER" description="Décidez ce qui dépasse la délégation opérationnelle de Facility Manager." badge="Validation métier active" />
     <div className="authority-split" role="note"><div><span>✓</span><p><b>Validation métier Administration</b><small>Risques, coûts à partir de 400 000 FCFA et contrôle des clôtures sensibles</small></p></div><div className="technical-admin"><span>⌘</span><p><b>Utilisateurs et paramètres</b><small>Comptes, droits sensibles, zones et seuil financier configurables</small></p><Badge tone="blue">ACCÈS ADMIN</Badge></div></div>
     <AnswerStrip todo={`${escalations.filter((item) => item.state === 'À décider').length} arbitrages`} risk="2 dossiers critiques" due="1 décision avant 10:30" proof="1 clôture sensible" />
-    <section className="direction-summary-grid"><article className="panel executive-metric"><span>RISQUES CRITIQUES</span><strong>2</strong><small>DEMO-SSI et continuité DEMO-GE</small></article><article className="panel executive-metric"><span>COÛTS À VALIDER</span><strong>6,7 M</strong><small>FCFA · 2 engagements</small></article><article className="panel executive-metric"><span>SANTÉ BÂTIMENT</span><strong className="healthy">82/100</strong><small>Équipements 70% · sécurité 15%</small></article><article className="panel threshold-card"><label>Seuil d’approbation Administration<input aria-label="Seuil d’approbation Administration" type="number" step="50000" value={threshold} onChange={(e) => setThreshold(Number(e.target.value))} /></label><small>Les engagements ≥ {formatMoney(threshold)} sont remontés automatiquement.</small></article></section>
+    <section className="direction-summary-grid"><article className="panel executive-metric"><span>RISQUES CRITIQUES</span><strong>2</strong><small>DEMO-SSI et continuité DEMO-GE</small></article><article className="panel executive-metric"><span>MONTANTS DOCUMENTÉS</span><strong>{formatMoney(documentedCostTotal)}</strong><small>{documentedCostItems.length} dossiers chiffrés · ni engagés ni payés</small></article><article className="panel executive-metric"><span>SANTÉ BÂTIMENT</span><strong className="healthy">82/100</strong><small>Équipements 70% · sécurité 15%</small></article><article className="panel threshold-card"><span>Seuil d’approbation Administration</span><strong>{formatMoney(threshold)}</strong><small>Valeur de référence validée · modification prévue dans le lot Paramètres.</small></article></section>
     <section className="decision-workbench">
       <article className="panel direction-inbox">
         <div className="workspace-tabs"><button className={tab === 'pending' ? 'active' : ''} onClick={() => setTab('pending')}>À décider <span>{escalations.filter((item) => item.state === 'À décider').length}</span></button><button className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')}>Historique <span>{escalations.filter((item) => item.state !== 'À décider').length}</span></button></div>
@@ -1109,11 +1117,11 @@ function DirectionWorkspace({ anomalies, equipment, escalations, onDecision, onO
       <aside className="panel direction-focus" aria-live="polite">{focusItem ? <>
         <div className="direction-focus-head"><div><Badge tone={focusItem.kind === 'Risque' ? 'critical' : focusItem.kind === 'Coût' || focusItem.kind === 'Clôture sensible' ? 'orange' : 'blue'}>{focusItem.kind}</Badge><span>{focusItem.id} · {focusItem.anomaly}</span></div><Badge tone={focusItem.state === 'Approuvée' ? 'success' : focusItem.state === 'Refusée' ? 'critical' : focusItem.state === 'Renvoyée à Facility Manager' ? 'orange' : 'neutral'}>{focusItem.state}</Badge></div>
         <h3>{focusItem.asset} · {focusItem.title}</h3>
-        <div className="case-facts"><span><b>Risque</b>{focusItem.risk}</span><span><b>Échéance</b>{focusItem.due}</span>{focusItem.amount && <span><b>Engagement</b>{formatMoney(focusItem.amount)} {focusItem.amount >= threshold && <em>AU-DESSUS DU SEUIL</em>}</span>}</div>
+        <div className="case-facts"><span><b>Risque</b>{focusItem.risk}</span><span><b>Échéance</b>{focusItem.due}</span>{focusItem.amount && <span><b>Montant de décision</b>{formatMoney(focusItem.amount)} {focusItem.amount >= threshold && <em>AU-DESSUS DU SEUIL</em>}</span>}</div>
         <div className="recommendation"><span>RECOMMANDATION</span><p>{focusItem.recommendation}</p></div>
         {focusItem.motive && <p className="decision-motive"><b>Motif :</b> {focusItem.motive}</p>}
         {focusItem.state === 'À décider' && <div className="case-actions">{focusItem.anomaly.startsWith('ANO-') && <button className="secondary-button" onClick={() => onOpen(focusItem.anomaly)}>Voir l’anomalie</button>}<button className="reject-action" onClick={() => {setDraft({id:focusItem.id,state:'Refusée'});setMotive('')}}>Refuser</button><button className="return-action" onClick={() => {setDraft({id:focusItem.id,state:'Renvoyée à Facility Manager'});setMotive('')}}>Renvoyer à Facility Manager</button><button className="primary-button" onClick={() => {setDraft({id:focusItem.id,state:'Approuvée'});setMotive('')}}>Approuver</button></div>}
-        <div className="direction-detail-kpis"><span><b>92%</b> disponibilité</span><span><b>3,2 j</b> délai moyen</span><span><b>8,45 M</b> engagés</span></div>
+        <div className="direction-detail-kpis"><span><b>92%</b> disponibilité</span><span><b>3,2 j</b> délai moyen</span><span><b>{documentedCostItems.length}</b> dossiers chiffrés</span></div>
       </> : <div className="empty-state compact"><span>⌁</span><h3>Sélectionnez un dossier</h3><p>Le détail de l’arbitrage apparaîtra ici.</p></div>}</aside>
     </section>
     <section className="admin-preview-grid">
@@ -1373,11 +1381,14 @@ function ManagerHealthOverview({ anomalies, equipment, onNavigate }: { anomalies
   </section>;
 }
 
-function Dashboard({ anomalies, equipment, audience = 'facility', onOpen, onNavigate, readOnly = false }: { anomalies: Anomaly[]; equipment:EquipmentItem[]; audience?:'administration'|'facility'; onOpen:(id:string, from?:View)=>void; onNavigate:(view:View)=>void; readOnly?:boolean }) {
+function Dashboard({ anomalies, equipment, escalations, audience = 'facility', onOpen, onNavigate, readOnly = false }: { anomalies: Anomaly[]; equipment:EquipmentItem[]; escalations:Escalation[]; audience?:'administration'|'facility'; onOpen:(id:string, from?:View)=>void; onNavigate:(view:View)=>void; readOnly?:boolean }) {
   const [dashboardTab, setDashboardTab] = useState<'overview'|'actions'|'health'|'equipment'>('overview');
   const urgent = anomalies.filter((a) => a.priority === 'Critique' || a.priority === 'Haute').filter((a) => a.status !== 'Clôturée').slice(0,3);
   const lateCount = anomalies.filter((a) => a.delayed && a.status !== 'Clôturée').length;
   const openCount = anomalies.filter((a) => a.status !== 'Clôturée').length;
+  const documentedCosts = escalations.filter((item) => item.amount !== undefined);
+  const documentedCostTotal = documentedCosts.reduce((total,item) => total + (item.amount ?? 0),0);
+  const overThresholdCosts = documentedCosts.filter((item) => (item.amount ?? 0) >= DECISION_THRESHOLD_FCFA).length;
   const dashboardTabs = [
     { id:'overview' as const, icon:'01', label:'Vue d’ensemble', detail:'5 angles du jour', count:'Synthèse' },
     { id:'actions' as const, icon:'02', label:'Actions & risques', detail:`${openCount} ouverts · ${lateCount} retards`, count:'À traiter' },
@@ -1403,11 +1414,11 @@ function Dashboard({ anomalies, equipment, audience = 'facility', onOpen, onNavi
       </article>
 
       {dashboardTab === 'overview' && <article className="panel direction-block costs-block">
-        <div className="direction-head"><span className="direction-number">03</span><div><h3>Coûts</h3><p>Projection maintenance · août</p></div></div>
-        <div className="cost-main"><span>Budget engagé</span><strong>6 200 000 <small>FCFA</small></strong></div>
-        <div className="cost-progress"><i /></div>
-        <div className="cost-details"><div><span>Estimé fin de mois</span><b>7 800 000 FCFA</b></div><div className="cost-gap"><span>Écart projeté</span><b>+1 600 000 FCFA</b></div></div>
-        <small className="cost-note">77% du plafond mensuel de 11 M FCFA engagé</small>
+        <div className="direction-head"><span className="direction-number">03</span><div><h3>Coûts</h3><p>Montants réellement renseignés</p></div></div>
+        <div className="cost-main"><span>Montants documentés</span><strong>{formatMoney(documentedCostTotal)}</strong></div>
+        <div className="cost-details"><div><span>Dossiers chiffrés</span><b>{documentedCosts.length}</b></div><div className="cost-gap"><span>Au-dessus du seuil</span><b>{overThresholdCosts}</b></div></div>
+        <small className="cost-note">Budget, engagé et payé : données insuffisantes.</small>
+        <button type="button" className="text-action" onClick={() => onNavigate('costs')}>Consulter les coûts documentés →</button>
       </article>}
 
       {dashboardTab === 'overview' && <article className="panel direction-block performance-block">
@@ -1466,7 +1477,7 @@ function Manager({ anomalies, tab, setTab, onOpen }: { anomalies:Anomaly[]; tab:
   const [decisionDone, setDecisionDone] = useState(false);
   const focus = active.find((item) => item.id === selectedId) ?? active[0];
   const amountValue = Number(amount || 0);
-  const overThreshold = amountValue >= 400000;
+  const overThreshold = amountValue >= DECISION_THRESHOLD_FCFA;
   const branchLocked = Boolean(focus && focus.status === 'À qualifier' && !canonicalResponsible(focus));
   const priorityCode:Record<Priority,string> = { Critique:'C', Haute:'H', Moyenne:'M', Faible:'F' };
 
@@ -1540,7 +1551,7 @@ function Manager({ anomalies, tab, setTab, onOpen }: { anomalies:Anomaly[]; tab:
   </div>;
 }
 
-function Detail({ anomaly, onBack, onStatus, onProof, onVerify, readOnly = false, canVerify = false, busy = false }: { anomaly:Anomaly; onBack:()=>void; onStatus:(s:Status)=>void; onProof:(file:File)=>void; onVerify:()=>void; readOnly?:boolean; canVerify?:boolean; busy?:boolean }) {
+function Detail({ anomaly, decisionAmount, onBack, onStatus, onProof, onVerify, readOnly = false, canVerify = false, busy = false }: { anomaly:Anomaly; decisionAmount:number|null; onBack:()=>void; onStatus:(s:Status)=>void; onProof:(file:File)=>void; onVerify:()=>void; readOnly?:boolean; canVerify?:boolean; busy?:boolean }) {
   const nextStep:Partial<Record<Status,Status>> = { 'À qualifier':'Affectée', 'Affectée':'En intervention', 'En intervention':'En validation', 'En validation':'Clôturée' };
   const nextStatusOption = nextStep[anomaly.status];
   const [nextStatus, setNextStatus] = useState<Status>(nextStatusOption ?? anomaly.status);
@@ -1550,8 +1561,7 @@ function Detail({ anomaly, onBack, onStatus, onProof, onVerify, readOnly = false
   const workflow = ['Constat','Qualification','Décision','Intervention','Preuve','Clôture'];
   const statusStep:Record<Status,number> = { 'À qualifier':1, 'Affectée':2, 'En intervention':3, 'En validation':4, 'Clôturée':5 };
   const currentStep = statusStep[anomaly.status];
-  const estimatedCost = anomaly.asset === 'DEMO-EAU' ? 280000 : anomaly.asset === 'DEMO-GE' ? 2400000 : anomaly.asset === 'DEMO-ASC-2' ? 950000 : 0;
-  const overThreshold = estimatedCost >= 400000;
+  const overThreshold = decisionAmount !== null && decisionAmount >= DECISION_THRESHOLD_FCFA;
   return <>
     <input ref={proofInput} className="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(event) => { const file = event.target.files?.[0]; if (file) onProof(file); event.currentTarget.value = ''; }} />
     <button className="back-button dossier-back" onClick={onBack}>← Retour à la file</button>
@@ -1576,7 +1586,7 @@ function Detail({ anomaly, onBack, onStatus, onProof, onVerify, readOnly = false
       </aside>
     </section>}
 
-    {section === 'finance' && <section className="dossier-two-columns"><article className="panel finance-decision-card"><div className="panel-head"><div><p className="design-kicker">BRANCHE DE TRAITEMENT</p><h3>{estimatedCost ? 'Intervention avec coût' : 'Intervention interne sans coût'}</h3></div><Badge tone={overThreshold ? 'orange' : 'success'}>{overThreshold ? 'ADMINISTRATION' : 'DÉLÉGATION FM'}</Badge></div><div className="finance-amount"><span>Coût estimé</span><strong>{formatMoney(estimatedCost)}</strong><small>Seuil d’approbation : 400 000 FCFA</small></div><div className={`authority-result ${overThreshold ? 'escalate' : 'delegated'}`}><span>{overThreshold ? '↑' : '✓'}</span><div><b>{overThreshold ? 'Arbitrage de l’Administration' : 'Facility Manager peut décider'}</b><small>{overThreshold ? 'Le montant dépasse la délégation validée.' : 'Le montant reste sous le seuil validé.'}</small></div></div><div className="decision-audit"><span><b>Décision</b>{overThreshold ? 'À soumettre' : 'Autorisée dans la délégation'}</span><span><b>Motif</b>Continuité de service et prévention de récidive</span><span><b>Urgence</b>Non déclarée</span></div></article><aside className="panel quote-card"><p className="design-kicker">PIÈCES FINANCIÈRES</p><h3>Devis et engagement</h3><div className="quote-file"><span>▧</span><p><b>{estimatedCost ? 'DEVIS-INTERVENTION.pdf' : 'Aucun devis requis'}</b><small>{estimatedCost ? 'Reçu · à contrôler' : 'Branche interne sans coût'}</small></p></div><button className="secondary-button">Ajouter une pièce</button></aside></section>}
+    {section === 'finance' && <section className="dossier-two-columns"><article className="panel finance-decision-card"><div className="panel-head"><div><p className="design-kicker">BRANCHE DE TRAITEMENT</p><h3>{decisionAmount === null ? 'Montant non renseigné' : 'Intervention avec montant documenté'}</h3></div><Badge tone={decisionAmount === null ? 'neutral' : overThreshold ? 'orange' : 'success'}>{decisionAmount === null ? 'DONNÉES INSUFFISANTES' : overThreshold ? 'ADMINISTRATION' : 'DÉLÉGATION FM'}</Badge></div><div className="finance-amount"><span>Montant de décision</span><strong>{decisionAmount === null ? 'Non renseigné' : formatMoney(decisionAmount)}</strong><small>Seuil d’approbation : 400 000 FCFA</small></div>{decisionAmount === null ? <div className="compact-insufficient-state"><b>Qualification financière incomplète</b><p>Aucun montant canonique n’est relié à ce dossier.</p></div> : <><div className={`authority-result ${overThreshold ? 'escalate' : 'delegated'}`}><span>{overThreshold ? '↑' : '✓'}</span><div><b>{overThreshold ? 'Arbitrage de l’Administration' : 'Facility Manager peut décider'}</b><small>{overThreshold ? 'Le montant dépasse la délégation validée.' : 'Le montant reste sous le seuil validé.'}</small></div></div><div className="decision-audit"><span><b>Décision</b>{overThreshold ? 'À soumettre' : 'Autorisée dans la délégation'}</span><span><b>Montant engagé</b>Non renseigné</span><span><b>Montant payé</b>Non renseigné</span></div></>}</article><aside className="panel quote-card"><p className="design-kicker">PIÈCES FINANCIÈRES</p><h3>Devis et engagement</h3><div className="quote-file"><span>▧</span><p><b>Pièce financière non reliée</b><small>Données insuffisantes dans la source actuelle</small></p></div></aside></section>}
 
     {section === 'evidence' && <section className="dossier-two-columns"><article className="panel evidence-panel"><div className="panel-head"><div><h3>Preuves du dossier</h3><p>Pièces adaptées au type d’intervention</p></div>{!readOnly && !anomaly.proofPending && <button disabled={busy} onClick={chooseProof}>＋ Ajouter</button>}</div>{anomaly.proof ? <div className="evidence-file"><span>▧</span><div><b>Preuve d’intervention acceptée</b><small>Fichier privé · contrôle Facility Manager terminé</small></div><Badge tone="success">ACCEPTÉE</Badge></div> : anomaly.proofPending ? <div className="evidence-file"><span>▧</span><div><b>Preuve reçue</b><small>Contrôle Facility Manager requis</small></div><Badge tone="orange">À VALIDER</Badge>{canVerify && <button className="primary-button" disabled={busy} onClick={onVerify}>Valider</button>}</div> : <div className="proof-requirement"><span>⌁</span><div><b>{anomaly.asset === 'DEMO-EAU' ? 'Photo du manomètre et rapport d’intervention' : 'Preuve définie selon le type de dossier'}</b><p>La clôture reste impossible tant que la pièce obligatoire n’est pas acceptée.</p></div>{!readOnly && <button className="primary-button" onClick={chooseProof}>Déposer</button>}</div>}</article><aside className="panel proof-matrix-card"><p className="design-kicker">MATRICE APPLIQUÉE</p><h3>{anomaly.asset}</h3><ul><li><span>✓</span>Photo après intervention</li><li><span>{anomaly.asset === 'DEMO-EAU' ? '✓' : '○'}</span>Valeur de contrôle finale</li><li><span>○</span>Rapport ou PV signé</li></ul></aside></section>}
 
