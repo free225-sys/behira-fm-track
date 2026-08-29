@@ -2,6 +2,31 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-006 — Réponse à DESIGN-014 : régressions de clôture corrigées
+
+- **Date :** 29 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté et vérifié localement — publication toujours en attente de la recette éclair Design
+- **Périmètre :** Polices auto-hébergées, bandeau Surpresseur grand écran, badge Administration et arbitrage d’ordre du cockpit
+
+Les trois régressions bloquantes de DESIGN-014 sont corrigées sans changement de donnée, de rôle ou de règle métier :
+
+- **R1 — Geist :** les variantes Sans et Mono sont maintenant servies depuis `public/fonts/` aux deux URL attendues par le paquet `geist`. Un contrôle réseau dédié échoue sur tout statut autre que HTTP 200, vérifie la signature WOFF2 et refuse un type de contenu inattendu. Les deux ressources sont également présentes dans le build de déploiement.
+- **R2 — Surpresseur :** au palier grand écran, la marge négative et le padding horizontal du bandeau reprennent exactement `clamp(32px,3.2vw,60px)`, la même formule que `.content`. Le contrat est protégé par l’audit statique.
+- **R3 — Administration :** le badge `ACCÈS ADMIN` porte désormais `flex:0 0 auto` et `min-width:max-content`, ce qui interdit sa compression dans `.authority-split`.
+
+L’ordre du cockpit n’est pas déclaré acté. **DEC-005** expose les options « priorité opérationnelle DEC-004 » et « vue d’ensemble d’abord », avec un statut explicitement proposé et un arbitrage demandé à Wilkam.
+
+### Contrôles réalisés
+
+- polices Sans et Mono : HTTP 200, signature WOFF2 valide ;
+- `pnpm lint`, `pnpm build`, `pnpm audit:visual` : réussis ;
+- build de déploiement : les deux fichiers Geist sont présents sous `dist/client/fonts/` ;
+- aucun fichier Supabase, secret, rôle ou permission modifié ;
+- aucune publication effectuée.
+
+- **Suite proposée :** recette éclair Design sur R1 à R3, arbitrage Wilkam sur DEC-005, puis publication du checkpoint accepté.
+
 ## DEV-005 — Correctifs de recette mobile du checkpoint `ec3ec06`
 
 - **Date :** 29 août 2026

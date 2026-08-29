@@ -57,6 +57,8 @@ const checks = [
   ['Branches de décision interactives', page.includes('className={`branch-selector ${branchLocked ? \'is-locked\' : \'\'}`}') && css.includes('.manager-pilot .branch-selector button.active{border-color:var(--brand);background:var(--surface-emphasis)')],
   ['Zébrure anti-dossier-zombie maintenue', css.includes('.anti-zombie-fields>div:nth-child(n+5){border-top:1px solid var(--border);background:var(--surface-muted)')],
   ['Historique insuffisant explicitement encadré', workflow.includes('className="compact-insufficient-state"') && css.includes('.compact-insufficient-state{min-height:116px;display:flex;align-items:center;gap:11px;padding:14px;border:1px dashed var(--border-strong)')],
+  ['Bandeau Surpresseur aligné sur le retrait grand écran', css.includes('.surpresseur-hero{margin-inline:calc(clamp(32px,3.2vw,60px)*-1);padding-inline:clamp(32px,3.2vw,60px)}')],
+  ['Badge Administration non compressible', css.includes('.authority-split .badge{flex:0 0 auto;min-width:max-content}')],
 ]
 
 for (const [label, ok] of checks) console.log(`${ok ? '✓' : '✗'} ${label}`)

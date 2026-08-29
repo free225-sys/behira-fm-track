@@ -8,6 +8,7 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 | id | date | sujet | attendu de | bloque |
 | --- | --- | --- | --- | --- |
+| DESIGN-014 | 2026-08-29 | Recette de clôture sur `0c0d9f7` : DESIGN-013 clos, trois régressions nouvelles | Dev Lead | publication |
 | DESIGN-013 | 2026-08-29 | Recette de `ec3ec06` : contrastes validés, trois débordements à 375 px | Dev Lead | publication |
 | DESIGN-012 | 2026-08-29 | Réponse à DEV-002 : badge Démo rétabli, direction artistique corrigée | Dev Lead | — |
 | DESIGN-011 | 2026-08-29 | Bandeau resserré — 403 px de chrome ramenés à 273, avis du dev lead demandé | Dev Lead | — |
@@ -21,6 +22,48 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 | DESIGN-003 | 2026-08-28 | `pnpm dev` échoue sans accès réseau à `fonts.googleapis.com` | Dev Lead | tout audit hors ligne |
 | DESIGN-002 | 2026-08-28 | Nomenclature unique des destinations — *arbitrée, voir DEC-002* | Dev Lead | routes |
 | DESIGN-001 | 2026-08-28 | Lot 1 — spécification du socle de tokens | Dev Lead | lot 2, écran pilote |
+
+---
+
+## DESIGN-014 — Recette de clôture du chantier design
+
+- **Date :** 29 août 2026
+- **Auteur :** Designer
+- **Statut :** **PUBLICATION BLOQUÉE** — non par les défauts de DESIGN-013, qui sont corrigés et clos, mais par trois régressions introduites par les commits postérieurs à `e096c55`.
+- **Périmètre :** La recette demandée visait `e096c55` ; la branche portait entre-temps cinq commits de plus (`be12a5c` → `0c0d9f7` : hébergement, assouplissement de l'en-tête, restructuration du cockpit, filtres de file). La recette a donc été faite sur **`0c0d9f7`**, l'état réel — recetter un commit que quatre autres ont déjà recouvert n'aurait rien validé du tout. **84 combinaisons** : 5 profils × 2 à 5 écrans × 6 largeurs (1440, 1024, 961, 960, 768, 375).
+
+### DESIGN-013 : clos
+
+| Contrôle demandé | Résultat |
+| --- | --- |
+| Badge « Surveillance », texte et glyphe | **5,84:1** sur son fond ambre, aux quatre combinaisons profil × largeur — seuil 4,5 dépassé |
+| Autres variantes de badges | aucune régression d'encre ; l'immunisation `.badge.badge-*` est en place |
+| « Mes rondes » à 375 px | **aucun débordement**, bandeau dans le viewport, cinq étapes accessibles par défilement horizontal visible |
+| Espace agent à 375 px, formulaire avec libellés longs | **aucun débordement**, champs compressibles |
+
+Sur le fond, la recette de clôture est excellente : **zéro écart de contraste sur les 84 combinaisons** (seuils WCAG adaptés à la taille), zéro texte sous 12 px, `aria-current` partout, pastille Démo visible partout, aucune erreur console applicative.
+
+### Trois régressions nouvelles, toutes datées d'après `e096c55`
+
+**R1 — La police Geist ne charge plus : toute l'application rend en Arial.** La console montre un 404 sur `/fonts/geist-sans/Geist-Variable.woff2` et `document.fonts` donne la face en statut **`error`**. Introduite par les commits d'hébergement (`86b067b` / `be12a5c`, qui modifient `vite.config.ts`) : la police auto-hébergée est désormais attendue sous un chemin `/fonts/…` que le serveur ne fournit pas. C'est la typographie canonique du produit qui disparaît silencieusement — le fallback Arial rend l'écart peu visible, c'est précisément ce qui le rend dangereux. À corriger et à protéger par un contrôle : un 404 sur une ressource de police doit faire échouer la recette.
+
+**R2 — Le bandeau Surpresseur déborde à nouveau, cette fois sur grand écran.** À 1440 px : bandeau de **1 456 px**, page qui défile latéralement de 8 px. `c1312f6` a élargi le retrait de `.content` en le passant en formule fluide (~46 px à 1440), mais la marge négative du bandeau est restée figée à **-54 px**. C'est le miroir exact du défaut mobile corrigé en DEV-005 — même mécanique, autre extrémité. La marge de débord doit être exprimée avec la même formule que le retrait du contenu, pas en valeur absolue ; sinon chaque ajustement de l'un recasse l'autre. Vérifié : aucun débordement de 701 à 1240 px, le défaut n'existe qu'au-dessus.
+
+**R3 — Le badge « ACCÈS ADMIN » est écrasé et son libellé rogné.** Espace Administration, desktop : la pastille mesure **30 px** de large pour un libellé de 86 px ; le texte déborde du badge et se fait couper par l'`overflow:hidden` de `.authority-split` — à l'écran on lit « ACCÈ ». Le badge subit une compression flex sans `flex-shrink:0` ni `min-width`. Capture jointe.
+
+### Deux observations non bloquantes
+
+- **La restructuration du cockpit (`6dcd654`) inverse l'ordre acté.** DEV-003 consignait : contexte, compteurs, file de décisions, flux, analyses. Le nouveau cockpit place une rangée « Santé & Performance » **avant** la file, avec un texte qui assume ce choix. C'est défendable — quatre tuiles compactes de situation avant la file se lisent en deux secondes — mais c'est un renversement de l'ordre consigné en DEC-004. Il faut soit l'acter dans `DECISIONS.md`, soit revenir à l'ordre validé. Ce n'est pas au design de trancher seul ni au dev de le faire silencieusement.
+- **Les codes `AQ` / `SLA` / `PV` sont revenus** dans les compteurs, alors que le lot 5 les retirait — le libellé sous le chiffre nomme déjà la mesure. Mineur, à traiter avec le lot DEC-002.
+
+### Verdict
+
+**PUBLICATION BLOQUÉE** sur `0c0d9f7` — par R1, R2, R3, dont aucun n'existait à `e096c55`. **DESIGN-013 est clos.** Si la publication doit partir immédiatement, `e096c55` est publiable tel quel : les cinq commits suivants n'y sont pas indispensables. Sinon : corriger R1–R3 (R2 et R3 font quelques lignes ; R1 est un chemin de ressource), recette éclair sur les trois points, publication.
+
+Le socle design — tokens, échelle, plancher 12 px, contrastes, shell, nomenclature de base — est **terminé et validé**. Ce qui reste relève du produit, pas du socle : les destinations autonomes de DEC-002, et l'arbitrage d'ordre du cockpit ci-dessus.
+
+- **Contrôles effectués :** clone `0c0d9f7`, exécution locale, 84 combinaisons en styles calculés, console réseau surveillée, captures des trois régressions.
+- **Suite proposée :** R1–R3, entrée `DECISIONS.md` pour l'ordre du cockpit, publication, ouverture du lot produit DEC-002.
 
 ---
 

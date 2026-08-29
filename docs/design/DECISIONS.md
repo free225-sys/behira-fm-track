@@ -2,6 +2,22 @@
 
 Ne jamais supprimer ni réécrire une décision actée. Toute évolution doit prendre la forme d'une nouvelle entrée qui complète ou remplace explicitement une décision antérieure.
 
+## DEC-005 — Ordre initial du cockpit Facility Manager
+
+- **Date :** 29 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** **Proposé — arbitrage de Wilkam requis, non acté**
+- **Périmètre :** Première page du cockpit Facility Manager après authentification
+- **Contexte :** DEC-004 a acté l’ordre « contexte, compteurs, file de travail, flux, tendances ». La restructuration du cockpit au commit `6dcd654` place désormais « Santé & Performance » avant les compteurs et la file de travail. Ce choix donne immédiatement l’état du bâtiment, du parc technique et de l’équipe, mais il modifie une séquence déjà adoptée et ne peut donc pas devenir canonique par le seul fait du code.
+- **Décision ou question :** Wilkam doit choisir entre les deux options suivantes :
+  - **Option A — priorité opérationnelle DEC-004 :** contexte → compteurs → file de travail → flux → santé et tendances ;
+  - **Option B — vue d’ensemble d’abord :** santé et performance → compteurs → file de travail → flux et tendances.
+- **Proposition du Dev Lead :** retenir l’option B si le cockpit doit d’abord répondre à « quel est l’état du bâtiment ? », avec des cartes compactes et actionnables ; retenir l’option A si la priorité absolue reste « quel dossier dois-je traiter maintenant ? ». L’implémentation actuelle de l’option B demeure provisoire jusqu’à l’arbitrage.
+- **Fichiers concernés :** `app/page.tsx`, `app/globals.css`
+- **Impacts attendus :** Ordre de lecture, hauteur avant la file de travail, perception de la priorité métier. Aucun impact sur les rôles, les droits, les données ou le workflow.
+- **Contrôles attendus :** Valider le premier écran à 1440, 1024, 768 et 375 px ; mesurer la position de la première action de file ; conserver un seul titre visible par écran et le plancher typographique de 12 px.
+- **Suite proposée :** Après choix de Wilkam, passer le statut de cette entrée à « Adopté » dans une nouvelle décision ou ajouter une entrée qui confirme explicitement le maintien de DEC-004.
+
 ## DEC-004 — Navigation en bandeau haut sur desktop
 
 - **Date :** 29 août 2026
