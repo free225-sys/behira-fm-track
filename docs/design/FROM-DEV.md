@@ -2,6 +2,42 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-012 — P4 Utilisateurs et droits sans administration cliente
+
+- **Date :** 30 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté et vérifié localement — non publié
+- **Périmètre :** destination Utilisateurs et droits dans le miroir public, sans compte Auth ni écriture d'administration
+
+Avant l'ouverture de P4, les lots P1 à P3 ont été relus depuis le dépôt et rejoués sur le checkpoint `7e8745b`. L'arbre de travail était propre, la branche contenait uniquement les trois checkpoints produit attendus au-dessus du design `0580270`, et la recette de départ a réussi : 69/69 contrôles visuels, 34/34 contrôles personas, polices HTTP 200, lint et build. Aucune omission bloquante, migration, configuration de publication, clé d'administration ou fichier d'environnement n'a été trouvée dans ces lots.
+
+P4 ajoute **Utilisateurs et droits** sous le groupe **Administration** du menu **Plus**. La destination respecte la délégation de DEC-014 :
+
+- l'Administration peut préparer une création ou une désactivation ;
+- le Facility Manager peut uniquement proposer un rôle ou un périmètre, puis attendre la validation de l'Administration ;
+- les trois profils terrain ne voient ni la destination ni ses actions ;
+- un profil Administration ne peut pas être ciblé par la proposition Facility Manager ;
+- les formulaires exigent une justification et rappellent avant l'envoi qu'aucune opération réelle n'est exécutée dans le navigateur.
+
+Les cinq entrées visibles sont qualifiées de **profils de démonstration**. Elles proviennent de la configuration frontend `personas` et ne sont jamais présentées comme cinq comptes Auth existants. Le composant `AccessWorkspace` reçoit un adaptateur explicite `AccessWorkspaceUser` et n'importe aucun client Supabase. Les confirmations de création et de désactivation indiquent qu'aucun compte ni accès réel n'a été modifié.
+
+L'ancien dialogue de création d'agent, imbriqué dans l'Accueil Administration, a été supprimé pour éviter une seconde source fonctionnelle. Son aperçu devient un résumé honnête et renvoie vers la destination autonome. La gestion réelle reste réservée au dépôt privé, à un traitement serveur sécurisé, aux contrôles canoniques de rôle et de périmètre, et à un journal d'audit.
+
+### Contrôles réalisés
+
+- recette préalable P1 à P3 réussie sans erreur ni omission bloquante ;
+- destination présente pour Administration et Facility Manager dans **Plus**, avec repère actif ;
+- proposition Facility Manager testée, sans rôle Administration disponible ;
+- préparation d'une création et d'une désactivation testée côté Administration ;
+- destination absente pour Agent Électricité, Agent Eau & Incendie et Agente Rondes & Assistance ;
+- rendu 390, 768, 1024 et 1440 px vérifié, sans perte d'information ;
+- aucun appel `service_role`, `createUser` ou `deleteUser`, aucune migration, RLS ou configuration de publication ajoutée ;
+- `pnpm audit:visual`, `pnpm verify:personas`, `pnpm verify:fonts`, `pnpm lint` et `pnpm build` : réussis.
+
+Le chemin `/utilisateurs-et-droits` reste réservé pour un futur découpage du routeur. Le lot ne modifie aucune donnée, permission réelle, API, Supabase ou configuration de déploiement.
+
+- **Suite proposée :** P5 Seuils et paramètres, d'abord en lecture explicable dans le miroir ; toute modification réelle devra rester canonique, historisée et protégée dans le dépôt privé.
+
 ## DEV-011 — P3 Coûts fondé sur les montants réellement documentés
 
 - **Date :** 30 août 2026

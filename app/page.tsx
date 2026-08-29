@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 import { AntiZombieSummary } from './components/AntiZombieSummary';
 import type { AntiZombieSummaryData } from './components/anti-zombie-contract';
+import { AccessWorkspace } from './components/AccessWorkspace';
 import { CostsWorkspace } from './components/CostsWorkspace';
 import { EquipmentWorkspace } from './components/EquipmentWorkspace';
 import { Badge, Button, Card, Field, IconButton } from './components/ui';
@@ -14,7 +15,7 @@ import { getSupabaseIntegrationState, isSupabaseIntegrationEnabled } from './lib
 import { loadOperationalSnapshot, type OperationalVendor } from './lib/supabase/data';
 import { advanceAnomalyWorkflow, uploadAnomalyProof, uploadVendorInterventionReport, verifyLatestAnomalyProof } from './lib/supabase/mutations';
 
-type View = 'workspace' | 'dashboard' | 'registry' | 'equipment' | 'costs' | 'manager' | 'report' | 'detail';
+type View = 'workspace' | 'dashboard' | 'registry' | 'equipment' | 'costs' | 'access' | 'manager' | 'report' | 'detail';
 type Priority = 'Critique' | 'Haute' | 'Moyenne' | 'Faible';
 type Status = 'À qualifier' | 'Affectée' | 'En intervention' | 'En validation' | 'Clôturée';
 type ManagerQueue = 'qualify'|'late'|'unassigned'|'proof'|'reception'|'reservations'|'reopened';
@@ -141,8 +142,8 @@ const demoAccounts: DemoAccount[] = [
 ];
 
 const allowedViewsByPersona: Record<PersonaId, View[]> = {
-  facility:['workspace','dashboard','registry','equipment','costs','manager','report'],
-  administration:['workspace','dashboard','registry','equipment','costs'],
+  facility:['workspace','dashboard','registry','equipment','costs','access','manager','report'],
+  administration:['workspace','dashboard','registry','equipment','costs','access'],
   electricite:['workspace','report'],
   eau_incendie:['workspace','report'],
   rondes_assistance:['workspace','report'],
@@ -184,6 +185,7 @@ const navItems: NavigationItem[] = [
   { key:'equipment', label:'Équipements', subtitle:'Santé et informations disponibles du parc technique.', group:'Le bâtiment', secondary:true },
   { key:'dashboard', label:'Pilotage', subtitle:'Performance opérationnelle du site.', group:'Pilotage' },
   { key:'costs', label:'Coûts', subtitle:'Montants documentés, seuil et arbitrages financiers.', group:'Pilotage', secondary:true },
+  { key:'access', label:'Utilisateurs et droits', subtitle:'Profils, rôles et périmètres métier.', group:'Administration', secondary:true },
 ];
 const navigationGroups: NavigationGroup[] = ['Mon travail','Le bâtiment','Pilotage','Administration'];
 
@@ -195,6 +197,7 @@ function NavigationIcon({ view }: { view:NavigationItem['key'] }) {
     {view === 'registry' && <><path {...common} d="M8 6h12M8 12h12M8 18h12"/><path {...common} d="M4 6h.01M4 12h.01M4 18h.01"/></>}
     {view === 'equipment' && <><path {...common} d="M5 7.5 12 4l7 3.5v9L12 20l-7-3.5z"/><path {...common} d="m5 7.5 7 3.5 7-3.5M12 11v9"/></>}
     {view === 'costs' && <><circle {...common} cx="12" cy="12" r="8"/><path {...common} d="M15 8.5h-4a2 2 0 0 0 0 4h2a2 2 0 0 1 0 4H9M12 6.5v2M12 16.5v2"/></>}
+    {view === 'access' && <><circle {...common} cx="9" cy="9" r="3"/><path {...common} d="M4.5 18c.5-3 2-4.5 4.5-4.5s4 1.5 4.5 4.5M15.5 8.5h4M17.5 6.5v4"/></>}
     {view === 'manager' && <><circle {...common} cx="12" cy="12" r="8"/><path {...common} d="M12 8v4l3 2"/></>}
     {view === 'report' && <><path {...common} d="M7 4h10v16H7zM9.5 4V2.8h5V4"/><path {...common} d="m9.5 12 1.7 1.7 3.6-4"/></>}
   </svg>;
@@ -1032,6 +1035,7 @@ export default function Home() {
           {view === 'registry' && <Registry anomalies={filtered} query={query} setQuery={setQuery} priority={priorityFilter} setPriority={setPriorityFilter} status={statusFilter} setStatus={setStatusFilter} onOpen={(id) => openDetail(id, 'registry')} />}
           {view === 'equipment' && <EquipmentWorkspace equipment={equipmentItems} />}
           {view === 'costs' && <CostsWorkspace items={escalations.map((item) => ({ id:item.id, anomaly:item.anomaly, asset:item.asset, title:item.title, kind:item.kind, amount:item.amount ?? null, due:item.due, state:item.state }))} audience={personaId === 'administration' ? 'administration' : 'facility'} threshold={DECISION_THRESHOLD_FCFA} onOpenDossier={(id) => openDetail(id, 'costs')} />}
+          {view === 'access' && <AccessWorkspace users={personas.map((item) => ({ id:item.id, name:item.name, initials:item.initials, role:item.role, scope:item.scope }))} audience={personaId === 'administration' ? 'administration' : 'facility'} />}
           {view === 'manager' && <Manager anomalies={anomalies} tab={managerTab} setTab={setManagerTab} onOpen={(id) => openDetail(id, 'manager')} />}
           {view === 'report' && <Report persona={persona} onNavigate={navigate} />}
           {view === 'detail' && <Detail key={`${selected.id}-${selected.status}-${selected.proof}-${selected.proofPending}`} anomaly={selected} decisionAmount={escalations.find((item) => item.anomaly === selected.id)?.amount ?? null} readOnly={personaId === 'administration'} canVerify={personaId === 'facility' && session.mode === 'supabase'} busy={mutationBusy} onBack={() => navigate(previousView)} onStatus={(status) => void persistWorkflowStatus(status)} onProof={(file) => void persistProof(file)} onVerify={() => void verifyProof()} />}
@@ -1086,9 +1090,8 @@ function DirectionWorkspace({ anomalies, equipment, escalations, onDecision, onO
   const [selectedCaseId, setSelectedCaseId] = useState('DEC-018');
   const [draft, setDraft] = useState<{id:string; state:DecisionState}|null>(null);
   const [motive, setMotive] = useState('');
-  const [adminPanel, setAdminPanel] = useState<'agent'|'zones'|null>(null);
+  const [adminPanel, setAdminPanel] = useState<'zones'|null>(null);
   const [adminConfirmation, setAdminConfirmation] = useState('');
-  const [newAgent, setNewAgent] = useState({name:'', email:'', role:'Agent terrain', scope:'DEMO-EAU'});
   const [newZone, setNewZone] = useState('');
   const stateItems = tab === 'pending' ? escalations.filter((item) => item.state === 'À décider') : escalations.filter((item) => item.state !== 'À décider');
   const activeItems = filter === 'Tous' ? stateItems : stateItems.filter((item) => item.kind === filter);
@@ -1125,13 +1128,13 @@ function DirectionWorkspace({ anomalies, equipment, escalations, onDecision, onO
       </> : <div className="empty-state compact"><span>⌁</span><h3>Sélectionnez un dossier</h3><p>Le détail de l’arbitrage apparaîtra ici.</p></div>}</aside>
     </section>
     <section className="admin-preview-grid">
-      <article className="panel admin-users-preview"><div className="panel-head"><div><p className="design-kicker">UTILISATEURS & ACCÈS</p><h3>5 comptes internes actifs</h3><p>Facility Manager peut proposer ; l’Administration valide les droits sensibles.</p></div><button className="primary-button" onClick={() => {setAdminPanel('agent');setAdminConfirmation('')}}>＋ Créer un agent</button></div>{adminConfirmation && <div className="admin-inline-confirmation" role="status"><span>✓</span>{adminConfirmation}</div>}<div className="admin-user-list">{[['FS','Facility Manager Démo','Facility Manager','Tous périmètres'],['ED','Agent Électricité Démo','Agent électricité','DEMO-GE'],['SD','Agent Eau & Incendie Démo','Agent eau / incendie','DEMO-EAU · DEMO-SSI · DEMO-ESP'],['LA','Agente Rondes & Assistance Démo','Agente & assistante','DEMO-RND']].map((user) => <button key={user[1]} onClick={() => {setNewAgent({name:user[1],email:'',role:user[2],scope:user[3]});setAdminPanel('agent');setAdminConfirmation('')}}><span>{user[0]}</span><p><b>{user[1]}</b><small>{user[2]} · {user[3]}</small></p><Badge tone="success">ACTIF</Badge><em>Gérer →</em></button>)}</div></article>
+      <article className="panel admin-users-preview"><div className="panel-head"><div><p className="design-kicker">UTILISATEURS & ACCÈS</p><h3>5 profils de démonstration</h3><p>Facility Manager propose ; l’Administration prépare la création ou la désactivation.</p></div><button className="primary-button" onClick={() => onNavigate('access')}>Ouvrir utilisateurs et droits</button></div>{adminConfirmation && <div className="admin-inline-confirmation" role="status"><span>✓</span>{adminConfirmation}</div>}<div className="admin-user-list">{[['FM','Facility Manager Démo','Facility Manager','Tous périmètres'],['AE','Agent Électricité Démo','Agent électricité','DEMO-GE'],['AI','Agent Eau & Incendie Démo','Agent eau / incendie','DEMO-EAU · DEMO-SSI · DEMO-ESP'],['RA','Agente Rondes & Assistance Démo','Agente & assistante','DEMO-RND']].map((user) => <button key={user[1]} onClick={() => onNavigate('access')}><span>{user[0]}</span><p><b>{user[1]}</b><small>{user[2]} · {user[3]}</small></p><Badge tone="neutral">PROFIL DÉMO</Badge><em>Consulter →</em></button>)}</div></article>
       <aside className="admin-parameters"><article className="panel"><p className="design-kicker">RÉFÉRENTIEL</p><div className="parameter-value"><strong>76</strong><span>zones actives</span></div><p>Ajouter, modifier ou désactiver une zone sans intervention technique.</p><button className="secondary-button" onClick={() => {setAdminPanel('zones');setAdminConfirmation('')}}>Gérer les zones</button></article><article className="panel"><p className="design-kicker">SCORES AGENTS</p><div className="agent-score-mini"><span><b>Agent Électricité</b>88</span><span><b>Agent Eau & Incendie</b>84</span><span><b>Agente Rondes & Assistance</b>91</span></div><small>Visibles par tous les agents · détail explicatif disponible</small></article></aside>
     </section>
     <WorkflowAnalytics items={anomalies.map((item) => ({ ...item, owner:canonicalResponsible(item) ?? 'Non affectée' }))} variant="administration" onOpenRegistry={() => onNavigate('registry')} />
     <OperationalAnalytics equipment={equipment} variant="direction" />
     {draft && selected && <div className="demo-modal-backdrop" role="presentation"><section className="demo-modal" role="dialog" aria-modal="true" aria-labelledby="decision-dialog-title"><button className="modal-close" aria-label="Fermer" onClick={() => setDraft(null)}>×</button><Badge tone={draft.state === 'Approuvée' ? 'success' : draft.state === 'Refusée' ? 'critical' : 'orange'}>{draft.state}</Badge><h3 id="decision-dialog-title">{selected.id} · Confirmer la décision</h3><p>{selected.asset} · {selected.title}</p><label className="field">Motif obligatoire<textarea autoFocus value={motive} onChange={(e) => setMotive(e.target.value)} placeholder="Expliquez la décision et les conditions éventuelles…" /></label><div className="modal-actions"><button className="secondary-button" onClick={() => setDraft(null)}>Annuler</button><button className="primary-button" disabled={!motive.trim()} onClick={confirm}>Confirmer et notifier Facility Manager</button></div><small>Simulation locale · aucune donnée n’est persistée.</small></section></div>}
-    {adminPanel && <div className="demo-modal-backdrop" role="presentation" onMouseDown={(event) => {if (event.target === event.currentTarget) setAdminPanel(null)}}><section className="demo-modal admin-dialog" role="dialog" aria-modal="true" aria-labelledby="admin-dialog-title"><button className="modal-close" aria-label="Fermer" onClick={() => setAdminPanel(null)}>×</button><Badge tone="blue">ADMINISTRATION</Badge>{adminPanel === 'agent' ? <form onSubmit={(event) => {event.preventDefault();setAdminPanel(null);setAdminConfirmation(`${newAgent.name || 'Le nouvel agent'} est prêt à être créé après validation finale.`)}}><h3 id="admin-dialog-title">{newAgent.name ? 'Gérer un agent' : 'Créer un nouvel agent'}</h3><p>Définissez l’identité, le rôle et le périmètre avant activation.</p><div className="admin-form-grid"><label className="field">Nom complet<input autoFocus required value={newAgent.name} onChange={(e) => setNewAgent({...newAgent,name:e.target.value})} placeholder="Prénom et nom" /></label><label className="field">Email professionnel<input required type="email" value={newAgent.email} onChange={(e) => setNewAgent({...newAgent,email:e.target.value})} placeholder="nom@entreprise.com" /></label><label className="field">Rôle<select value={newAgent.role} onChange={(e) => setNewAgent({...newAgent,role:e.target.value})}><option>Agent terrain</option><option>Facility Manager</option><option>Agente & assistante</option><option>Administration</option></select></label><label className="field">Périmètre<select value={newAgent.scope} onChange={(e) => setNewAgent({...newAgent,scope:e.target.value})}><option>DEMO-EAU</option><option>DEMO-GE</option><option>DEMO-SSI · DEMO-ESP</option><option>DEMO-RND</option><option>Tous périmètres</option></select></label></div><div className="admin-rights-note"><span>⌘</span><p><b>Droits sensibles contrôlés</b><small>Le dépôt de rapports prestataires et les validations restent attribués séparément.</small></p></div><div className="modal-actions"><button type="button" className="secondary-button" onClick={() => setAdminPanel(null)}>Annuler</button><button type="submit" className="primary-button">Préparer le compte</button></div><small>Maquette interactive · aucun compte Auth n’est créé.</small></form> : <form onSubmit={(event) => {event.preventDefault();setAdminPanel(null);setAdminConfirmation(`La zone « ${newZone} » est prête à être ajoutée après validation.`);setNewZone('')}}><h3 id="admin-dialog-title">Gérer les zones</h3><p>Le référentiel contient 24 zones actives. Toute modification reste traçable.</p><div className="zone-preview-list"><span><b>Sous-sol</b>12 zones</span><span><b>Rez-de-chaussée</b>18 zones</span><span><b>Étages R+1 à R+4</b>38 zones</span><span><b>Extérieurs</b>8 zones</span></div><label className="field">Nouvelle zone<input autoFocus required value={newZone} onChange={(e) => setNewZone(e.target.value)} placeholder="Ex. Local technique R+3" /></label><div className="modal-actions"><button type="button" className="secondary-button" onClick={() => setAdminPanel(null)}>Annuler</button><button type="submit" className="primary-button">Préparer l’ajout</button></div><small>Maquette interactive · aucun référentiel n’est modifié.</small></form>}</section></div>}
+    {adminPanel && <div className="demo-modal-backdrop" role="presentation" onMouseDown={(event) => {if (event.target === event.currentTarget) setAdminPanel(null)}}><section className="demo-modal admin-dialog" role="dialog" aria-modal="true" aria-labelledby="admin-dialog-title"><button className="modal-close" aria-label="Fermer" onClick={() => setAdminPanel(null)}>×</button><Badge tone="blue">ADMINISTRATION</Badge><form onSubmit={(event) => {event.preventDefault();setAdminPanel(null);setAdminConfirmation(`La zone « ${newZone} » est prête à être ajoutée après validation.`);setNewZone('')}}><h3 id="admin-dialog-title">Gérer les zones</h3><p>Le référentiel contient 24 zones actives. Toute modification reste traçable.</p><div className="zone-preview-list"><span><b>Sous-sol</b>12 zones</span><span><b>Rez-de-chaussée</b>18 zones</span><span><b>Étages R+1 à R+4</b>38 zones</span><span><b>Extérieurs</b>8 zones</span></div><label className="field">Nouvelle zone<input autoFocus required value={newZone} onChange={(e) => setNewZone(e.target.value)} placeholder="Ex. Local technique R+3" /></label><div className="modal-actions"><button type="button" className="secondary-button" onClick={() => setAdminPanel(null)}>Annuler</button><button type="submit" className="primary-button">Préparer l’ajout</button></div><small>Maquette interactive · aucun référentiel n’est modifié.</small></form></section></div>}
   </>;
 }
 

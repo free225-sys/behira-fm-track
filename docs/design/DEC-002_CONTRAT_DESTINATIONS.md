@@ -2,7 +2,7 @@
 
 - **Date :** 30 août 2026
 - **Auteur :** Dev Lead
-- **Statut :** Validé par Wilkam le 30 août 2026 — P2 Équipements et P3 Coûts livrés localement
+- **Statut :** Validé par Wilkam le 30 août 2026 — P2 Équipements, P3 Coûts et P4 Utilisateurs et droits livrés localement
 - **Références :** DEC-002, DEC-008, DEV-003 et DEV-009
 
 ## 1. Objet du lot
@@ -14,6 +14,8 @@ DEC-008 complète DEC-002 : la navigation principale reste **Accueil · À trait
 La validation du 30 août 2026 est consignée dans **DEC-014** : Équipements est réservé à l'Administration et au Facility Manager ; Coûts est opérationnel pour le Facility Manager et global pour l'Administration ; la création/désactivation d'utilisateurs revient à l'Administration, avec proposition seulement pour le Facility Manager ; le seuil de référence est fixé à 400 000 FCFA ; les quatre destinations restent dans **Plus** et leurs chemins futurs sont réservés.
 
 P3 applique cette décision en donnant à `Escalation.amount` le libellé strict de **montant de décision**. Les états engagé, payé et budget restent insuffisants tant qu'une source canonique n'existe pas. Le total affiché est uniquement la somme transparente des montants visibles ; le coût facultatif d'un rapport prestataire n'est pas agrégé, faute de collection canonique dans le miroir.
+
+P4 applique la délégation validée sans transformer la configuration frontend en source d'identité. `personas` décrit cinq profils de démonstration, pas cinq comptes Auth. L'Administration prépare création ou désactivation, le Facility Manager prépare seulement une proposition de rôle ou de périmètre, et les profils terrain n'accèdent pas à la destination. Aucune opération cliente ne modifie un compte, un rôle, une RLS ou un périmètre réel ; le raccordement demeure un traitement serveur du dépôt privé.
 
 ## 2. Catalogue principal déjà implémenté
 
