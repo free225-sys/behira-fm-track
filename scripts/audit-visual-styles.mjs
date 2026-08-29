@@ -38,6 +38,8 @@ const checks = [
   ['Navigation unique et état courant accessible', page.includes('const navItems: NavigationItem[]') && page.includes('className="primary-navigation"') && page.includes("aria-current={active ? 'page' : undefined}")],
   ['Menu Plus prêt pour le catalogue groupé', page.includes("const navigationGroups: NavigationGroup[] = ['Mon travail','Le bâtiment','Pilotage','Administration']") && page.includes('overflowIsActive ? \'active\'') && page.includes('groupItems = overflowNav.filter') && page.includes("event.key === 'ArrowDown' || event.key === 'ArrowUp'") && page.includes('moreNavTriggerRef.current?.focus()')],
   ['Environnement de démonstration visible', page.includes('className="persona-mode-label"') && page.includes('Mode démonstration') && !css.includes('.persona-mode-label{display:none}')],
+  ['Triplets sémantiques déclarés', ['success','warning','danger','info','neutral'].every((role) => css.includes(`--${role}-surface:`) && css.includes(`--${role}-border:`) && css.includes(`--${role}-text:`))],
+  ['Encres sémantiques consommées', css.includes('background:var(--danger-surface)') && css.includes('color:var(--danger-text)') && css.includes('background:var(--warning-surface)') && css.includes('color:var(--warning-text)') && css.includes('background:var(--success-surface)') && css.includes('color:var(--success-text)')],
 ]
 
 for (const [label, ok] of checks) console.log(`${ok ? '✓' : '✗'} ${label}`)

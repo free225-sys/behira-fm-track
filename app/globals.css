@@ -16,6 +16,21 @@
   --warning:#b85d17;
   --danger:#c83f48;
   --info:#235ea7;
+  --success-surface:#e7f5ed;
+  --success-border:#cae7d8;
+  --success-text:#287c58;
+  --warning-surface:#fff0e1;
+  --warning-border:#f1d5bf;
+  --warning-text:#ad5716;
+  --danger-surface:#fde8e9;
+  --danger-border:#f0c5c7;
+  --danger-text:#c33841;
+  --info-surface:var(--surface-emphasis);
+  --info-border:#d5dee7;
+  --info-text:var(--brand);
+  --neutral-surface:var(--surface-muted);
+  --neutral-border:var(--border);
+  --neutral-text:var(--foreground-muted);
   /* Rampe séquentielle : parts d'un même score, ordonnées par poids. */
   --score-part-1:#123a6b;
   --score-part-2:#235ea7;
@@ -728,3 +743,126 @@ button:focus,input:focus,select:focus,textarea:focus{outline:none}
 /* Lot 4 — une ligne libellé/valeur doit pouvoir se replier quand le texte grandit. */
 .score-freshness span{flex-wrap:wrap;min-width:0}
 .score-freshness b{min-width:0;overflow-wrap:anywhere}
+
+/* Lot 6 : un triplet surface / bordure / encre par état sémantique. */
+.photo-toggle>span,
+.vendor-proof-grid button>span,
+.surpresseur-progress button>span,
+.branch-selector button>span,
+.history-grid article>span,
+.zone-preview-list>span{
+  background:var(--neutral-surface);
+  color:var(--neutral-text);
+}
+.stat-card.danger .stat-icon,
+.severity.critical,
+.asset-square.critical,
+.kpi-icon.red,
+.queue-mark.critical,
+.focus-icon,
+.critical-banner>span,
+.risk-focus>span,
+.decision-priority.critical,
+.return-mark.no,
+.vendor-job-mark.late{
+  background:var(--danger-surface);
+  color:var(--danger-text);
+}
+.stat-card.warning .stat-icon,
+.severity.warning,
+.asset-square.high,
+.kpi-icon.amber,
+.queue-mark.high,
+.missing-proof>span,
+.decision-priority.warning,
+.return-mark.back,
+.provisional-rule>span,
+.measure-alert>span,
+.check-grid .unchecked>span,
+.proposed-finding>span,
+.recurrence-card>div>span,
+.dashboard-section-tabs button.active .dashboard-tab-index{
+  background:var(--warning-surface);
+  color:var(--warning-text);
+}
+.stat-card.green .stat-icon,
+.evidence-file>span,
+.detail-timeline .done>span,
+.import-result>div:first-child>span,
+.success-check,
+.return-mark.ok,
+.zone-rounds>button>span.done,
+.photo-toggle.active>span,
+.vendor-proof-grid button.active>span,
+.history-grid article.done>span{
+  background:var(--success-surface);
+  color:var(--success-text);
+}
+.critical-banner{
+  border-color:var(--danger-border);
+}
+.measure-alert,
+.proposed-finding,
+.cost-details .cost-gap,
+.authority-result.escalate,
+.anti-zombie-alert{
+  border-color:var(--warning-border);
+  background:var(--warning-surface);
+  color:var(--warning-text);
+}
+.cost-gap b,
+.authority-result.escalate,
+.authority-result.escalate small,
+.anti-zombie-alert,
+.measure-alert,
+.proposed-finding p{
+  color:var(--warning-text);
+}
+.authority-result.delegated,
+.inline-success,
+.admin-inline-confirmation{
+  background:var(--success-surface);
+  color:var(--success-text);
+}
+.direction-case-card.active .decision-card-copy small{
+  color:var(--neutral-text);
+}
+.direction-focus-head>div>.badge-critical{
+  color:#9f202b;
+}
+.direction-focus-head>div>.badge-neutral{
+  color:#465360;
+}
+.return-action{
+  border-color:var(--warning-border);
+  color:var(--warning-text);
+}
+.admin-user-list>button>.badge{
+  width:max-content;
+  height:auto;
+  display:inline-flex;
+  place-items:initial;
+  border-radius:var(--radius-round);
+}
+.admin-user-list>button>.badge-success{
+  border-color:#bfdfce;
+  background:var(--success-surface);
+  color:#176340;
+}
+.field-request-list article>div:first-child>span:not(.badge){
+  color:var(--neutral-text);
+}
+.score-explain-card .score-freshness span{
+  color:var(--neutral-text);
+}
+.score-explain-card .analytics-note{
+  color:#bed0df;
+}
+.cost-details .cost-gap span{
+  color:var(--warning-text);
+}
+@media (min-width:701px){
+  .manager-pilot .manager-command-hero .manager-heading-copy>p:last-child{
+    color:#c3d8ee;
+  }
+}

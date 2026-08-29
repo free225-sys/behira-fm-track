@@ -107,9 +107,14 @@ const contrastPairs = [
   ['bleu', '#174f89', '#eaf2fb'],
   ['succès', '#176340', '#e7f5ed'],
   ['neutre', '#465360', '#f0f3f5'],
+  ['encre danger', '#c33841', '#fde8e9'],
+  ['encre avertissement', '#ad5716', '#fff0e1'],
+  ['encre succès', '#287c58', '#e7f5ed'],
+  ['encre information', '#235ea7', '#edf5fc'],
+  ['encre neutre', '#596777', '#f7f9fb'],
 ]
 const failedContrasts = contrastPairs.filter(([, foreground, background]) => contrast(foreground, background) < 4.5).map(([label, foreground, background]) => `${label} ${contrast(foreground, background).toFixed(2)}:1`)
-checks.push({ label:'Contrastes de badges ≥ 4,5:1', ok:failedContrasts.length === 0, missing:failedContrasts })
+checks.push({ label:'Contrastes sémantiques et badges ≥ 4,5:1', ok:failedContrasts.length === 0, missing:failedContrasts })
 
 const forbidden = [
   /createClient\s*\(/,

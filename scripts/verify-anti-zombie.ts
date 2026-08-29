@@ -83,7 +83,9 @@ assert.match(component, /tabIndex=\{0\}/, 'La synthèse doit être atteignable a
 assert.doesNotMatch(component, /title=/, 'Aucun contenu essentiel ne doit dépendre d’un tooltip.');
 assert.match(css, /\.anti-zombie-summary:focus-visible/, 'Le focus clavier de la synthèse doit être visible.');
 assert.match(css, /@media \(max-width:700px\)[\s\S]*?\.anti-zombie-fields/, 'La disposition mobile doit être définie.');
-assert.match(css, /\.anti-zombie-fields[\s\S]*?font-size:12px/, 'Les contenus essentiels doivent faire au moins 12 px.');
+assert.match(css, /--font-size-label:12px/, 'Le plancher typographique doit rester fixé à 12 px.');
+assert.match(css, /\.anti-zombie-fields dt\{[^}]*font-size:var\(--font-size-label\)/, 'Les libellés doivent consommer le plancher typographique.');
+assert.match(css, /\.anti-zombie-fields dd\{[^}]*font-size:var\(--font-size-body\)/, 'Les valeurs essentielles doivent rester au-dessus du plancher typographique.');
 assert.match(component, /CONTINUITÉ DE TRAITEMENT/, 'Le libellé métier validé doit remplacer le vocabulaire anti-zombie.');
 assert.match(component, /NORMALE/, 'La continuité normale doit être distinguée du statut du workflow.');
 
