@@ -2,6 +2,24 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-005 — Correctifs de recette mobile du checkpoint `ec3ec06`
+
+- **Date :** 29 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté et vérifié localement — non publié
+- **Périmètre :** `app/globals.css`, `scripts/audit-visual-styles.mjs`
+
+Les trois défauts bloquant la publication signalés dans DESIGN-013 sont corrigés sans modification de l'interface métier :
+
+- toutes les variantes de badge portent désormais leur encre avec le sélecteur à deux classes `.badge.badge-*`, ce qui les protège des règles de couleur liées à la position dans un conteneur ;
+- le bandeau de la ronde Surpresseur reprend exactement le retrait mobile de 16 px et ne dépasse plus le viewport à 375 px ;
+- le sélecteur des cinq étapes reste borné à la largeur disponible et propose un défilement horizontal visible et tactile ;
+- les champs de formulaire et leurs conteneurs peuvent se comprimer malgré une option métier longue, sans élargir la page.
+
+Les nouveaux contrôles statiques protègent ces quatre contrats. La recette de rendu cible « Mes rondes » et l'espace agent à 375 px, ainsi que la couleur calculée du badge « Surveillance ».
+
+- **Suite proposée :** recette rapide du design sur les écrans concernés, puis publication du checkpoint accepté et ouverture du lot DEC-002 sur les destinations autonomes.
+
 ## DEV-004 — Lot 6 : encres sémantiques raccordées et contrôlées sur le rendu réel
 
 - **Date :** 29 août 2026

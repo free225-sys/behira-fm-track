@@ -8,6 +8,7 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 | id | date | sujet | attendu de | bloque |
 | --- | --- | --- | --- | --- |
+| DESIGN-013 | 2026-08-29 | Recette de `ec3ec06` : contrastes validés, trois débordements à 375 px | Dev Lead | publication |
 | DESIGN-012 | 2026-08-29 | Réponse à DEV-002 : badge Démo rétabli, direction artistique corrigée | Dev Lead | — |
 | DESIGN-011 | 2026-08-29 | Bandeau resserré — 403 px de chrome ramenés à 273, avis du dev lead demandé | Dev Lead | — |
 | DESIGN-010 | 2026-08-29 | Navigation en bandeau haut et première page — écart avec la direction artistique | wilkam | lot 5 |
@@ -20,6 +21,79 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 | DESIGN-003 | 2026-08-28 | `pnpm dev` échoue sans accès réseau à `fonts.googleapis.com` | Dev Lead | tout audit hors ligne |
 | DESIGN-002 | 2026-08-28 | Nomenclature unique des destinations — *arbitrée, voir DEC-002* | Dev Lead | routes |
 | DESIGN-001 | 2026-08-28 | Lot 1 — spécification du socle de tokens | Dev Lead | lot 2, écran pilote |
+
+---
+
+## DESIGN-013 — Recette du checkpoint `ec3ec06`
+
+- **Date :** 29 août 2026
+- **Auteur :** Designer
+- **Statut :** **Socle validé sur le fond. Trois défauts bloquent la publication**, tous de mise en page, aucun de contraste.
+- **Périmètre :** Recette indépendante, application clonée depuis GitHub et exécutée localement. 60 combinaisons : 3 profils × 2 à 5 écrans × 6 largeurs (1440, 1024, 961, 960, 768, 375 px). Seuils WCAG appliqués selon la taille du texte — 3:1 au-dessus de 24 px ou 18,66 px en gras, 4,5:1 sinon.
+
+### Ce qui est acquis
+
+| Contrôle | Résultat |
+| --- | --- |
+| Texte sous 12 px | **0**, sur les 60 combinaisons |
+| Écarts de contraste | **0** sur 12 des 14 combinaisons profil × écran |
+| `aria-current` | présent sur chaque écran |
+| Débordement horizontal desktop | **aucun** de 768 à 1440 px |
+| Registre en tableau | tient jusqu'à 961 px, cartes à 960 px, conforme à DEC-004 |
+| Nomenclature DEC-002 | en place — Mon espace, À traiter, Mes rondes, Anomalies, Vue d'ensemble |
+| Badge Démo | visible en permanence |
+
+Le lot 6 fait ce qu'il annonce. La quasi-totalité des 302 occurrences que je relevais sur `f8d5aa5` a disparu.
+
+### Défaut 1 — le badge « Surveillance » à 1,69:1
+
+Sur « Mes rondes », aux six largeurs et pour les deux profils concernés : le badge `SURVEILLANCE` et son glyphe `◆` s'affichent à **1,69:1** et **1,88:1**. Cause exacte :
+
+```
+.surpresseur-health > span { color: rgb(170,192,212); font-size: var(--font-size-label) }
+```
+
+Cette règle peint en bleu clair **tout `span` enfant direct**, badge compris. Le badge conserve son fond ambre `#fff1e2` et hérite d'une encre destinée à la carte sombre. `.badge-orange` (0,1,0) perd contre `.surpresseur-health > span` (0,1,1).
+
+**C'est la troisième occurrence du même mécanisme** : une règle de mise en page qui peint par position et attrape un composant. La première grisait le badge critique à 3,07:1 dans les remontées terrain ; la deuxième cassait `.score-freshness` en le passant en rangée flex avec un libellé rendu à 20 px.
+
+Plutôt qu'un troisième `:not(.badge)`, je propose l'immunisation : **porter l'encre des variantes de badge à deux classes** — `.badge.badge-orange`, `.badge.badge-critical`, etc. (0,2,0) — de sorte qu'aucune règle « classe + combinateur d'élément » ne puisse plus les atteindre. Une passe, et le motif ne peut plus se reproduire.
+
+### Défaut 2 — débordement horizontal à 375 px sur « Mes rondes »
+
+`.surpresseur-hero` mesure **391 px dans un écran de 375**, et la page défile latéralement. Cause : le bandeau déborde en pleine largeur avec une marge négative de 24 px alors que `.content` n'a que **16 px** de retrait à cette largeur. 375 + 2 × 8 = 391.
+
+Correctif : sous 700 px, la marge de débord doit suivre le retrait du contenu.
+
+```css
+@media (max-width:700px){
+  .surpresseur-hero{margin-left:-16px;margin-right:-16px;padding-left:16px;padding-right:16px}
+}
+```
+
+Affecte les deux profils qui accèdent à cet écran. Les pas 4 et 5 du parcours de ronde sortent par ailleurs jusqu'à 530 px : le sélecteur d'étapes n'a ni repli ni défilement propre à cette largeur.
+
+### Défaut 3 — débordement horizontal à 375 px sur l'espace agent
+
+`.two-fields`, `.field` et un `<select>` mesurent **396 px** dans un écran de 375. Cause : un `<select>` se dimensionne sur son option la plus longue — ici « ANO-0241 · DEMO-SSI · Pression réseau incendie instable » — et rien n'autorise ses conteneurs à se comprimer.
+
+```css
+.field,.two-fields>*{min-width:0}
+.field select,.field input,.field textarea{max-width:100%;width:100%}
+```
+
+Ce défaut concerne tout formulaire alimenté par des libellés métier longs, pas seulement cet écran.
+
+### Réserve de densité, sans gravité
+
+« Vue d'ensemble » passe à **8 troncatures à 768 px** contre 1 à 2 ailleurs, `.dashboard-tab-copy` en tête. Rien n'est illisible ni masqué, mais l'écran est manifestement calibré pour le desktop et se replie mal sur tablette. À traiter au lot suivant, pas avant publication.
+
+### Verdict
+
+Le socle est validé : tokens, échelle typographique, plancher à 12 px, contrastes, coquille de navigation, nomenclature. Les trois défauts ci-dessus sont des régressions de mise en page à 375 px, tous diagnostiqués avec leur cause et leur correctif — moins de dix lignes de CSS au total. **Je recommande de les corriger avant publication**, puis d'ouvrir le lot sur les destinations autonomes de DEC-002.
+
+- **Contrôles effectués :** clone depuis `origin/design/lot-1-tokens` à `ec3ec06`, `pnpm install --frozen-lockfile`, exécution locale, 60 combinaisons mesurées en styles calculés — taille de police, contraste avec seuil adapté, troncature, débordement, `aria-current`.
+- **Suite proposée :** correctifs 1 à 3, nouvelle recette rapide sur les seuls écrans concernés, puis publication.
 
 ---
 
