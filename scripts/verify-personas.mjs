@@ -10,7 +10,8 @@ const equipmentWorkspace = await readFile(path.join(root, 'app', 'components', '
 const costsWorkspace = await readFile(path.join(root, 'app', 'components', 'CostsWorkspace.tsx'), 'utf8')
 const accessWorkspace = await readFile(path.join(root, 'app', 'components', 'AccessWorkspace.tsx'), 'utf8')
 const parametersWorkspace = await readFile(path.join(root, 'app', 'components', 'ParametersWorkspace.tsx'), 'utf8')
-const appSource = `${page}\n${css}\n${badge}\n${equipmentWorkspace}\n${costsWorkspace}\n${accessWorkspace}\n${parametersWorkspace}`
+const syncStatusNotice = await readFile(path.join(root, 'app', 'components', 'SyncStatusNotice.tsx'), 'utf8')
+const appSource = `${page}\n${css}\n${badge}\n${equipmentWorkspace}\n${costsWorkspace}\n${accessWorkspace}\n${parametersWorkspace}\n${syncStatusNotice}`
 
 const checks = []
 const requireAll = (label, source, values) => {
@@ -64,7 +65,7 @@ requireAll('Polish Direction et Facility Manager', page, [
   'decision-filters', 'direction-focus', 'Qualifier maintenant', 'qualify-action', 'escalate-action',
 ])
 requireAll('Pilote Surpresseur et saisie directe', page, [
-  'MODULE PILOTE · SURPRESSEUR', 'Mode hors ligne actif', 'Ronde Surpresseur prête à synchroniser', 'Aucun import',
+  'MODULE PILOTE · SURPRESSEUR', 'Brouillon temporaire dans cette page', 'Simulation de ronde terminée', 'Aucun import',
 ])
 checks.push({
   label:'Aucun parcours d’import de reporting',
@@ -109,7 +110,11 @@ requireAll('Dossier central P6 sans seconde source métier', appSource, [
   'role="tablist"', 'role="tabpanel"',
 ])
 requireAll('Double mission Agente Rondes & Assistance', page, [
-  'mission-switch', 'Rondes, constats et brouillons hors ligne', 'Devis, paiements et autorisations',
+  'mission-switch', 'Rondes, constats et brouillons de démonstration', 'Devis, paiements et autorisations',
+])
+requireAll('Résilience terrain sans promesse hors ligne fictive', appSource, [
+  'SyncStatusNotice', 'Démonstration locale — non enregistrée', 'Connexion requise pour enregistrer',
+  'Aucun mode hors ligne ni reprise automatique', 'Échec de l’enregistrement', 'Réessayer',
 ])
 requireAll('Mesures Surpresseur explicables', page, [
   'MeasureRange', 'DANS LA PLAGE', 'HORS PLAGE', 'Variation</b>Indisponible', 'Fraîcheur</b>Non synchronisée',

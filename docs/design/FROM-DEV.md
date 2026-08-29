@@ -2,6 +2,51 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-015 — P7A Résilience terrain et contrat d’enregistrement honnête
+
+- **Date :** 30 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté et vérifié localement — non publié
+- **Périmètre :** rondes, actions terrain et dépôt de preuve ; aucun schéma, droit ou service Supabase modifié
+
+L’audit de départ a confirmé que le miroir ne possède ni stockage hors ligne durable, ni file de synchronisation, ni idempotence, ni résolution de conflit. Pourtant, le pilote Surpresseur annonçait « Mode hors ligne actif », « Brouillon enregistré localement » et « prêt à synchroniser ». La saisie directe indiquait elle aussi que le brouillon était conservé sur l’appareil. Ces libellés donnaient une garantie que le code ne pouvait pas tenir.
+
+P7A introduit un composant partagé `SyncStatusNotice` et un type `SyncStatusState`. Le contrat distingue cinq états :
+
+- **démonstration locale — non enregistrée** : les valeurs restent dans la page et peuvent être perdues ;
+- **connexion requise** : l’action doit écrire directement sur le serveur et ne bénéficie d’aucune reprise automatique ;
+- **transmission en cours** : la page doit rester ouverte jusqu’à la réponse ;
+- **enregistrement serveur confirmé** : cet état n’est retourné qu’après succès de l’écriture et relecture opérationnelle ;
+- **échec d’enregistrement** : la donnée n’est pas présentée comme sauvée et une reprise explicite est proposée lorsque le fichier est encore disponible.
+
+### Raccordements réalisés
+
+- la ronde Surpresseur et la saisie directe ne simulent plus l’état réseau et ne promettent plus une sauvegarde locale ;
+- leurs confirmations indiquent qu’aucune donnée n’a été enregistrée, transmise ou mise en file hors ligne ;
+- les photos illustratives ne sont plus décrites comme compressées ou synchronisées ;
+- les actions des agents et leurs preuves illustratives sont explicitement des interactions de démonstration ;
+- le libellé de la double mission Rondes & Assistance parle de brouillons de démonstration, pas de brouillons hors ligne ;
+- le dépôt réel de preuve dans le dossier reçoit les états connexion requise, transmission, échec et reprise ; le même fichier peut être renvoyé après erreur ;
+- le résultat `server-confirmed` n’est retourné qu’après succès de `uploadAnomalyProof` et du rechargement des données ; le repli de démonstration retourne `demo-volatile`.
+
+Le composant réutilise uniquement les triplets sémantiques, espacements, rayons, contrôles et tailles du design system. Son état d’erreur utilise `role="alert"`, les autres états `role="status"`, le mouvement respecte `prefers-reduced-motion` et le bouton de reprise reste utilisable sur mobile.
+
+### Contrôles réalisés
+
+- `pnpm verify:resilience` : 11/11 contrôles réussis ;
+- `pnpm audit:visual` : 81/81 contrôles réussis ;
+- `pnpm verify:personas` : 38/38 contrôles réussis ;
+- `pnpm verify:anti-zombie` : 11/11 scénarios réussis ;
+- `pnpm verify:auth` : 20/20 contrôles réussis ;
+- `pnpm verify:fonts`, `pnpm lint` et `pnpm build` : réussis ;
+- aucun ancien libellé trompeur détecté ; aucune migration, RLS, permission, clé, environnement ou publication ajouté.
+
+### Limite volontaire
+
+Ce lot ferme le contrat d’interface du miroir public, pas la capacité hors ligne réelle. Une activation durable exige, dans le dépôt privé, une file locale persistante, des identifiants idempotents, des états `pending/synced/conflict/error`, une politique de résolution des conflits, une reprise après fermeture et des tests avec coupure réseau réelle. Tant que ce lot privé n’est pas livré, l’outil ne doit pas promettre un fonctionnement hors connexion.
+
+- **Suite proposée :** P7B dans le dépôt privé pour la persistance hors ligne réelle ; si la livraison visée reste une maquette de validation, passer à P8 avec cette limite explicitement inscrite dans la recette métier.
+
 ## DEV-014 — P6 Dossier central et continuité de traitement
 
 - **Date :** 30 août 2026

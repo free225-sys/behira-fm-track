@@ -14,9 +14,10 @@
     "verify:personas": "node scripts/verify-personas.mjs",
     "verify:auth": "node scripts/verify-auth.mjs",
     "verify:anti-zombie": "node scripts/verify-anti-zombie.ts",
+    "verify:resilience": "node scripts/verify-resilience.mjs",
     "audit:visual": "node scripts/audit-visual-styles.mjs",
     "verify:fonts": "node scripts/verify-font-assets.mjs",
-    "verify:release": "pnpm audit:visual && pnpm verify:personas && pnpm verify:fonts"
+    "verify:release": "pnpm audit:visual && pnpm verify:personas && pnpm verify:resilience && pnpm verify:fonts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",
