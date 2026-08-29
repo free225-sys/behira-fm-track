@@ -2,6 +2,43 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-013 — P5 Seuils et paramètres en lecture explicable
+
+- **Date :** 30 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté et vérifié localement — non publié
+- **Périmètre :** destination Seuils et paramètres réservée à l'Administration, sans édition de règle réelle
+
+Le lot démarre depuis le checkpoint P4 propre `8482d88`. L'inventaire du miroir distingue une seule valeur métier confirmée — le seuil de décision financière de **400 000 FCFA** — de trois familles seulement partielles : délais SLA par priorité, seuils techniques des équipements et méthodes de calcul des scores. Ces familles ne sont pas transformées en paramètres actifs tant que leurs valeurs, leur portée et leur historique ne sont pas raccordés.
+
+P5 ajoute **Seuils et paramètres** sous le groupe **Administration** du menu **Plus**. La destination est absente du Facility Manager et des trois profils terrain. Elle reçoit `FINANCIAL_DECISION_PARAMETER`, dont la valeur dépend de l'unique constante `DECISION_THRESHOLD_FCFA`; aucun second montant n'est recopié dans le composant. Les consommateurs existants — Coûts, À traiter, dossier central et Accueil Administration — utilisent désormais la même valeur lors de leur rendu.
+
+Le détail présente le nom, la valeur, l'unité, la portée, la date d'effet, l'autorité métier, la justification et les écrans consommateurs. L'historique manquant est signalé explicitement : ancienne valeur, auteur technique, horodatage détaillé et motif enregistré ne sont pas disponibles. Le composant ne contient ni formulaire, ni champ éditable, ni commande de modification.
+
+L'Accueil Administration conserve une synthèse du seuil et renvoie vers la destination autonome. Les textes qui annonçaient un seuil « configurable » ou répétaient `400 000 FCFA` en dur ont été remplacés par une lecture honnête alimentée par la constante commune.
+
+### Contrat d'accès et de sécurité
+
+- Administration : consultation du seuil confirmé et des données manquantes ;
+- Facility Manager : aucun accès à la destination, mais conserve la lecture du seuil dans ses décisions autorisées ;
+- profils terrain : aucune destination ou donnée de paramétrage ajoutée ;
+- miroir public : aucune édition, migration, RLS, secret ou appel d'administration ;
+- cible privée future : modification serveur uniquement, avec ancienne et nouvelle valeur, auteur, date, justification et retour arrière.
+
+### Contrôles réalisés
+
+- seuil `400_000` présent une seule fois comme valeur source dans `app/page.tsx` ;
+- destination réservée à l'Administration et rangée sous **Plus** ;
+- état lecture seule, historique insuffisant et trois familles non raccordées présents ;
+- aucune balise de formulaire, aucun champ de saisie ou gestionnaire de modification dans `ParametersWorkspace` ;
+- `pnpm audit:visual` : 76/76 contrôles réussis ;
+- `pnpm verify:personas` : 36/36 contrôles réussis ;
+- `pnpm verify:fonts`, `pnpm lint` et `pnpm build` : réussis.
+
+Le chemin `/seuils-et-parametres` reste réservé pour un futur découpage du routeur. Aucun fichier Supabase, environnement ou déploiement n'est modifié.
+
+- **Suite proposée :** P6 Dossier central, en réutilisant `AntiZombieSummary` sans créer de seconde source pour ses huit champs.
+
 ## DEV-012 — P4 Utilisateurs et droits sans administration cliente
 
 - **Date :** 30 août 2026

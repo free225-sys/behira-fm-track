@@ -9,7 +9,8 @@ const badge = await readFile(path.join(root, 'app', 'components', 'ui', 'badge.t
 const equipmentWorkspace = await readFile(path.join(root, 'app', 'components', 'EquipmentWorkspace.tsx'), 'utf8')
 const costsWorkspace = await readFile(path.join(root, 'app', 'components', 'CostsWorkspace.tsx'), 'utf8')
 const accessWorkspace = await readFile(path.join(root, 'app', 'components', 'AccessWorkspace.tsx'), 'utf8')
-const appSource = `${page}\n${css}\n${badge}\n${equipmentWorkspace}\n${costsWorkspace}\n${accessWorkspace}`
+const parametersWorkspace = await readFile(path.join(root, 'app', 'components', 'ParametersWorkspace.tsx'), 'utf8')
+const appSource = `${page}\n${css}\n${badge}\n${equipmentWorkspace}\n${costsWorkspace}\n${accessWorkspace}\n${parametersWorkspace}`
 
 const checks = []
 const requireAll = (label, source, values) => {
@@ -35,7 +36,7 @@ requireAll('Cycle métier', page, ['Constat', 'Qualification', 'Décision', 'Int
 requireAll('États opérationnels', page, ['Critique', 'En retard', 'PREUVE MANQUANTE', 'Terminées'])
 requireAll('Droits visibles par persona', page, [
   "['workspace','dashboard','registry','equipment','costs','access','manager','report']",
-  "['workspace','dashboard','registry','equipment','costs','access']",
+  "['workspace','dashboard','registry','equipment','costs','access','settings']",
   "['workspace','report']",
   "personaId === 'electricite' || personaId === 'eau_incendie'",
   "Cleaning · jardinage · suivi administratif",
@@ -71,7 +72,7 @@ checks.push({
   missing:page.includes('Importer un rapport de ronde') ? ['ancien import encore présent'] : [],
 })
 requireAll('Délégation et dossier cible', page, [
-  '400 000 FCFA', 'Décision dans la délégation de Facility Manager', 'AntiZombieSummary', 'dossier-workflow', 'dossier-three-zone',
+  'DECISION_THRESHOLD_FCFA = 400_000', 'Décision dans la délégation de Facility Manager', 'AntiZombieSummary', 'dossier-workflow', 'dossier-three-zone',
 ])
 requireAll('Clôture design des cockpits', page, [
   'WorkflowAnalytics', 'Sans responsable', 'Preuves à vérifier', 'Réceptions', 'Réserves', 'Dossiers rouverts',
@@ -94,6 +95,12 @@ requireAll('Destination Utilisateurs et droits conforme à la délégation', app
   'Aucun compte réel n’a été créé', 'aucun compte, rôle ou périmètre réel n’est modifié',
   "users.filter((user) => user.id !== 'administration')",
   "audience === 'administration' && <option>Administration</option>",
+])
+requireAll('Destination Seuils et paramètres réservée à Administration', appSource, [
+  "key:'settings'", "label:'Seuils et paramètres'", 'ParametersWorkspace',
+  'LECTURE SEULE', 'Seuil de décision financière', 'Historique persistant indisponible',
+  'Délais SLA par priorité', 'Seuils techniques des équipements', 'Méthodes de calcul des scores',
+  "administration:['workspace','dashboard','registry','equipment','costs','access','settings']",
 ])
 requireAll('Double mission Agente Rondes & Assistance', page, [
   'mission-switch', 'Rondes, constats et brouillons hors ligne', 'Devis, paiements et autorisations',

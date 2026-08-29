@@ -2,7 +2,7 @@
 
 - **Date :** 30 août 2026
 - **Auteur :** Dev Lead
-- **Statut :** Validé par Wilkam le 30 août 2026 — P2 Équipements, P3 Coûts et P4 Utilisateurs et droits livrés localement
+- **Statut :** Validé par Wilkam le 30 août 2026 — P2 à P5 livrés localement
 - **Références :** DEC-002, DEC-008, DEV-003 et DEV-009
 
 ## 1. Objet du lot
@@ -16,6 +16,8 @@ La validation du 30 août 2026 est consignée dans **DEC-014** : Équipements es
 P3 applique cette décision en donnant à `Escalation.amount` le libellé strict de **montant de décision**. Les états engagé, payé et budget restent insuffisants tant qu'une source canonique n'existe pas. Le total affiché est uniquement la somme transparente des montants visibles ; le coût facultatif d'un rapport prestataire n'est pas agrégé, faute de collection canonique dans le miroir.
 
 P4 applique la délégation validée sans transformer la configuration frontend en source d'identité. `personas` décrit cinq profils de démonstration, pas cinq comptes Auth. L'Administration prépare création ou désactivation, le Facility Manager prépare seulement une proposition de rôle ou de périmètre, et les profils terrain n'accèdent pas à la destination. Aucune opération cliente ne modifie un compte, un rôle, une RLS ou un périmètre réel ; le raccordement demeure un traitement serveur du dépôt privé.
+
+P5 expose le seuil financier confirmé de 400 000 FCFA depuis une constante commune et réserve la destination à l'Administration. Le miroir reste strictement en lecture : l'historique persistant n'est pas disponible et les familles SLA, seuils techniques et méthodes de score sont signalées comme non raccordées plutôt que converties en règles actives.
 
 ## 2. Catalogue principal déjà implémenté
 
@@ -36,7 +38,7 @@ Cette matrice décrit strictement `allowedViewsByPersona`. Elle n'est pas une pr
 | Équipements | Le bâtiment | Onglet **Parc technique**, `OperationalAnalytics`, cartes de santé sur Accueil | `EquipmentItem[]` chargé dans `equipmentItems`, avec repli de démonstration | Partiel : liste, libellé, score et état existent ; recherche, fiche, historique et maintenance n'existent pas comme destination | Conserver Administration + Facility Manager uniquement, ou ajouter aux agents une lecture limitée à leur périmètre |
 | Coûts | Pilotage | Bloc Coûts de Pilotage, arbitrages Administration, pièce et coût de rapport d'intervention | `Escalation.amount` et `VendorReportInput.costAmount` ; plusieurs totaux restent des valeurs de maquette | Partiel : décisions et quelques montants existent ; aucune source canonique ne justifie encore budget engagé, payé ou tendance | Définir la lecture Facility Manager et réserver ou non l'arbitrage global à l'Administration |
 | Utilisateurs et droits | Administration | Aperçu **Utilisateurs & accès** et dialogue de maquette Administration | `personas` et `allowedViewsByPersona` sont une configuration frontend, pas une source métier administrable | Absent pour le réel : aucun compte ne doit être créé depuis le miroir public | Confirmer Administration seule pour créer/désactiver ; confirmer si Facility Manager peut seulement proposer un accès |
-| Seuils et paramètres | Administration | Carte de seuil et paramètres visibles dans l'Accueil Administration | Le seuil de 400 000 FCFA est un état local et apparaît aussi en dur dans plusieurs vues | Absent comme paramètre canonique et historisé | Confirmer Administration seule et confirmer 400 000 FCFA comme valeur métier de référence avant raccordement privé |
+| Seuils et paramètres | Administration | Carte de seuil et destination autonome en lecture | `DECISION_THRESHOLD_FCFA` alimente le seuil confirmé ; les autres familles ne sont pas chargées | Livré localement en lecture ; historique canonique absent | Administration seule ; 400 000 FCFA confirmé avant raccordement privé |
 
 ## 4. Contrat de contenu minimal
 
