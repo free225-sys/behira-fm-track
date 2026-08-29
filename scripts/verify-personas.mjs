@@ -102,6 +102,12 @@ requireAll('Destination Seuils et paramètres réservée à Administration', app
   'Délais SLA par priorité', 'Seuils techniques des équipements', 'Méthodes de calcul des scores',
   "administration:['workspace','dashboard','registry','equipment','costs','access','settings']",
 ])
+requireAll('Dossier central P6 sans seconde source métier', appSource, [
+  'dossier-continuity', 'adaptDossierToAntiZombieSummary(anomaly)', 'variant="detailed"',
+  '0 événement canonique', 'Historique métier indisponible', 'Preuve attendue non définie',
+  'Consultation uniquement · aucune action métier accordée', 'criticalClosureLocked',
+  'role="tablist"', 'role="tabpanel"',
+])
 requireAll('Double mission Agente Rondes & Assistance', page, [
   'mission-switch', 'Rondes, constats et brouillons hors ligne', 'Devis, paiements et autorisations',
 ])

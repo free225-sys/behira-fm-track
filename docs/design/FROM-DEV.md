@@ -2,6 +2,43 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-014 — P6 Dossier central et continuité de traitement
+
+- **Date :** 30 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté et vérifié localement — non publié
+- **Périmètre :** fiche détaillée d'une anomalie, réutilisation de `AntiZombieSummary`, preuves et historique affiché
+
+L'audit du checkpoint P5 `2bd49ee` a montré que le dossier central possédait déjà une intégration partielle de `AntiZombieSummary` et une grille en trois zones. Le lot P6 ne reconstruit pas ces acquis. Il referme cinq écarts : synthèse reléguée dans une colonne secondaire, faux événements présentés comme historisés, matrice de preuve généralisée sans règle confirmée, action de colonne non raccordée et onglets sans sémantique accessible complète.
+
+La synthèse partagée est désormais placée avant les onglets du dossier. Elle consomme le même adaptateur `adaptDossierToAntiZombieSummary` que le cockpit Facility Manager et le registre : statut, responsable, prochaine action, échéance/SLA, blocage, motif, preuve attendue et dernière activité ne disposent donc pas d'une seconde projection. Les données absentes continuent d'utiliser les valeurs de repli du contrat partagé.
+
+### Historique et preuves
+
+L'onglet Historique ne transforme plus le workflow courant en journal métier. Les mentions « étape validée et historisée » et « historique complet » sont supprimées. Tant qu'aucune source chargée ne fournit action, acteur, étape et horodatage, l'écran affiche **0 événement canonique** et **Historique métier indisponible**. Le constat d'origine et l'étape actuelle apparaissent seulement comme repères, explicitement séparés d'un historique.
+
+La règle particulière de `DEMO-EAU` reste la seule exigence de preuve connue par l'adaptateur. Pour les autres équipements, la fiche affiche **Preuve attendue non définie** et refuse d'inventer une matrice. Une preuve déposée ou acceptée conserve ses états actuels et le contrôle Facility Manager existant.
+
+### Actions et droits
+
+- Administration : consultation seulement ; aucun CTA métier n'est accordé dans la carte d'action ;
+- Facility Manager : l'action principale réutilise la transition existante ou ouvre les preuves / la décision financière selon l'état ;
+- clôture critique : le bouton de progression est désactivé tant que la preuve n'est pas acceptée ;
+- seuil financier : `DECISION_THRESHOLD_FCFA` reste l'unique valeur de décision ;
+- onglets : `tablist`, `tab`, `aria-selected`, `aria-controls` et panneaux associés sont reliés.
+
+### Contrôles réalisés
+
+- `pnpm verify:anti-zombie` : 11/11 scénarios réussis, dont données absentes, blocage incomplet et intégration partagée ;
+- `pnpm audit:visual` : 81/81 contrôles réussis ;
+- `pnpm verify:personas` : 37/37 contrôles réussis ;
+- `pnpm verify:fonts`, `pnpm lint` et `pnpm build` : réussis ;
+- aucune valeur de preuve, activité historique, permission, migration ou règle Supabase ajoutée.
+
+Le lot reste une fermeture d'interface dans le miroir public. Le raccordement d'un journal métier réel, des blocages canoniques et des exigences de preuve historisées appartient toujours au dépôt privé.
+
+- **Suite proposée :** P7 Terrain et résilience, en commençant par les rondes puis les actions et preuves terrain, avec états de synchronisation explicites avant toute promesse hors ligne.
+
 ## DEV-013 — P5 Seuils et paramètres en lecture explicable
 
 - **Date :** 30 août 2026
