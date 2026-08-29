@@ -162,17 +162,22 @@ const seedEscalations: Escalation[] = [
 ];
 
 type NavigationGroup = 'Mon travail' | 'Le bâtiment' | 'Pilotage' | 'Administration';
-type NavigationItem = { key:Exclude<View,'detail'>; label:string; group:NavigationGroup };
+type NavigationItem = {
+  key:Exclude<View,'detail'>;
+  label:string;
+  subtitle:string;
+  group:NavigationGroup;
+};
 
 /* Une seule source alimente le bandeau desktop et la barre mobile. Les groupes
    reprennent mot pour mot DEC-002 afin que le futur menu de débordement ne crée
    pas une nomenclature parallèle. */
 const navItems: NavigationItem[] = [
-  { key:'workspace', label:'Mon espace', group:'Mon travail' },
-  { key:'manager', label:'À traiter', group:'Mon travail' },
-  { key:'report', label:'Mes rondes', group:'Mon travail' },
-  { key:'registry', label:'Anomalies', group:'Le bâtiment' },
-  { key:'dashboard', label:'Vue d’ensemble', group:'Pilotage' },
+  { key:'workspace', label:'Accueil', subtitle:'Vos priorités opérationnelles et informations du jour.', group:'Mon travail' },
+  { key:'manager', label:'À traiter', subtitle:'Dossiers nécessitant votre intervention.', group:'Mon travail' },
+  { key:'report', label:'Rondes', subtitle:'Contrôles terrain et rondes planifiées.', group:'Mon travail' },
+  { key:'registry', label:'Registre', subtitle:'Consultez et recherchez l’ensemble des dossiers.', group:'Le bâtiment' },
+  { key:'dashboard', label:'Pilotage', subtitle:'Performance opérationnelle du site.', group:'Pilotage' },
 ];
 const navigationGroups: NavigationGroup[] = ['Mon travail','Le bâtiment','Pilotage','Administration'];
 
@@ -945,7 +950,6 @@ export default function Home() {
   };
 
   const visibleNav = navItems.filter((item) => allowedViewsByPersona[personaId].includes(item.key));
-  const navigationLabel = (item:NavigationItem) => item.key === 'workspace' && personaId === 'administration' ? 'À valider' : item.key === 'workspace' && !['facility','administration'].includes(personaId) ? 'À traiter' : item.label;
   const primaryNav = visibleNav.slice(0,6);
   const overflowNav = visibleNav.slice(6);
   const activeNavKey = view === 'detail' ? previousView : view;
@@ -971,8 +975,11 @@ export default function Home() {
       window.requestAnimationFrame(() => moreNavTriggerRef.current?.focus());
     }
   };
-  const pageTitle = view === 'workspace' ? `Espace ${persona.shortName}` : view === 'dashboard' ? (personaId === 'administration' ? 'Vue consolidée Administration' : 'Tableau de bord') : view === 'registry' ? 'Registre des anomalies' : view === 'manager' ? 'Espace Facility Manager' : view === 'report' ? (personaId === 'eau_incendie' || personaId === 'facility' ? 'Pilote Surpresseur' : 'Ronde terrain') : selected.id;
-  const mobilePageTitle = view === 'workspace' ? `Espace ${persona.shortName}` : view === 'dashboard' ? 'Pilotage' : view === 'registry' ? 'Registre' : view === 'manager' ? 'Facility Manager' : view === 'report' ? (personaId === 'eau_incendie' || personaId === 'facility' ? 'Pilote Surpresseur' : 'Ronde') : selected.id;
+  const currentNavigationItem = navItems.find((item) => item.key === activeNavKey) ?? navItems[0];
+  const pageTitle = view === 'detail' ? selected.id : currentNavigationItem.label;
+  const pageSubtitle = view === 'detail' ? `${selected.asset} · ${selected.title}` : currentNavigationItem.subtitle;
+  const canStartRound = allowedViewsByPersona[personaId].includes('report') && personaId !== 'administration';
+  const showRoundCta = view === 'workspace' && canStartRound;
 
   if (!authReady) return <main className="auth-loading" aria-label="Chargement de la session"><span className="brand-mark">B</span><p>Préparation de votre espace…</p></main>;
   if (passwordChangeRequirement) return <RequiredPasswordChange requirement={passwordChangeRequirement} onComplete={completeRequiredPasswordChange} onSignOut={signOutLockedSession} />;
@@ -981,11 +988,11 @@ export default function Home() {
   return (
     <div className="app-shell">
       <header className="app-navigation">
-        <button className="brand" onClick={() => navigate('dashboard')}><span className="brand-mark">B</span><span className="brand-wordmark">BEHIRA<small>FM / GB TRACK</small></span></button>
+        <button className="brand" onClick={() => navigate('workspace')} aria-label="BEHIRA — aller à l’Accueil"><span className="brand-mark">B</span><span className="brand-wordmark">BEHIRA<small>FM / GB TRACK</small></span></button>
         <nav className="primary-navigation" aria-label="Navigation principale">
           {primaryNav.map((item) => {
             const active = isNavigationActive(item.key);
-            return <button key={item.key} type="button" className={`nav-item ${active ? 'active' : ''}`} aria-current={active ? 'page' : undefined} onClick={() => navigate(item.key)}><NavigationIcon view={item.key}/><span className="nav-item-label">{navigationLabel(item)}</span></button>;
+            return <button key={item.key} type="button" className={`nav-item ${active ? 'active' : ''}`} aria-current={active ? 'page' : undefined} onClick={() => navigate(item.key)}><NavigationIcon view={item.key}/><span className="nav-item-label">{item.label}</span></button>;
           })}
           {overflowNav.length > 0 && <div className="nav-overflow" ref={moreNavRef}>
             <button ref={moreNavTriggerRef} type="button" className={`nav-item nav-more-trigger ${overflowIsActive ? 'active' : ''}`} aria-haspopup="menu" aria-expanded={moreNavOpen} aria-controls="navigation-more-menu" onKeyDown={(event) => {if (event.key === 'ArrowDown') {event.preventDefault();setMoreNavOpen(true);window.requestAnimationFrame(() => focusOverflowItem(0))}}} onClick={() => setMoreNavOpen((open) => !open)}><span className="nav-more-icon" aria-hidden="true">•••</span><span className="nav-item-label">Plus</span></button>
@@ -996,20 +1003,20 @@ export default function Home() {
                 return <section className="nav-more-group" key={group} aria-label={group}><p>{group}</p>{groupItems.map((item) => {
                   const active = isNavigationActive(item.key);
                   const overflowIndex = overflowNav.findIndex((candidate) => candidate.key === item.key);
-                  return <button ref={(node) => {moreNavItemRefs.current[overflowIndex] = node}} type="button" role="menuitem" key={item.key} className={active ? 'active' : ''} aria-current={active ? 'page' : undefined} onClick={() => navigate(item.key)}><NavigationIcon view={item.key}/><span>{navigationLabel(item)}</span></button>;
+                  return <button ref={(node) => {moreNavItemRefs.current[overflowIndex] = node}} type="button" role="menuitem" key={item.key} className={active ? 'active' : ''} aria-current={active ? 'page' : undefined} onClick={() => navigate(item.key)}><NavigationIcon view={item.key}/><span>{item.label}</span></button>;
                 })}</section>;
               })}
             </div>}
           </div>}
         </nav>
         <div className="scope-box"><span>●</span><div><b>Site Démo Atlas</b><small>{session.mode === 'supabase' ? dataState === 'live' ? `${referenceCounts.anomalies} anomalies · ${referenceCounts.equipment} équipements · ${referenceCounts.zones} zones` : dataState === 'loading' ? `Synchronisation ${supabaseIntegration.environmentLabel}…` : 'Repli sur les données de démonstration' : 'Site principal · démonstration'}</small></div></div>
-        <div className="app-navigation-user"><span className="avatar">{persona.initials}</span><div><b>{persona.name}</b><small>{persona.role}</small></div><button className="logout-button" onClick={() => setSignOutConfirm(true)} aria-label="Se déconnecter">↪</button></div>
+        <div className="app-navigation-user"><button className="logout-button" onClick={() => setSignOutConfirm(true)} aria-label="Se déconnecter">↪</button></div>
       </header>
 
       <main className="main-column">
         <header className="topbar">
-          <div><p className="eyebrow">LUNDI 24 AOÛT · 09:42</p><h1><span className="desktop-title">{pageTitle}</span><span className="mobile-title">{mobilePageTitle}</span></h1></div>
-          <div className="top-actions">{session.mode === 'demo' ? <PersonaSwitcher value={personaId} onChange={changePersona} /> : <div className={`authenticated-persona data-${dataState}`} title={`${session.email} · ${dataState === 'live' ? `données ${supabaseIntegration.environmentLabel}` : 'données de repli'}`}><span>{persona.initials}</span><p><b>{persona.name}</b><small>{dataState === 'live' ? `${supabaseIntegration.environmentLabel} · ${referenceCounts.anomalies} anomalies visibles` : dataState === 'loading' ? `Connexion à ${supabaseIntegration.environmentLabel}…` : `Mode de repli · ${persona.role}`}</small></p></div>}<button className="icon-button" aria-label="Notifications">●<span className="notification-dot" /></button><button className="auth-signout-top" onClick={() => setSignOutConfirm(true)} aria-label="Se déconnecter">↪</button>{personaId !== 'administration' && <button className="primary-button top-create" onClick={() => navigate('report')}>＋ Nouvelle ronde</button>}</div>
+          <div className="topbar-title"><h1>{pageTitle}</h1><p>{pageSubtitle}</p></div>
+          <div className="top-actions">{session.mode === 'demo' ? <PersonaSwitcher value={personaId} onChange={changePersona} /> : <div className={`authenticated-persona data-${dataState}`} title={`${session.email} · ${dataState === 'live' ? `données ${supabaseIntegration.environmentLabel}` : 'données de repli'}`}><span>{persona.initials}</span><p><b>{persona.name}</b><small>{dataState === 'live' ? `${supabaseIntegration.environmentLabel} · ${referenceCounts.anomalies} anomalies visibles` : dataState === 'loading' ? `Connexion à ${supabaseIntegration.environmentLabel}…` : `Mode de repli · ${persona.role}`}</small></p></div>}<button className="icon-button" aria-label="Notifications">●<span className="notification-dot" /></button><button className="auth-signout-top" onClick={() => setSignOutConfirm(true)} aria-label="Se déconnecter">↪</button>{showRoundCta && <button className="primary-button top-create" onClick={() => navigate('report')}>＋ Nouvelle ronde</button>}</div>
         </header>
 
         <div className="content">

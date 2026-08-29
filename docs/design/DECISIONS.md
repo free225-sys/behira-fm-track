@@ -2,6 +2,29 @@
 
 Ne jamais supprimer ni réécrire une décision actée. Toute évolution doit prendre la forme d'une nouvelle entrée qui complète ou remplace explicitement une décision antérieure.
 
+## DEC-008 — Navigation et en-tête stabilisés
+
+- **Date :** 29 août 2026
+- **Auteur :** Wilkam — arbitrage produit/UX
+- **Statut :** **Adopté — complète DEC-002 pour la nomenclature principale**
+- **Périmètre :** Navigation principale, titres globaux, logo et en-tête applicatif
+- **Contexte :** La nomenclature issue de DEC-002 variait encore selon le persona et mélangeait destinations principales, actions contextuelles et onglet analytique interne. L'en-tête répétait également plusieurs fois l'identité et le rôle de l'utilisateur.
+- **Décision ou question :** La navigation canonique devient **Accueil · À traiter · Rondes · Registre · Pilotage**.
+- **Décisions associées :**
+  - `workspace` conserve le libellé **Accueil** quel que soit le persona ;
+  - **Vue d'ensemble** devient un onglet interne de Pilotage ;
+  - **Mes rondes** devient **Rondes** ;
+  - **Anomalies** devient **Registre** ;
+  - les actions telles que **Signaler une anomalie** ou **Nouvelle ronde** restent des actions contextuelles et ne deviennent pas des destinations principales ;
+  - le logo BEHIRA renvoie vers Accueil ;
+  - le shell desktop reste un bandeau horizontal conformément à DEC-004 ;
+  - l'en-tête gagne en respiration et réduit les répétitions d'identité utilisateur ;
+  - aucun rôle, droit, workflow ou modèle métier n'est modifié.
+- **Fichiers concernés :** `app/page.tsx`, `app/globals.css`, `scripts/audit-visual-styles.mjs`
+- **Impacts attendus :** Vocabulaire stable entre navigation desktop, barre mobile et titre principal ; hiérarchie plus claire ; actions mieux contextualisées.
+- **Contrôles attendus :** correspondance stricte menu/H1, `aria-current="page"`, navigation clavier, plancher de 12 px, absence de débordement à 1440, 1024, 768, 390 et 375 px, et CTA conforme au rôle et à la destination.
+- **Suite proposée :** Conserver les onglets analytiques existants à l'intérieur de Pilotage et n'ouvrir de nouvelles destinations qu'au sein d'un lot produit explicitement validé.
+
 ## DEC-007 — Priorité opérationnelle dans le cockpit Facility Manager
 
 - **Date :** 29 août 2026
