@@ -2,7 +2,7 @@
 
 - **Date :** 30 août 2026
 - **Auteur :** Dev Lead
-- **Statut :** Proposition documentaire — aucune destination ni permission ajoutée
+- **Statut :** Validé par Wilkam le 30 août 2026 — P2 Équipements ouvert
 - **Références :** DEC-002, DEC-008, DEV-003 et DEV-009
 
 ## 1. Objet du lot
@@ -10,6 +10,8 @@
 Ce document ferme la première étape du lot produit DEC-002 : nommer les destinations, identifier leur contenu réel et séparer ce qui existe de ce qui reste à valider. Il ne modifie ni `View`, ni `navItems`, ni `allowedViewsByPersona`, ni une route, une donnée, un handler ou une API.
 
 DEC-008 complète DEC-002 : la navigation principale reste **Accueil · À traiter · Rondes · Registre · Pilotage**. Les actions **Signaler une anomalie** et **Nouvelle ronde** restent contextuelles. Les futures destinations autonomes sont filtrées par les droits avant d'être placées dans le menu **Plus**, sous les groupes de DEC-002.
+
+La validation du 30 août 2026 est consignée dans **DEC-014** : Équipements est réservé à l'Administration et au Facility Manager ; Coûts est opérationnel pour le Facility Manager et global pour l'Administration ; la création/désactivation d'utilisateurs revient à l'Administration, avec proposition seulement pour le Facility Manager ; le seuil de référence est fixé à 400 000 FCFA ; les quatre destinations restent dans **Plus** et leurs chemins futurs sont réservés.
 
 ## 2. Catalogue principal déjà implémenté
 
@@ -106,4 +108,3 @@ Ces chemins ne sont pas implémentés dans ce lot. `/espace` et `/facility-manag
 4. Seuils et paramètres en lecture, puis raccordement canonique et historisé dans le dépôt privé ;
 5. recette du menu Plus, du clavier, du responsive et des cinq personas ;
 6. seulement ensuite, redistribution des synthèses actuellement imbriquées dans Accueil et Pilotage.
-

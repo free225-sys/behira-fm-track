@@ -8,6 +8,7 @@ const page = await readFile(path.join(root, 'app', 'page.tsx'), 'utf8')
 const workflow = await readFile(path.join(root, 'app', 'components', 'WorkflowAnalytics.tsx'), 'utf8')
 const specimen = await readFile(path.join(root, 'app', 'design-system', 'page.tsx'), 'utf8')
 const badge = await readFile(path.join(root, 'app', 'components', 'ui', 'badge.tsx'), 'utf8')
+const equipmentWorkspace = await readFile(path.join(root, 'app', 'components', 'EquipmentWorkspace.tsx'), 'utf8')
 
 const cssWithoutComments = css.replace(/\/\*[\s\S]*?\*\//g, '')
 const rules = [...cssWithoutComments.matchAll(/([^{}]+)\{([^{}]+)\}/g)].map((match, order) => ({
@@ -47,7 +48,7 @@ const checks = [
   ['Hero À traiter sans second titre', page.includes('aria-label="Contexte opérationnel"') && !page.includes('id="manager-operational-title"') && !page.includes('Dossiers à traiter')],
   ['Landing Facility Manager sur À traiter', page.includes("facility:'manager'")],
   ['Hero Facility Manager sans bande navy collée', !css.includes('border-top:1px solid #21456f;border-radius:0;background:#16345a;color:white')],
-  ['Menu Plus prêt pour le catalogue groupé', page.includes("const navigationGroups: NavigationGroup[] = ['Mon travail','Le bâtiment','Pilotage','Administration']") && page.includes('overflowIsActive ? \'active\'') && page.includes('groupItems = overflowNav.filter') && page.includes("event.key === 'ArrowDown' || event.key === 'ArrowUp'") && page.includes('moreNavTriggerRef.current?.focus()')],
+  ['Menu Plus prêt pour le catalogue groupé', page.includes("const navigationGroups: NavigationGroup[] = ['Mon travail','Le bâtiment','Pilotage','Administration']") && page.includes('overflowIsActive ? \'active\'') && page.includes("aria-current={overflowIsActive ? 'page' : undefined}") && page.includes('groupItems = overflowNav.filter') && page.includes("event.key === 'ArrowDown' || event.key === 'ArrowUp'") && page.includes('moreNavTriggerRef.current?.focus()')],
   ['Environnement de démonstration visible', page.includes('className="persona-mode-label"') && page.includes('Mode démonstration') && !css.includes('.persona-mode-label{display:none}')],
   ['Triplets sémantiques déclarés', ['success','warning','danger','info','neutral'].every((role) => css.includes(`--${role}-surface:`) && css.includes(`--${role}-border:`) && css.includes(`--${role}-text:`))],
   ['Encres sémantiques consommées', css.includes('background:var(--danger-surface)') && css.includes('color:var(--danger-text)') && css.includes('background:var(--warning-surface)') && css.includes('color:var(--warning-text)') && css.includes('background:var(--success-surface)') && css.includes('color:var(--success-text)')],
@@ -85,6 +86,8 @@ const checks = [
   ['Durées d’animation tokenisées', css.includes('transition:width var(--motion-bar) var(--ease-standard)') && css.includes('transition:stroke-dashoffset var(--motion-ring) var(--ease-standard)')],
   ['Spécimen hors navigation produit', specimen.includes('Système de design · hors navigation produit') && page.includes('href="/design-system"') && !page.includes("label:'Système de design'")],
   ['Primitives UI partagées', page.includes("from './components/ui'") && specimen.includes("from '../components/ui'") && page.includes('<IconButton') && page.includes('<Card className="fm-decision-card">')],
+  ['Destination Équipements sur primitives et tokens', equipmentWorkspace.includes("from './ui'") && equipmentWorkspace.includes('<Card') && css.includes('.equipment-workspace-hero') && css.includes('background:var(--surface-muted)') && css.includes('.equipment-destination-card{min-width:0;padding:var(--space-4);box-shadow:none}')],
+  ['Équipements dans Plus sans étendre les profils terrain', page.includes("key:'equipment'") && page.includes('secondary:true') && page.includes("facility:['workspace','dashboard','registry','equipment','manager','report']") && page.includes("administration:['workspace','dashboard','registry','equipment']") && !page.includes("electricite:['workspace','report','equipment']")],
 ]
 
 for (const [label, ok] of checks) console.log(`${ok ? '✓' : '✗'} ${label}`)

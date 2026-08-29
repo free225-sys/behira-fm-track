@@ -2,6 +2,34 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-010 — P2 Équipements après validation des six arbitrages DEC-002
+
+- **Date :** 30 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté et vérifié localement — non publié
+- **Périmètre :** destination Équipements en lecture pour l'Administration et le Facility Manager
+
+Wilkam a validé les six recommandations du contrat produit. La décision est consignée dans **DEC-014**. Le lot P2 ajoute une destination **Équipements** groupée sous **Le bâtiment** dans le menu **Plus**. Elle ne remplace aucune des destinations principales et reste absente des trois profils terrain.
+
+La vue consomme exclusivement `equipmentItems`, la source déjà utilisée par Accueil et Pilotage. Elle fournit une synthèse calculée sur les scores disponibles, une recherche par code/libellé/état et un filtre sur les états existants. Aucune fraîcheur, intervention, maintenance ou cause n'est inventée : les absences sont affichées comme **Non renseignée** ou **Données insuffisantes**. La destination réutilise `Card`, `Field` et `Badge`, ainsi que les tokens du système vivant et l'accent teal de DEC-013.
+
+La navigation protège le repère actif : lorsque la destination courante se trouve dans le menu de débordement, le déclencheur **Plus** porte `aria-current="page"`. Le passage d'un persona à un autre ramène vers sa destination autorisée ; aucun accès ne persiste pour un agent non habilité.
+
+### Contrôles réalisés
+
+- recherche « pompe » : un seul équipement correspondant ;
+- filtre « Sain » : Irrigation et Rondes & constats uniquement ;
+- accès Administration et Facility Manager : présent dans **Plus** ;
+- accès Agent Électricité : destination absente et retour vers Accueil ;
+- rendu 390, 768 et 1024 px : contenu complet, cartes repliées sans perte d'information et menu actif identifiable ;
+- `pnpm audit:visual` : 64/64 contrôles réussis ;
+- `pnpm verify:personas` : 33/33 contrôles réussis ;
+- `pnpm lint`, `pnpm build` et `pnpm verify:fonts` : réussis, avec les deux polices Geist servies en HTTP 200.
+
+Ce lot ne crée aucune route réseau autonome : `/equipements` reste réservé par DEC-014 pour un futur découpage du routeur. Il ne modifie ni donnée, API, statut métier, permission réelle, Supabase ou configuration de déploiement.
+
+- **Suite proposée :** P3 Coûts, limité aux montants réellement disponibles et à des états explicites lorsque les agrégats ne sont pas justifiables.
+
 ## DEV-009 — Reprise Dev Lead après le checkpoint design `0580270`
 
 - **Date :** 30 août 2026

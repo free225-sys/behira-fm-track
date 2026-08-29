@@ -2,6 +2,23 @@
 
 Ne jamais supprimer ni réécrire une décision actée. Toute évolution doit prendre la forme d'une nouvelle entrée qui complète ou remplace explicitement une décision antérieure.
 
+## DEC-014 — Validation du contrat produit DEC-002 et ouverture du lot Équipements
+
+- **Date :** 30 août 2026
+- **Auteur :** Wilkam, consigné par le Dev Lead
+- **Statut :** **Adopté**
+- **Périmètre :** destinations autonomes Équipements, Coûts, Utilisateurs et droits, Seuils et paramètres
+- **Contexte :** les six arbitrages du contrat `DEC-002_CONTRAT_DESTINATIONS.md` ont été validés avant toute extension de la navigation.
+- **Décision :**
+  - la destination **Équipements** est ouverte d'abord à l'Administration et au Facility Manager ; les agents conservent leurs vues limitées existantes ;
+  - le Facility Manager pourra consulter les coûts opérationnels, tandis que l'Administration conservera la lecture et l'arbitrage globaux ;
+  - l'Administration créera et désactivera les utilisateurs ; le Facility Manager pourra seulement proposer un rôle ou un périmètre ;
+  - **400 000 FCFA** est confirmé comme seuil métier de référence ;
+  - les quatre destinations autonomes seront placées dans **Plus**, sans remplacer les destinations principales ;
+  - les chemins `/equipements`, `/couts`, `/utilisateurs-et-droits` et `/seuils-et-parametres` sont réservés pour le futur découpage du routeur.
+- **Garde-fous :** le miroir public ne reçoit aucun secret, accès Supabase réel ni traitement serveur d'administration. Une destination n'élargit jamais silencieusement les permissions métier.
+- **Suite :** livrer P2 Équipements sur les données existantes, puis ouvrir P3 Coûts.
+
 ## DEC-013 — Accent de marque teal (clôture DEC-001)
 
 - **Date :** 29 août 2026

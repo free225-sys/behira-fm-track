@@ -1761,3 +1761,50 @@ button.manager-health-card:hover{
 .manager-pilot .manager-command-hero .delegation-chip{
   background:var(--surface);
 }
+
+/* P2 — destination Équipements, construite sur le système vivant */
+.equipment-workspace{display:grid;gap:var(--space-4);font-variant-numeric:tabular-nums}
+.equipment-workspace-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--space-6);padding:var(--space-5);border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface-muted)}
+.equipment-workspace-hero h2{margin:0 0 var(--space-1);font-size:var(--font-size-title)}
+.equipment-workspace-hero>div>p:last-child{max-width:68ch;margin:0;color:var(--foreground-muted);font-size:var(--font-size-body);line-height:1.5}
+.equipment-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--space-3)}
+.equipment-summary-card{display:grid;gap:var(--space-1);min-width:0;padding:var(--space-4);box-shadow:none}
+.equipment-summary-card>span{color:var(--foreground-muted);font-size:var(--font-size-label);font-weight:800;letter-spacing:.04em}
+.equipment-summary-card>strong{font-size:var(--font-size-title);line-height:1.2}
+.equipment-summary-card>strong small{color:var(--foreground-muted);font-size:var(--font-size-label)}
+.equipment-summary-card>small{color:var(--foreground-muted);font-size:var(--font-size-label);line-height:1.4}
+.equipment-catalogue{padding:var(--space-5);box-shadow:none}
+.equipment-catalogue-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-5)}
+.equipment-catalogue-head h3{margin:0 0 var(--space-1);font-size:var(--font-size-subtitle)}
+.equipment-catalogue-head>div>p:last-child{margin:0;color:var(--foreground-muted);font-size:var(--font-size-label)}
+.equipment-filters{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(220px,.7fr);gap:var(--space-3);margin:var(--space-4) 0}
+.equipment-filters .field{margin:0}
+.equipment-filters .field input,.equipment-filters .field select{min-height:var(--control-height);background:var(--surface)}
+.equipment-destination-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-3)}
+.equipment-destination-card{min-width:0;padding:var(--space-4);box-shadow:none}
+.equipment-destination-card>header{display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:var(--space-3);align-items:center}
+.equipment-destination-card>header>div{min-width:0}
+.equipment-destination-card>header small{display:block;overflow:hidden;color:var(--foreground-muted);font-size:var(--font-size-label);font-weight:800;text-overflow:ellipsis;white-space:nowrap}
+.equipment-destination-card>header h3{margin:var(--space-1) 0 0;overflow:hidden;font-size:var(--font-size-body);text-overflow:ellipsis;white-space:nowrap}
+.equipment-destination-mark{width:36px;height:36px;display:grid;place-items:center;border-radius:var(--radius-sm);background:var(--surface-emphasis);color:var(--brand);font-size:var(--font-size-label);font-weight:850}
+.equipment-health-row{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--space-3);margin-top:var(--space-5)}
+.equipment-health-row>div>span{display:block;color:var(--foreground-muted);font-size:var(--font-size-label);font-weight:800;letter-spacing:.04em}
+.equipment-health-row strong{display:block;margin-top:var(--space-1);font-size:var(--font-size-title)}
+.equipment-health-row strong small{color:var(--foreground-muted);font-size:var(--font-size-label)}
+.equipment-health-row .is-good{color:var(--success-text)}
+.equipment-health-track{height:8px;margin:var(--space-3) 0 var(--space-4);overflow:hidden;border-radius:var(--radius-round);background:var(--neutral-surface)}
+.equipment-health-track>i{display:block;height:100%;border-radius:var(--radius-round);background:var(--success);transition:width var(--motion-bar) var(--ease-standard)}
+.equipment-health-track>i.orange{background:var(--teal)}
+.equipment-health-track>i.critical{background:var(--danger)}
+.equipment-known-facts{display:grid;grid-template-columns:1fr 1fr;gap:1px;margin:0;overflow:hidden;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--border)}
+.equipment-known-facts>div{min-width:0;padding:var(--space-3);background:var(--surface-muted)}
+.equipment-known-facts dt{color:var(--foreground-muted);font-size:var(--font-size-label);font-weight:700}
+.equipment-known-facts dd{margin:var(--space-1) 0 0;color:var(--foreground);font-size:var(--font-size-label);font-weight:750;line-height:1.35}
+.equipment-empty{min-height:180px;display:flex;align-items:center;justify-content:center;gap:var(--space-3);border:1px dashed var(--border-strong);border-radius:var(--radius-md);background:var(--surface-muted)}
+.equipment-empty>span{width:40px;height:40px;display:grid;place-items:center;border-radius:var(--radius-round);background:var(--surface);color:var(--brand);font-size:var(--font-size-title)}
+.equipment-empty h3{margin:0 0 var(--space-1);font-size:var(--font-size-subtitle)}
+.equipment-empty p{margin:0;color:var(--foreground-muted);font-size:var(--font-size-label)}
+@media (prefers-reduced-motion:reduce){.equipment-health-track>i{transition:none}}
+@media (max-width:1100px){.equipment-destination-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:800px){.equipment-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.equipment-destination-grid{grid-template-columns:1fr}}
+@media (max-width:700px){.equipment-workspace-hero{display:block;padding:var(--space-4)}.equipment-workspace-hero>.mockup-label{margin-top:var(--space-3)}.equipment-catalogue{padding:var(--space-4)}.equipment-catalogue-head{display:block}.equipment-catalogue-head>.panel-count{display:inline-flex;margin-top:var(--space-3)}.equipment-filters{grid-template-columns:1fr}.equipment-known-facts{grid-template-columns:1fr}.equipment-known-facts>div+div{border-top:1px solid var(--border)}}

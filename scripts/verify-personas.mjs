@@ -6,7 +6,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const page = await readFile(path.join(root, 'app', 'page.tsx'), 'utf8')
 const css = await readFile(path.join(root, 'app', 'globals.css'), 'utf8')
 const badge = await readFile(path.join(root, 'app', 'components', 'ui', 'badge.tsx'), 'utf8')
-const appSource = `${page}\n${css}\n${badge}`
+const equipmentWorkspace = await readFile(path.join(root, 'app', 'components', 'EquipmentWorkspace.tsx'), 'utf8')
+const appSource = `${page}\n${css}\n${badge}\n${equipmentWorkspace}`
 
 const checks = []
 const requireAll = (label, source, values) => {
@@ -31,8 +32,8 @@ requireAll('Parcours terrain et preuve', page, [
 requireAll('Cycle métier', page, ['Constat', 'Qualification', 'Décision', 'Intervention', 'Preuve', 'Clôture'])
 requireAll('États opérationnels', page, ['Critique', 'En retard', 'PREUVE MANQUANTE', 'Terminées'])
 requireAll('Droits visibles par persona', page, [
-  "['workspace','dashboard','registry','manager','report']",
-  "['workspace','dashboard','registry']",
+  "['workspace','dashboard','registry','equipment','manager','report']",
+  "['workspace','dashboard','registry','equipment']",
   "['workspace','report']",
   "personaId === 'electricite' || personaId === 'eau_incendie'",
   "Cleaning · jardinage · suivi administratif",
@@ -76,6 +77,10 @@ requireAll('Clôture design des cockpits', page, [
 requireAll('Navigation analytique du tableau de bord', appSource, [
   'dashboard-section-tabs', 'Vue d’ensemble', 'Actions & risques', 'Santé & scores', 'Parc technique',
   'scroll-snap-type:x proximity', 'PILOTAGE FACILITY MANAGER', 'Disponibilité technique 92%',
+])
+requireAll('Destination Équipements limitée à Administration et Facility Manager', appSource, [
+  "key:'equipment'", "secondary:true", 'EquipmentWorkspace', 'Parc technique',
+  'Fraîcheur du score', 'Facteurs explicatifs', 'Données insuffisantes',
 ])
 requireAll('Double mission Agente Rondes & Assistance', page, [
   'mission-switch', 'Rondes, constats et brouillons hors ligne', 'Devis, paiements et autorisations',

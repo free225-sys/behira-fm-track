@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 import { AntiZombieSummary } from './components/AntiZombieSummary';
 import type { AntiZombieSummaryData } from './components/anti-zombie-contract';
+import { EquipmentWorkspace } from './components/EquipmentWorkspace';
 import { Badge, Button, Card, Field, IconButton } from './components/ui';
 import { WorkflowAnalytics } from './components/WorkflowAnalytics';
 import { getAuthenticatedProfileGate, resolveAuthenticatedPersona } from './lib/supabase/auth';
@@ -12,7 +13,7 @@ import { getSupabaseIntegrationState, isSupabaseIntegrationEnabled } from './lib
 import { loadOperationalSnapshot, type OperationalVendor } from './lib/supabase/data';
 import { advanceAnomalyWorkflow, uploadAnomalyProof, uploadVendorInterventionReport, verifyLatestAnomalyProof } from './lib/supabase/mutations';
 
-type View = 'workspace' | 'dashboard' | 'registry' | 'manager' | 'report' | 'detail';
+type View = 'workspace' | 'dashboard' | 'registry' | 'equipment' | 'manager' | 'report' | 'detail';
 type Priority = 'Critique' | 'Haute' | 'Moyenne' | 'Faible';
 type Status = 'À qualifier' | 'Affectée' | 'En intervention' | 'En validation' | 'Clôturée';
 type ManagerQueue = 'qualify'|'late'|'unassigned'|'proof'|'reception'|'reservations'|'reopened';
@@ -139,8 +140,8 @@ const demoAccounts: DemoAccount[] = [
 ];
 
 const allowedViewsByPersona: Record<PersonaId, View[]> = {
-  facility:['workspace','dashboard','registry','manager','report'],
-  administration:['workspace','dashboard','registry'],
+  facility:['workspace','dashboard','registry','equipment','manager','report'],
+  administration:['workspace','dashboard','registry','equipment'],
   electricite:['workspace','report'],
   eau_incendie:['workspace','report'],
   rondes_assistance:['workspace','report'],
@@ -168,6 +169,7 @@ type NavigationItem = {
   label:string;
   subtitle:string;
   group:NavigationGroup;
+  secondary?:boolean;
 };
 
 /* Une seule source alimente le bandeau desktop et la barre mobile. Les groupes
@@ -178,6 +180,7 @@ const navItems: NavigationItem[] = [
   { key:'manager', label:'À traiter', subtitle:'Dossiers nécessitant votre intervention.', group:'Mon travail' },
   { key:'report', label:'Rondes', subtitle:'Contrôles terrain et rondes planifiées.', group:'Mon travail' },
   { key:'registry', label:'Registre', subtitle:'Consultez et recherchez l’ensemble des dossiers.', group:'Le bâtiment' },
+  { key:'equipment', label:'Équipements', subtitle:'Santé et informations disponibles du parc technique.', group:'Le bâtiment', secondary:true },
   { key:'dashboard', label:'Pilotage', subtitle:'Performance opérationnelle du site.', group:'Pilotage' },
 ];
 const navigationGroups: NavigationGroup[] = ['Mon travail','Le bâtiment','Pilotage','Administration'];
@@ -188,6 +191,7 @@ function NavigationIcon({ view }: { view:NavigationItem['key'] }) {
     {view === 'workspace' && <><path {...common} d="M4 5.5h16v13H4z"/><path {...common} d="M8 9h8M8 13h5"/></>}
     {view === 'dashboard' && <><path {...common} d="M4 13h6v7H4zM14 4h6v16h-6zM4 4h6v5H4z"/></>}
     {view === 'registry' && <><path {...common} d="M8 6h12M8 12h12M8 18h12"/><path {...common} d="M4 6h.01M4 12h.01M4 18h.01"/></>}
+    {view === 'equipment' && <><path {...common} d="M5 7.5 12 4l7 3.5v9L12 20l-7-3.5z"/><path {...common} d="m5 7.5 7 3.5 7-3.5M12 11v9"/></>}
     {view === 'manager' && <><circle {...common} cx="12" cy="12" r="8"/><path {...common} d="M12 8v4l3 2"/></>}
     {view === 'report' && <><path {...common} d="M7 4h10v16H7zM9.5 4V2.8h5V4"/><path {...common} d="m9.5 12 1.7 1.7 3.6-4"/></>}
   </svg>;
@@ -946,8 +950,10 @@ export default function Home() {
   };
 
   const visibleNav = navItems.filter((item) => allowedViewsByPersona[personaId].includes(item.key));
-  const primaryNav = visibleNav.slice(0,6);
-  const overflowNav = visibleNav.slice(6);
+  const primaryCandidates = visibleNav.filter((item) => !item.secondary);
+  const primaryNav = primaryCandidates.slice(0,6);
+  const primaryKeys = new Set(primaryNav.map((item) => item.key));
+  const overflowNav = visibleNav.filter((item) => !primaryKeys.has(item.key));
   const activeNavKey = view === 'detail' ? previousView : view;
   const overflowIsActive = overflowNav.some((item) => item.key === activeNavKey);
   const isNavigationActive = (key:NavigationItem['key']) => key === activeNavKey;
@@ -991,7 +997,7 @@ export default function Home() {
             return <button key={item.key} type="button" className={`nav-item ${active ? 'active' : ''}`} aria-current={active ? 'page' : undefined} onClick={() => navigate(item.key)}><NavigationIcon view={item.key}/><span className="nav-item-label">{item.label}</span></button>;
           })}
           {overflowNav.length > 0 && <div className="nav-overflow" ref={moreNavRef}>
-            <button ref={moreNavTriggerRef} type="button" className={`nav-item nav-more-trigger ${overflowIsActive ? 'active' : ''}`} aria-haspopup="menu" aria-expanded={moreNavOpen} aria-controls="navigation-more-menu" onKeyDown={(event) => {if (event.key === 'ArrowDown') {event.preventDefault();setMoreNavOpen(true);window.requestAnimationFrame(() => focusOverflowItem(0))}}} onClick={() => setMoreNavOpen((open) => !open)}><span className="nav-more-icon" aria-hidden="true">•••</span><span className="nav-item-label">Plus</span></button>
+            <button ref={moreNavTriggerRef} type="button" className={`nav-item nav-more-trigger ${overflowIsActive ? 'active' : ''}`} aria-current={overflowIsActive ? 'page' : undefined} aria-haspopup="menu" aria-expanded={moreNavOpen} aria-controls="navigation-more-menu" onKeyDown={(event) => {if (event.key === 'ArrowDown') {event.preventDefault();setMoreNavOpen(true);window.requestAnimationFrame(() => focusOverflowItem(0))}}} onClick={() => setMoreNavOpen((open) => !open)}><span className="nav-more-icon" aria-hidden="true">•••</span><span className="nav-item-label">Plus</span></button>
             {moreNavOpen && <div className="nav-more-menu" id="navigation-more-menu" role="menu" aria-label="Autres destinations" onKeyDown={onMoreNavKeyDown}>
               {navigationGroups.map((group) => {
                 const groupItems = overflowNav.filter((item) => item.group === group);
@@ -1019,6 +1025,7 @@ export default function Home() {
           {view === 'workspace' && <PersonaWorkspace persona={persona} anomalies={anomalies} equipment={equipmentItems} vendors={vendorReferences} canUploadVendorReport={effectiveCanUploadVendorReport} vendorReportBusy={mutationBusy} onVendorReport={persistVendorReport} escalations={escalations} fieldRequests={fieldRequests} onEscalationDecision={decideEscalation} onEscalateToDirection={escalateToDirection} onFieldRequest={submitFieldRequest} onOpen={(id) => openDetail(id, 'workspace')} onNavigate={navigate} flash={flash} />}
           {view === 'dashboard' && <Dashboard anomalies={anomalies} equipment={equipmentItems} audience={personaId === 'administration' ? 'administration' : 'facility'} onOpen={openDetail} onNavigate={navigate} />}
           {view === 'registry' && <Registry anomalies={filtered} query={query} setQuery={setQuery} priority={priorityFilter} setPriority={setPriorityFilter} status={statusFilter} setStatus={setStatusFilter} onOpen={(id) => openDetail(id, 'registry')} />}
+          {view === 'equipment' && <EquipmentWorkspace equipment={equipmentItems} />}
           {view === 'manager' && <Manager anomalies={anomalies} tab={managerTab} setTab={setManagerTab} onOpen={(id) => openDetail(id, 'manager')} />}
           {view === 'report' && <Report persona={persona} onNavigate={navigate} />}
           {view === 'detail' && <Detail key={`${selected.id}-${selected.status}-${selected.proof}-${selected.proofPending}`} anomaly={selected} readOnly={personaId === 'administration'} canVerify={personaId === 'facility' && session.mode === 'supabase'} busy={mutationBusy} onBack={() => navigate(previousView)} onStatus={(status) => void persistWorkflowStatus(status)} onProof={(file) => void persistProof(file)} onVerify={() => void verifyProof()} />}
