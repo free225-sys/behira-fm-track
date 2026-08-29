@@ -1309,6 +1309,41 @@ function OperationalAnalytics({ equipment, variant = 'direction' }: { equipment:
   </section>;
 }
 
+function ManagerHealthOverview({ anomalies, equipment }: { anomalies:Anomaly[]; equipment:EquipmentItem[] }) {
+  const criticalCount = anomalies.filter((item) => item.priority === 'Critique' && item.status !== 'Clôturée').length;
+  const watchedEquipment = equipment.filter((item) => item.health < 90).length;
+  const averageEquipmentHealth = equipment.length ? Math.round(equipment.reduce((total,item) => total + item.health,0) / equipment.length) : 0;
+  const averageAgentScore = Math.round(agentPerformance.reduce((total,item) => total + item.score,0) / agentPerformance.length);
+
+  return <section className="manager-health-overview" aria-labelledby="manager-health-title">
+    <header className="manager-health-heading">
+      <div><p className="design-kicker">SANTÉ &amp; PERFORMANCE</p><h2 id="manager-health-title">Vue d’ensemble du bâtiment</h2><p>Les indicateurs globaux précèdent les files opérationnelles afin de situer immédiatement le niveau de risque.</p></div>
+      <div className="delegation-chip" aria-label="Délégation financière active"><span>DÉLÉGATION ACTIVE</span><b>&lt; 400 000 FCFA</b><small>Au-delà : validation de l’Administration</small></div>
+    </header>
+    <div className="manager-health-kpis">
+      <article className="panel manager-health-card manager-building-score">
+        <div><span>SANTÉ BÂTIMENT</span><h3>Score global</h3><Badge tone="orange">SURVEILLANCE</Badge></div>
+        <ScoreRing value={82} />
+      </article>
+      <article className="panel manager-health-card manager-critical-health">
+        <div className="manager-health-card-head"><span>ALERTES CRITIQUES</span><Badge tone="critical">ACTION REQUISE</Badge></div>
+        <strong>{criticalCount}</strong><p>dossier{criticalCount > 1 ? 's' : ''} critique{criticalCount > 1 ? 's' : ''} actif{criticalCount > 1 ? 's' : ''}</p>
+        <div className="manager-health-progress danger" role="progressbar" aria-label={`${criticalCount} alertes critiques actives`} aria-valuemin={0} aria-valuemax={Math.max(anomalies.length,1)} aria-valuenow={criticalCount}><i style={{width:`${Math.min(100,(criticalCount / Math.max(anomalies.length,1)) * 100)}%`}} /></div>
+      </article>
+      <article className="panel manager-health-card">
+        <div className="manager-health-card-head"><span>PARC TECHNIQUE</span><Badge tone={watchedEquipment ? 'orange' : 'success'}>{watchedEquipment ? 'À SURVEILLER' : 'OPÉRATIONNEL'}</Badge></div>
+        <strong>{averageEquipmentHealth}<small>/100</small></strong><p>{equipment.length} modules suivis · {watchedEquipment} sous surveillance</p>
+        <div className="manager-health-progress" role="progressbar" aria-label={`Santé moyenne du parc technique ${averageEquipmentHealth} sur 100`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={averageEquipmentHealth}><i style={{width:`${averageEquipmentHealth}%`}} /></div>
+      </article>
+      <article className="panel manager-health-card">
+        <div className="manager-health-card-head"><span>ÉQUIPE TERRAIN</span><Badge tone="blue">3 AGENTS</Badge></div>
+        <strong>{averageAgentScore}<small>/100</small></strong><p>Score moyen de démonstration · méthode à valider</p>
+        <div className="manager-health-progress" role="progressbar" aria-label={`Score moyen de démonstration des agents ${averageAgentScore} sur 100`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={averageAgentScore}><i style={{width:`${averageAgentScore}%`}} /></div>
+      </article>
+    </div>
+  </section>;
+}
+
 function Dashboard({ anomalies, equipment, audience = 'facility', onOpen, onNavigate, readOnly = false }: { anomalies: Anomaly[]; equipment:EquipmentItem[]; audience?:'administration'|'facility'; onOpen:(id:string, from?:View)=>void; onNavigate:(view:View)=>void; readOnly?:boolean }) {
   const [dashboardTab, setDashboardTab] = useState<'overview'|'actions'|'health'|'equipment'>('overview');
   const urgent = anomalies.filter((a) => a.priority === 'Critique' || a.priority === 'Haute').filter((a) => a.status !== 'Clôturée').slice(0,3);
@@ -1407,16 +1442,7 @@ function Manager({ anomalies, equipment, tab, setTab, onOpen }: { anomalies:Anom
   const priorityCode:Record<Priority,string> = { Critique:'C', Haute:'H', Moyenne:'M', Faible:'F' };
 
   return <div className="manager-pilot">
-    <section className="manager-command-hero" aria-label="Contexte du poste de pilotage">
-      <div className="manager-heading-copy">
-        <p>Chaque dossier ressort avec un responsable, une prochaine action et une échéance.</p>
-      </div>
-      <div className="delegation-chip" aria-label="Délégation financière active">
-        <span>DÉLÉGATION ACTIVE</span>
-        <b>&lt; 400 000 FCFA</b>
-        <small>Au-delà : validation de l’Administration</small>
-      </div>
-    </section>
+    <ManagerHealthOverview anomalies={anomalies} equipment={equipment} />
 
     <section className="manager-kpis manager-kpis-target" aria-label="Indicateurs opérationnels">
       <button type="button" aria-pressed={tab === 'qualify'} className={tab === 'qualify' ? 'active' : ''} onClick={() => {setTab('qualify');setDecisionDone(false)}}>
@@ -1449,6 +1475,7 @@ function Manager({ anomalies, equipment, tab, setTab, onOpen }: { anomalies:Anom
         </div>
       </article>
 
+      <div className="fm-right-column">
       <article className="panel fm-decision-card">
         <div className="fm-decision-head">
           <div><div><Badge tone={priorityTone(focus.priority)}>{focus.priority}</Badge><span>{focus.id} · {focus.asset}</span></div><h3>{focus.title}</h3><p>{focus.location}</p></div>
@@ -1478,10 +1505,9 @@ function Manager({ anomalies, equipment, tab, setTab, onOpen }: { anomalies:Anom
         <div className="fm-decision-actions"><small>Proposition de maquette · la synthèse conserve les valeurs actuelles tant qu’aucune transaction n’est confirmée</small><button type="button" className="secondary-button" onClick={() => setDecisionDone(false)}>Conserver en brouillon</button><button type="button" className="primary-button" onClick={() => setDecisionDone(true)}>{branchLocked ? 'Préparer l’affectation' : overThreshold ? 'Soumettre à l’Administration' : 'Préparer la décision'}</button></div>
         {decisionDone && <div className="inline-success" role="status"><span>✓</span><p><b>Proposition préparée</b><small>Elle reste distincte de l’état actuel du dossier jusqu’à son enregistrement côté serveur.</small></p></div>}
       </article>
+      <WorkflowAnalytics items={anomalies.map((item) => ({ ...item, owner:canonicalResponsible(item) ?? 'Non affectée' }))} variant="manager" />
+      </div>
     </section>
-
-    <WorkflowAnalytics items={anomalies.map((item) => ({ ...item, owner:canonicalResponsible(item) ?? 'Non affectée' }))} variant="manager" />
-    <OperationalAnalytics equipment={equipment} variant="manager" />
   </div>;
 }
 

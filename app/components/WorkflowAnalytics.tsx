@@ -26,6 +26,7 @@ export function WorkflowAnalytics({ items, variant = 'manager', onOpenRegistry }
     { label:'Moyenne', count:active.filter((item) => item.priority === 'Moyenne').length, className:'info' },
     { label:'Faible', count:active.filter((item) => item.priority === 'Faible').length, className:'neutral' },
   ];
+  const severityMax = Math.max(1, ...severity.map((item) => item.count));
   const unassigned = active.filter((item) => item.owner === 'Non affectée').length;
   const proofsToReview = active.filter((item) => item.proofPending || (item.status === 'En validation' && item.proof)).length;
   const late = active.filter((item) => item.delayed).length;
@@ -54,7 +55,17 @@ export function WorkflowAnalytics({ items, variant = 'manager', onOpenRegistry }
 
       <article className="panel severity-card">
         <div className="analytics-card-head"><div><span>GRAVITÉ</span><h4>Exposition des dossiers actifs</h4></div><strong>{active.length}</strong></div>
-        <div className="severity-stack" aria-label="Répartition textuelle par gravité">{severity.map((item) => <div key={item.label}><span><i className={item.className} />{item.label}</span><b>{item.count}</b></div>)}</div>
+        <div className="severity-bars" aria-label="Répartition des dossiers actifs par gravité">
+          {severity.map((item) => (
+            <div className={`severity-bar-row severity-${item.className}`} key={item.label}>
+              <span><i aria-hidden="true" />{item.label}</span>
+              <div className="severity-bar-track" role="progressbar" aria-label={`${item.label} : ${item.count} dossier${item.count > 1 ? 's' : ''}`} aria-valuemin={0} aria-valuemax={severityMax} aria-valuenow={item.count}>
+                <i style={{ width:`${(item.count / severityMax) * 100}%` }} />
+              </div>
+              <b>{item.count}</b>
+            </div>
+          ))}
+        </div>
         {onOpenRegistry && <button className="text-action" type="button" onClick={onOpenRegistry}>Examiner dans le registre →</button>}
       </article>
 
