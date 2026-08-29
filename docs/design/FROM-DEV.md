@@ -2,6 +2,45 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-009 — Reprise Dev Lead après le checkpoint design `0580270`
+
+- **Date :** 30 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Checkpoint design reçu et vérifié localement — roadmap produit reprise
+- **Périmètre :** commits `85413e6` et `0580270`, contrat design vivant, recette du miroir et séquencement produit
+
+Le Dev Lead prend acte des deux commits livrés par le design. Les arbitrages **DEC-011**, **DEC-012** et **DEC-013** sont considérés comme clos conformément à la validation de Wilkam. En particulier, aucune nouvelle surface ne doit redéfinir la marque : `--mark #20b2aa` reste réservé au glyphe B, `--teal #0e6a66` porte l'accent courant, `--accent` reste son alias et le triplet `warning` conserve son rôle métier distinct.
+
+Le spécimen `/design-system`, `:root` et les primitives `Button`, `IconButton`, `Badge`, `Field` et `Card` constituent désormais le contrat obligatoire avant toute évolution d'interface. Les entrées DESIGN-030 à DESIGN-032 sont présentes dans la table de suivi de `FROM-DESIGN.md`, mais leurs corps détaillés ne figurent pas dans le journal ; cette lacune documentaire ne rouvre pas les décisions, dont la portée est confirmée par les commits, `DESIGN.md` et `DECISIONS.md`.
+
+### Recette du checkpoint
+
+- `pnpm audit:visual` : réussi, 62 contrôles après ajout du garde-fou sur les libellés de files ;
+- `pnpm verify:personas` : réussi, 32 contrôles ;
+- `pnpm lint` et `pnpm build` : réussis ;
+- `/` et `/design-system` : HTTP 200 ;
+- Geist Sans et Mono : HTTP 200, signature WOFF2 valide ;
+- contrôle rendu Facility Manager à 390, 768 et 1024 px : sept files visibles, trois compteurs prioritaires visibles, `aria-current` présent et aucun débordement horizontal.
+
+La recette de rendu a détecté une seule exception au contrat DEC-003 : les sept libellés `<small>` des files héritaient de la taille relative du navigateur et rendaient à 9,6 px. Le correctif ne crée aucun style : il applique `var(--font-size-label)` à ces libellés et ajoute un contrôle statique dédié. Aucun rôle, droit, statut, route, jeu de données, handler ou API n'est modifié.
+
+Le checkpoint design est donc **clos dans le miroir local**. Aucune publication ni configuration de déploiement n'est ajoutée dans ce lot. La branche distante reste au checkpoint reçu tant qu'un envoi explicite de ce nouveau commit n'est pas demandé.
+
+### Roadmap produit et technique reprise après DEV-008
+
+| Lot atomique | Objectif | Périmètre autorisé dans le miroir | Condition de sortie |
+| --- | --- | --- | --- |
+| **P1 — Contrat DEC-002** | Fermer la nomenclature et la matrice des destinations | Documenter la correspondance entre les cinq destinations existantes et les quatre destinations autonomes attendues : Équipements, Coûts, Utilisateurs et droits, Seuils et paramètres. Aucun écran ni accès nouveau dans ce sous-lot. | Noms, source de données, rôle lecteur, rôle acteur, CTA et état vide validés explicitement. |
+| **P2 — Équipements** | Extraire une destination autonome à partir du parc déjà visible | Réutiliser les données et composants existants, sans créer de donnée ni modifier `allowedViewsByPersona`. L'activation dans la navigation attend la validation de la matrice P1. | Liste, recherche, santé explicable, état insuffisant, responsive et accès validés. |
+| **P3 — Coûts** | Rassembler les montants et arbitrages existants | Vue de lecture et de décision fondée uniquement sur les montants déjà présents ; aucune tendance, facture ou paiement inventé. | Estimé, engagé, seuil, décision et pièces reliés au dossier avec état insuffisant. |
+| **P4 — Utilisateurs et droits** | Séparer l'administration fonctionnelle de la démonstration | Dans le miroir : spécification et état de démonstration uniquement. La création réelle d'un compte reste un traitement serveur du dépôt privé, jamais une clé d'administration dans le navigateur. | Matrice des rôles validée, création/désactivation/rattachement de périmètre spécifiés et audités. |
+| **P5 — Seuils et paramètres** | Rendre les paramètres métier lisibles et historisables | Présentation des seuils existants sans modification de règle dans le miroir. Toute édition réelle exige modèle canonique, historique et RLS dans le dépôt privé. | Valeur, unité, portée, auteur, justification et historique définis. |
+| **P6 — Dossier central** | Réutiliser la synthèse anti-dossier-zombie au niveau détaillé | Recomposition de la fiche avec les composants existants après raccordement canonique des huit champs dans le dépôt privé. | Aucune double source, CTA conforme au rôle, mobile sans perte d'information. |
+| **P7 — Terrain et résilience** | Consolider rondes, Surpresseur et double mission Rondes & Assistance | Rondes puis actions/preuves terrain ; synchronisation, idempotence, conflits et reprise après erreur spécifiés avant activation hors ligne. | Scénarios en ligne/hors ligne, preuves, erreurs et reprise testés. |
+| **P8 — Recette de livraison** | Préparer la validation métier et la production | Recette par persona, sécurité/RLS dans le dépôt privé, accessibilité, performance, sauvegarde et plan de retour arrière. | GO métier Administration + Facility Manager, puis publication contrôlée hors du miroir public. |
+
+Le lot **P1 — Contrat DEC-002** est livré dans `docs/design/DEC-002_CONTRAT_DESTINATIONS.md`. Il inventorie les cinq destinations existantes, les quatre destinations attendues, leurs sources réelles et leurs lacunes, puis soumet six arbitrages avant codage. L'ajout effectif de destinations ou leur attribution à des personas attend une validation explicite, car il modifierait la navigation visible et potentiellement la matrice d'accès.
+
 ## DEV-008 — Arbitrage DEC-007 : cockpit Facility Manager opérationnel d'abord
 
 - **Date :** 29 août 2026

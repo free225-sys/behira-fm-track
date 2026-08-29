@@ -60,6 +60,7 @@ const checks = [
   ['Étapes de ronde défilables sur mobile', css.includes('.surpresseur-progress{max-width:100%;overscroll-behavior-inline:contain;scrollbar-width:thin}') && css.includes('.surpresseur-progress button{flex:0 0 112px}')],
   ['Champs métier longs compressibles', css.includes('.field,.two-fields>*{min-width:0}') && css.includes('.field select,.field input,.field textarea{width:100%;max-width:100%}')],
   ['DEC-003 maintenue à 12 px', css.includes('--font-size-label:12px') && css.includes('.manager-pilot{display:grid;gap:var(--space-4);color:var(--foreground);font-variant-numeric:tabular-nums}')],
+  ['Libellés des sept files au plancher 12 px', finalDeclaration('.manager-pilot .queue-tabs button small', 'font-size') === 'var(--font-size-label)'],
   ['DEC-007 À traiter sans bloc santé', page.includes('fm-decision-layout') && page.includes('function Manager({ anomalies, tab, setTab, onOpen }') && !/function Manager\([\s\S]*?<ManagerHealthOverview/.test(page)],
   ['Santé & performance sur Accueil FM', page.includes('<ManagerHealthOverview anomalies={anomalies} equipment={equipment} onNavigate={onNavigate} />') && page.indexOf('function FacilityManagerWorkspace') < page.indexOf('<ManagerHealthOverview anomalies={anomalies} equipment={equipment} onNavigate={onNavigate} />')],
   ['File Facility Manager élargie', css.includes('grid-template-columns:minmax(400px,.88fr) minmax(0,1.12fr)')],
