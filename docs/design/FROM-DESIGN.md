@@ -8,11 +8,365 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 | id | date | sujet | attendu de | bloque |
 | --- | --- | --- | --- | --- |
+| DESIGN-012 | 2026-08-29 | Réponse à DEV-002 : badge Démo rétabli, direction artistique corrigée | Dev Lead | — |
+| DESIGN-011 | 2026-08-29 | Bandeau resserré — 403 px de chrome ramenés à 273, avis du dev lead demandé | Dev Lead | — |
+| DESIGN-010 | 2026-08-29 | Navigation en bandeau haut et première page — écart avec la direction artistique | wilkam | lot 5 |
+| DESIGN-009 | 2026-08-29 | Lot 4 — généralisation du socle, et un défaut de mon patch du lot 2 | Dev Lead | lot 5 |
+| DESIGN-008 | 2026-08-28 | Lot 3 — durées d'animation, rampe de composition, badge critique en gris | Dev Lead | — |
+| DESIGN-007 | 2026-08-28 | Triplets sémantiques : trois rôles sur cinq échouent au contraste 4.5:1 | Dev Lead | lot 3 |
+| DESIGN-006 | 2026-08-28 | Lot 2 — le registre au plancher 12 px : mesures et patch | Dev Lead | généralisation |
 | DESIGN-005 | 2026-08-28 | Fins de ligne : 31 fichiers apparaissent réécrits en entier à chaque diff | Dev Lead | toute relecture de diff |
 | DESIGN-004 | 2026-08-28 | Revue du lot 1B implémenté : neuf tokens font doublon avec ceux conservés | Dev Lead | lot 2 |
 | DESIGN-003 | 2026-08-28 | `pnpm dev` échoue sans accès réseau à `fonts.googleapis.com` | Dev Lead | tout audit hors ligne |
 | DESIGN-002 | 2026-08-28 | Nomenclature unique des destinations — *arbitrée, voir DEC-002* | Dev Lead | routes |
 | DESIGN-001 | 2026-08-28 | Lot 1 — spécification du socle de tokens | Dev Lead | lot 2, écran pilote |
+
+---
+
+## DESIGN-012 — Réponse à DEV-002 : le badge Démo était une erreur de ma part
+
+- **Date :** 29 août 2026
+- **Auteur :** Designer
+- **Statut :** Corrigé — patch du lot 5 régénéré
+- **Périmètre :** `app/globals.css`, `docs/design/BEHIRA_FM_TRACK_DIRECTION_ARTISTIQUE.md`, `docs/design/DECISIONS.md`
+
+### Le refus du masquage de « Mode démonstration » est fondé
+
+J'avais traité cette mention comme du bruit typographique occupant une ligne de trop, et je l'avais renvoyée aux seuls lecteurs d'écran avec un `clip`. C'était une erreur de catégorie : ce n'est pas un titre de zone, c'est **un marqueur d'environnement**, donc une information de sécurité. Un utilisateur qui ne voit pas qu'il est en démonstration peut croire qu'une action a été enregistrée. Le fait qu'elle prenne de la place n'autorise pas à la faire disparaître ; il oblige à la rendre compacte.
+
+Corrigé dans le patch : la mention devient une pastille ambre à côté du profil — fond `#3d2f16`, bordure `#6d5424`, texte `#f2c98d`, **8,36:1**, visible de tous. L'ambre la distingue du bleu de la coquille : c'est un état d'environnement, pas un élément de marque. Le libellé accessible complet et le raccourcissement à « Démo » relèvent du balisage et vous reviennent.
+
+Le chrome passe de 273 à **300 px**, soit 25 px de plus que la version qui masquait la mention. C'est le prix correct d'une information qui doit être vue, et on reste très en dessous des 403 px de départ.
+
+### Vos trois autres décisions
+
+**Refonte propre du shell avant le lot 6** — d'accord, et pour la raison que vous donnez : la réversibilité doit venir de Git, pas d'une seconde architecture laissée active dans la feuille. Le bloc appendu du lot 5 doit être lu comme une **spécification visuelle**, pas comme du code à intégrer. Les valeurs qui comptent y sont : hauteurs de bandes, paliers de compression 1240 et 1100 px, seuil du registre à 960 px, ordre des sections de la première page.
+
+**Menu « Plus » groupé plutôt que réduction du catalogue** — c'est le bon arbitrage, et il lève la tension entre DEC-002 et DEC-004. Deux points de vigilance de mon côté quand vous l'implémenterez : l'état actif doit rester visible sur le déclencheur quand la destination courante est dans le menu, sinon l'utilisateur perd son repère ; et les rubriques du menu doivent porter les mêmes noms que les groupes de DEC-002, faute de quoi on recrée une troisième nomenclature.
+
+**Contrôle renommé « Repli du registre avec responsable »** — d'accord, y compris sur la critique de mon intitulé : « desktop étroit » encode encore une largeur. Vos deux contrats sont plus justes que mon assertion, et l'ajout d'un test de rendu de part et d'autre du seuil est ce qui manquait réellement — un contrôle statique ne peut pas prouver qu'une information est visible.
+
+**Ordre d'exécution** — retenu tel quel. Je ne produis plus de patch tant que les lots 2 à 4 ne sont pas consolidés sur une base unique.
+
+### Direction artistique mise à jour
+
+`BEHIRA_FM_TRACK_DIRECTION_ARTISTIQUE.md`, section « Navigation », contredisait le produit depuis DEC-004. Réécrite, avec une note de révision datée qui renvoie à la décision et rappelle les mesures qui la motivent. Les nouveaux points ajoutés :
+
+- une seule source de destinations pour le bandeau desktop et la barre mobile ;
+- libellés seuls sur desktop, icônes réservées à la barre mobile et issues d'une famille tracée ;
+- rubrique active signalée par deux canaux au minimum, dont `aria-current` ;
+- quatre à six destinations visibles, le reste dans un menu « Plus » groupé, les droits filtrant avant la répartition ;
+- contraction par paliers plutôt que débordement, dans l'ordre : nom du site, nom d'utilisateur, mot-symbole ;
+- un seul titre visible par écran — la rubrique de menu, le titre de page et le titre de section ne se répètent pas ;
+- chrome de tête sous le quart de la hauteur utile ;
+- environnement non productif signalé visiblement et en permanence.
+
+`DECISIONS.md` porte désormais **DEC-004**, qui acte le bandeau, nomme la dérogation à la direction artistique et consigne ses conséquences.
+
+- **Fichiers concernés :** `app/globals.css` (patch régénéré, 270 lignes), `BEHIRA_FM_TRACK_DIRECTION_ARTISTIQUE.md`, `DECISIONS.md`
+- **Contrôles attendus :** `pnpm lint`, `pnpm build`, `pnpm audit:visual` passent. Aucun texte sous 12 px et aucun débordement à 1440, 1240, 1100, 1024, 960 et 760 px.
+- **Suite proposée :** J'attends la consolidation des lots 2 à 4 et la refonte du shell. Le lot 6 — encres sémantiques de DESIGN-007, les 58 écarts restants sur fond teinté — ne s'ouvre qu'après.
+
+---
+
+## DESIGN-011 — Le bandeau resserré, et une question ouverte au dev lead
+
+- **Date :** 29 août 2026
+- **Auteur :** Designer
+- **Statut :** Livré — **avis du dev lead explicitement demandé, voir la fin de l'entrée**
+- **Périmètre :** `app/globals.css`, plus une assertion de `scripts/audit-visual-styles.mjs`
+
+wilkam a retenu la navigation en bandeau haut (DESIGN-010) et demandé que le bandeau lui-même soit retravaillé. Voici ce qui a été corrigé.
+
+### Le vrai défaut : 403 px de chrome, et deux titres qui se répètent
+
+La première version empilait quatre bandes bleues avant le moindre contenu — 403 px sur un écran de 1 000 px, soit 40 % de la hauteur utile. Et deux titres se suivaient à trois lignes d'écart : « Espace Facility Manager » dans la barre de contexte, « Décider, affecter, débloquer » dans le bloc de tête. La duplication de nomenclature relevée en DESIGN-002 devenait visible à l'œil nu, l'un sous l'autre.
+
+| | Avant | Après |
+| --- | ---: | ---: |
+| Barre de navigation | 58 px | 52 px |
+| Bande de contexte | 103 px | 68 px |
+| Bloc de tête | 130 px | 56 px |
+| Compteurs | 112 px | 94 px |
+| **Chrome total** | **403 px** | **273 px** |
+
+Un tiers de la hauteur récupéré, sans rien retirer d'informatif.
+
+### Ce qui a été enlevé, et pourquoi
+
+**Le titre en double.** Le bloc de tête ne garde que sa phrase de contexte et le seuil de délégation. Son titre et sa rubrique répétaient mot pour mot le titre de page et l'entrée de menu active. Trois occurrences du même nom à l'écran, c'était une de trop même avant la refonte.
+
+**« MODE DÉMONSTRATION ».** Le libellé occupait une ligne entière au-dessus du sélecteur de profil, avec le poids typographique d'un titre de zone. C'est une mention d'environnement. Elle reste accessible aux lecteurs d'écran, elle ne prend plus de hauteur.
+
+**Le seuil de délégation** passe d'un encadré de trois lignes à une pastille horizontale : « Délégation active — < 400 000 FCFA — Au-delà : validation de l'Administration ». Même information, un quart de la place.
+
+**Le sélecteur de site** était une carte claire posée sur le bleu, plus lourde visuellement que la navigation elle-même. Il devient un repère séparé par un filet, au même poids que le bloc utilisateur. Un site courant se consulte, il ne se clique pas dix fois par jour.
+
+**Le pavé de score** alignait sa hauteur sur trois compteurs voisins à cause d'une barre de progression de 6 px et de ses marges. Compacté.
+
+### Contrôles
+
+`pnpm lint`, `pnpm build`, `pnpm verify:personas` (32) et `pnpm audit:visual` (13) passent. Mesures sur 10 combinaisons écran × profil à 1440 et 1024 px : aucun texte sous 12 px, aucun débordement horizontal, **aucun écart de contraste dans le bandeau**, une à deux troncatures résiduelles — toujours le titre d'anomalie le plus long. Barre mobile inchangée sous 700 px.
+
+### Un contrôle qui casse à chaque changement de seuil
+
+« Responsable visible sur desktop étroit » a échoué pour la troisième fois. Le contrôle teste la présence d'une chaîne de media query : il casse au lot 2 quand le seuil passe à 1280, au lot 5 quand il redescend à 960. Ce n'est pas le seuil qui est fragile, c'est l'assertion — elle vérifie une implémentation, pas un résultat.
+
+Réécrite pour être indépendante du seuil : elle vérifie qu'**il existe un repli en cartes, à n'importe quelle largeur, et que ce repli porte le responsable**. Elle survivra au prochain arbitrage de densité.
+
+### Ce sur quoi j'aimerais votre avis
+
+Trois points relèvent autant de la tenue du code que du design, et je préfère les poser plutôt que les trancher seul.
+
+**1. Le bandeau est aujourd'hui du CSS de surcharge.** Tout le lot 5 est un bloc appendu en fin de feuille qui neutralise le rail latéral au lieu de le remplacer. C'est ce qui rend la proposition réversible — et c'est aussi une dette immédiate : deux mises en page cohabitent dans le même fichier. Faut-il refondre `.sidebar` et `.app-shell` proprement maintenant, au risque de perdre la réversibilité, ou garder la surcharge jusqu'à validation métier ?
+
+**2. Trois éléments sont masqués en CSS alors qu'ils devraient disparaître du balisage** : le titre et la rubrique du bloc de tête, et le libellé « Mode démonstration ». Masquer du contenu en CSS est un procédé de démonstration, pas une solution. Est-ce que ces suppressions vous paraissent justes, et voulez-vous que je les formule comme une demande de modification de `page.tsx` ?
+
+**3. La tension entre DEC-002 et le bandeau.** La nomenclature validée prévoit jusqu'à neuf destinations groupées pour l'Administration ; un bandeau horizontal n'en porte pas plus de sept ou huit et ne sait pas afficher de groupes. Vous connaissez la structure de `navItems` et `allowedViewsByPersona` mieux que moi : un menu « Plus » en débordement vous paraît-il tenable, ou faut-il réduire le nombre de destinations exposées ?
+
+- **Fichiers concernés :** `app/globals.css`, `scripts/audit-visual-styles.mjs` (une assertion)
+- **Suite proposée :** Selon vos réponses, soit une refonte propre du shell, soit le lot 6 sur les encres sémantiques de DESIGN-007, qui referme le socle.
+
+---
+
+## DESIGN-010 — Navigation en bandeau haut, et remise en ordre de la première page
+
+- **Date :** 29 août 2026
+- **Auteur :** Designer
+- **Statut :** Proposition — **arbitrage de wilkam requis avant implémentation**
+- **Périmètre :** `app/globals.css`, desktop uniquement (au-dessus de 700 px)
+
+### Un écart assumé avec la direction artistique
+
+Le document de direction demande explicitement une « barre latérale stable sur desktop ». Cette proposition la remplace par un bandeau horizontal. **C'est un écart au cadrage validé, pas une interprétation.** Il ne doit pas être implémenté sans décision explicite, et il appelle une entrée dans `DECISIONS.md` s'il est retenu.
+
+La référence visuelle fournie par wilkam a servi de source de principes, pas de maquette : bandeau de navigation horizontal, bande de contexte sous le menu, compteurs en tête de page, contenu sur fond clair. Aucun élément graphique n'en est repris.
+
+### L'argument n'est pas esthétique, il est mesuré
+
+Le rail latéral occupe 244 px fixes. Le lot 2 a montré que le registre ne tient pas ses six colonnes en dessous de 1280 px et bascule en cartes — au prix d'une page deux fois plus haute à 1024 px. Le bandeau haut rend ces 244 px à la largeur utile.
+
+| Largeur | Rail latéral (lot 2) | Bandeau haut | Largeur de ligne du registre |
+| ---: | --- | --- | --- |
+| 1440 | tableau · 0 troncature | tableau · 0 troncature | 1 086 → **1 330 px** |
+| 1280 | tableau · 1 troncature | tableau · **0 troncature** | 926 → **1 176 px** |
+| 1180 | cartes · 1 687 px de haut | **tableau** · 0 troncature | — → **1 084 px** |
+| 1100 | cartes | **tableau** · 1 troncature | — → **1 010 px** |
+| 1024 | cartes | **tableau** · 1 troncature | 696 → **940 px** |
+| 961 | cartes | **tableau** · 1 troncature | — → **882 px** |
+
+Le seuil de bascule en cartes peut donc redescendre de 1280 à 960 px : un portable de 13 pouces retrouve le tableau dense, la vue en cartes redevient ce qu'elle doit être — la vue tablette et mobile. La réserve de densité conservée après le lot 2 disparaît d'elle-même.
+
+Le rail avait par ailleurs un défaut relevé dès la première revue : à deux entrées, il laissait près de 200 px de vide avant le pied de colonne. Un bandeau horizontal n'a pas ce problème — il se contracte.
+
+### La première page
+
+Après authentification, le Facility Manager arrivait sur un slogan — « Décider, affecter, débloquer » — suivi des compteurs, puis d'un diagramme de flux, et la file de travail se trouvait tout en bas de la page. Le premier écran ne répondait pas à la question qu'on se pose en ouvrant l'outil : qu'est-ce qui m'attend.
+
+L'ordre proposé, obtenu par `order` sur les sections existantes, sans toucher au balisage :
+
+1. **Bandeau de contexte** — date, écran, profil, action principale, seuil de délégation. Prolonge le bleu du menu.
+2. **Compteurs** — à qualifier, en retard, preuves à vérifier, score. Dans le bandeau, donc permanents et non plus contenu de page.
+3. **La file de décisions** — le travail, avec le premier dossier déjà ouvert et sa prochaine action.
+4. Le flux opérationnel.
+5. Les scores et tendances.
+
+Trois ajustements accompagnent ce changement. Le slogan passe de 26 px à `--font-size-title` et cède la vedette au contexte. Le seuil de délégation devient une pastille du bandeau plutôt qu'un encadré au milieu du contenu. Et les codes `AQ`, `SLA`, `PV` des compteurs sont masqués : le libellé sous le chiffre nomme déjà la mesure, ces abréviations n'étaient lisibles que par ceux qui les connaissaient déjà.
+
+### Les glyphes Unicode disparaissent
+
+Un bandeau horizontal se lit en texte. `◈ ⌂ ≡ ◎ ✓` sont masqués sur desktop, ce qui règle sans coût le défaut relevé en revue initiale — des caractères de police système servant d'icônes, dont deux disaient le contraire de leur destination. La barre basse mobile les conserve pour l'instant ; leur remplacement par une vraie famille tracée reste à faire là.
+
+### Compression et responsive
+
+Le bandeau se contracte par paliers : sous 1240 px le sélecteur de site et le nom d'utilisateur passent en retrait, sous 1100 px le mot-symbole ne garde que sa marque. Vérifié sans débordement horizontal à 1440, 1240, 1180, 1100, 1024, 960, 800 et 760 px, sur les trois profils. **Sous 700 px, rien ne change** : la barre basse mobile est intacte.
+
+### Le risque à connaître
+
+Cinq entrées tiennent confortablement. La nomenclature adoptée en DEC-002 en prévoit jusqu'à neuf pour l'Administration, réparties en quatre groupes. **Un bandeau horizontal ne porte pas de groupes nommés** et ne dépassera pas sept ou huit entrées avant de devoir déborder dans un menu « Plus ». Si la nomenclature groupée est maintenue, les deux décisions entrent en tension et il faut trancher : soit le rail latéral avec ses groupes, soit le bandeau avec une liste plate plus courte.
+
+C'est la seule vraie objection à cette proposition, et elle ne se résout pas par le design : elle dépend du nombre de destinations que le produit veut exposer.
+
+- **Fichiers concernés :** `app/globals.css` uniquement — aucun changement de balisage, de logique ni de rôle
+- **Contrôles attendus :** `pnpm lint`, `pnpm build`, `pnpm verify:personas`. Vérifié de mon côté : aucun texte sous 12 px, aucun débordement horizontal sur 10 combinaisons écran × profil à 1440 et 1024 px, barre mobile inchangée à 375 px.
+- **Suite proposée :** Si wilkam retient le bandeau, consigner la décision, redescendre le seuil du registre à 960 px et rouvrir la question de la colonne Responsable, aujourd'hui masquée sous 1180 px alors que la largeur le permettrait désormais. Si wilkam conserve le rail, le patch est jeté et le lot 5 revient aux encres sémantiques de DESIGN-007.
+
+---
+
+## DESIGN-009 — Lot 4 : le socle généralisé, et une erreur dans mon patch du lot 2
+
+- **Date :** 29 août 2026
+- **Auteur :** Designer
+- **Statut :** Livré — `lot4-socle-generalise.patch`, à appliquer après les lots 2 et 3
+- **Périmètre :** `app/globals.css` pour l'essentiel, plus une assertion de `scripts/audit-visual-styles.mjs`
+
+### Mes deux erreurs, corrigées par le dev lead
+
+**Le patch du lot 2 déplaçait trois points de rupture au lieu d'un.** J'avais opéré par substitution de chaîne sur `@media (max-width:960px)` puis sur `@media (max-width:1100px)`, sans restreindre la portée. Résultat : le bloc du registre partait bien à 1279 px, mais **deux blocs préexistants à 1100 px**, concernant le tableau de bord et le Surpresseur, partaient avec lui. La restauration à 1100 px était la bonne décision, et le constat était juste : seul le registre bascule à 1280 px.
+
+C'est le même mécanisme que le défaut relevé au lot 1B — une opération globale appliquée sans vérifier son périmètre réel. J'ai adopté depuis une règle : ne plus dériver un périmètre d'une liste de sélecteurs devinée, mais **le collecter depuis le DOM rendu**. Le lot 4 ci-dessous est construit ainsi.
+
+**« Afficher la continuité de traitement » restait à 8 px.** Ma cartographie du lot 2 énumérait les sélecteurs à la main et a manqué la variante repliée. Le correctif était nécessaire.
+
+**Sur la réserve de densité :** la troncature observée en fenêtre étroite avec barre de défilement classique correspond à ma propre mesure — une seule troncature à 1280 px, le titre d'anomalie le plus long. La barre de défilement retire une quinzaine de pixels au viewport et fait tomber la fenêtre juste au-dessus du seuil. La conserver comme réserve est le bon arbitrage : c'est un titre sur huit, et le code d'anomalie comme l'équipement restent lisibles.
+
+### Ce que fait le lot 4
+
+Le périmètre a été relevé dans le navigateur, sur les trois profils et tous leurs écrans : tout élément rendu sous 12 px, et tout rayon hors échelle, avec les règles CSS qui les produisent. Le résultat déborde largement du tableau de bord — 75 sélecteurs de taille, 14 de rayon, dont une partie dans la coquille applicative. La substitution a donc été appliquée mécaniquement à toute la feuille, sans changement d'intention visuelle.
+
+| | Avant lot 4 | Après |
+| --- | ---: | ---: |
+| Déclarations `font-size` en pixels ≤ 18 px | 425 | **0** — toutes passées aux tokens |
+| Déclarations `border-radius` en pixels | 157 | **0** |
+| Rayons réellement rendus dans l'application | 8 valeurs | **8, 12, 16, 999, 50 %** |
+| Éléments rendus sous 12 px | ~40 par écran | **0** |
+| Gris de texte écrits en dur sous 4.5:1 | 78 valeurs, 94 usages | **0** — tous sur `--foreground-muted` |
+| Éléments sous 4.5:1 (10 écrans × 3 profils) | 161 | **58** |
+| Débordement horizontal | — | **aucun** |
+
+**`--font-size-display` porté de 24 à 28 px.** Les valeurs dominantes actuelles sont à 27, 28, 29 et 30 px selon l'écran ; 24 px les aurait toutes réduites. 28 px les unifie en abaissant très légèrement la plus grande. Les KPI secondaires, à 21 et 22 px, se replient sur `--font-size-title` (20 px). Deux niveaux au lieu de huit.
+
+**Une régression introduite puis corrigée dans le même lot.** Le passage de la fiche Surpresseur à 12 px a fait déborder `.score-freshness` de 154 px à 1440. La ligne libellé/valeur était en `flex` sans repli ni `min-width:0`. Corrigé ; vérifié sur les deux profils qui accèdent à cet écran.
+
+**Une assertion de test modifiée — votre territoire, à valider.** `pnpm audit:visual` échouait sur « Responsable visible sur desktop étroit ». Le contrôle teste la présence de la chaîne `@media (min-width:961px) and (max-width:1180px)`, que le lot 2 a supprimée : il vérifie le mécanisme, pas le résultat. Le résultat, lui, est acquis — sous 1280 px le registre passe en cartes et le responsable s'affiche en champ libellé, ce que j'ai mesuré à 0 troncature. J'ai réécrit l'assertion sur `@media (max-width:1279px)` et la présence de `.registry-mobile-details`. Votre copie locale comporte un contrôle de plus que la mienne ; reprenez la formulation plutôt que le patch.
+
+### Contrôles
+
+`pnpm lint`, `pnpm build`, `pnpm verify:personas` (32 contrôles) et `pnpm audit:visual` (13 contrôles) passent. Mesures runtime sur 10 combinaisons écran × profil à 1440 px : aucun texte sous 12 px, aucun débordement, une troncature résiduelle sur le tableau de bord.
+
+### Ce qui reste : 58 écarts de contraste, tous sur fond teinté
+
+Ils ne relèvent plus de l'encre neutre mais des surfaces sémantiques : `+1 600 000 FCFA` à 3.96:1 sur ambre, les pastilles `AQ` à 2.93:1, `SLA` et `PV` à 4.2:1, les marqueurs `1`, `2`, `01` dans leurs ronds teintés. C'est exactement l'objet de DESIGN-007 : chaque triplet a besoin d'une encre propre, assombrie au minimum, distincte du token de rôle. C'est le lot 5, et il clôt le socle.
+
+- **Fichiers concernés :** `app/globals.css`, `scripts/audit-visual-styles.mjs` (une assertion)
+- **Impacts attendus :** Aucun changement de logique, de donnée, de rôle ni de rupture. Aucune valeur de couleur nouvelle hors `--foreground-muted`, déjà déclaré.
+- **Suite proposée :** Lot 5 — encres des triplets sémantiques, puis le socle est refermé et la nomenclature de DEC-002 peut être implémentée avec les routes.
+
+---
+
+## DESIGN-008 — Lot 3 : animation, encodage des graphiques, badge critique
+
+- **Date :** 28 août 2026
+- **Auteur :** Designer
+- **Statut :** Livré — patch `lot3-graphes-contraste.patch`, à appliquer après le lot 2
+- **Périmètre :** `app/globals.css`
+- **Contexte :** Demande initiale : « animer les graphiques ». Vérification faite dans l'application en marche — **ils le sont déjà, et correctement.** `.score-ring-value` transitionne sur `stroke-dashoffset`, `.score-bar-track>i` et `.agent-score-track>i` sur `width`, `.trend-column i` sur `height`, et trois blocs `prefers-reduced-motion` les neutralisent. Surtout, l'animation se déclenche au **changement de valeur** — bascule 7 j / 30 j / 90 j, filtre Tous / À surveiller — et non à l'ouverture. C'est le seul rôle légitime du mouvement dans un outil d'exploitation : dire quelle barre a bougé et de combien.
+
+  Trois observations issues de cette vérification.
+
+  **Les durées sont trop longues.** 550 ms pour les barres, 600 ms pour l'anneau. Au-delà d'environ 400 ms, l'utilisateur attend que la valeur se stabilise avant de la lire. Ramenées à **240 ms** pour les barres et **320 ms** pour l'anneau, qui parcourt plus de chemin. Courbe d'accélération inchangée.
+
+  **Le mouvement rejoue à chaque navigation.** Faute de routes, chaque clic dans la sidebar remonte les composants et relance toutes les transitions. Aucune animation supplémentaire ne devrait être ajoutée avant le chantier B, sous peine de multiplier cet effet.
+
+  **Ce qui manque n'est pas de l'animation, c'est de la donnée.** « Évolution de la charge » et « Score du bâtiment » affichent tous deux *Données historiques insuffisantes*. Le graphique de tendance — celui que le mouvement servirait le mieux — n'existe pas encore comme graphique.
+
+- **Décision ou question :** Trois corrections, appliquées et vérifiées.
+
+  **1. La composition du score portait les couleurs d'état.** `.score-components i.series-2/3/4` consommait `--viz-series-2/3/4`, dont les valeurs sont exactement `--success`, `--warning` et `--danger`. Résultat : dans la répartition du score global — Équipements 70 %, Sécurité 15 %, Zones 10 %, Continuité 5 % — la Sécurité s'affichait en vert et la Continuité en rouge. Le lecteur comprend « la sécurité va bien, la continuité va mal », ce que le graphique ne dit pas : ce sont des poids, pas des états.
+
+  Ces quatre parts ne sont pas des catégories indépendantes mais les fractions d'une même grandeur. L'encodage juste est donc **séquentiel, une seule teinte, du foncé au clair**, ordonné par poids — pas une palette catégorielle. Rampe introduite, construite sur l'axe bleu BEHIRA et ancrée sur `--brand` :
+
+  | Token | Valeur | Contraste sur blanc |
+  | --- | --- | ---: |
+  | `--score-part-1` | `#123a6b` | 11.39:1 |
+  | `--score-part-2` | `#235ea7` *(= `--brand`)* | 6.50:1 |
+  | `--score-part-3` | `#3d79bd` | 4.50:1 |
+  | `--score-part-4` | `#5b93cd` | 3.23:1 |
+
+  Luminance strictement croissante, chaque pas au-dessus du seuil de 3:1 exigé pour une surface colorée. Aucune palette nouvelle : la rampe est une interpolation entre les deux bleus déjà validés du projet.
+
+  En contrepartie, `--viz-series-2/3/4` disparaissent. Là où la couleur signifie réellement un état — `.score-bar-track>i.success/.warning/.danger`, les barres de score par équipement, et leur légende — les règles consomment désormais `--success`, `--warning` et `--danger` directement. Ces trois tokens étaient de simples doublons de valeur, du même type que les alias supprimés au lot 1A.
+
+  **2. Le badge le plus important de l'application s'affichait en gris.** Mesuré dans le rendu : « Hors délégation », « Critique » et « 3 décisions » apparaissaient à **3,07:1** dans la liste des remontées terrain. La cause n'est pas la palette mais une collision de spécificité :
+
+```
+.field-request-list article>div:first-child>span { color:#7d8996; font-size:8px }
+```
+
+  Cette règle de mise en page repeint **tous** les `span` enfants directs, badges compris, avec une spécificité (0,3,3) qui écrase `.badge-critical` (0,1,0). Le statut n'était plus porté que par la teinte de fond. Corrigé par `span:not(.badge)`. Les neuf badges de l'application passent désormais entre **5,84:1 et 7,39:1**.
+
+  Ce constat corrige mon entrée DESIGN-007 : mon estimation partait de la lecture statique de la feuille de style, qui annonçait trois badges non conformes. Le rendu réel en donnait un seul, et pour une autre cause. Les valeurs assombries que j'y proposais ne sont pas nécessaires ; l'entrée reste ouverte pour les seuls triplets fond/bordure/texte, à consommer quand les autres écrans passeront au socle.
+
+  **3. Un débordement de périmètre de ma part, au lot 2.** La règle `.badge-label{font-size:var(--font-size-label)}` que j'avais ajoutée en fin de feuille n'était pas cadrée et remontait tous les badges de l'application à 12 px, pas seulement ceux du registre. Je l'assume et je la conserve — mais délibérément, cadrée en `.badge .badge-label, .badge .badge-icon`. Conséquence à valider : tous les badges de l'application passent de 8–9 px à 12 px, ce qui est conforme à DEC-003 mais dépasse le périmètre annoncé du lot 2.
+
+- **Fichiers concernés :** `app/globals.css` uniquement
+- **Impacts attendus :** Aucun changement de logique, de donnée ni de rôle. Trois tokens supprimés, quatre ajoutés.
+- **Contrôles attendus :** `pnpm lint`, `pnpm build`, `pnpm verify:personas`. Vérifié de mon côté : neuf badges entre 5,84:1 et 7,39:1 sur les quatre écrans du Facility Manager, transitions à 0,24 s et 0,32 s, rampe de composition rendue en quatre bleus, et non-régression du registre — aucun texte sous 12 px, une seule troncature résiduelle à 1280 et 375 px.
+- **Suite proposée :** Ne pas ajouter d'animation supplémentaire avant les routes. Quand le graphique de tendance aura des données, définir à ce moment-là une palette catégorielle validée — pas avant, et pas en réutilisant les couleurs d'état.
+
+---
+
+## DESIGN-007 — Trois rôles sémantiques sur cinq échouent au contraste
+
+- **Date :** 28 août 2026
+- **Auteur :** Designer
+- **Statut :** Ouvert — valeurs à arbitrer avant le lot 3
+- **Périmètre :** Triplets fond / bordure / texte, badges
+- **Contexte :** Le passage au plancher de 12 px rend le contrôle de contraste contraignant : à cette taille le seuil applicable est 4.5:1, pas 3:1. Mesuré sur les triplets que j'avais proposés en DESIGN-001, en utilisant les tokens de rôle comme couleur de texte :
+
+  | Rôle | Surface | Texte | Ratio | Verdict |
+  | --- | --- | --- | ---: | --- |
+  | Danger | `#fde8e9` | `var(--danger)` | 4.20 | insuffisant |
+  | Avertissement | `#fff0e1` | `var(--warning)` | 4.07 | insuffisant |
+  | Succès | `#e7f5ed` | `var(--success)` | 3.32 | **très insuffisant** |
+  | Information | `#edf5fc` | `var(--brand)` | 5.90 | conforme |
+  | Neutre | `#f7f9fb` | `var(--foreground-muted)` | 5.48 | conforme |
+
+  Le défaut existe déjà dans le code actuel, indépendamment du chantier. Sur les huit badges de `app/globals.css`, trois sont sous le seuil : `.badge-high` 3.21:1, `.badge-orange` 3.51:1, `.badge-neutral` 4.39:1.
+
+- **Décision ou question :** Introduire une couleur de texte propre à chaque triplet, distincte du token de rôle, obtenue en assombrissant le rôle au minimum nécessaire — teinte et saturation conservées, donc sans nouvelle palette :
+
+  | Token proposé | Valeur | Ratio sur sa surface | Ratio sur blanc |
+  | --- | --- | ---: | ---: |
+  | `--danger-text` | `#c33841` | 4.52 | 5.30 |
+  | `--warning-text` | `#ad5716` | 4.53 | 5.06 |
+  | `--success-text` | `#287c58` | 4.54 | 5.10 |
+  | `--info-text` | `var(--brand)` inchangé | 5.90 | 6.50 |
+  | `--neutral-text` | `var(--foreground-muted)` inchangé | 5.48 | 5.78 |
+
+  Les tokens de rôle `--danger`, `--warning`, `--success` restent inchangés pour les pastilles, barres et séries de graphiques, où seul le 3:1 non textuel s'applique. Correctifs de badges au passage : `.badge-high` `#d26b18` → `#ac5814`, `.badge-orange` `#c6671b` → `#ab5917`, `.badge-neutral` `#66717d` → `#656f7b`.
+
+- **Fichiers concernés :** `app/globals.css`
+- **Impacts attendus :** Assombrissement à peine perceptible des libellés de badge ; aucun changement de teinte perçue.
+- **Contrôles attendus :** Recalcul des ratios après application, sur les cinq profils.
+- **Suite proposée :** À intégrer au lot 3, en même temps que la consommation des triplets sur les autres écrans.
+
+---
+
+## DESIGN-006 — Lot 2 : le registre au plancher de 12 px
+
+- **Date :** 28 août 2026
+- **Auteur :** Designer
+- **Statut :** Livré — patch joint, à relire et committer
+- **Périmètre :** `app/globals.css`, périmètre registre uniquement
+- **Contexte :** Application de l'échelle du lot 1B au seul écran pilote, pour mesurer le coût réel du plancher arbitré en DEC-003. Vingt-six déclarations `font-size` remplacées par les tokens, plus les hauteurs de contrôle des filtres et de la recherche (38 px → `--control-height`). Mesures prises sur l'application lancée localement au commit `31430d8`, profil Facility Manager, huit anomalies de démonstration.
+
+  | Largeur | Avant | Après |
+  | --- | --- | --- |
+  | 1440 | tableau · 0 troncature · 715 px · textes de 7 à 11 px | tableau · 0 troncature · 743 px *(+4 %)* · rien sous 12 px |
+  | 1280 | tableau · troncatures · idem | tableau · 1 troncature *(le titre le plus long)* · 753 px |
+  | 1024 | tableau · **9 troncatures** · 715 px | cartes · **0 troncature** · 1 687 px |
+  | 880 | cartes · 0 troncature · 1 393 px | cartes · 0 troncature · 1 687 px *(+21 %)* |
+  | 375 | cartes · 0 troncature · 1 724 px | cartes · 1 troncature · 2 218 px *(+29 %)* |
+
+  **Le plancher tient sur desktop.** À 1440 px, remonter tous les textes à 12 px coûte 3 px de hauteur de ligne et ne provoque aucune troncature ni aucun débordement. C'est presque gratuit.
+
+  **Il ne tient pas dans le tableau à six colonnes en dessous de 1280 px.** Le titre d'anomalie devient illisible : « Batterie de démarrage s… » ne dit pas ce qui est en panne. J'ai d'abord tenté un rééquilibrage des colonnes ; sans effet, parce qu'à cette largeur toutes les colonnes sont déjà à leur minimum et la répartition en `fr` ne s'applique plus.
+
+  La solution retenue est de **remonter la bascule en cartes structurées de 960 à 1280 px**. Les cartes affichent l'échéance et le responsable en clair, ce que le tableau masquait ou tronquait. Coût : la page fait 1 687 px au lieu de 748 px à 1024 px — on remplace de la troncature par du défilement. Un titre tronqué est inutilisable ; du défilement est seulement plus lent.
+
+  Correction incluse : `Non attribué` et `Acteur externe : PREST-ASC` s'affichaient collés faute de `display:block` sur le `<small>`. Le défaut existait avant, il devenait très visible à 12 px.
+
+- **Décision ou question :** Adopter le patch tel quel, ou retenir l'alternative — conserver le tableau jusqu'à 960 px et accepter neuf troncatures à 1024 px. Je recommande le patch : la direction artistique demande que statut, priorité, échéance et responsable soient lisibles sans ouvrir la fiche, ce que le tableau à 1024 px ne permet pas.
+
+  Deux points laissés ouverts en DESIGN-004 sont tranchés par la mesure :
+  - **`--font-size-secondary` n'est pas nécessaire.** Le registre n'utilise que `label` 12 et `body` 14 ; aucun besoin d'un cran à 13 px n'est apparu. La proposition est retirée.
+  - **`--font-size-display` à 24 px n'a pas été éprouvé ici** : le registre n'affiche pas de valeur KPI dominante. À trancher sur le tableau de bord, où les valeurs sont aujourd'hui à 29 px.
+
+- **Fichiers concernés :** `app/globals.css` — patch de 107 lignes, aucun autre fichier touché
+- **Impacts attendus :** Aucun changement de logique, de rôle ni de contenu. Un point de rupture supprimé (`min-width:961px and max-width:1180px`), un déplacé (960 → 1280).
+- **Contrôles attendus :** `pnpm lint`, `pnpm build`, `pnpm verify:personas`. Vérifié de mon côté à 1600, 1440, 1366, 1280, 1279, 1024, 880, 700, 430 et 375 px : aucun texte sous 12 px dans le périmètre, aucun débordement horizontal, une seule troncature résiduelle — le titre d'anomalie le plus long.
+- **Suite proposée :** Après validation, lot 3 sur le tableau de bord : triplets sémantiques de DESIGN-007, arbitrage de `--font-size-display`, et rayons.
 
 ---
 

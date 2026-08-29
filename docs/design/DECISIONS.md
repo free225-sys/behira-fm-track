@@ -2,6 +2,24 @@
 
 Ne jamais supprimer ni réécrire une décision actée. Toute évolution doit prendre la forme d'une nouvelle entrée qui complète ou remplace explicitement une décision antérieure.
 
+## DEC-004 — Navigation en bandeau haut sur desktop
+
+- **Date :** 29 août 2026
+- **Auteur :** wilkam
+- **Statut :** Adopté
+- **Périmètre :** Coquille applicative, desktop au-dessus de 700 px
+- **Contexte :** La direction artistique demande une « barre latérale stable sur desktop ». Le rail occupe 244 px fixes, ce qui a contraint le registre à basculer en cartes structurées dès 1280 px au lot 2, au prix d'une page deux fois plus haute à 1024 px. Le rail laissait par ailleurs près de 200 px de vide pour les profils à deux entrées. Mesures comparées sur la largeur de ligne du registre : 696 px avec le rail à 1024 px, 940 px avec le bandeau ; le tableau à six colonnes tient jusqu'à 961 px au lieu de céder à 1280 px.
+- **Décision ou question :** La navigation passe en **bandeau horizontal en haut** sur desktop. Cette décision **déroge explicitement** au cadrage de `BEHIRA_FM_TRACK_DIRECTION_ARTISTIQUE.md`, section « Navigation ». La dérogation est assumée et motivée par la densité opérationnelle regagnée, pas par une préférence esthétique. La navigation mobile en barre basse, sous 700 px, reste inchangée.
+- **Conséquences actées :**
+  - Le seuil de bascule du registre en cartes redescend de 1280 px à 960 px.
+  - Les glyphes Unicode `◈ ⌂ ≡ ◎ ✓` disparaissent de la navigation desktop : un bandeau horizontal se lit en texte. Ils subsistent sur la barre mobile, à remplacer par une famille tracée.
+  - L'ordre de la première page après authentification devient : contexte, compteurs, file de travail, flux, tendances.
+- **Point ouvert :** Tension avec DEC-002. La nomenclature adoptée prévoit jusqu'à neuf destinations groupées pour l'Administration ; un bandeau horizontal ne porte pas de groupes nommés et sature vers sept ou huit entrées. À trancher avant l'implémentation de la nomenclature : menu « Plus » en débordement, ou réduction du nombre de destinations exposées.
+- **Fichiers concernés :** `app/globals.css`, et `app/page.tsx` si les suppressions de titres dupliqués sont portées au balisage
+- **Impacts attendus :** Aucun changement de logique, de rôle ni de permission. Mise à jour de la section « Navigation » de la direction artistique à prévoir, pour que le document cesse de contredire le produit.
+- **Contrôles attendus :** `pnpm lint`, `pnpm build`, `pnpm verify:personas`, `pnpm audit:visual`, plus vérification sans débordement horizontal de 760 à 1600 px et barre mobile intacte sous 700 px.
+- **Suite proposée :** Voir DESIGN-010 et DESIGN-011 dans `FROM-DESIGN.md`.
+
 ## DEC-003 — Plancher typographique à 12 px
 
 - **Date :** 29 août 2026

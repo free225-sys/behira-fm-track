@@ -102,10 +102,16 @@ Prévoir également une échelle cohérente pour les espacements, rayons, hauteu
 
 ### Navigation
 
-- Barre latérale stable sur desktop, navigation adaptée sur mobile.
-- Rubrique active évidente sans double bordure ni décoration excessive.
-- Icônes cohérentes, accompagnées d’un libellé lorsque leur sens n’est pas universel.
-- En-tête de page réunissant contexte, titre, information secondaire et action principale.
+> **Révisé le 29 août 2026 par DEC-004.** La version initiale demandait une barre latérale stable sur desktop. Le rail occupait 244 px fixes, ce qui empêchait le registre de tenir ses six colonnes en dessous de 1280 px et laissait près de 200 px de vide pour les profils à deux entrées. La navigation passe en bandeau horizontal ; les mesures qui motivent l'arbitrage sont dans DEC-004.
+
+- **Bandeau horizontal en haut sur desktop, barre basse sur mobile.** Une seule source de destinations alimente les deux : mêmes libellés, mêmes droits, aucun doublon.
+- Un bandeau se lit en texte. Sur desktop les libellés suffisent ; réserver les icônes à la barre mobile, où la place manque, et n'y employer qu'une famille tracée cohérente — jamais des caractères de police système.
+- Rubrique active évidente sans double bordure ni décoration excessive, et signalée par au moins deux canaux : un repère visuel et `aria-current`. La couleur seule ne suffit pas.
+- Quatre à six destinations prioritaires visibles selon le profil et la largeur ; les suivantes dans un menu « Plus » qui affiche les rubriques du catalogue. Le menu n'accorde jamais un accès que la navigation principale refuserait : les droits filtrent avant la répartition.
+- Le bandeau se contracte par paliers plutôt que de déborder. Ce qui disparaît en premier est ce qui se consulte le moins : le nom du site, puis le nom de l'utilisateur, puis le mot-symbole.
+- En-tête de page réunissant contexte, titre, information secondaire et action principale — **une seule fois**. Un même écran ne porte qu'un titre visible ; la rubrique de menu, le titre de page et le titre de section ne se répètent pas l'un sous l'autre.
+- Le chrome de tête reste sous le quart de la hauteur utile. Au-delà, le contenu commence trop bas sur un portable.
+- L'environnement non productif est signalé en permanence et visiblement, pas seulement pour les lecteurs d'écran : un badge compact suffit, mais il doit être vu. Une action simulée ne doit jamais pouvoir passer pour une action enregistrée.
 
 ### KPI
 

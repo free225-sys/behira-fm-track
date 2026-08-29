@@ -1,0 +1,15 @@
+diff --git a/scripts/audit-visual-styles.mjs b/scripts/audit-visual-styles.mjs
+index f593945..5ceb2d3 100644
+--- a/scripts/audit-visual-styles.mjs
++++ b/scripts/audit-visual-styles.mjs
+@@ -30,7 +30,9 @@ const checks = [
+   ['Titres mobiles compacts présents', page.includes('mobilePageTitle') && css.includes('.mobile-title{display:inline}')],
+   ['Réserve navigation mobile présente', css.includes('.main-column{padding-bottom:92px}')],
+   ['Grille du registre partagée', css.includes('.registry-head,.registry-row{grid-template-columns:var(--registry-columns)}')],
+-  ['Responsable visible sur desktop étroit', css.includes('@media (min-width:961px) and (max-width:1180px)') && css.includes('.registry-row>.owner-cell{display:flex}')],
++  // Contrôle indépendant du seuil : quel que soit le point de bascule retenu,
++  // le registre doit offrir un repli en cartes qui porte le responsable.
++  ['Responsable visible sur desktop étroit', /@media \(max-width:\d+px\)\{[^@]*\.registry-head\{display:none\}/.test(css) && css.includes('.registry-mobile-details{grid-column:1;grid-row:3;display:grid')],
+   ['Titres tronqués proprement', css.includes('.topbar h1{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}')],
+   ['Références équipement insécables', page.includes('className="equipment-reference"') && css.includes('.equipment-reference{white-space:nowrap;word-break:keep-all;overflow-wrap:normal}')],
+ ]

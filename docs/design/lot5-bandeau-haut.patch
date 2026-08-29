@@ -1,0 +1,270 @@
+--- a/app/globals.css
++++ b/app/globals.css
+@@ -653,7 +653,7 @@
+ 
+ 
+ 
+-@media (max-width:1279px){
++@media (max-width:960px){
+   .registry-head{display:none}
+   .registry-card{border-top:1px solid var(--border);border-radius:var(--radius-md)}
+   .registry-row{grid-template-columns:minmax(0,1fr) 20px;gap:8px;align-items:start;padding:14px}
+@@ -676,3 +676,258 @@
+ /* Lot 4 — une ligne libellé/valeur doit pouvoir se replier quand le texte grandit. */
+ .score-freshness span{flex-wrap:wrap;min-width:0}
+ .score-freshness b{min-width:0;overflow-wrap:anywhere}
++
++/* ============================================================
++   Lot 5 (proposition) — navigation en bandeau haut
++   Remplace le rail latéral sur desktop. La navigation mobile
++   en barre basse reste inchangée sous 700 px.
++   ============================================================ */
++@media (min-width:701px){
++  .app-shell{flex-direction:column}
++
++  .sidebar{
++    position:sticky; top:0; inset:auto; width:100%; height:auto;
++    flex-direction:row; align-items:stretch; gap:clamp(16px,2.5vw,40px);
++    padding:0 clamp(24px,4vw,54px);
++    background:var(--brand-strong);
++  }
++  .sidebar .brand{
++    width:auto; flex:none; align-self:center;
++    padding:0; margin:0; border:0; gap:10px;
++  }
++  .sidebar .brand-mark{width:32px;height:32px;border-radius:var(--radius-sm)}
++  .sidebar nav{flex-direction:row; align-items:stretch; gap:2px; flex:1; width:auto}
++
++  /* Les glyphes Unicode ne tiennent pas en barre horizontale : libellés seuls. */
++  .nav-item{
++    align-items:center; padding:0 14px; min-height:58px;
++    border-radius:0; border-bottom:2px solid transparent;
++    font-size:var(--font-size-body); white-space:nowrap;
++  }
++  .nav-item span{display:none}
++  .nav-item:hover{color:#dbe7f3}
++  .nav-item.active{background:transparent; color:#fff; font-weight:600; border-bottom-color:#7ab3f5}
++
++  .sidebar .scope-box{
++    margin:0; align-self:center; flex:none; max-width:230px;
++    padding:7px 11px; background:#16334f; border-color:#2b4868;
++  }
++  .sidebar .scope-box small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
++  .sidebar .sidebar-footer{
++    margin:0; align-self:center; flex:none;
++    padding:0; border:0; gap:9px;
++  }
++  .sidebar .sidebar-footer>div{max-width:150px}
++  .sidebar .sidebar-footer b,.sidebar .sidebar-footer small{
++    display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
++  }
++  .sidebar .avatar{width:32px;height:32px}
++
++  .main-column{margin-left:0; width:100%}
++
++  /* Deuxième bande : contexte de la page et commandes, sur le même bleu. */
++  .topbar{
++    height:auto; min-height:0; padding:16px clamp(24px,4vw,54px);
++    background:#16345a; border-bottom:1px solid #21456f; color:#fff;
++  }
++  .topbar h1{color:#fff}
++  .topbar .eyebrow{color:#9fbcdb}
++  .topbar .icon-button{background:#1d3f68;border-color:#2f5b8c;color:#cfe0f2}
++}
++
++/* ---- Lot 5 : première page après authentification ----------
++   Le bandeau bleu se prolonge du menu jusqu'aux compteurs :
++   contexte permanent en haut, travail à faire en dessous.
++   ------------------------------------------------------------ */
++@media (min-width:701px){
++  .manager-pilot .manager-command-hero{
++    margin:-30px calc(clamp(24px,4vw,54px)*-1) 0;
++    padding:22px clamp(24px,4vw,54px) 18px;
++    background:#16345a; border:0; border-radius:0; color:#fff;
++    align-items:flex-end;
++  }
++  .manager-pilot .manager-command-hero h2{font-size:var(--font-size-title);margin:2px 0 4px;color:#fff}
++  .manager-pilot .manager-command-hero>div>p:last-child{color:#a8c2dd}
++  .manager-pilot .manager-command-hero .eyebrow,
++  .manager-pilot .manager-command-hero .eyebrow-light{color:#7fb0e0}
++
++  /* Le seuil de délégation devient une pastille de contexte, pas un encadré. */
++  .manager-pilot .manager-command-hero .delegation-chip,
++  .manager-pilot .manager-command-hero>div:last-child{
++    background:#1d3f68; border:1px solid #2f5b8c; border-radius:var(--radius-sm);
++    padding:10px 14px; color:#fff;
++  }
++  .manager-pilot .manager-command-hero>div:last-child b,
++  .manager-pilot .manager-command-hero>div:last-child strong{color:#fff}
++  .manager-pilot .manager-command-hero>div:last-child small,
++  .manager-pilot .manager-command-hero>div:last-child span{color:#a8c2dd}
++
++  /* Bandeau de compteurs, dans la continuité du menu. */
++  .manager-pilot .manager-kpis-target{
++    margin:0 calc(clamp(24px,4vw,54px)*-1) 26px;
++    padding:0 clamp(24px,4vw,54px) 22px;
++    background:#16345a; border:0; border-radius:0; gap:0;
++  }
++  .manager-pilot .manager-kpis-target>button,
++  .manager-pilot .manager-kpis-target>div{
++    background:#1d3f68; border:1px solid #2f5b8c; border-radius:0;
++    padding:14px 18px; color:#fff;
++  }
++  .manager-pilot .manager-kpis-target>*:not(:first-child){border-left:0}
++  .manager-pilot .manager-kpis-target>*:first-child{border-radius:var(--radius-sm) 0 0 var(--radius-sm)}
++  .manager-pilot .manager-kpis-target>*:last-child{border-radius:0 var(--radius-sm) var(--radius-sm) 0}
++  .manager-pilot .manager-kpis-target>button.active{background:#24507f;border-color:#4b7cb0}
++  .manager-pilot .manager-kpis-target strong{color:#fff;font-size:var(--font-size-display)}
++  .manager-pilot .manager-kpis-target small,
++  .manager-pilot .manager-kpis-target span{color:#b6cde3}
++  /* Les codes AQ / SLA / PV n'apportent rien : le libellé nomme déjà la mesure. */
++  .manager-pilot .manager-kpis-target .kpi-icon{display:none}
++  .manager-pilot .manager-kpis-target .completion-bar{background:#2f5b8c}
++  .manager-pilot .manager-kpis-target .completion>div b{color:#fff}
++}
++
++/* ---- Lot 5 : ordre de lecture de la première page ----------
++   Le travail à faire avant l'analyse. Les compteurs et le
++   contexte restent en tête, la tendance passe en dernier.
++   ------------------------------------------------------------ */
++@media (min-width:701px){
++  .manager-pilot{display:flex;flex-direction:column}
++  .manager-pilot .manager-command-hero{order:1;margin-bottom:0}
++  .manager-pilot .manager-kpis-target{order:2}
++  .manager-pilot .fm-decision-layout{order:3}
++  .manager-pilot .workflow-analytics{order:4}
++  .manager-pilot .operational-analytics{order:5}
++
++  /* Texte secondaire lisible sur le bandeau bleu. */
++  .manager-pilot .manager-command-hero p,
++  .manager-pilot .manager-command-hero small{color:#a8c2dd}
++
++  /* Sélecteur de profil : intégré au bandeau, pas posé dessus. */
++  .topbar .persona-trigger{background:#1d3f68;border-color:#2f5b8c;color:#fff}
++  .topbar .persona-trigger b,.topbar .persona-trigger strong{color:#fff}
++  .topbar .persona-trigger small,.topbar .persona-trigger span{color:#a8c2dd}
++  .topbar .persona-switcher>span,.topbar .eyebrow{color:#7fb0e0}
++}
++
++@media (min-width:701px){
++  /* Le passage en flex réactivait un gap : les bandes doivent rester jointives. */
++  .manager-pilot{gap:0}
++  .manager-pilot .fm-decision-layout{margin-bottom:20px}
++  .manager-pilot .workflow-analytics{margin-bottom:20px}
++  .manager-pilot .manager-kpis-target{margin-bottom:26px}
++  /* Sous-titre du bandeau : encre claire, pas l'encre secondaire du fond blanc. */
++  .manager-pilot .manager-command-hero .manager-heading-copy p,
++  .manager-pilot .manager-command-hero .manager-heading-copy small{color:#a8c2dd}
++}
++
++@media (min-width:701px){
++  /* Toute encre posée sur le bandeau bleu doit venir du jeu clair. */
++  .manager-pilot .manager-command-hero .eyebrow,
++  .manager-pilot .manager-command-hero [class*="kicker"],
++  .manager-pilot .manager-command-hero .manager-heading-copy>*:first-child{color:#7fb0e0!important}
++  .manager-pilot .manager-command-hero .manager-heading-copy>p{color:#a8c2dd!important}
++}
++
++/* ---- Lot 5 : compression du bandeau sur écrans étroits ---- */
++@media (min-width:701px) and (max-width:1240px){
++  .sidebar{gap:12px; padding:0 20px}
++  .sidebar .brand>span:last-child small{display:none}
++  .sidebar .scope-box{display:none}          /* le site reste dans le bandeau de page */
++  .nav-item{padding:0 10px; font-size:var(--font-size-label)}
++  .sidebar .sidebar-footer>div{display:none} /* l'avatar suffit, le nom est dans le menu profil */
++}
++@media (min-width:701px) and (max-width:1100px){
++  .sidebar .brand>span:last-child{display:none}
++}
++
++/* ============================================================
++   Lot 5b — resserrage du bandeau
++   403 px de chrome avant le contenu, et deux titres empilés qui
++   disent la même chose. On garde une identité de page, une ligne
++   de contexte, une rangée de compteurs.
++   ============================================================ */
++@media (min-width:701px){
++  .sidebar{min-height:52px}
++  .nav-item{min-height:52px}
++
++  /* Bande de contexte : une seule ligne. */
++  .topbar{padding:12px clamp(24px,4vw,54px);gap:16px;align-items:center;border-bottom:0}
++  .topbar h1{font-size:var(--font-size-title);line-height:1.2}
++  .topbar .eyebrow{margin:0 0 2px}
++
++  /* Le sélecteur de démonstration ne doit pas peser autant qu'un titre. */
++  .topbar .persona-switcher>span,.topbar>div:last-child>span:first-child{font-size:var(--font-size-label)}
++  .topbar .persona-trigger{padding:7px 11px}
++  .topbar .persona-trigger .persona-trigger-avatar,.topbar .persona-trigger .avatar{width:26px;height:26px}
++  .topbar .icon-button{width:34px;height:34px}
++  .topbar .primary-button{padding:9px 14px;font-size:var(--font-size-body)}
++
++  /* Le bloc de tête du cockpit dupliquait le titre de page et sa rubrique :
++     il ne conserve que la phrase de contexte et le seuil de délégation. */
++  .manager-pilot .manager-command-hero{
++    padding:12px clamp(24px,4vw,54px) 14px; align-items:center;
++    border-top:1px solid #21456f;
++  }
++  .manager-pilot .manager-command-hero .eyebrow,
++  .manager-pilot .manager-command-hero .eyebrow-light,
++  .manager-pilot .manager-command-hero h2{display:none}
++  .manager-pilot .manager-command-hero .manager-heading-copy>p{
++    margin:0; font-size:var(--font-size-body); color:#c3d8ee!important;
++  }
++  .manager-pilot .manager-command-hero>div:last-child{padding:8px 12px}
++
++  /* Compteurs : une rangée de contexte, pas quatre widgets encadrés. */
++  .manager-pilot .manager-kpis-target{
++    padding:0 clamp(24px,4vw,54px) 18px; background:#16345a;
++  }
++  .manager-pilot .manager-kpis-target>button,
++  .manager-pilot .manager-kpis-target>div{
++    background:#1c3f6a; border:0; border-left:1px solid #2f5b8c;
++    border-radius:0; padding:12px 18px;
++  }
++  .manager-pilot .manager-kpis-target>*:first-child{border-left:0;border-radius:var(--radius-sm) 0 0 var(--radius-sm)}
++  .manager-pilot .manager-kpis-target>*:last-child{border-radius:0 var(--radius-sm) var(--radius-sm) 0}
++  .manager-pilot .manager-kpis-target>button.active{background:#24507f}
++  .manager-pilot .manager-kpis-target strong{font-size:var(--font-size-title);line-height:1.1}
++}
++
++@media (min-width:701px){
++  /* Mention d'environnement : elle doit rester vue de tous — un utilisateur ne doit
++     jamais prendre une action simulée pour une action enregistrée. Elle cesse d'être
++     un titre de zone et devient une pastille compacte à côté du profil. (DEV-002) */
++  .topbar .persona-switcher>span:first-child,
++  .topbar>div:last-child .eyebrow{
++    display:inline-flex; align-items:center; align-self:center; margin:0 10px 0 0;
++    padding:3px 9px; border-radius:var(--radius-round);
++    background:#3d2f16; border:1px solid #6d5424; color:#f2c98d;
++    font-size:var(--font-size-label); letter-spacing:.08em; white-space:nowrap;
++  }
++  .topbar>div:last-child{display:flex;align-items:center;flex-wrap:wrap}
++  .topbar{padding:10px clamp(24px,4vw,54px)}
++
++  /* Ligne de contexte : une seule ligne, seuil de délégation à l'horizontale. */
++  .manager-pilot .manager-command-hero{padding:9px clamp(24px,4vw,54px) 11px}
++  .manager-pilot .manager-command-hero>div:last-child{
++    display:flex; align-items:baseline; gap:10px; padding:6px 12px; white-space:nowrap;
++  }
++  .manager-pilot .manager-command-hero>div:last-child *{margin:0}
++  .manager-pilot .manager-command-hero>div:last-child strong,
++  .manager-pilot .manager-command-hero>div:last-child b{font-size:var(--font-size-body)}
++
++  /* Le pavé de score alignait sa hauteur sur trois compteurs : il se compacte. */
++  .manager-pilot .manager-kpis-target .completion{padding:0}
++  .manager-pilot .manager-kpis-target .completion-bar{height:4px;margin:6px 0 4px}
++  .manager-pilot .manager-kpis-target>button,
++  .manager-pilot .manager-kpis-target>div{padding:10px 18px}
++}
++
++@media (min-width:701px){
++  /* Le site est un repère, pas un bouton : il ne doit pas peser plus que le menu. */
++  .sidebar .scope-box{
++    background:transparent; border:0; border-left:1px solid #24405d;
++    border-radius:0; padding:2px 0 2px 16px; max-width:200px;
++  }
++  .sidebar .scope-box b{color:#dbe7f3}
++  .sidebar .scope-box small{color:#8fa7c2}
++  .sidebar .sidebar-footer{border-left:1px solid #24405d;padding-left:16px}
++}
