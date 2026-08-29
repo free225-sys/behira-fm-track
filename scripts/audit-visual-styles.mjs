@@ -30,10 +30,14 @@ const checks = [
   ['Titres mobiles compacts présents', page.includes('mobilePageTitle') && css.includes('.mobile-title{display:inline}')],
   ['Réserve navigation mobile présente', css.includes('.main-column{padding-bottom:92px}')],
   ['Grille du registre partagée', css.includes('.registry-head,.registry-row{grid-template-columns:var(--registry-columns)}')],
-  ['Registre en cartes sous 1280 px avec responsable visible', css.includes('@media (max-width:1279px)') && css.includes('.registry-row>.owner-cell{display:none}') && css.includes('.registry-mobile-details{grid-column:1;grid-row:3;display:grid')],
+  ['Repli du registre avec responsable', css.includes('.registry-head{display:none}') && css.includes('.registry-row>.owner-cell{display:none}') && css.includes('.registry-mobile-details{grid-column:1;grid-row:3;display:grid') && page.includes('<b>Responsable interne</b>')],
   ['Continuité du traitement au plancher 12 px', finalDeclaration('.registry-entry:not(.is-expanded) .registry-summary-toggle', 'font-size') === 'var(--font-size-label)'],
   ['Titres tronqués proprement', css.includes('.topbar h1{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}')],
   ['Références équipement insécables', page.includes('className="equipment-reference"') && css.includes('.equipment-reference{white-space:nowrap;word-break:keep-all;overflow-wrap:normal}')],
+  ['Shell sans rail latéral résiduel', page.includes('className="app-navigation"') && !page.includes('className="sidebar"') && !css.includes('.sidebar')],
+  ['Navigation unique et état courant accessible', page.includes('const navItems: NavigationItem[]') && page.includes('className="primary-navigation"') && page.includes("aria-current={active ? 'page' : undefined}")],
+  ['Menu Plus prêt pour le catalogue groupé', page.includes("const navigationGroups: NavigationGroup[] = ['Mon travail','Le bâtiment','Pilotage','Administration']") && page.includes('overflowIsActive ? \'active\'') && page.includes('groupItems = overflowNav.filter') && page.includes("event.key === 'ArrowDown' || event.key === 'ArrowUp'") && page.includes('moreNavTriggerRef.current?.focus()')],
+  ['Environnement de démonstration visible', page.includes('className="persona-mode-label"') && page.includes('Mode démonstration') && !css.includes('.persona-mode-label{display:none}')],
 ]
 
 for (const [label, ok] of checks) console.log(`${ok ? '✓' : '✗'} ${label}`)

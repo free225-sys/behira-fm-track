@@ -161,13 +161,31 @@ const seedEscalations: Escalation[] = [
   { id:'DEC-014', anomaly:'ANO-0226', asset:'DEMO-ASC-1', title:'Clôture finale après risque usager', kind:'Clôture sensible', due:'Décidée le 22 août', risk:'Preuves PREST-ASC conformes', recommendation:'Clôturer avec suivi de récurrence à 30 jours.', state:'Approuvée', motive:'Preuves complètes et essai de sécurité concluant.' },
 ];
 
-const navItems: { key: View; icon: string; label: string }[] = [
-  { key:'workspace', icon:'◈', label:'Mon espace' },
-  { key:'dashboard', icon:'⌂', label:'Tableau de bord' },
-  { key:'registry', icon:'≡', label:'Registre' },
-  { key:'manager', icon:'◎', label:'Facility Manager' },
-  { key:'report', icon:'✓', label:'Rondes' },
+type NavigationGroup = 'Mon travail' | 'Le bâtiment' | 'Pilotage' | 'Administration';
+type NavigationItem = { key:Exclude<View,'detail'>; label:string; group:NavigationGroup };
+
+/* Une seule source alimente le bandeau desktop et la barre mobile. Les groupes
+   reprennent mot pour mot DEC-002 afin que le futur menu de débordement ne crée
+   pas une nomenclature parallèle. */
+const navItems: NavigationItem[] = [
+  { key:'workspace', label:'Mon espace', group:'Mon travail' },
+  { key:'manager', label:'À traiter', group:'Mon travail' },
+  { key:'report', label:'Mes rondes', group:'Mon travail' },
+  { key:'registry', label:'Anomalies', group:'Le bâtiment' },
+  { key:'dashboard', label:'Vue d’ensemble', group:'Pilotage' },
 ];
+const navigationGroups: NavigationGroup[] = ['Mon travail','Le bâtiment','Pilotage','Administration'];
+
+function NavigationIcon({ view }: { view:NavigationItem['key'] }) {
+  const common = { fill:'none', stroke:'currentColor', strokeWidth:1.8, strokeLinecap:'round' as const, strokeLinejoin:'round' as const };
+  return <svg className="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    {view === 'workspace' && <><path {...common} d="M4 5.5h16v13H4z"/><path {...common} d="M8 9h8M8 13h5"/></>}
+    {view === 'dashboard' && <><path {...common} d="M4 13h6v7H4zM14 4h6v16h-6zM4 4h6v5H4z"/></>}
+    {view === 'registry' && <><path {...common} d="M8 6h12M8 12h12M8 18h12"/><path {...common} d="M4 6h.01M4 12h.01M4 18h.01"/></>}
+    {view === 'manager' && <><circle {...common} cx="12" cy="12" r="8"/><path {...common} d="M12 8v4l3 2"/></>}
+    {view === 'report' && <><path {...common} d="M7 4h10v16H7zM9.5 4V2.8h5V4"/><path {...common} d="m9.5 12 1.7 1.7 3.6-4"/></>}
+  </svg>;
+}
 
 const fallbackEquipment: EquipmentItem[] = [
   { code:'DEMO-GE', label:'Groupe électrogène', health:86, state:'Surveillance' },
@@ -256,7 +274,7 @@ function PersonaSwitcher({ value, onChange }: { value:PersonaId; onChange:(id:Pe
   };
 
   return <div className={`persona-switcher ${open ? 'is-open' : ''}`} ref={rootRef}>
-    <span className="persona-mode-label">MODE DÉMONSTRATION</span>
+    <span className="persona-mode-label"><span aria-hidden="true">DÉMO</span><span className="visually-hidden">Mode démonstration</span></span>
     <button ref={triggerRef} type="button" className="persona-trigger" aria-haspopup="listbox" aria-expanded={open} aria-controls="persona-listbox" onKeyDown={onTriggerKeyDown} onClick={() => open ? close(false) : show()}>
       <span className="persona-trigger-avatar">{selected.initials}</span>
       <span className="persona-trigger-copy"><b>{selected.name}</b><small>{selected.role}</small></span>
@@ -560,6 +578,10 @@ export default function Home() {
   const [managerTab, setManagerTab] = useState<ManagerQueue>('qualify');
   const [toast, setToast] = useState('');
   const [mutationBusy, setMutationBusy] = useState(false);
+  const [moreNavOpen, setMoreNavOpen] = useState(false);
+  const moreNavRef = useRef<HTMLDivElement>(null);
+  const moreNavTriggerRef = useRef<HTMLButtonElement>(null);
+  const moreNavItemRefs = useRef<Array<HTMLButtonElement|null>>([]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -604,6 +626,25 @@ export default function Home() {
     window.requestAnimationFrame(() => signOutCancelRef.current?.focus());
     return () => document.removeEventListener('keydown', handleKey);
   }, [signOutConfirm]);
+
+  useEffect(() => {
+    if (!moreNavOpen) return;
+    const closeOnPointer = (event:PointerEvent) => {
+      if (!moreNavRef.current?.contains(event.target as Node)) setMoreNavOpen(false);
+    };
+    const closeOnEscape = (event:KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMoreNavOpen(false);
+        window.requestAnimationFrame(() => moreNavTriggerRef.current?.focus());
+      }
+    };
+    document.addEventListener('pointerdown', closeOnPointer);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnPointer);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [moreNavOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -678,6 +719,7 @@ export default function Home() {
       window.setTimeout(() => setToast(''), 3200);
       return;
     }
+    setMoreNavOpen(false);
     setView(next);
     setToast('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -903,6 +945,32 @@ export default function Home() {
   };
 
   const visibleNav = navItems.filter((item) => allowedViewsByPersona[personaId].includes(item.key));
+  const navigationLabel = (item:NavigationItem) => item.key === 'workspace' && personaId === 'administration' ? 'À valider' : item.key === 'workspace' && !['facility','administration'].includes(personaId) ? 'À traiter' : item.label;
+  const primaryNav = visibleNav.slice(0,6);
+  const overflowNav = visibleNav.slice(6);
+  const activeNavKey = view === 'detail' ? previousView : view;
+  const overflowIsActive = overflowNav.some((item) => item.key === activeNavKey);
+  const isNavigationActive = (key:NavigationItem['key']) => key === activeNavKey;
+  const focusOverflowItem = (index:number) => {
+    const items = moreNavItemRefs.current.filter((item): item is HTMLButtonElement => Boolean(item));
+    if (!items.length) return;
+    items[(index + items.length) % items.length]?.focus();
+  };
+  const onMoreNavKeyDown = (event:React.KeyboardEvent<HTMLDivElement>) => {
+    const items = moreNavItemRefs.current.filter((item): item is HTMLButtonElement => Boolean(item));
+    const currentIndex = items.indexOf(document.activeElement as HTMLButtonElement);
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      focusOverflowItem(currentIndex + (event.key === 'ArrowDown' ? 1 : -1));
+    } else if (event.key === 'Home' || event.key === 'End') {
+      event.preventDefault();
+      focusOverflowItem(event.key === 'Home' ? 0 : items.length - 1);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      setMoreNavOpen(false);
+      window.requestAnimationFrame(() => moreNavTriggerRef.current?.focus());
+    }
+  };
   const pageTitle = view === 'workspace' ? `Espace ${persona.shortName}` : view === 'dashboard' ? (personaId === 'administration' ? 'Vue consolidée Administration' : 'Tableau de bord') : view === 'registry' ? 'Registre des anomalies' : view === 'manager' ? 'Espace Facility Manager' : view === 'report' ? (personaId === 'eau_incendie' || personaId === 'facility' ? 'Pilote Surpresseur' : 'Ronde terrain') : selected.id;
   const mobilePageTitle = view === 'workspace' ? `Espace ${persona.shortName}` : view === 'dashboard' ? 'Pilotage' : view === 'registry' ? 'Registre' : view === 'manager' ? 'Facility Manager' : view === 'report' ? (personaId === 'eau_incendie' || personaId === 'facility' ? 'Pilote Surpresseur' : 'Ronde') : selected.id;
 
@@ -911,17 +979,34 @@ export default function Home() {
   if (!session) return <AuthExperience onAuthenticate={authenticate} onDemoAuthenticate={authenticateDemo} onForgot={requestPasswordReset} onReset={resetDemo} supabaseMode={isSupabaseIntegrationEnabled} allowDemoFallback={supabaseIntegration.demoFallback} environmentLabel={supabaseIntegration.environmentLabel} />;
 
   return (
-    <main className="app-shell">
-      <aside className="sidebar">
-        <button className="brand" onClick={() => navigate('dashboard')}><span className="brand-mark">B</span><span>BEHIRA<small>FM / GB TRACK</small></span></button>
-        <nav aria-label="Navigation principale">
-          {visibleNav.map((item) => <button key={item.key} className={`nav-item ${view === item.key || (view === 'detail' && item.key === previousView) ? 'active' : ''}`} onClick={() => navigate(item.key)}><span>{item.icon}</span>{item.label}</button>)}
+    <div className="app-shell">
+      <header className="app-navigation">
+        <button className="brand" onClick={() => navigate('dashboard')}><span className="brand-mark">B</span><span className="brand-wordmark">BEHIRA<small>FM / GB TRACK</small></span></button>
+        <nav className="primary-navigation" aria-label="Navigation principale">
+          {primaryNav.map((item) => {
+            const active = isNavigationActive(item.key);
+            return <button key={item.key} type="button" className={`nav-item ${active ? 'active' : ''}`} aria-current={active ? 'page' : undefined} onClick={() => navigate(item.key)}><NavigationIcon view={item.key}/><span className="nav-item-label">{navigationLabel(item)}</span></button>;
+          })}
+          {overflowNav.length > 0 && <div className="nav-overflow" ref={moreNavRef}>
+            <button ref={moreNavTriggerRef} type="button" className={`nav-item nav-more-trigger ${overflowIsActive ? 'active' : ''}`} aria-haspopup="menu" aria-expanded={moreNavOpen} aria-controls="navigation-more-menu" onKeyDown={(event) => {if (event.key === 'ArrowDown') {event.preventDefault();setMoreNavOpen(true);window.requestAnimationFrame(() => focusOverflowItem(0))}}} onClick={() => setMoreNavOpen((open) => !open)}><span className="nav-more-icon" aria-hidden="true">•••</span><span className="nav-item-label">Plus</span></button>
+            {moreNavOpen && <div className="nav-more-menu" id="navigation-more-menu" role="menu" aria-label="Autres destinations" onKeyDown={onMoreNavKeyDown}>
+              {navigationGroups.map((group) => {
+                const groupItems = overflowNav.filter((item) => item.group === group);
+                if (!groupItems.length) return null;
+                return <section className="nav-more-group" key={group} aria-label={group}><p>{group}</p>{groupItems.map((item) => {
+                  const active = isNavigationActive(item.key);
+                  const overflowIndex = overflowNav.findIndex((candidate) => candidate.key === item.key);
+                  return <button ref={(node) => {moreNavItemRefs.current[overflowIndex] = node}} type="button" role="menuitem" key={item.key} className={active ? 'active' : ''} aria-current={active ? 'page' : undefined} onClick={() => navigate(item.key)}><NavigationIcon view={item.key}/><span>{navigationLabel(item)}</span></button>;
+                })}</section>;
+              })}
+            </div>}
+          </div>}
         </nav>
         <div className="scope-box"><span>●</span><div><b>Site Démo Atlas</b><small>{session.mode === 'supabase' ? dataState === 'live' ? `${referenceCounts.anomalies} anomalies · ${referenceCounts.equipment} équipements · ${referenceCounts.zones} zones` : dataState === 'loading' ? `Synchronisation ${supabaseIntegration.environmentLabel}…` : 'Repli sur les données de démonstration' : 'Site principal · démonstration'}</small></div></div>
-        <div className="sidebar-footer"><span className="avatar">{persona.initials}</span><div><b>{persona.name}</b><small>{persona.role}</small></div><button className="logout-button" onClick={() => setSignOutConfirm(true)} aria-label="Se déconnecter">↪</button></div>
-      </aside>
+        <div className="app-navigation-user"><span className="avatar">{persona.initials}</span><div><b>{persona.name}</b><small>{persona.role}</small></div><button className="logout-button" onClick={() => setSignOutConfirm(true)} aria-label="Se déconnecter">↪</button></div>
+      </header>
 
-      <section className="main-column">
+      <main className="main-column">
         <header className="topbar">
           <div><p className="eyebrow">LUNDI 24 AOÛT · 09:42</p><h1><span className="desktop-title">{pageTitle}</span><span className="mobile-title">{mobilePageTitle}</span></h1></div>
           <div className="top-actions">{session.mode === 'demo' ? <PersonaSwitcher value={personaId} onChange={changePersona} /> : <div className={`authenticated-persona data-${dataState}`} title={`${session.email} · ${dataState === 'live' ? `données ${supabaseIntegration.environmentLabel}` : 'données de repli'}`}><span>{persona.initials}</span><p><b>{persona.name}</b><small>{dataState === 'live' ? `${supabaseIntegration.environmentLabel} · ${referenceCounts.anomalies} anomalies visibles` : dataState === 'loading' ? `Connexion à ${supabaseIntegration.environmentLabel}…` : `Mode de repli · ${persona.role}`}</small></p></div>}<button className="icon-button" aria-label="Notifications">●<span className="notification-dot" /></button><button className="auth-signout-top" onClick={() => setSignOutConfirm(true)} aria-label="Se déconnecter">↪</button>{personaId !== 'administration' && <button className="primary-button top-create" onClick={() => navigate('report')}>＋ Nouvelle ronde</button>}</div>
@@ -935,10 +1020,10 @@ export default function Home() {
           {view === 'report' && <Report persona={persona} onNavigate={navigate} />}
           {view === 'detail' && <Detail key={`${selected.id}-${selected.status}-${selected.proof}-${selected.proofPending}`} anomaly={selected} readOnly={personaId === 'administration'} canVerify={personaId === 'facility' && session.mode === 'supabase'} busy={mutationBusy} onBack={() => navigate(previousView)} onStatus={(status) => void persistWorkflowStatus(status)} onProof={(file) => void persistProof(file)} onVerify={() => void verifyProof()} />}
         </div>
-      </section>
+      </main>
       {toast && <div className={`toast ${/impossible|non enregistrée/i.test(toast) ? 'toast-error' : ''}`} role="status"><span>{/impossible|non enregistrée/i.test(toast) ? '!' : '✓'}</span>{toast}</div>}
       {signOutConfirm && <div className="signout-backdrop" role="presentation" onMouseDown={(event) => {if (event.target === event.currentTarget) setSignOutConfirm(false)}}><section className="signout-dialog" role="dialog" aria-modal="true" aria-labelledby="signout-title"><span className="signout-icon">↪</span><h2 id="signout-title">Se déconnecter ?</h2><p>{session.mode === 'supabase' ? `La session ${supabaseIntegration.environmentLabel} sera fermée. Les données métier de démonstration resteront disponibles.` : 'La session simulée sera supprimée de cet appareil. Les données de démonstration resteront disponibles.'}</p><div><button ref={signOutCancelRef} className="secondary-button" onClick={() => setSignOutConfirm(false)}>Annuler</button><button className="primary-button" onClick={() => void signOut()}>Se déconnecter</button></div><button className="reset-session-link" onClick={resetDemo}>Déconnecter et réinitialiser toute la démo</button></section></div>}
-    </main>
+    </div>
   );
 }
 
@@ -1322,10 +1407,8 @@ function Manager({ anomalies, equipment, tab, setTab, onOpen }: { anomalies:Anom
   const priorityCode:Record<Priority,string> = { Critique:'C', Haute:'H', Moyenne:'M', Faible:'F' };
 
   return <div className="manager-pilot">
-    <section className="manager-command-hero">
+    <section className="manager-command-hero" aria-label="Contexte du poste de pilotage">
       <div className="manager-heading-copy">
-        <p className="eyebrow-light">CENTRE DE DÉCISION · FACILITY MANAGER</p>
-        <h2>Décider, affecter, débloquer</h2>
         <p>Chaque dossier ressort avec un responsable, une prochaine action et une échéance.</p>
       </div>
       <div className="delegation-chip" aria-label="Délégation financière active">
@@ -1351,9 +1434,6 @@ function Manager({ anomalies, equipment, tab, setTab, onOpen }: { anomalies:Anom
         <small>Délais 88 · réactivité 91 · preuves 79</small>
       </div>
     </section>
-
-    <WorkflowAnalytics items={anomalies.map((item) => ({ ...item, owner:canonicalResponsible(item) ?? 'Non affectée' }))} variant="manager" />
-    <OperationalAnalytics equipment={equipment} variant="manager" />
 
     <section className="fm-decision-layout">
       <article className="panel fm-inbox">
@@ -1399,6 +1479,9 @@ function Manager({ anomalies, equipment, tab, setTab, onOpen }: { anomalies:Anom
         {decisionDone && <div className="inline-success" role="status"><span>✓</span><p><b>Proposition préparée</b><small>Elle reste distincte de l’état actuel du dossier jusqu’à son enregistrement côté serveur.</small></p></div>}
       </article>
     </section>
+
+    <WorkflowAnalytics items={anomalies.map((item) => ({ ...item, owner:canonicalResponsible(item) ?? 'Non affectée' }))} variant="manager" />
+    <OperationalAnalytics equipment={equipment} variant="manager" />
   </div>;
 }
 

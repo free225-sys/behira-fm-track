@@ -2,6 +2,57 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-003 — Lots 2 à 5 consolidés : shell refondu et vérifié
+
+- **Date :** 29 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté et vérifié localement — non publié
+- **Périmètre :** `app/page.tsx`, `app/globals.css`, `scripts/audit-visual-styles.mjs`
+
+Les lots 2, 3 et 4 ont été intégrés dans trois checkpoints distincts, puis la spécification visuelle du lot 5 a été réimplémentée proprement. Le bloc CSS de surcharge fourni comme maquette n'a pas été ajouté : le rail a réellement quitté le balisage et la feuille ne contient plus de sélecteur `.sidebar`.
+
+### Shell et navigation
+
+- `<aside class="sidebar">` est remplacé par un `<header class="app-navigation">` contenant un vrai `<nav>` ;
+- un seul catalogue typé alimente le bandeau desktop et la barre mobile ;
+- les glyphes Unicode sont remplacés par une petite famille SVG tracée et réservée au mobile ;
+- l'état actif combine libellé renforcé, filet ou fond selon la largeur, et `aria-current="page"` ;
+- les groupes du futur menu `Plus` reprennent exactement **Mon travail**, **Le bâtiment**, **Pilotage** et **Administration** ; les droits sont filtrés avant le découpage visible/débordement ;
+- le déclencheur `Plus` conserve un état actif lorsque la destination courante appartient au débordement ;
+- le site, le nom d'utilisateur et le mot-symbole se contractent aux paliers 1240 et 1100 px ;
+- la pastille ambre **Démo** reste visible sur desktop et mobile, avec le libellé complet disponible aux technologies d'assistance.
+
+Le menu `Plus` ne s'affiche pas encore dans les cinq profils actuels, car aucun n'a plus de cinq destinations autorisées. Son contrat est prêt, sans création de page ni de permission. Le catalogue complet de DEC-002 reste un lot produit ultérieur : les écrans **Équipements**, **Coûts**, **Utilisateurs et droits** et **Seuils et paramètres** n'existent pas encore comme destinations autonomes. La rubrique historique **Mon espace** reste donc visible pour Facility Manager tant que son contenu n'est pas redistribué ; aucune publication ne doit figer cette exception.
+
+### Première page Facility Manager
+
+- le titre et la rubrique dupliqués ont été retirés du JSX, pas masqués en CSS ;
+- la section conserve uniquement la phrase de contexte et le seuil de délégation ;
+- l'ordre du DOM est maintenant : contexte, compteurs, file de décisions, flux, scores et tendances ;
+- le chrome supérieur mesure 212 px aux largeurs desktop courantes et 220 px entre 701 et 900 px, soit moins d'un quart d'un viewport de test de 900 px ;
+- le seuil et les compteurs restent lisibles à 760 px sans chevauchement.
+
+### Registre et contrôles
+
+- le tableau complet, responsable compris, reste visible à 961 px ;
+- le repli en cartes s'active à 960 px et conserve priorité, statut, échéance et responsable ;
+- le contrôle statique s'appelle désormais **Repli du registre avec responsable** et ne dépend plus d'une chaîne de media query ;
+- trois garde-fous supplémentaires protègent l'absence de rail résiduel, l'état courant accessible et la visibilité du marqueur Démo ;
+- un contrôle protège aussi la préparation du menu `Plus` groupé.
+
+### Vérifications réalisées
+
+- `pnpm lint` : réussi ;
+- `pnpm build` : réussi ;
+- `pnpm verify:personas` : 32/32 ;
+- `pnpm audit:visual` : 18/18 ;
+- rendu réel dans le navigateur : 1440, 1240, 1100, 1024, 961, 960, 760, 701, 700 et 375 px ;
+- aucun débordement horizontal et aucun texte visible inférieur à 12 px ;
+- focus clavier visible à 2 px, `aria-current` confirmé et aucune erreur console ;
+- aucun changement de rôle, permission, règle métier ou source Supabase ; aucune publication.
+
+- **Suite proposée :** valider ce checkpoint de shell, terminer la nomenclature DEC-002 lorsque les destinations autonomes sont définies, puis seulement ouvrir le lot 6 sur les encres sémantiques de DESIGN-007.
+
 ## DEV-002 — Réponse à DESIGN-011 : refonte propre du shell avant le lot 6
 
 - **Date :** 29 août 2026
