@@ -42,6 +42,8 @@ const checks = [
   ['Triplets sémantiques déclarés', ['success','warning','danger','info','neutral'].every((role) => css.includes(`--${role}-surface:`) && css.includes(`--${role}-border:`) && css.includes(`--${role}-text:`))],
   ['Encres sémantiques consommées', css.includes('background:var(--danger-surface)') && css.includes('color:var(--danger-text)') && css.includes('background:var(--warning-surface)') && css.includes('color:var(--warning-text)') && css.includes('background:var(--success-surface)') && css.includes('color:var(--success-text)')],
   ['Badges immunisés contre les encres de conteneur', ['critical','high','orange','medium','blue','low','neutral','success','purple'].every((variant) => css.includes(`.badge.badge-${variant}`))],
+  ['Badges immunisés contre les dispositions de conteneur', finalDeclaration('.badge.badge-critical', 'display') === 'inline-flex' && finalDeclaration('.badge.badge-critical', 'border-left-width') === '3px'],
+  ['Aucun mécanisme de thème sombre (DEC-006)', !/prefers-color-scheme|data-theme/.test(cssWithoutComments)],
   ['Bandeau des rondes borné au retrait mobile', css.includes('@media (max-width:700px){.surpresseur-hero{margin-left:-16px;margin-right:-16px;padding-left:16px;padding-right:16px}')],
   ['Étapes de ronde défilables sur mobile', css.includes('.surpresseur-progress{max-width:100%;overscroll-behavior-inline:contain;scrollbar-width:thin}') && css.includes('.surpresseur-progress button{flex:0 0 112px}')],
   ['Champs métier longs compressibles', css.includes('.field,.two-fields>*{min-width:0}') && css.includes('.field select,.field input,.field textarea{width:100%;max-width:100%}')],

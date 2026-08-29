@@ -942,3 +942,46 @@ button:focus,input:focus,select:focus,textarea:focus{outline:none}
     color:#c3d8ee;
   }
 }
+
+/* Badges de statut — forme à rail latéral (remplace la pastille).
+   Le rail de 3 px porte la couleur pleine du rôle ; la surface reste claire.
+   Les marqueurs d'environnement et de provenance (.persona-mode-label,
+   .data-origin-badge, .mockup-label) gardent la forme pastille : la forme
+   distingue « état d'un dossier » de « état de l'application ».
+   Les propriétés de mise en page sont répétées sur le sélecteur à deux classes
+   pour immuniser le badge contre les règles de disposition en `> span`
+   (cf. .manager-health-card > span, qui le forçait en display:block et
+   annulait donc l'écart entre l'icône et le libellé). */
+.badge,
+.badge.badge-critical,.badge.badge-high,.badge.badge-orange,
+.badge.badge-medium,.badge.badge-blue,.badge.badge-low,
+.badge.badge-neutral,.badge.badge-success,.badge.badge-purple{
+  display:inline-flex;
+  align-items:center;
+  width:max-content;
+  gap:6px;
+  padding:4px 9px 4px 7px;
+  border-width:1px;
+  border-style:solid;
+  border-left-width:3px;
+  border-radius:0 var(--radius-sm) var(--radius-sm) 0;
+  font-size:var(--font-size-label);
+  font-weight:800;
+  letter-spacing:.015em;
+}
+.badge .badge-icon{
+  width:auto;
+  height:auto;
+  min-width:0;
+  border-radius:0;
+  background:none;
+  color:inherit;
+  font-weight:900;
+}
+.badge.badge-critical{border-left-color:var(--danger-text)}
+.badge.badge-high,.badge.badge-orange{border-left-color:var(--warning-text)}
+.badge.badge-medium,.badge.badge-blue{border-left-color:var(--info-text)}
+.badge.badge-low,.badge.badge-neutral{border-left-color:var(--neutral-text)}
+.badge.badge-success{border-left-color:var(--success-text)}
+.badge.badge-purple{border-left-color:#65428d}
+.admin-user-list>button>.badge{border-radius:0 var(--radius-sm) var(--radius-sm) 0}

@@ -8,6 +8,7 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 | id | date | sujet | attendu de | bloque |
 | --- | --- | --- | --- | --- |
+| DESIGN-015 | 2026-08-29 | **GO PUBLICATION** sur `b517167` — socle design clos | — | — |
 | DESIGN-014 | 2026-08-29 | Recette de clôture sur `0c0d9f7` : DESIGN-013 clos, trois régressions nouvelles | Dev Lead | publication |
 | DESIGN-013 | 2026-08-29 | Recette de `ec3ec06` : contrastes validés, trois débordements à 375 px | Dev Lead | publication |
 | DESIGN-012 | 2026-08-29 | Réponse à DEV-002 : badge Démo rétabli, direction artistique corrigée | Dev Lead | — |
@@ -22,6 +23,118 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 | DESIGN-003 | 2026-08-28 | `pnpm dev` échoue sans accès réseau à `fonts.googleapis.com` | Dev Lead | tout audit hors ligne |
 | DESIGN-002 | 2026-08-28 | Nomenclature unique des destinations — *arbitrée, voir DEC-002* | Dev Lead | routes |
 | DESIGN-001 | 2026-08-28 | Lot 1 — spécification du socle de tokens | Dev Lead | lot 2, écran pilote |
+
+---
+
+## DESIGN-017 — Badges de statut : nouvelle forme à rail latéral
+
+**Date :** 29 août 2026 · **Auteur :** Designer · **Nature :** livraison, appliquée sur `app/globals.css`
+
+Wilkam a demandé de changer l'aspect des badges de statut, partout où ils apparaissent. Les trois exemples cités — « ! Hors délégation », « ◆ À traiter par Facility Manager », « ◆ 2 à traiter » — partageaient la même faiblesse : une pastille entièrement arrondie, une bordure pâle d'un pixel qui ne se voyait pas, et une icône posée dans un disque blanc semi-transparent qui flottait sans rôle.
+
+### Ce qui change
+
+| | Avant | Après |
+|---|---|---|
+| Forme | pastille `--radius-round` (999 px) | angle vif côté rail, `--radius-sm` sur les trois autres coins |
+| Bordure | 1 px pâle sur les quatre côtés | rail de 3 px à gauche, en couleur pleine du rôle ; hairline sur le reste |
+| Icône | glyphe dans un disque `rgba(255,255,255,.68)` | glyphe nu, à l'encre du rôle |
+| Écart icône/libellé | `gap:5px`, sans effet | `gap:6px`, effectif |
+
+Aucun nouveau jeton. Le rail réutilise `--danger-text`, `--warning-text`, `--info-text`, `--neutral-text`, `--success-text` — la couleur pleine que le libellé porte déjà. Les surfaces et les encres de texte sont inchangées, donc les 84 combinaisons de contraste validées restent valides : rien de ce qui portait du texte n'a bougé.
+
+### Ce qui ne change pas, et pourquoi
+
+`.persona-mode-label` (« DÉMO »), `.data-origin-badge` et `.mockup-label` gardent la forme pastille. Ce n'est pas un oubli : la forme sépare désormais deux familles. Le rail signale **l'état d'un dossier** ; la pastille signale **l'état de l'application**. Le marqueur de démonstration, qui relève de la sécurité d'environnement, gagne à ne ressembler à rien d'autre. Les rails de progression (`.severity-bar-track`, `.manager-health-progress`, `.agent-score-track`) gardent évidemment leur rayon rond.
+
+### Un défaut préexistant corrigé au passage
+
+En mesurant le rendu j'ai trouvé une quatrième occurrence de la famille de collisions de spécificité déjà traitée : **`.manager-health-card > span` capturait le badge et le forçait en `display:block`**. Conséquence : dans la carte « Santé bâtiment », le badge perdait sa mise en page flex et l'écart entre l'icône et le libellé disparaissait — « ◆SURVEILLANCE » se rendait collé. Le défaut existait avant ce lot, la pastille le subissait aussi.
+
+Corrigé selon la méthode que tu as toi-même retenue : les propriétés de mise en page sont répétées sur le sélecteur à deux classes, qui l'emporte sur la règle de conteneur. Le contrôle `Badges immunisés contre les encres de conteneur` de `scripts/audit-visual-styles.mjs` couvrait la couleur, pas la disposition — tu voudras peut-être l'élargir.
+
+### Contrôles passés
+
+- `pnpm lint` : propre. `pnpm build` : complet.
+- `node scripts/audit-visual-styles.mjs` : 38/38.
+- Quatre profils (Facility Manager, Administration, Agent Électricité, Rondes & Assistance) : 38 badges rendus, aucun en `display:block`, aucun débordement horizontal.
+- Quatre largeurs (1440, 1024, 768, 375 px) : `scrollWidth - clientWidth = 0`, aucun libellé tronqué, hauteur minimale de badge stable à 24 px.
+
+---
+
+## DESIGN-016 — Mode sombre : décision de clôture, à ne pas contourner
+
+**Date :** 29 août 2026 · **Auteur :** Designer · **Nature :** consignation d'un arbitrage Wilkam
+
+Wilkam a tranché : **le mode sombre n'est pas introduit**. L'entrée `DEC-006` de `DECISIONS.md` acte la décision.
+
+Contexte pour Codex : l'analyse de la maquette d'origine (V0) a établi que celle-ci était sombre par défaut avec un commutateur `data-theme`, et que la V2 avait perdu cette bascule au portage. La question du rétablissement était ouverte dans la revue de dérive. Elle est close, dans le sens du statu quo.
+
+**Ce que cela interdit, pour toute contribution, designer comme dev :**
+
+- aucune règle `@media (prefers-color-scheme: dark)` ;
+- aucun attribut, sélecteur ou script `data-theme` ;
+- aucun commutateur de thème dans le bandeau de navigation, dans « Mon espace » ni ailleurs ;
+- aucun jeu de tokens sombre déclaré « en prévision » d'un lot futur.
+
+**Ce que cela ne remet pas en cause :** `--on-dark` et `--on-dark-muted` restent en place. Ce ne sont pas les amorces d'un thème : ce sont les encres du texte posé sur les cartes sombres du cockpit, introduites au lot 4 pour corriger un contraste de 2,41:1 sur `.analytics-note`. Elles restent limitées à cet usage.
+
+**Contrôle proposé pour `scripts/audit-visual-styles.mjs`** — la feuille de styles est actuellement à zéro occurrence, vérifié ce jour :
+
+```js
+['Aucun mécanisme de thème sombre (DEC-006)', !/prefers-color-scheme|data-theme/.test(css)],
+```
+
+Si tu l'ajoutes, il ferme la question par un contrôle automatique plutôt que par la mémoire des intervenants.
+
+---
+
+## DESIGN-015 — GO PUBLICATION · clôture du chantier design
+
+- **Date :** 29 août 2026
+- **Auteur :** Designer
+- **Statut :** **GO PUBLICATION** sur `b517167`. DESIGN-013 et DESIGN-014 sont clos. Le socle visuel est terminé.
+- **Périmètre :** Recette éclair des trois régressions, puis balayage complet de non-régression — 84 combinaisons, 5 profils × 2 à 5 écrans × 6 largeurs.
+
+### Les trois régressions sont corrigées
+
+| | Contrôle | Mesure sur `b517167` |
+| --- | --- | --- |
+| **R1** | Police Geist | `document.fonts` en statut **`loaded`**, **aucun 404** sur les ressources de police. L'application rend bien en Geist. |
+| **R2** | Bandeau Surpresseur | Contenu dans le viewport à **1600, 1440, 1366, 1280, 1240, 1024, 760 et 375 px** — bornes gauche et droite exactes, aucun débordement. |
+| **R3** | Badge « Accès admin » | Pastille de **107 px** pour un libellé de 89 px : le libellé tient, plus aucun rognage. |
+
+### Non-régression : 84 combinaisons, aucun écart
+
+| Contrôle | Résultat |
+| --- | --- |
+| Écarts de contraste (seuils WCAG adaptés à la taille) | **0** |
+| Texte sous 12 px | **0** |
+| Débordement horizontal | **0** |
+| Contenu hors viewport non défilable | **0** |
+| `aria-current` | présent sur les 84 |
+| Pastille Démo visible | présente sur les 84 |
+| Erreurs console | **0** |
+| `pnpm lint`, `build`, `verify:personas` (32), `audit:visual` (38) | tous réussis |
+
+Le chantier ouvert par la revue du 28 août est clos. Ce qui était mesuré à l'ouverture — 583 littéraux de couleur, 27 tailles de police dont du 6 px, 15 rayons, 161 puis 302 écarts de contraste, un rail de 244 px imposant un registre en cartes dès 1280 px — n'existe plus.
+
+### Ce qui reste, et qui n'est pas du design
+
+**DEC-005 attend l'arbitrage de wilkam.** Le cockpit place aujourd'hui « Santé & Performance » avant la file de travail, ce qui inverse l'ordre acté en DEC-004. Mesure utile pour trancher — position du premier dossier actionnable :
+
+| Écran | Position | Entièrement visible sans défiler |
+| --- | ---: | --- |
+| 1440 × 800 | 664 px | **oui** |
+| 1366 × 768 | 682 px | non, coupé en bas |
+| 1280 × 720 | 644 px | non, coupé en bas |
+
+Sur un portable courant, le Facility Manager voit son premier dossier **partiellement**, et doit défiler pour l'atteindre. C'est le coût réel de l'option B. L'option A le remonterait d'environ 190 px, au-dessus de la ligne de flottaison sur toutes les tailles testées. L'arbitrage reste métier : « quel est l'état du bâtiment ? » contre « quel dossier dois-je traiter maintenant ? ». Cette décision ne bloque pas la publication — elle porte sur un ordre, pas sur un défaut.
+
+**Le lot produit DEC-002** : les destinations Équipements, Coûts, Utilisateurs et droits, Seuils et paramètres n'existent pas encore. Le menu « Plus », les groupes et la nomenclature les attendent. La rubrique historique « Mon espace » reste visible pour le Facility Manager tant que son contenu n'est pas redistribué — à ne pas figer comme définitif.
+
+- **Contrôles effectués :** clone `b517167`, `pnpm install --frozen-lockfile`, exécution locale, recette ciblée R1–R3, balayage de 84 combinaisons en styles calculés, surveillance réseau et console, contrôles projet complets.
+- **Suite proposée :** publier `b517167`. Arbitrer DEC-005. Ouvrir le lot produit DEC-002.
 
 ---
 

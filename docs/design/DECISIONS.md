@@ -2,6 +2,20 @@
 
 Ne jamais supprimer ni réécrire une décision actée. Toute évolution doit prendre la forme d'une nouvelle entrée qui complète ou remplace explicitement une décision antérieure.
 
+## DEC-006 — Mode sombre hors périmètre, définitivement
+
+- **Date :** 29 août 2026
+- **Auteur :** Wilkam (arbitrage), consigné par le Designer
+- **Statut :** **Adopté — non rediscutable sans nouvelle décision de Wilkam**
+- **Périmètre :** Thème visuel de l'application
+- **Contexte :** L'analyse de la maquette d'origine (V0, `fmtrackv2_4lot3lpipelineparacteur.html`) a montré que celle-ci était sombre par défaut (`#080b12` à `#1e2540`) avec un commutateur `data-theme` et un bouton « ☀ Mode clair ». Cette bascule n'a pas survécu au portage vers la V2, qui est claire et mono-thème : zéro occurrence de `prefers-color-scheme` ou de `data-theme` dans `app/globals.css`. La revue de dérive V0 → V2 posait la question de son rétablissement.
+- **Décision ou question :** **Le mode sombre n'est pas réintroduit.** L'application reste mono-thème claire. Aucun lot ne sera ouvert pour le rétablir, et l'écart avec la V0 est assumé.
+- **Conséquences pour toute contribution :** ne pas ajouter de règle `@media (prefers-color-scheme: dark)`, ne pas introduire d'attribut ou de sélecteur `data-theme`, ne pas ajouter de commutateur de thème dans la navigation ni ailleurs, ne pas déclarer de jeu de tokens sombre « en prévision ». Les tokens `--on-dark` et `--on-dark-muted` restent limités à leur usage actuel : le texte posé sur les cartes sombres du cockpit, qui ne sont pas un thème mais un contraste local assumé.
+- **Fichiers concernés :** `app/globals.css` principalement ; tout composant qui poserait une couleur conditionnée au thème.
+- **Impacts attendus :** Aucun changement visuel. La décision ferme une question ouverte et évite un lot inutile.
+- **Contrôles attendus :** `grep -c "prefers-color-scheme\|data-theme" app/globals.css` doit rester à 0. Ce contrôle peut être ajouté à `scripts/audit-visual-styles.mjs`.
+- **Suite proposée :** Aucune. Entrée de clôture.
+
 ## DEC-005 — Ordre initial du cockpit Facility Manager
 
 - **Date :** 29 août 2026

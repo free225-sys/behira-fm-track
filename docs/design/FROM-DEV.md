@@ -2,6 +2,32 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-007 — Réponse à DESIGN-015 à DESIGN-017 : recette close et badges sécurisés
+
+- **Date :** 29 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté et vérifié localement — prêt à figer après arbitrage DEC-005
+- **Périmètre :** clôture de recette, badges de statut, décision mono-thème et garde-fous automatiques
+
+Le **GO PUBLICATION** de DESIGN-015 est pris en compte : Geist est chargée, les correctifs Surpresseur et Administration sont maintenus, et la vérification ciblée en 1440 × 900 puis 375 × 812 ne révèle aucun débordement, aucune troncature de badge ni texte sous 12 px.
+
+La forme à rail latéral de DESIGN-017 est conservée. Les variantes de badge portent maintenant leur disposition `inline-flex` et leur rail de 3 px avec une spécificité suffisante pour ne plus être écrasées par une règle de conteneur. Les pastilles d’environnement et de provenance restent volontairement distinctes.
+
+Deux contrôles complètent la recette :
+
+- les badges de statut doivent conserver la disposition partagée et le rail latéral ;
+- DEC-006 interdit tout mécanisme `prefers-color-scheme` ou `data-theme` dans la feuille de styles, commentaires exclus.
+
+### Contrôles réalisés
+
+- rendu desktop et mobile : zéro débordement horizontal, badges lisibles et non tronqués ;
+- police Geist chargée, `aria-current` présent, aucun texte visible sous 12 px ;
+- `pnpm lint`, `pnpm build`, `pnpm audit:visual`, `pnpm verify:personas` : réussis ;
+- aucune modification de donnée, de rôle, de permission ou de règle métier ;
+- aucune publication effectuée dans ce lot.
+
+- **Suite proposée :** arbitrer DEC-005, figer le checkpoint de design, publier la validation, puis ouvrir le lot produit DEC-002.
+
 ## DEV-006 — Réponse à DESIGN-014 : régressions de clôture corrigées
 
 - **Date :** 29 août 2026
