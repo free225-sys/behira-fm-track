@@ -1435,23 +1435,23 @@ function Manager({ anomalies, equipment, tab, setTab, onOpen }: { anomalies:Anom
   const [branch, setBranch] = useState<'internal'|'cost'|'external'>('cost');
   const [amount, setAmount] = useState('280000');
   const [decisionDone, setDecisionDone] = useState(false);
-  const focus = active.find((item) => item.id === selectedId) ?? active[0] ?? anomalies[0];
+  const focus = active.find((item) => item.id === selectedId) ?? active[0];
   const amountValue = Number(amount || 0);
   const overThreshold = amountValue >= 400000;
-  const branchLocked = focus.status === 'À qualifier' && !canonicalResponsible(focus);
+  const branchLocked = Boolean(focus && focus.status === 'À qualifier' && !canonicalResponsible(focus));
   const priorityCode:Record<Priority,string> = { Critique:'C', Haute:'H', Moyenne:'M', Faible:'F' };
 
   return <div className="manager-pilot">
     <ManagerHealthOverview anomalies={anomalies} equipment={equipment} />
 
-    <section className="manager-kpis manager-kpis-target" aria-label="Indicateurs opérationnels">
-      <button type="button" aria-pressed={tab === 'qualify'} className={tab === 'qualify' ? 'active' : ''} onClick={() => {setTab('qualify');setDecisionDone(false)}}>
+    <section className="manager-kpis manager-kpis-target dashboard-section-tabs" role="tablist" aria-label="Filtres rapides des files opérationnelles">
+      <button type="button" role="tab" aria-selected={tab === 'qualify'} aria-controls="manager-queue-panel" className={tab === 'qualify' ? 'active' : ''} onClick={() => {setTab('qualify');setDecisionDone(false)}}>
         <span className="kpi-icon amber">AQ</span><div><strong>{groups.qualify.length}</strong><small>À qualifier</small></div>
       </button>
-      <button type="button" aria-pressed={tab === 'late'} className={tab === 'late' ? 'active' : ''} onClick={() => {setTab('late');setDecisionDone(false)}}>
+      <button type="button" role="tab" aria-selected={tab === 'late'} aria-controls="manager-queue-panel" className={tab === 'late' ? 'active' : ''} onClick={() => {setTab('late');setDecisionDone(false)}}>
         <span className="kpi-icon red">SLA</span><div><strong>{groups.late.length}</strong><small>En retard</small></div>
       </button>
-      <button type="button" aria-pressed={tab === 'proof'} className={tab === 'proof' ? 'active' : ''} onClick={() => {setTab('proof');setDecisionDone(false)}}>
+      <button type="button" role="tab" aria-selected={tab === 'proof'} aria-controls="manager-queue-panel" className={tab === 'proof' ? 'active' : ''} onClick={() => {setTab('proof');setDecisionDone(false)}}>
         <span className="kpi-icon blue">PV</span><div><strong>{groups.proof.length}</strong><small>Preuves à vérifier</small></div>
       </button>
       <div className="completion" aria-label="Score de traitement 86 sur 100">
@@ -1464,9 +1464,9 @@ function Manager({ anomalies, equipment, tab, setTab, onOpen }: { anomalies:Anom
     <section className="fm-decision-layout">
       <article className="panel fm-inbox">
         <div className="queue-tabs" role="tablist" aria-label="Files de travail">
-          {(Object.keys(queueMeta) as ManagerQueue[]).map((key) => <button type="button" role="tab" key={key} aria-selected={tab === key} className={tab === key ? 'active' : ''} onClick={() => setTab(key)}>{queueMeta[key].label} <span>{groups[key].length}</span></button>)}
+          {(Object.keys(queueMeta) as ManagerQueue[]).map((key) => <button type="button" role="tab" key={key} aria-selected={tab === key} aria-controls="manager-queue-panel" className={tab === key ? 'active' : ''} onClick={() => {setTab(key);setDecisionDone(false)}}>{queueMeta[key].label} <span>{groups[key].length}</span></button>)}
         </div>
-        <div className="fm-inbox-list">
+        <div className="fm-inbox-list" id="manager-queue-panel" aria-live="polite">
           {active.length ? active.map((item) => <button type="button" key={item.id} aria-pressed={focus.id === item.id} className={focus.id === item.id ? 'active' : ''} onClick={() => {setSelectedId(item.id);setDecisionDone(false)}}>
             <span className={`queue-mark ${priorityTone(item.priority)}`} aria-label={`Priorité ${item.priority}`}>{priorityCode[item.priority]}</span>
             <div><span>{item.asset} · {item.id}</span><b>{item.title}</b><small>{canonicalResponsible(item) ?? 'Responsable non attribué'} · échéance {item.due}</small>{externalActorConcerned(item) && <small>Acteur externe concerné : {externalActorConcerned(item)}</small>}</div>
@@ -1476,7 +1476,7 @@ function Manager({ anomalies, equipment, tab, setTab, onOpen }: { anomalies:Anom
       </article>
 
       <div className="fm-right-column">
-      <article className="panel fm-decision-card">
+      {focus ? <article className="panel fm-decision-card">
         <div className="fm-decision-head">
           <div><div><Badge tone={priorityTone(focus.priority)}>{focus.priority}</Badge><span>{focus.id} · {focus.asset}</span></div><h3>{focus.title}</h3><p>{focus.location}</p></div>
           <button type="button" className="secondary-button" onClick={() => onOpen(focus.id)}>Voir le dossier complet</button>
@@ -1504,7 +1504,7 @@ function Manager({ anomalies, equipment, tab, setTab, onOpen }: { anomalies:Anom
         <label className="field">{branchLocked ? 'Note de qualification' : 'Décision motivée'}<textarea defaultValue={branchLocked ? 'Affectation proposée pour réaliser et confirmer le diagnostic terrain.' : overThreshold ? 'Intervention à soumettre avec devis et justification de continuité de service.' : 'Intervention autorisée pour rétablir le fonctionnement et éviter une récidive.'} /></label>
         <div className="fm-decision-actions"><small>Proposition de maquette · la synthèse conserve les valeurs actuelles tant qu’aucune transaction n’est confirmée</small><button type="button" className="secondary-button" onClick={() => setDecisionDone(false)}>Conserver en brouillon</button><button type="button" className="primary-button" onClick={() => setDecisionDone(true)}>{branchLocked ? 'Préparer l’affectation' : overThreshold ? 'Soumettre à l’Administration' : 'Préparer la décision'}</button></div>
         {decisionDone && <div className="inline-success" role="status"><span>✓</span><p><b>Proposition préparée</b><small>Elle reste distincte de l’état actuel du dossier jusqu’à son enregistrement côté serveur.</small></p></div>}
-      </article>
+      </article> : <article className="panel fm-empty-detail" role="status"><span>⌁</span><div><h3>Aucun dossier dans cette file</h3><p>Choisissez un autre compteur pour afficher les dossiers correspondants.</p></div></article>}
       <WorkflowAnalytics items={anomalies.map((item) => ({ ...item, owner:canonicalResponsible(item) ?? 'Non affectée' }))} variant="manager" />
       </div>
     </section>

@@ -46,12 +46,17 @@ const checks = [
   ['Étapes de ronde défilables sur mobile', css.includes('.surpresseur-progress{max-width:100%;overscroll-behavior-inline:contain;scrollbar-width:thin}') && css.includes('.surpresseur-progress button{flex:0 0 112px}')],
   ['Champs métier longs compressibles', css.includes('.field,.two-fields>*{min-width:0}') && css.includes('.field select,.field input,.field textarea{width:100%;max-width:100%}')],
   ['DEC-003 maintenue à 12 px', css.includes('--font-size-label:12px') && css.includes('.manager-pilot{display:grid;gap:var(--space-4);color:var(--foreground);font-variant-numeric:tabular-nums}')],
-  ['Vue bâtiment avant les files', page.indexOf('<ManagerHealthOverview anomalies={anomalies} equipment={equipment} />') < page.indexOf('className="manager-kpis manager-kpis-target"')],
+  ['Vue bâtiment avant les files', page.indexOf('<ManagerHealthOverview anomalies={anomalies} equipment={equipment} />') < page.indexOf('className="manager-kpis manager-kpis-target dashboard-section-tabs"')],
   ['File Facility Manager élargie', css.includes('grid-template-columns:minmax(400px,.88fr) minmax(0,1.12fr)')],
   ['Ticket actif identifié par deux canaux', css.includes('.fm-inbox-list>button.active{border-left-color:var(--brand);background:var(--surface-emphasis)')],
   ['Pipeline renforcé et connecté', css.includes('.workflow-pipeline b{display:block;color:var(--foreground);font-size:28px') && css.includes('.workflow-pipeline>div:not(:last-child)::after')],
   ['Gravité représentée par des barres accessibles', workflow.includes('className="severity-bars"') && workflow.includes('role="progressbar"') && css.includes('.severity-bar-track')],
   ['Cartes Facility Manager sans ombre lourde', css.includes('.manager-pilot .panel{box-shadow:none}') && css.includes('.anti-zombie-summary{margin:16px 20px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);box-shadow:none')],
+  ['Ruban de compteurs relié à la file', page.includes('manager-kpis manager-kpis-target dashboard-section-tabs') && page.includes('aria-controls="manager-queue-panel"') && page.includes('id="manager-queue-panel"')],
+  ['Compteur actif surface et encre de marque', css.includes('.manager-kpis-target.dashboard-section-tabs>button.active{border-color:transparent;background:var(--surface);color:var(--brand-strong)')],
+  ['Branches de décision interactives', page.includes('className={`branch-selector ${branchLocked ? \'is-locked\' : \'\'}`}') && css.includes('.manager-pilot .branch-selector button.active{border-color:var(--brand);background:var(--surface-emphasis)')],
+  ['Zébrure anti-dossier-zombie maintenue', css.includes('.anti-zombie-fields>div:nth-child(n+5){border-top:1px solid var(--border);background:var(--surface-muted)')],
+  ['Historique insuffisant explicitement encadré', workflow.includes('className="compact-insufficient-state"') && css.includes('.compact-insufficient-state{min-height:116px;display:flex;align-items:center;gap:11px;padding:14px;border:1px dashed var(--border-strong)')],
 ]
 
 for (const [label, ok] of checks) console.log(`${ok ? '✓' : '✗'} ${label}`)
