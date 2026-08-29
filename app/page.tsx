@@ -1309,16 +1309,26 @@ function OperationalAnalytics({ equipment, variant = 'direction' }: { equipment:
   </section>;
 }
 
+function ManagerOperationalContext() {
+  return <section className="manager-command-hero" aria-labelledby="manager-operational-title">
+    <div className="manager-heading-copy">
+      <p className="eyebrow-light">PRIORITÉS OPÉRATIONNELLES</p>
+      <h2 id="manager-operational-title">Dossiers à traiter</h2>
+      <p>Commencez par les dossiers qui exigent une qualification, une relance ou une vérification de preuve.</p>
+    </div>
+    <div className="delegation-chip" aria-label="Délégation financière active"><span>DÉLÉGATION ACTIVE</span><b>&lt; 400 000 FCFA</b><small>Au-delà : validation de l’Administration</small></div>
+  </section>;
+}
+
 function ManagerHealthOverview({ anomalies, equipment }: { anomalies:Anomaly[]; equipment:EquipmentItem[] }) {
   const criticalCount = anomalies.filter((item) => item.priority === 'Critique' && item.status !== 'Clôturée').length;
   const watchedEquipment = equipment.filter((item) => item.health < 90).length;
   const averageEquipmentHealth = equipment.length ? Math.round(equipment.reduce((total,item) => total + item.health,0) / equipment.length) : 0;
   const averageAgentScore = Math.round(agentPerformance.reduce((total,item) => total + item.score,0) / agentPerformance.length);
 
-  return <section className="manager-health-overview" aria-labelledby="manager-health-title">
+  return <section className="manager-health-overview manager-health-overview-secondary" aria-labelledby="manager-health-title">
     <header className="manager-health-heading">
-      <div><p className="design-kicker">SANTÉ &amp; PERFORMANCE</p><h2 id="manager-health-title">Vue d’ensemble du bâtiment</h2><p>Les indicateurs globaux précèdent les files opérationnelles afin de situer immédiatement le niveau de risque.</p></div>
-      <div className="delegation-chip" aria-label="Délégation financière active"><span>DÉLÉGATION ACTIVE</span><b>&lt; 400 000 FCFA</b><small>Au-delà : validation de l’Administration</small></div>
+      <div><p className="design-kicker">SANTÉ &amp; PERFORMANCE</p><h2 id="manager-health-title">Vue d’ensemble du bâtiment</h2><p>Ces indicateurs consolident l’état du bâtiment, du parc technique et de l’équipe après les priorités opérationnelles.</p></div>
     </header>
     <div className="manager-health-kpis">
       <article className="panel manager-health-card manager-building-score">
@@ -1442,7 +1452,7 @@ function Manager({ anomalies, equipment, tab, setTab, onOpen }: { anomalies:Anom
   const priorityCode:Record<Priority,string> = { Critique:'C', Haute:'H', Moyenne:'M', Faible:'F' };
 
   return <div className="manager-pilot">
-    <ManagerHealthOverview anomalies={anomalies} equipment={equipment} />
+    <ManagerOperationalContext />
 
     <section className="manager-kpis manager-kpis-target dashboard-section-tabs" role="tablist" aria-label="Filtres rapides des files opérationnelles">
       <button type="button" role="tab" aria-selected={tab === 'qualify'} aria-controls="manager-queue-panel" className={tab === 'qualify' ? 'active' : ''} onClick={() => {setTab('qualify');setDecisionDone(false)}}>
@@ -1508,6 +1518,7 @@ function Manager({ anomalies, equipment, tab, setTab, onOpen }: { anomalies:Anom
       <WorkflowAnalytics items={anomalies.map((item) => ({ ...item, owner:canonicalResponsible(item) ?? 'Non affectée' }))} variant="manager" />
       </div>
     </section>
+    <ManagerHealthOverview anomalies={anomalies} equipment={equipment} />
   </div>;
 }
 

@@ -2,6 +2,19 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-008 — Arbitrage DEC-007 : cockpit Facility Manager opérationnel d'abord
+
+- **Date :** 29 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté — recette finale et publication en cours
+- **Périmètre :** ordre de lecture du cockpit Facility Manager
+
+Wilkam a validé l'option A de DEC-005. DEC-007 consigne l'arbitrage sans réécrire l'historique. Le cockpit présente maintenant un contexte opérationnel compact avec le seuil de délégation, puis les compteurs, la file et son dossier actif, le flux opérationnel, et enfin la synthèse Santé & Performance.
+
+La synthèse de santé reste complète, mais ne masque plus la première action sur les écrans portables courants. Son texte est mis à jour pour ne plus affirmer qu'elle précède les files. Un contrôle automatique protège désormais l'ordre canonique.
+
+- **Suite proposée :** recette responsive finale, publication sur l'URL de validation existante, puis ouverture du lot produit DEC-002.
+
 ## DEV-007 — Réponse à DESIGN-015 à DESIGN-017 : recette close et badges sécurisés
 
 - **Date :** 29 août 2026

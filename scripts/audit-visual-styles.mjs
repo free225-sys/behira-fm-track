@@ -48,7 +48,7 @@ const checks = [
   ['Étapes de ronde défilables sur mobile', css.includes('.surpresseur-progress{max-width:100%;overscroll-behavior-inline:contain;scrollbar-width:thin}') && css.includes('.surpresseur-progress button{flex:0 0 112px}')],
   ['Champs métier longs compressibles', css.includes('.field,.two-fields>*{min-width:0}') && css.includes('.field select,.field input,.field textarea{width:100%;max-width:100%}')],
   ['DEC-003 maintenue à 12 px', css.includes('--font-size-label:12px') && css.includes('.manager-pilot{display:grid;gap:var(--space-4);color:var(--foreground);font-variant-numeric:tabular-nums}')],
-  ['Vue bâtiment avant les files', page.indexOf('<ManagerHealthOverview anomalies={anomalies} equipment={equipment} />') < page.indexOf('className="manager-kpis manager-kpis-target dashboard-section-tabs"')],
+  ['DEC-007 priorité opérationnelle avant la santé', page.indexOf('className="manager-kpis manager-kpis-target dashboard-section-tabs"') < page.indexOf('<ManagerHealthOverview anomalies={anomalies} equipment={equipment} />') && page.indexOf('className="fm-decision-layout"') < page.indexOf('<ManagerHealthOverview anomalies={anomalies} equipment={equipment} />')],
   ['File Facility Manager élargie', css.includes('grid-template-columns:minmax(400px,.88fr) minmax(0,1.12fr)')],
   ['Ticket actif identifié par deux canaux', css.includes('.fm-inbox-list>button.active{border-left-color:var(--brand);background:var(--surface-emphasis)')],
   ['Pipeline renforcé et connecté', css.includes('.workflow-pipeline b{display:block;color:var(--foreground);font-size:28px') && css.includes('.workflow-pipeline>div:not(:last-child)::after')],

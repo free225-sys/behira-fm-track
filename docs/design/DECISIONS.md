@@ -2,6 +2,20 @@
 
 Ne jamais supprimer ni réécrire une décision actée. Toute évolution doit prendre la forme d'une nouvelle entrée qui complète ou remplace explicitement une décision antérieure.
 
+## DEC-007 — Priorité opérationnelle dans le cockpit Facility Manager
+
+- **Date :** 29 août 2026
+- **Auteur :** Wilkam (arbitrage), consigné par le Dev Lead
+- **Statut :** **Adopté — clôt DEC-005 et confirme DEC-004**
+- **Périmètre :** Première page du cockpit Facility Manager après authentification
+- **Contexte :** DEC-005 demandait de choisir entre la vue d'ensemble d'abord et la priorité opérationnelle. La recette a montré que, avec la santé en premier, le premier dossier actionnable n'était pas entièrement visible sur plusieurs écrans portables courants.
+- **Décision ou question :** L'option A est retenue. L'ordre canonique devient : contexte opérationnel → compteurs → file de travail et détail → flux opérationnel → santé et performance.
+- **Conséquences actées :** le Facility Manager voit d'abord ce qu'il doit traiter ; les scores du bâtiment, du parc et de l'équipe restent disponibles sur la même page après les files. Le seuil de délégation reste visible dans le contexte opérationnel.
+- **Fichiers concernés :** `app/page.tsx`, `app/globals.css`, `scripts/audit-visual-styles.mjs`
+- **Impacts attendus :** amélioration de l'accès à la première action sur ordinateur portable, sans changement de donnée, de rôle, de droit ou de workflow.
+- **Contrôles attendus :** ordre du DOM protégé automatiquement, recette à 1440, 1024, 768 et 375 px, aucun débordement et plancher typographique de 12 px conservé.
+- **Suite proposée :** publier le checkpoint validé puis ouvrir le lot produit DEC-002.
+
 ## DEC-006 — Mode sombre hors périmètre, définitivement
 
 - **Date :** 29 août 2026

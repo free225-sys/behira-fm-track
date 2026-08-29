@@ -301,6 +301,7 @@ button:focus,input:focus,select:focus,textarea:focus{outline:none}
 .manager-pilot{display:grid;gap:var(--space-4);color:var(--foreground);font-variant-numeric:tabular-nums}
 .manager-pilot .panel{box-shadow:none}
 .manager-health-overview{display:grid;gap:var(--space-4);margin:-30px calc(clamp(24px,4vw,54px)*-1) 0;padding:24px clamp(24px,4vw,54px);border-bottom:1px solid var(--border);background:linear-gradient(180deg,#f7fafd 0%,var(--surface-muted) 100%)}
+.manager-pilot>.manager-health-overview.manager-health-overview-secondary{margin:var(--space-2) 0 0;padding:var(--space-5);border:1px solid var(--border);border-radius:var(--radius-md);background:linear-gradient(180deg,#f7fafd 0%,var(--surface-muted) 100%)}
 .manager-health-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--space-6)}
 .manager-health-heading h2{margin:4px 0;font-size:24px;line-height:1.25;letter-spacing:-.025em}
 .manager-health-heading>div>p:last-child{max-width:680px;margin:0;color:var(--foreground-muted);font-size:var(--font-size-body);line-height:var(--line-height-normal)}
@@ -414,7 +415,9 @@ button:focus,input:focus,select:focus,textarea:focus{outline:none}
 
 @media (min-width:701px){
   .manager-pilot{gap:0}
-  .manager-pilot .manager-command-hero{height:42px;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:20px;margin:-30px calc(clamp(24px,4vw,54px)*-1) 0;padding:3px clamp(24px,4vw,54px);border:0;border-top:1px solid #21456f;border-radius:0;background:#16345a;color:white}
+  .manager-pilot .manager-command-hero{height:auto;min-height:84px;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:20px;margin:-30px calc(clamp(24px,4vw,54px)*-1) 0;padding:10px clamp(24px,4vw,54px);border:0;border-top:1px solid #21456f;border-radius:0;background:#16345a;color:white}
+  .manager-pilot .manager-command-hero .eyebrow-light{color:#9fc3e5!important}
+  .manager-pilot .manager-command-hero h2{margin:2px 0 3px;color:white;font-size:20px}
   .manager-pilot .manager-command-hero .manager-heading-copy>p{max-width:680px;margin:0;color:#c3d8ee;font-size:var(--font-size-body);line-height:1.5}
   .manager-pilot .delegation-chip{min-width:0;white-space:nowrap}
   .manager-pilot .manager-kpis-target{height:auto;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(240px,1.35fr);margin:0 0 26px;padding:0;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface)}
@@ -448,7 +451,7 @@ button:focus,input:focus,select:focus,textarea:focus{outline:none}
   .content{padding-inline:clamp(32px,3.2vw,60px)}
   .surpresseur-hero{margin-inline:calc(clamp(32px,3.2vw,60px)*-1);padding-inline:clamp(32px,3.2vw,60px)}
   .manager-health-overview{margin-inline:calc(clamp(32px,3.2vw,60px)*-1);padding-inline:clamp(32px,3.2vw,60px)}
-  .manager-pilot .manager-command-hero{height:68px;margin-inline:calc(clamp(32px,3.2vw,60px)*-1);padding:8px clamp(32px,3.2vw,60px);gap:28px}
+  .manager-pilot .manager-command-hero{height:auto;min-height:88px;margin-inline:calc(clamp(32px,3.2vw,60px)*-1);padding:10px clamp(32px,3.2vw,60px);gap:28px}
   .manager-pilot .manager-command-hero .manager-heading-copy>p{font-size:var(--font-size-body);line-height:1.55}
   .manager-pilot .delegation-chip{min-height:44px;gap:12px;padding:8px 14px}
   .manager-pilot .manager-kpis-target{height:auto;margin:0 0 30px;padding:0}
@@ -508,9 +511,9 @@ button:focus,input:focus,select:focus,textarea:focus{outline:none}
 }
 @media (min-width:701px) and (max-width:900px){
   .topbar{height:48px;min-height:48px;padding-block:2px}
-  .manager-pilot .manager-command-hero{height:56px;display:grid;grid-template-columns:1fr;gap:2px;padding:3px clamp(24px,4vw,54px)}
+  .manager-pilot .manager-command-hero{height:auto;min-height:84px;display:grid;grid-template-columns:minmax(0,1fr) minmax(205px,32%);gap:12px;padding:8px clamp(24px,4vw,54px)}
   .manager-pilot .manager-command-hero .manager-heading-copy>p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .manager-pilot .delegation-chip{width:100%;margin:0;justify-content:flex-end}
+  .manager-pilot .delegation-chip{width:auto;margin:0}
   .manager-pilot .manager-kpis-target{grid-template-columns:repeat(3,minmax(0,1fr)) minmax(180px,1.2fr)}
   .manager-pilot .manager-kpis-target>div{grid-column:auto}
   .manager-pilot .completion{grid-column:auto;border-top:0;border-left:1px solid var(--border)}
