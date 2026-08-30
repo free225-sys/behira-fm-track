@@ -57,6 +57,11 @@ Le workflow manuel `supabase-preproduction.yml` réalise toujours un `dry-run`
 avant l’application. Il n’importe jamais les fixtures de démo. Le référentiel
 de production reste appliqué séparément avec le seed idempotent contrôlé.
 
+La procédure C8 détaillée, les huit migrations locales encore absentes de
+`fm_track`, les critères d’arrêt et le contrôle de retour arrière sont consignés
+dans `C8_RECETTE_ET_DRY_RUN_PREPRODUCTION.md`. C8 ne lie pas la copie locale au
+projet distant et n’exécute aucune migration distante.
+
 ## Recette métier minimale
 
 | Profil | Contrôle attendu |

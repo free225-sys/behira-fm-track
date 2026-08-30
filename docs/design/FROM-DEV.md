@@ -2,6 +2,31 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-027 — C8 local : recette canonique et porte de dry-run préproduction
+
+- **Date :** 31 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté et vérifié localement — dry-run préparé, non exécuté ; aucune écriture distante
+- **Sources métier :** contrats C1 à C7, workflow persistant existant et procédure préproduction
+- **Périmètre :** qualification bout en bout, preuve de nettoyage et plan de dry-run ; aucune migration, règle métier, permission, donnée durable, interface ou publication
+
+La suite `013_anti_zombie_c8_end_to_end.sql` construit dans une transaction un dossier critique GE-01 relié à un constat terrain, puis vérifie les contrats C1 à C7 sur le même dossier : référence et historique serveur, échéance Qualification dépassée, séquence de prochaine action contrôlée, blocage externe, justification du retard, résolution validée par Faustin, changement de branche par le workflow existant, intervention, preuve exigée, renforcement photo, dépôt distinct, rattachement, verrou critique et clôture. La projection `anti_zombie_summary_v` est contrôlée avant la résolution du blocage : les huit informations sont présentes, le motif du blocage prime sur la justification de retard et la dernière activité provient de l’historique réel.
+
+La recette utilise les fonctions transactionnelles déjà publiées dans les migrations locales. Elle ne redéfinit ni statut, ni SLA, ni droit, ni règle de preuve. Un rejeu de la prochaine action avec la même clé est vérifié comme idempotent. La sortie de Qualification annule explicitement l’action encore active au lieu de laisser une action orpheline. Administration et l’agent responsable lisent le dossier selon leur périmètre ; Laetitia, hors périmètre GE-01, et le même agent placé sous verrou de première connexion ne reçoivent aucune projection.
+
+Le fichier `docs/C8_RECETTE_ET_DRY_RUN_PREPRODUCTION.md` fixe la porte de passage distante. Le projet `fm_track` a été observé en lecture seule, actif et sain en `eu-west-1`, avec douze migrations enregistrées. Les vingt migrations locales laissent exactement huit fichiers à présenter dans le futur dry-run : hors-ligne, garde-fous C1, confirmation de la séquence Qualification, puis C2 à C6. Aucun lien CLI local, dry-run distant ou push n’a été exécuté. L’application future reste soumise à deux validations séparées : une pour le dry-run, une autre pour l’écriture effective après lecture de sa sortie.
+
+### Contrôles réalisés
+
+- `pnpm test:c8:local` : reconstruction des **20 migrations**, seed contrôlé, **13/13 suites pgTAP**, adaptateur C7 **13/13**, cycle critique avec téléversement Storage privé, puis Auth/RLS des cinq profils ;
+- préflight complet : lint, build, inventaire **41 tables / 20 migrations / 13 tests SQL**, authentification **20/20**, personas **38/38**, audit visuel **92/92**, configuration Supabase, cycle persistant et lint base réussis ;
+- contrôles complémentaires : hors ligne **17/17**, résilience **12/12**, polices Geist HTTP 200, lint des schémas `public` et `private` sans erreur ;
+- nettoyage vérifié après exécution : **0** anomalie C8, **0** rapport C8 et **0** utilisateur Auth C8 ;
+- aucune modification du dossier `tmp/`, aucun secret, aucune écriture Supabase distante, aucun push et aucune publication.
+
+- **Limites explicites :** la suite SQL contrôle le cycle et les métadonnées de preuve dans une transaction ; le téléversement réel dans le bucket privé est couvert séparément par `verify-operational-workflow.mjs`. Le dry-run distant n’est volontairement pas exécuté dans C8.
+- **Suite proposée :** après validation de DEV-027, lancer uniquement le workflow préproduction avec `apply_migrations = false`, comparer sa sortie aux huit migrations attendues et remettre le chantier en pause avant toute application.
+
 ## DEV-026 — C7 local : raccordement transversal de la continuité de traitement
 
 - **Date :** 30 août 2026
