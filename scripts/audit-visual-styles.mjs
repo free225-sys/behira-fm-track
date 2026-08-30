@@ -115,6 +115,7 @@ const checks = [
   ['Accueil FM sans bandeau opérationnel doublon', page.includes('<ManagerHealthOverview anomalies={anomalies} equipment={equipment} onNavigate={onNavigate} />') && page.includes('Ouvrir À traiter') && !page.includes('Ouvrir le poste de pilotage complet') && !page.includes('todo="2 qualifications"')],
   ['Analytique santé unique sur Pilotage', page.includes("{dashboardTab === 'health' &&") && page.includes('<OperationalAnalytics equipment={equipment} />') && !page.includes('<OperationalAnalytics equipment={equipment} variant="direction" />')],
   ['Parc Pilotage pointe vers Équipements', page.includes('dashboard-equipment-pointer') && page.includes("onNavigate('equipment')") && !page.includes('dashboard-equipment-panel')],
+  ['Dossier sans seconde bande navy', finalDeclaration('.next-step-card', 'background') === 'var(--surface)' && finalDeclaration('.next-step-card .primary-button', 'background') === 'var(--brand)' && !page.includes('className="compact-workflow"') && css.includes('.dossier-tabs button.active{\n  background:var(--teal);\n')],
 ]
 
 for (const [label, ok] of checks) console.log(`${ok ? '✓' : '✗'} ${label}`)

@@ -2511,4 +2511,47 @@ button.executive-metric.is-link:hover{
   font-size:var(--font-size-body);
 }
 
+/* DESIGN-036 — dossier central : une bande navy, un cycle, action lisible */
+.dossier-tabs button.active{
+  background:var(--teal);
+  color:var(--brand-foreground);
+}
+.dossier-tabs button.active span{
+  background:rgba(255,255,255,.22);
+  color:var(--brand-foreground);
+}
+.dossier-workflow>div.current{
+  background:var(--surface);
+  color:var(--teal);
+  box-shadow:inset 0 0 0 1px var(--teal);
+}
+.dossier-workflow>div.current>span{
+  background:var(--teal);
+  color:var(--brand-foreground);
+}
+.next-step-card{
+  background:var(--surface);
+  color:var(--foreground);
+  border:1px solid var(--border);
+  box-shadow:none;
+}
+.next-step-card .design-kicker{color:var(--teal)}
+.next-step-card h3{color:var(--brand-strong)}
+.next-step-card>p:not(.design-kicker){color:var(--foreground-muted)}
+.next-step-card .primary-button{
+  width:100%;
+  background:var(--brand);
+  color:var(--brand-foreground);
+}
+@media (max-width:800px){
+  .dossier-three-zone{
+    display:flex;
+    flex-direction:column;
+  }
+  .dossier-identity-column{order:1}
+  .dossier-decision-column{order:2}
+  .dossier-activity-column{order:3}
+}
+
+
 

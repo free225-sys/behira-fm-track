@@ -8,6 +8,7 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 | id | date | sujet | attendu de | bloque |
 | --- | --- | --- | --- | --- |
+| DESIGN-036 | 2026-08-30 | Dossier central : une navy, un cycle, action claire | Wilkam | — |
 | DESIGN-035 | 2026-08-30 | Cohérence des destinations : un sujet, une page | Wilkam | — |
 | DESIGN-034 | 2026-08-30 | Menu compact sans double bordure ; onglet actif pétrole | Wilkam | — |
 | DESIGN-033 | 2026-08-30 | Porte d’authentification : chrome unique, briefing clair | Wilkam | — |
@@ -44,7 +45,25 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 ---
 
+## DESIGN-036 — Dossier central, même langage que l’app
+
+- **Date :** 30 août 2026
+- **Auteur :** Revue design
+- **Statut :** Livré dans le miroir
+- **Périmètre :** `Detail` — aucun statut, preuve, montant ou droit modifié
+
+Le dossier cessait d’être une page BEHIRA : carte d’action navy + bouton orange, cycle affiché deux fois, onglets `#173d66`.
+
+- **Action principale** : surface claire, CTA `--brand`. Plus de seconde bande navy (DEC-009) ni d’orange de marque (DEC-013).
+- **Cycle** : uniquement le stepper du haut. Mini-pipeline du diagnostic retiré.
+- **Onglets** : actif `--teal`, comme le ruban et le menu compact.
+- **Identité** : badge d’étape seulement (la priorité reste dans le hero).
+- **Mobile** : identité → action → constat, conformément à DESIGN.md §5.
+
+---
+
 ## DESIGN-035 — Cohérence des destinations
+
 
 - **Date :** 30 août 2026
 - **Auteur :** Revue design
