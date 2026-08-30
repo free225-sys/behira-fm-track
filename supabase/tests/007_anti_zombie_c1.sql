@@ -65,9 +65,9 @@ begin
     raise exception 'C1 block resolution catalogue counts are incorrect';
   end if;
 
-  if (select count(*) from public.business_event_definitions) <> 18
-    or (select count(*) from public.business_event_definitions where is_activity) <> 17 then
-    raise exception 'C1 through C4 history event catalogues are incomplete';
+  if (select count(*) from public.business_event_definitions) <> 25
+    or (select count(*) from public.business_event_definitions where is_activity) <> 24 then
+    raise exception 'C1 through C5 history event catalogues are incomplete';
   end if;
 
   if (select count(*) from public.next_action_code_stages) <> 29 then

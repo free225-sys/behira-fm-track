@@ -2,6 +2,41 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-024 — C5 local : règles, exigences et validation des preuves
+
+- **Date :** 30 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté et vérifié localement — non publié, non appliqué à distance
+- **Sources métier :** dictionnaire du lot A, modèle du lot B et décisions fermées du lot B2
+- **Périmètre :** exigences de preuve canoniques et validation Facility Manager ; aucun nouvel écran, statut, rôle, seuil, accès Prestataire, droit de dérogation ou règle hors ligne
+
+Le modèle C5 sépare désormais quatre objets qui ne doivent jamais être confondus : la règle contextuelle publiée, l’exigence figée appliquée au dossier, la preuve déposée et la décision d’acceptation ou de refus. Les tables `proof_type_definitions`, `proof_rule_sets`, `proof_requirement_rules`, `anomaly_proof_requirements` et `proof_requirement_evidence` portent ces sources canoniques. Une évolution ultérieure d’une règle ne transforme donc pas rétroactivement les anciens dossiers.
+
+La seule automatisation activée est la règle confirmée `CRITICAL_ACCEPTED_PROOF` : tout dossier critique ouvert reçoit l’exigence d’au moins une preuve acceptée avant clôture. Le type exact reste contextuel et à confirmer. Aucune matrice propre à WILO-01, RIA-01, aux ascenseurs, à une catégorie ou à un équipement n’a été inventée. Les types `photo`, `report` et `pv` sont les seuls types actifs et confirmés ; `invoice`, `quote`, `comment` et `other` restent inactifs pour compatibilité ou validation ultérieure.
+
+Faustin peut renforcer le dossier en ajoutant une exigence spécifique fondée sur un type actif, mais il ne peut ni supprimer, ni affaiblir, ni remplacer silencieusement une exigence existante. C5 n’expose aucune commande de dérogation ou de substitution. Une preuve déposée reste `pending` jusqu’à une décision explicite du Facility Manager. Une preuve refusée conserve son motif, son auteur et son heure ; une preuve acceptée ne satisfait une exigence typée qu’après une liaison explicite. Les exigences génériques « toute preuve acceptée » sont reliées automatiquement après acceptation. La clôture reste refusée tant qu’une exigence obligatoire est `pending`, en complément du verrou critique historique.
+
+### Droits, provenance et cohérence
+
+- les agents peuvent déposer les preuves déjà autorisées dans leur périmètre, sans pouvoir les valider, les lier à une exigence ou déclarer une exigence satisfaite ;
+- le Facility Manager est le seul rôle opérationnel autorisé à ajouter une exigence spécifique, accepter ou refuser une preuve et effectuer une liaison explicite ;
+- l’Administration conserve la lecture globale d’audit sans acquérir les commandes du Facility Manager ; un profil verrouillé ou hors périmètre ne reçoit aucun accès métier ;
+- RLS active sur les cinq nouveaux objets, aucun droit `anon`, aucune écriture directe client, fonctions internes inexécutables par les rôles exposés et RPC publiques limitées aux utilisateurs authentifiés puis contrôlées côté serveur ;
+- application, renforcement, liaison, satisfaction, dépôt, acceptation et refus sont historisés avec acteur, étape, source, heure serveur et clé d’idempotence ; les replays identiques restent sans doublon et les replays divergents sont refusés ;
+- les règles publiées et les instantanés appliqués sont protégés contre les réécritures silencieuses. Le script de recette locale supprime uniquement sa fixture par le conteneur local, sans assouplir cette immutabilité dans le modèle produit.
+
+### Contrôles réalisés
+
+- reconstruction complète : **19 migrations**, seed idempotent et **11/11 suites pgTAP** réussies ;
+- recette C5 : règle critique unique, absence de règle équipement inventée, exigence générique automatique, renforcement typé, preuve déposée distincte, acceptation/refus, motif et provenance, liaison explicite, satisfaction, idempotence, version obsolète, immutabilité, verrou de clôture et RLS Administration/FM/agent/hors périmètre/profil verrouillé ;
+- lint des schémas `public` et `private` : aucune erreur ; inventaire Lot 0 : **41 tables / 19 migrations / 11 tests SQL** ; types TypeScript Supabase régénérés ;
+- cinq comptes Auth locaux, changement obligatoire du premier mot de passe, périmètres RLS, workflow persistant critique, Storage privé et nettoyage de fixture : réussis ;
+- audit visuel **92/92**, personas **38/38**, authentification **20/20**, AntiZombieSummary **11/11**, hors ligne **17/17**, résilience **12/12**, lint et build réussis ;
+- aucune écriture Supabase distante, aucun secret, aucune publication, aucune modification de l’interface et aucune modification du dossier `tmp/`.
+
+- **Limites explicites :** aucune exigence par équipement, catégorie ou étape n’est activée tant que sa matrice n’est pas validée ; aucune dérogation n’est disponible ; les décisions, validations et clôtures restent en ligne. `AntiZombieSummary` n’est pas encore raccordé à ces sources canoniques.
+- **Suite proposée :** C6 local — créer une projection de lecture unique des huit champs canoniques, raccorder l’adaptateur partagé de `AntiZombieSummary`, puis vérifier Faustin, registre et dossier central sans dupliquer la logique métier.
+
 ## DEV-023 — C4 local : blocage principal et justification de retard
 
 - **Date :** 30 août 2026

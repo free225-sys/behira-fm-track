@@ -21,6 +21,9 @@ declare
   v_history_count integer;
 begin
   select id into v_fm from public.profiles where employee_code = 'FAU-FM';
+  update public.profiles
+  set account_status = 'active', must_change_password = false
+  where id = v_fm;
   select id into v_critical from public.priority_definitions where code = 'CRITICAL';
   select id into v_category from public.categories where code = 'INC';
   select id into v_equipment from public.equipment where code = 'RIA-01';

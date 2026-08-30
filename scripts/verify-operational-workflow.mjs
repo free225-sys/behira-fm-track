@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { createClient } from "@supabase/supabase-js";
 
 const environment = Object.fromEntries(
@@ -16,6 +17,45 @@ const key = environment.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 const serviceKey = environment.SUPABASE_LOCAL_SERVICE_ROLE_KEY;
 const password = "Behira-Demo-2026!";
 if (!url || !key || !serviceKey) throw new Error("Local Supabase credentials are unavailable.");
+
+const supabaseConfig = readFileSync(new URL("../supabase/config.toml", import.meta.url), "utf8");
+const projectId = supabaseConfig.match(/^project_id\s*=\s*"([^"]+)"/m)?.[1];
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+if (!projectId) throw new Error("Local Supabase project id is unavailable.");
+
+function cleanupLocalWorkflowFixture(targetAnomalyId, targetReportId) {
+  if (targetAnomalyId && !uuidPattern.test(targetAnomalyId)) throw new Error("Invalid local anomaly fixture id.");
+  if (targetReportId && !uuidPattern.test(targetReportId)) throw new Error("Invalid local report fixture id.");
+
+  const anomalyFilter = targetAnomalyId ? `'${targetAnomalyId}'::uuid` : "null::uuid";
+  const reportFilter = targetReportId ? `'${targetReportId}'::uuid` : "null::uuid";
+  const sql = `
+begin;
+alter table public.proof_requirement_evidence disable trigger validate_proof_requirement_evidence_row;
+alter table public.anomaly_proof_requirements disable trigger validate_proof_requirement_row;
+delete from public.proof_requirement_evidence
+where requirement_id in (
+  select id from public.anomaly_proof_requirements where anomaly_id = ${anomalyFilter}
+);
+delete from public.anomaly_proof_requirements where anomaly_id = ${anomalyFilter};
+alter table public.anomaly_proof_requirements enable trigger validate_proof_requirement_row;
+alter table public.proof_requirement_evidence enable trigger validate_proof_requirement_evidence_row;
+delete from public.proofs where anomaly_id = ${anomalyFilter};
+delete from public.costs where anomaly_id = ${anomalyFilter};
+delete from public.interventions where anomaly_id = ${anomalyFilter};
+delete from public.work_orders where anomaly_id = ${anomalyFilter};
+delete from public.qualifications where anomaly_id = ${anomalyFilter};
+delete from public.anomalies where id = ${anomalyFilter};
+delete from public.reports where id = ${reportFilter};
+commit;
+`;
+
+  execFileSync(
+    "docker",
+    ["exec", "-i", `supabase_db_${projectId}`, "psql", "-v", "ON_ERROR_STOP=1", "-U", "postgres", "-d", "postgres"],
+    { input: sql, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] },
+  );
+}
 
 const facilityManager = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 const service = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
@@ -137,18 +177,12 @@ try {
     const { error } = await service.storage.from("anomaly-proofs").remove([proofPath]);
     if (error) cleanupFailures.push(`storage: ${error.message}`);
   }
-  if (anomalyId) {
-    const childTables = ["proofs", "costs", "interventions", "work_orders", "qualifications"];
-    for (const table of childTables) {
-      const { error } = await service.from(table).delete().eq("anomaly_id", anomalyId);
-      if (error) cleanupFailures.push(`${table}: ${error.message}`);
+  if (anomalyId || reportId) {
+    try {
+      cleanupLocalWorkflowFixture(anomalyId, reportId);
+    } catch (error) {
+      cleanupFailures.push(`database: ${error instanceof Error ? error.message : String(error)}`);
     }
-    const { error } = await service.from("anomalies").delete().eq("id", anomalyId);
-    if (error) cleanupFailures.push(`anomalies: ${error.message}`);
-  }
-  if (reportId) {
-    const { error } = await service.from("reports").delete().eq("id", reportId);
-    if (error) cleanupFailures.push(`reports: ${error.message}`);
   }
   await facilityManager.auth.signOut();
   if (cleanupFailures.length) throw new Error(`Workflow fixture cleanup failed: ${cleanupFailures.join("; ")}`);

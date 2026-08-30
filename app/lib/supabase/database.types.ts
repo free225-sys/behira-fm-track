@@ -810,6 +810,153 @@ export type Database = {
           },
         ]
       }
+      anomaly_proof_requirements: {
+        Row: {
+          acceptance_criteria_snapshot: Json
+          anomaly_id: string
+          application_base_version_no: number
+          application_client_occurred_at: string | null
+          application_comment: string
+          application_idempotency_key: string
+          created_at: string
+          created_by_profile_id: string | null
+          id: string
+          is_mandatory: boolean
+          label_snapshot: string
+          minimum_count: number
+          origin: string
+          proof_type_id: string | null
+          proof_type_mode: string
+          satisfied_at: string | null
+          satisfied_by_profile_id: string | null
+          server_received_at: string
+          source_rule_id: string | null
+          source_rule_set_version: number | null
+          state: string
+          superseded_at: string | null
+          superseded_by_profile_id: string | null
+          superseded_by_requirement_id: string | null
+          waived_at: string | null
+          waived_by_profile_id: string | null
+          waiver_reason: string | null
+        }
+        Insert: {
+          acceptance_criteria_snapshot?: Json
+          anomaly_id: string
+          application_base_version_no: number
+          application_client_occurred_at?: string | null
+          application_comment: string
+          application_idempotency_key: string
+          created_at?: string
+          created_by_profile_id?: string | null
+          id?: string
+          is_mandatory?: boolean
+          label_snapshot: string
+          minimum_count: number
+          origin: string
+          proof_type_id?: string | null
+          proof_type_mode: string
+          satisfied_at?: string | null
+          satisfied_by_profile_id?: string | null
+          server_received_at?: string
+          source_rule_id?: string | null
+          source_rule_set_version?: number | null
+          state?: string
+          superseded_at?: string | null
+          superseded_by_profile_id?: string | null
+          superseded_by_requirement_id?: string | null
+          waived_at?: string | null
+          waived_by_profile_id?: string | null
+          waiver_reason?: string | null
+        }
+        Update: {
+          acceptance_criteria_snapshot?: Json
+          anomaly_id?: string
+          application_base_version_no?: number
+          application_client_occurred_at?: string | null
+          application_comment?: string
+          application_idempotency_key?: string
+          created_at?: string
+          created_by_profile_id?: string | null
+          id?: string
+          is_mandatory?: boolean
+          label_snapshot?: string
+          minimum_count?: number
+          origin?: string
+          proof_type_id?: string | null
+          proof_type_mode?: string
+          satisfied_at?: string | null
+          satisfied_by_profile_id?: string | null
+          server_received_at?: string
+          source_rule_id?: string | null
+          source_rule_set_version?: number | null
+          state?: string
+          superseded_at?: string | null
+          superseded_by_profile_id?: string | null
+          superseded_by_requirement_id?: string | null
+          waived_at?: string | null
+          waived_by_profile_id?: string | null
+          waiver_reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anomaly_proof_requirements_anomaly_id_fkey"
+            columns: ["anomaly_id"]
+            isOneToOne: false
+            referencedRelation: "anomalies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_proof_requirements_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_proof_requirements_proof_type_id_fkey"
+            columns: ["proof_type_id"]
+            isOneToOne: false
+            referencedRelation: "proof_type_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_proof_requirements_satisfied_by_profile_id_fkey"
+            columns: ["satisfied_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_proof_requirements_source_rule_id_fkey"
+            columns: ["source_rule_id"]
+            isOneToOne: false
+            referencedRelation: "proof_requirement_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_proof_requirements_superseded_by_profile_id_fkey"
+            columns: ["superseded_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_proof_requirements_superseded_by_requirement_id_fkey"
+            columns: ["superseded_by_requirement_id"]
+            isOneToOne: false
+            referencedRelation: "anomaly_proof_requirements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_proof_requirements_waived_by_profile_id_fkey"
+            columns: ["waived_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_events: {
         Row: {
           actor_auth_user_id: string | null
@@ -1830,6 +1977,260 @@ export type Database = {
           },
         ]
       }
+      proof_requirement_evidence: {
+        Row: {
+          idempotency_key: string
+          linked_at: string
+          linked_by_profile_id: string
+          proof_id: string
+          requirement_id: string
+        }
+        Insert: {
+          idempotency_key: string
+          linked_at?: string
+          linked_by_profile_id: string
+          proof_id: string
+          requirement_id: string
+        }
+        Update: {
+          idempotency_key?: string
+          linked_at?: string
+          linked_by_profile_id?: string
+          proof_id?: string
+          requirement_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proof_requirement_evidence_linked_by_profile_id_fkey"
+            columns: ["linked_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proof_requirement_evidence_proof_id_fkey"
+            columns: ["proof_id"]
+            isOneToOne: false
+            referencedRelation: "proofs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proof_requirement_evidence_requirement_id_fkey"
+            columns: ["requirement_id"]
+            isOneToOne: false
+            referencedRelation: "anomaly_proof_requirements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proof_requirement_rules: {
+        Row: {
+          acceptance_criteria: Json
+          action_code_id: string | null
+          category_id: string | null
+          code: string
+          created_at: string
+          equipment_id: string | null
+          id: string
+          is_active: boolean
+          is_mandatory: boolean
+          label: string
+          minimum_count: number
+          precedence: number
+          priority_id: string | null
+          proof_type_id: string | null
+          proof_type_mode: string
+          requires_critical: boolean
+          rule_set_id: string
+          source_document: string
+          validation_status: string
+          workflow_stage_id: string | null
+        }
+        Insert: {
+          acceptance_criteria?: Json
+          action_code_id?: string | null
+          category_id?: string | null
+          code: string
+          created_at?: string
+          equipment_id?: string | null
+          id?: string
+          is_active?: boolean
+          is_mandatory?: boolean
+          label: string
+          minimum_count?: number
+          precedence?: number
+          priority_id?: string | null
+          proof_type_id?: string | null
+          proof_type_mode: string
+          requires_critical?: boolean
+          rule_set_id: string
+          source_document: string
+          validation_status: string
+          workflow_stage_id?: string | null
+        }
+        Update: {
+          acceptance_criteria?: Json
+          action_code_id?: string | null
+          category_id?: string | null
+          code?: string
+          created_at?: string
+          equipment_id?: string | null
+          id?: string
+          is_active?: boolean
+          is_mandatory?: boolean
+          label?: string
+          minimum_count?: number
+          precedence?: number
+          priority_id?: string | null
+          proof_type_id?: string | null
+          proof_type_mode?: string
+          requires_critical?: boolean
+          rule_set_id?: string
+          source_document?: string
+          validation_status?: string
+          workflow_stage_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proof_requirement_rules_action_code_id_fkey"
+            columns: ["action_code_id"]
+            isOneToOne: false
+            referencedRelation: "next_action_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proof_requirement_rules_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proof_requirement_rules_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "equipment"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proof_requirement_rules_priority_id_fkey"
+            columns: ["priority_id"]
+            isOneToOne: false
+            referencedRelation: "priority_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proof_requirement_rules_proof_type_id_fkey"
+            columns: ["proof_type_id"]
+            isOneToOne: false
+            referencedRelation: "proof_type_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proof_requirement_rules_rule_set_id_fkey"
+            columns: ["rule_set_id"]
+            isOneToOne: false
+            referencedRelation: "proof_rule_sets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proof_requirement_rules_workflow_stage_id_fkey"
+            columns: ["workflow_stage_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proof_rule_sets: {
+        Row: {
+          code: string
+          created_at: string
+          effective_from: string
+          effective_to: string | null
+          id: string
+          published_at: string | null
+          published_by_profile_id: string | null
+          source_document: string
+          status: string
+          version_no: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          effective_from: string
+          effective_to?: string | null
+          id?: string
+          published_at?: string | null
+          published_by_profile_id?: string | null
+          source_document: string
+          status: string
+          version_no: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          published_at?: string | null
+          published_by_profile_id?: string | null
+          source_document?: string
+          status?: string
+          version_no?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proof_rule_sets_published_by_profile_id_fkey"
+            columns: ["published_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proof_type_definitions: {
+        Row: {
+          allowed_mime_types: string[]
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          max_file_size_bytes: number | null
+          sort_order: number
+          source_document: string
+          updated_at: string
+          validation_status: string
+        }
+        Insert: {
+          allowed_mime_types?: string[]
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          max_file_size_bytes?: number | null
+          sort_order: number
+          source_document: string
+          updated_at?: string
+          validation_status: string
+        }
+        Update: {
+          allowed_mime_types?: string[]
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          max_file_size_bytes?: number | null
+          sort_order?: number
+          source_document?: string
+          updated_at?: string
+          validation_status?: string
+        }
+        Relationships: []
+      }
       proofs: {
         Row: {
           anomaly_id: string | null
@@ -1846,6 +2247,12 @@ export type Database = {
           reference: string
           rejection_reason: string | null
           report_id: string | null
+          review_base_version_no: number | null
+          review_client_occurred_at: string | null
+          review_comment: string | null
+          review_idempotency_key: string | null
+          reviewed_at: string | null
+          reviewed_by_profile_id: string | null
           sha256: string | null
           storage_bucket: string | null
           storage_path: string | null
@@ -1872,6 +2279,12 @@ export type Database = {
           reference: string
           rejection_reason?: string | null
           report_id?: string | null
+          review_base_version_no?: number | null
+          review_client_occurred_at?: string | null
+          review_comment?: string | null
+          review_idempotency_key?: string | null
+          reviewed_at?: string | null
+          reviewed_by_profile_id?: string | null
           sha256?: string | null
           storage_bucket?: string | null
           storage_path?: string | null
@@ -1898,6 +2311,12 @@ export type Database = {
           reference?: string
           rejection_reason?: string | null
           report_id?: string | null
+          review_base_version_no?: number | null
+          review_client_occurred_at?: string | null
+          review_comment?: string | null
+          review_idempotency_key?: string | null
+          reviewed_at?: string | null
+          reviewed_by_profile_id?: string | null
           sha256?: string | null
           storage_bucket?: string | null
           storage_path?: string | null
@@ -1929,6 +2348,13 @@ export type Database = {
             columns: ["report_id"]
             isOneToOne: false
             referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proofs_reviewed_by_profile_id_fkey"
+            columns: ["reviewed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -2975,6 +3401,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_anomaly_proof_requirement: {
+        Args: {
+          p_acceptance_criteria: Json
+          p_base_version_no: number
+          p_client_occurred_at?: string
+          p_comment: string
+          p_idempotency_key: string
+          p_label: string
+          p_minimum_count: number
+          p_proof_type_code: string
+          p_reference: string
+        }
+        Returns: Json
+      }
       advance_anomaly_workflow: {
         Args: { p_comment?: string; p_reference: string; p_target: string }
         Returns: Json
@@ -3039,6 +3479,16 @@ export type Database = {
       has_any_role: { Args: { p_role_codes: string[] }; Returns: boolean }
       has_permission: { Args: { p_permission_code: string }; Returns: boolean }
       has_role: { Args: { p_role_code: string }; Returns: boolean }
+      link_proof_to_requirement: {
+        Args: {
+          p_base_version_no: number
+          p_idempotency_key: string
+          p_proof_id: string
+          p_reference: string
+          p_requirement_id: string
+        }
+        Returns: Json
+      }
       mark_notification_read: {
         Args: { p_notification_id: string }
         Returns: undefined
@@ -3119,6 +3569,18 @@ export type Database = {
           intervention_due_at: string
           qualification_due_at: string
         }[]
+      }
+      review_anomaly_proof: {
+        Args: {
+          p_base_version_no: number
+          p_client_occurred_at?: string
+          p_comment: string
+          p_decision: string
+          p_idempotency_key: string
+          p_proof_id: string
+          p_reference: string
+        }
+        Returns: Json
       }
       set_anomaly_next_action: {
         Args: {
