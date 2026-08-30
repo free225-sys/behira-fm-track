@@ -8,6 +8,9 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 | id | date | sujet | attendu de | bloque |
 | --- | --- | --- | --- | --- |
+| DESIGN-035 | 2026-08-30 | Cohérence des destinations : un sujet, une page | Wilkam | — |
+| DESIGN-034 | 2026-08-30 | Menu compact sans double bordure ; onglet actif pétrole | Wilkam | — |
+| DESIGN-033 | 2026-08-30 | Porte d’authentification : chrome unique, briefing clair | Wilkam | — |
 | DESIGN-032 | 2026-08-29 | Bandeau contexte lisible ; score KPI teal | Wilkam | — |
 | DESIGN-031 | 2026-08-29 | Ruban 3 files lisible ; accent teal (DEC-013) | Wilkam | DEC-013 |
 | DESIGN-030 | 2026-08-29 | Onglets compact : 4 files + 3 codes + score à droite | Wilkam | — |
@@ -41,7 +44,51 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 ---
 
+## DESIGN-035 — Cohérence des destinations
+
+- **Date :** 30 août 2026
+- **Auteur :** Revue design
+- **Statut :** Livré dans le miroir
+- **Périmètre :** Accueil, Pilotage, Registre, Rondes — sans changer `navItems` ni les droits
+
+Chaque destination garde son sujet. Les doublons deviennent des aperçus + CTA :
+
+- Accueil FM : santé du bâtiment + remontées. Plus de bandeau opérationnel ni libellé « poste de pilotage ».
+- Accueil Administration : l’analytique complète quitte la page ; le score 82 ouvre Pilotage.
+- Pilotage / Parc : aperçu des modules à surveiller, catalogue dans Équipements.
+- Accueil Rondes & Assistance : plus de second formulaire de constat ; la saisie reste dans Rondes.
+- Registre : le H1 du catalogue suffit, plus de « Registre central ».
+
+Aucune destination n’est retirée du menu (DEC-002 / DEC-014).
+
+---
+
+## DESIGN-034 — Menu compact, actif pétrole
+
+
+- **Date :** 30 août 2026
+- **Auteur :** Revue design
+- **Statut :** Livré dans le miroir
+- **Périmètre :** navigation mobile/tablette, ruban AQ/SLA/PV
+
+Plus de trait supérieur + pastille (double bordure). L’item actif est un segment `--teal` (bleu pétrole DEC-013), texte blanc. Même remplissage sur l’onglet de file actif. Tablette haute : soulignement pétrole, sans second trait.
+
+---
+
+## DESIGN-033 — Porte d’authentification
+
+
+- **Date :** 30 août 2026
+- **Auteur :** Revue design
+- **Statut :** Livré dans le miroir
+- **Périmètre :** login, mot de passe oublié, invitation, changement obligatoire
+
+Le panneau navy plein écran et le dégradé décoratif quittent l’entrée. Une **seule bande chrome** (comme l’app) ouvre un canvas clair : briefing à gauche, formulaire et accès de démonstration à droite. Compte sélectionné = carte interne + monogramme inversé. Aucun changement d’identifiants, de rôles ni de session.
+
+---
+
 ## DESIGN-029 — Files sans masquage
+
 
 - **Date :** 29 août 2026
 - **Auteur :** Revue design

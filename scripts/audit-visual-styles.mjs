@@ -73,7 +73,7 @@ const checks = [
   ['Gravité représentée par des barres accessibles', workflow.includes('className="severity-bars"') && workflow.includes('role="progressbar"') && css.includes('.severity-bar-track')],
   ['Cartes Facility Manager sans ombre lourde', css.includes('.manager-pilot .panel{box-shadow:none}') && css.includes('.anti-zombie-summary{margin:16px 20px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);box-shadow:none')],
   ['Ruban de compteurs relié à la file', page.includes('manager-kpis manager-kpis-target dashboard-section-tabs') && page.includes('aria-controls="manager-queue-panel"') && page.includes('id="manager-queue-panel"')],
-  ['Compteur actif surface et encre de marque', css.includes('.manager-kpis-target.dashboard-section-tabs>button.active{border-color:transparent;background:var(--surface);color:var(--brand-strong)') && css.includes('button.active .kpi-icon.amber') && !css.includes('box-shadow:inset 3px 0 0 var(--brand)')],
+  ['Compteur actif pétrole', finalDeclaration('.manager-pilot .manager-kpis.manager-kpis-target.dashboard-section-tabs>button.active', 'background') === 'var(--teal)' && css.includes('button.active .kpi-icon.amber') && !css.includes('box-shadow:inset 3px 0 0 var(--brand)')],
   ['Monogrammes de file au triplet', css.includes('.dashboard-section-tabs .kpi-icon.amber{\n  background:var(--warning-surface);\n  color:var(--warning-text);\n}') && css.includes('.dashboard-section-tabs .kpi-icon.red{\n  background:var(--danger-surface);\n  color:var(--danger-text);\n}')],
   ['Glyphes de badge distincts', badge.includes("critical: '!'") && badge.includes("high: '▲'") && badge.includes("success: '✓'")],
   ['Focus du ruban non clippé', css.includes('overflow:visible') && css.includes('.manager-kpis.manager-kpis-target.dashboard-section-tabs')],
@@ -110,6 +110,11 @@ const checks = [
   ['Actions du dossier conformes au rôle et au verrou critique', page.includes('Consultation uniquement · aucune action métier accordée') && page.includes("const criticalClosureLocked = nextStatusOption === 'Clôturée'") && page.includes('disabled={busy || criticalClosureLocked}') && page.includes('Preuve requise avant clôture')],
   ['Score WILO sans collision de disposition', css.includes('.score-explain-card>.score-freshness{\n  display:grid;') && css.includes('grid-template-columns:1fr;')],
   ['Actions principales tactiles sur mobile', css.includes('.manager-pilot .primary-button,\n  .manager-pilot .secondary-button,\n  .score-explain-card button{min-height:44px}') && css.includes('.auth-signout-top{width:44px;height:44px;min-width:44px;min-height:44px}')],
+  ['Porte d’authentification sans panneau navy', page.includes('className="auth-chrome"') && page.includes('function AuthFrame') && finalDeclaration('.auth-brand-panel', 'background') === 'transparent' && finalDeclaration('.auth-shell', 'grid-template-rows') === 'auto 1fr' && css.includes('.demo-account-grid>button.is-selected>span{\n  background:var(--brand);\n  color:var(--brand-foreground);\n}')],
+  ['Menu compact sans double bordure', css.includes('.app-navigation .nav-item.active{\n    border:0;\n    box-shadow:none;\n    background:var(--teal);\n    color:var(--brand-foreground);\n  }')],
+  ['Accueil FM sans bandeau opérationnel doublon', page.includes('<ManagerHealthOverview anomalies={anomalies} equipment={equipment} onNavigate={onNavigate} />') && page.includes('Ouvrir À traiter') && !page.includes('Ouvrir le poste de pilotage complet') && !page.includes('todo="2 qualifications"')],
+  ['Analytique santé unique sur Pilotage', page.includes("{dashboardTab === 'health' &&") && page.includes('<OperationalAnalytics equipment={equipment} />') && !page.includes('<OperationalAnalytics equipment={equipment} variant="direction" />')],
+  ['Parc Pilotage pointe vers Équipements', page.includes('dashboard-equipment-pointer') && page.includes("onNavigate('equipment')") && !page.includes('dashboard-equipment-panel')],
 ]
 
 for (const [label, ok] of checks) console.log(`${ok ? '✓' : '✗'} ${label}`)
