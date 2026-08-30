@@ -2,6 +2,26 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-020 — Validation de la séquence Qualification
+
+- **Date :** 30 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Validation métier appliquée localement — non publiée, non appliquée à distance
+- **Décision utilisateur :** le diagnostic reste dans l’étape `QUALIFICATION` et le statut `A_QUALIFIER` jusqu’au choix de la branche de traitement
+
+La décision active uniquement les trois actions successives déjà décrites dans B2 :
+
+1. `QUALIFY_ASSIGN` — Qualifier et affecter ;
+2. `PERFORM_DIAGNOSIS` — Réaliser et confirmer le diagnostic ;
+3. `CHOOSE_TREATMENT_BRANCH` — Choisir la branche de traitement.
+
+Ces actions appartiennent au dossier et restent compatibles avec l’étape Qualification ; aucun statut ni aucune étape n’est ajouté. Les treize autres codes C1 restent inactifs. La liste visible par un agent est donc limitée aux trois codes confirmés, tandis que l’Administration et le Facility Manager conservent la possibilité de relire les candidats inactifs avant un futur arbitrage.
+
+Cette validation n’ajoute aucune action opérationnelle à un dossier, ne modifie aucune permission et ne raccorde encore aucun écran. Elle ferme seulement le premier gate métier de B2 et prépare C2 sur l’échéance canonique historisée.
+
+- **Contrôles réalisés :** reconstruction des **15 migrations** et seed idempotent ; **7/7 suites pgTAP** ; inventaire Lot 0 **32 tables / 15 migrations / 7 tests SQL** ; lint du schéma `public` sans erreur ; audit visuel **92/92**, personas **38/38**, authentification **20/20**, AntiZombieSummary **11/11**, hors ligne **17/17**, résilience **12/12**, lint et build réussis.
+- **Suite proposée :** C2 local additif — créer `anomaly_deadlines`, reprendre sans invention les échéances déjà calculées et conserver toute future ancienne/nouvelle valeur dans l’historique.
+
 ## DEV-019 — C1 local : référentiels anti-dossier-zombie et provenance de l’historique
 
 - **Date :** 30 août 2026

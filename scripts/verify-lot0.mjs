@@ -30,6 +30,7 @@ const expectedMigrations = [
   "20260826183000_require_first_password_change.sql",
   "20260829234552_offline_field_sync_idempotency.sql",
   "20260830040839_anti_zombie_c1_references_history_guardrails.sql",
+  "20260830121913_confirm_qualification_action_sequence.sql",
 ];
 check(JSON.stringify(migrations) === JSON.stringify(expectedMigrations), "Migration order or inventory is unexpected");
 

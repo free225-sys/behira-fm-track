@@ -40,9 +40,14 @@ declare
   v_duplicate_key uuid := '70000000-0000-0000-0000-000000000099';
 begin
   if (select count(*) from public.next_action_codes) <> 16
-    or exists (select 1 from public.next_action_codes where is_active)
-    or exists (select 1 from public.next_action_codes where validation_status <> 'to_confirm') then
-    raise exception 'C1 next-action candidates must remain inactive until catalogue validation';
+    or (select count(*) from public.next_action_codes where is_active and validation_status = 'confirmed') <> 3
+    or exists (
+      select 1
+      from public.next_action_codes
+      where is_active
+        and code not in ('QUALIFY_ASSIGN', 'PERFORM_DIAGNOSIS', 'CHOOSE_TREATMENT_BRANCH')
+    ) then
+    raise exception 'Only the three validated Qualification actions may be active';
   end if;
 
   if (select count(*) from public.block_reason_codes) <> 9
@@ -171,8 +176,10 @@ select set_config('request.jwt.claim.sub', '70000000-0000-0000-0000-000000000001
 
 do $$
 begin
-  if (select count(*) from public.next_action_codes) <> 0 then
-    raise exception 'Agent can see inactive next-action candidates';
+  if (select count(*) from public.next_action_codes) <> 3
+    or (select array_agg(code order by sort_order) from public.next_action_codes)
+      <> array['QUALIFY_ASSIGN', 'PERFORM_DIAGNOSIS', 'CHOOSE_TREATMENT_BRANCH']::text[] then
+    raise exception 'Agent does not see exactly the validated Qualification sequence';
   end if;
   if (select count(*) from public.block_reason_codes) <> 6
     or (select count(*) from public.delay_reason_codes) <> 6
