@@ -2,6 +2,31 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-028 — C8 préproduction : application contrôlée et correctif de provenance
+
+- **Date :** 31 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Appliqué et vérifié sur la préproduction `fm_track`
+- **Cible :** `polmebcfablztzojgwoo`, `eu-west-1`, état `ACTIVE_HEALTHY`
+- **Périmètre :** application des huit migrations C1 à C6 puis migration compensatoire du catalogue action/étape ; aucune interface, permission, règle métier, fixture ou publication frontend
+
+Après sauvegarde et restauration validée, l’historique des douze migrations déjà présentes a été rapproché des douze versions locales correspondantes. Le dry-run a ensuite présenté exactement les huit migrations attendues, sans seed, rôle ou secret, puis leur application a réussi. La première recette distante transactionnelle a détecté un écart que les tests locaux masquaient : `next_action_code_stages` contenait **29** lignes localement parce que `seed.sql` les ajoutait après les migrations, mais **0** ligne à distance puisque le seed avait été volontairement exclu. Le garde-fou `validate_anomaly_action_row` refusait donc correctement toute prochaine action.
+
+La correction ne réécrit aucune migration appliquée. La migration progressive `20260830233549_restore_canonical_action_stage_mappings.sql` reprend exactement les six étapes du workflow et les 29 correspondances déjà validées. Elle est idempotente, échoue si un code requis manque et ne change ni statut, rôle, seuil, permission ou définition du SLA. Le nouveau contrôle `test:migration-data:local` reconstruit la base sans seed, exige **6/6** étapes et **29/29** correspondances exactes, puis restaure automatiquement la base locale avec le seed contrôlé.
+
+### Contrôles réalisés
+
+- checkpoint local `3cc598f` pour la migration et son garde-fou ; dossier `tmp/` préexistant laissé intact ;
+- migration-only : **6/6** étapes et **29/29** correspondances ; recette locale : **13/13** suites pgTAP, AntiZombieSummary **13/13**, cycle persistant/Storage et Auth/RLS des cinq profils réussis ;
+- préflight complet : lint, build, Lot 0 **41 tables / 21 migrations / 13 tests SQL**, authentification **20/20**, personas **38/38**, audit visuel **92/92**, lint base sans erreur ;
+- sauvegarde avant correctif : schéma et données publiques protégés par ACL, empreintes SHA-256 calculées ;
+- cible confirmée `fm_track`, dry-run limité à une migration, puis application sans seed, rôle ou coffre de secrets ;
+- état distant : **21** migrations alignées, **46/46** tables publiques sous RLS, `anti_zombie_summary_v` en `security_invoker`, **6** étapes et **29** correspondances sans écart ;
+- recette C8 distante réussie et annulée ; nettoyage vérifié à zéro pour anomalies, actions, blocages, retards, échéances, exigences de preuve, interventions, preuves, rapports et utilisateurs C8.
+
+- **Advisors non bloquants avant production :** 30 fonctions `SECURITY DEFINER` exposées aux utilisateurs authentifiés doivent rester justifiées et testées ; activer la protection contre les mots de passe compromis ; traiter séparément les index et politiques permissives signalés.
+- **Suite proposée :** recette métier guidée avec les cinq comptes réels en préproduction, puis correction des advisors retenus et décision de passage en production. Aucun déploiement frontend n’a été effectué par DEV-028.
+
 ## DEV-027 — C8 local : recette canonique et porte de dry-run préproduction
 
 - **Date :** 31 août 2026

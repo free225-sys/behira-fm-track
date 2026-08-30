@@ -1,5 +1,11 @@
 # C8 — recette canonique et préparation du dry-run préproduction
 
+> **Clôture du 31 août 2026.** Les autorisations de dry-run puis d’application
+> ont été reçues. Les huit migrations prévues et la migration compensatoire
+> `20260830233549_restore_canonical_action_stage_mappings.sql` sont appliquées
+> sur `fm_track`. Les sections d’état initial ci-dessous restent la trace du plan
+> contrôlé qui a précédé l’application.
+
 ## Décision de lot
 
 C8 qualifie le socle C1 à C7 avant toute écriture distante. Il ajoute une recette
@@ -112,8 +118,29 @@ Après application, toute correction devra être une nouvelle migration compensa
 versionnée et testée ; aucune réécriture d’une migration déjà appliquée ni remise à
 zéro de la préproduction partagée n’est autorisée.
 
-## Validation nécessaire pour la suite
+## Validation et clôture exécutées
 
-Une nouvelle autorisation explicite est requise pour lancer le dry-run sur le job
-de préproduction. Une seconde autorisation, distincte, sera exigée pour appliquer
-les migrations après examen de sa sortie. C8 s’arrête avant ces deux écritures.
+Les validations séparées du dry-run et de l’application ont été reçues. Après
+alignement contrôlé de l’historique distant, les huit migrations C1 à C6 ont été
+appliquées sans seed, rôle ni secret. La recette distante a alors détecté que les
+29 correspondances entre codes de prochaine action et étapes du workflow étaient
+restées uniquement dans `seed.sql`.
+
+Le correctif est une migration progressive et idempotente : il reprend exactement
+les six étapes et les 29 correspondances déjà validées, sans créer de statut, droit,
+seuil ou règle métier. Le contrôle `test:migration-data:local` reconstruit désormais
+la base sans seed, vérifie ces références, puis restaure automatiquement la base
+locale avec le seed contrôlé.
+
+Résultat final sur `fm_track` :
+
+- 21 migrations locales et distantes alignées ;
+- 6/6 étapes et 29/29 correspondances, aucune manquante ou inattendue ;
+- recette C8 distante réussie dans une transaction terminée par `ROLLBACK` ;
+- 46/46 tables publiques sous RLS et vue canonique en `security_invoker` ;
+- zéro anomalie, action, blocage, retard, échéance, exigence de preuve, preuve,
+  intervention, rapport ou utilisateur C8 résiduel.
+
+Deux sauvegardes logiques protégées existent avant application initiale et avant
+la migration compensatoire. La restauration de la première a été validée dans une
+base PostgreSQL jetable. Aucun secret n’a été écrit dans le dépôt ou les rapports.

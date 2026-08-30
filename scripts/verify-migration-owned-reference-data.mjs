@@ -64,82 +64,89 @@ function run(command, args, options = {}) {
   return result.stdout ?? "";
 }
 
-console.log("Reconstruction locale à partir des migrations uniquement (seed exclu)...");
-run(process.execPath, [supabaseCli, "db", "reset", "--local", "--no-seed"]);
+try {
+  console.log("Reconstruction locale à partir des migrations uniquement (seed exclu)...");
+  run(process.execPath, [supabaseCli, "db", "reset", "--local", "--no-seed"]);
 
-const sql = [
-  "select action_code.code || '|' || stage.code",
-  "from public.next_action_code_stages compatibility",
-  "join public.next_action_codes action_code on action_code.id = compatibility.action_code_id",
-  "join public.workflow_stages stage on stage.id = compatibility.workflow_stage_id",
-  "order by action_code.code, stage.code;",
-].join(" ");
+  const sql = [
+    "select action_code.code || '|' || stage.code",
+    "from public.next_action_code_stages compatibility",
+    "join public.next_action_codes action_code on action_code.id = compatibility.action_code_id",
+    "join public.workflow_stages stage on stage.id = compatibility.workflow_stage_id",
+    "order by action_code.code, stage.code;",
+  ].join(" ");
 
-const actualMappings = run(
-  "docker",
-  [
-    "exec",
-    databaseContainer,
-    "psql",
-    "-U",
-    "postgres",
-    "-d",
-    "postgres",
-    "-At",
-    "-v",
-    "ON_ERROR_STOP=1",
-    "-c",
-    sql,
-  ],
-  { capture: true },
-)
-  .split(/\r?\n/)
-  .map((line) => line.trim())
-  .filter(Boolean)
-  .sort();
+  const actualMappings = run(
+    "docker",
+    [
+      "exec",
+      databaseContainer,
+      "psql",
+      "-U",
+      "postgres",
+      "-d",
+      "postgres",
+      "-At",
+      "-v",
+      "ON_ERROR_STOP=1",
+      "-c",
+      sql,
+    ],
+    { capture: true },
+  )
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .sort();
 
-const actualStages = run(
-  "docker",
-  [
-    "exec",
-    databaseContainer,
-    "psql",
-    "-U",
-    "postgres",
-    "-d",
-    "postgres",
-    "-At",
-    "-v",
-    "ON_ERROR_STOP=1",
-    "-c",
-    "select code || '|' || label || '|' || sequence_no from public.workflow_stages order by code;",
-  ],
-  { capture: true },
-)
-  .split(/\r?\n/)
-  .map((line) => line.trim())
-  .filter(Boolean)
-  .sort();
+  const actualStages = run(
+    "docker",
+    [
+      "exec",
+      databaseContainer,
+      "psql",
+      "-U",
+      "postgres",
+      "-d",
+      "postgres",
+      "-At",
+      "-v",
+      "ON_ERROR_STOP=1",
+      "-c",
+      "select code || '|' || label || '|' || sequence_no from public.workflow_stages order by code;",
+    ],
+    { capture: true },
+  )
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .sort();
 
-if (actualMappings.length !== expectedMappings.length) {
-  throw new Error(
-    `Expected ${expectedMappings.length} migration-owned mappings, got ${actualMappings.length}`,
-  );
+  if (actualMappings.length !== expectedMappings.length) {
+    throw new Error(
+      `Expected ${expectedMappings.length} migration-owned mappings, got ${actualMappings.length}`,
+    );
+  }
+
+  const missing = expectedMappings.filter((mapping) => !actualMappings.includes(mapping));
+  const unexpected = actualMappings.filter((mapping) => !expectedMappings.includes(mapping));
+
+  if (missing.length || unexpected.length) {
+    throw new Error(
+      `Canonical mapping drift. Missing: ${missing.join(", ") || "none"}. ` +
+        `Unexpected: ${unexpected.join(", ") || "none"}.`,
+    );
+  }
+
+  const missingStages = expectedStages.filter((stage) => !actualStages.includes(stage));
+  if (missingStages.length) {
+    throw new Error(
+      `Canonical workflow stages missing from migrations: ${missingStages.join(", ")}`,
+    );
+  }
+
+  console.log("Migration-only catalogue: 6/6 stages and 29/29 action/stage mappings verified.");
+} finally {
+  console.log("Restauration de la base locale avec le seed contrôlé...");
+  run(process.execPath, [supabaseCli, "db", "reset", "--local"]);
 }
-
-const missing = expectedMappings.filter((mapping) => !actualMappings.includes(mapping));
-const unexpected = actualMappings.filter((mapping) => !expectedMappings.includes(mapping));
-
-if (missing.length || unexpected.length) {
-  throw new Error(
-    `Canonical mapping drift. Missing: ${missing.join(", ") || "none"}. ` +
-      `Unexpected: ${unexpected.join(", ") || "none"}.`,
-  );
-}
-
-const missingStages = expectedStages.filter((stage) => !actualStages.includes(stage));
-if (missingStages.length) {
-  throw new Error(`Canonical workflow stages missing from migrations: ${missingStages.join(", ")}`);
-}
-
-console.log("Migration-only catalogue: 6/6 stages and 29/29 action/stage mappings verified.");
