@@ -324,6 +324,172 @@ export type Database = {
           },
         ]
       }
+      anomaly_blocks: {
+        Row: {
+          anomaly_id: string
+          block_reason_code_id: string
+          blocking_actor_label_snapshot: string
+          blocking_actor_type: string
+          blocking_external_label: string | null
+          blocking_profile_id: string | null
+          blocking_system_code: string | null
+          blocking_vendor_id: string | null
+          declaration_base_version_no: number
+          declaration_client_occurred_at: string | null
+          declaration_idempotency_key: string
+          declared_at: string
+          declared_by_profile_id: string
+          id: string
+          previous_block_id: string | null
+          reason_detail: string
+          resolution_base_version_no: number | null
+          resolution_client_occurred_at: string | null
+          resolution_code_id: string | null
+          resolution_detail: string | null
+          resolution_idempotency_key: string | null
+          resolution_proposal_base_version_no: number | null
+          resolution_proposal_client_occurred_at: string | null
+          resolution_proposal_comment: string | null
+          resolution_proposal_idempotency_key: string | null
+          resolution_proposed_at: string | null
+          resolution_proposed_by_profile_id: string | null
+          resolved_at: string | null
+          resolved_by_profile_id: string | null
+          server_received_at: string
+          state: string
+        }
+        Insert: {
+          anomaly_id: string
+          block_reason_code_id: string
+          blocking_actor_label_snapshot: string
+          blocking_actor_type: string
+          blocking_external_label?: string | null
+          blocking_profile_id?: string | null
+          blocking_system_code?: string | null
+          blocking_vendor_id?: string | null
+          declaration_base_version_no: number
+          declaration_client_occurred_at?: string | null
+          declaration_idempotency_key: string
+          declared_at?: string
+          declared_by_profile_id: string
+          id?: string
+          previous_block_id?: string | null
+          reason_detail: string
+          resolution_base_version_no?: number | null
+          resolution_client_occurred_at?: string | null
+          resolution_code_id?: string | null
+          resolution_detail?: string | null
+          resolution_idempotency_key?: string | null
+          resolution_proposal_base_version_no?: number | null
+          resolution_proposal_client_occurred_at?: string | null
+          resolution_proposal_comment?: string | null
+          resolution_proposal_idempotency_key?: string | null
+          resolution_proposed_at?: string | null
+          resolution_proposed_by_profile_id?: string | null
+          resolved_at?: string | null
+          resolved_by_profile_id?: string | null
+          server_received_at?: string
+          state?: string
+        }
+        Update: {
+          anomaly_id?: string
+          block_reason_code_id?: string
+          blocking_actor_label_snapshot?: string
+          blocking_actor_type?: string
+          blocking_external_label?: string | null
+          blocking_profile_id?: string | null
+          blocking_system_code?: string | null
+          blocking_vendor_id?: string | null
+          declaration_base_version_no?: number
+          declaration_client_occurred_at?: string | null
+          declaration_idempotency_key?: string
+          declared_at?: string
+          declared_by_profile_id?: string
+          id?: string
+          previous_block_id?: string | null
+          reason_detail?: string
+          resolution_base_version_no?: number | null
+          resolution_client_occurred_at?: string | null
+          resolution_code_id?: string | null
+          resolution_detail?: string | null
+          resolution_idempotency_key?: string | null
+          resolution_proposal_base_version_no?: number | null
+          resolution_proposal_client_occurred_at?: string | null
+          resolution_proposal_comment?: string | null
+          resolution_proposal_idempotency_key?: string | null
+          resolution_proposed_at?: string | null
+          resolution_proposed_by_profile_id?: string | null
+          resolved_at?: string | null
+          resolved_by_profile_id?: string | null
+          server_received_at?: string
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anomaly_blocks_anomaly_id_fkey"
+            columns: ["anomaly_id"]
+            isOneToOne: false
+            referencedRelation: "anomalies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_blocks_block_reason_code_id_fkey"
+            columns: ["block_reason_code_id"]
+            isOneToOne: false
+            referencedRelation: "block_reason_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_blocks_blocking_profile_id_fkey"
+            columns: ["blocking_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_blocks_blocking_vendor_id_fkey"
+            columns: ["blocking_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_blocks_declared_by_profile_id_fkey"
+            columns: ["declared_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_blocks_previous_block_id_fkey"
+            columns: ["previous_block_id"]
+            isOneToOne: false
+            referencedRelation: "anomaly_blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_blocks_resolution_code_id_fkey"
+            columns: ["resolution_code_id"]
+            isOneToOne: false
+            referencedRelation: "block_resolution_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_blocks_resolution_proposed_by_profile_id_fkey"
+            columns: ["resolution_proposed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_blocks_resolved_by_profile_id_fkey"
+            columns: ["resolved_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       anomaly_deadlines: {
         Row: {
           anomaly_id: string
@@ -427,6 +593,113 @@ export type Database = {
             columns: ["workflow_stage_id"]
             isOneToOne: false
             referencedRelation: "workflow_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      anomaly_delay_justifications: {
+        Row: {
+          anomaly_id: string
+          base_version_no: number
+          client_occurred_at: string | null
+          deadline_id: string
+          declared_at: string
+          declared_by_profile_id: string
+          delay_reason_code_id: string
+          id: string
+          idempotency_key: string
+          previous_justification_id: string | null
+          reason_detail: string
+          server_received_at: string
+          state: string
+          superseded_at: string | null
+          superseded_by_id: string | null
+          superseded_by_profile_id: string | null
+        }
+        Insert: {
+          anomaly_id: string
+          base_version_no: number
+          client_occurred_at?: string | null
+          deadline_id: string
+          declared_at?: string
+          declared_by_profile_id: string
+          delay_reason_code_id: string
+          id?: string
+          idempotency_key: string
+          previous_justification_id?: string | null
+          reason_detail: string
+          server_received_at?: string
+          state?: string
+          superseded_at?: string | null
+          superseded_by_id?: string | null
+          superseded_by_profile_id?: string | null
+        }
+        Update: {
+          anomaly_id?: string
+          base_version_no?: number
+          client_occurred_at?: string | null
+          deadline_id?: string
+          declared_at?: string
+          declared_by_profile_id?: string
+          delay_reason_code_id?: string
+          id?: string
+          idempotency_key?: string
+          previous_justification_id?: string | null
+          reason_detail?: string
+          server_received_at?: string
+          state?: string
+          superseded_at?: string | null
+          superseded_by_id?: string | null
+          superseded_by_profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anomaly_delay_justifications_anomaly_id_fkey"
+            columns: ["anomaly_id"]
+            isOneToOne: false
+            referencedRelation: "anomalies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_delay_justifications_deadline_id_fkey"
+            columns: ["deadline_id"]
+            isOneToOne: false
+            referencedRelation: "anomaly_deadlines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_delay_justifications_declared_by_profile_id_fkey"
+            columns: ["declared_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_delay_justifications_delay_reason_code_id_fkey"
+            columns: ["delay_reason_code_id"]
+            isOneToOne: false
+            referencedRelation: "delay_reason_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_delay_justifications_previous_justification_id_fkey"
+            columns: ["previous_justification_id"]
+            isOneToOne: false
+            referencedRelation: "anomaly_delay_justifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_delay_justifications_superseded_by_fkey"
+            columns: ["superseded_by_id"]
+            isOneToOne: false
+            referencedRelation: "anomaly_delay_justifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_delay_justifications_superseded_by_profile_id_fkey"
+            columns: ["superseded_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2723,6 +2996,18 @@ export type Database = {
         }
         Returns: Json
       }
+      confirm_anomaly_block_resolution: {
+        Args: {
+          p_base_version_no: number
+          p_block_id: string
+          p_client_occurred_at?: string
+          p_comment: string
+          p_idempotency_key: string
+          p_reference: string
+          p_resolution_code: string
+        }
+        Returns: Json
+      }
       create_field_anomaly: {
         Args: {
           p_description: string
@@ -2733,6 +3018,22 @@ export type Database = {
         Returns: Json
       }
       current_profile_id: { Args: never; Returns: string }
+      declare_anomaly_block: {
+        Args: {
+          p_base_version_no: number
+          p_blocking_actor_type: string
+          p_blocking_external_label: string
+          p_blocking_profile_id: string
+          p_blocking_vendor_id: string
+          p_client_occurred_at?: string
+          p_idempotency_key: string
+          p_previous_block_id: string
+          p_reason_code: string
+          p_reason_detail: string
+          p_reference: string
+        }
+        Returns: Json
+      }
       get_my_auth_gate: { Args: never; Returns: Json }
       has_accepted_proof: { Args: { p_anomaly_id: string }; Returns: boolean }
       has_any_role: { Args: { p_role_codes: string[] }; Returns: boolean }
@@ -2744,6 +3045,29 @@ export type Database = {
       }
       next_business_reference: { Args: { p_prefix: string }; Returns: string }
       proof_object_anomaly_id: { Args: { p_name: string }; Returns: string }
+      propose_anomaly_block_resolution: {
+        Args: {
+          p_base_version_no: number
+          p_block_id: string
+          p_client_occurred_at?: string
+          p_comment: string
+          p_idempotency_key: string
+          p_reference: string
+        }
+        Returns: Json
+      }
+      record_anomaly_delay_justification: {
+        Args: {
+          p_base_version_no: number
+          p_client_occurred_at?: string
+          p_deadline_id: string
+          p_idempotency_key: string
+          p_reason_code: string
+          p_reason_detail: string
+          p_reference: string
+        }
+        Returns: Json
+      }
       register_anomaly_proof: {
         Args: {
           p_mime_type: string

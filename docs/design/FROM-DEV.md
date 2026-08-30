@@ -2,6 +2,41 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-023 — C4 local : blocage principal et justification de retard
+
+- **Date :** 30 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté et vérifié localement — non publié, non appliqué à distance
+- **Sources métier :** dictionnaire du lot A, modèle du lot B et décisions fermées du lot B2
+- **Périmètre :** blocage principal actif et justification d’un retard déjà constaté sur l’échéance canonique ; aucun nouvel écran, statut, rôle, droit, délai, seuil, pause SLA ou compte Prestataire
+
+Les tables `anomaly_blocks` et `anomaly_delay_justifications` portent désormais les deux sources canoniques C4. Un dossier ne peut avoir qu’un blocage principal ouvert à la fois. Son cycle est strictement `active` → `resolution_proposed` → `resolved` : la personne qui constate la levée propose la résolution, puis le Facility Manager la confirme pour les blocages opérationnels ; l’Administration confirme les blocages d’arbitrage qui lui appartiennent. Un nouveau blocage ne remplace jamais le précédent : le précédent doit être résolu, reste historisé et peut être référencé par le suivant.
+
+L’acteur bloquant est enregistré comme interne, entreprise prestataire de référence, acteur externe libre ou système. Un prestataire reste une référence métier sans compte, rôle ni accès à l’application. Le libellé, le code et l’identité éventuelle sont figés au moment de la déclaration afin qu’une évolution ultérieure du référentiel ne réécrive pas l’histoire.
+
+La justification de retard ne fabrique jamais le retard et ne modifie pas le SLA. Elle ne peut viser qu’une échéance canonique active dont l’heure serveur confirme le dépassement. Une nouvelle justification remplace explicitement la précédente sans la supprimer, avec lien de succession, auteur, motif contrôlé, commentaire, heure serveur, version du dossier et clé d’idempotence. Les motifs sont contrôlés par l’étape ou le statut concerné ; `ROUND_OVERDUE` reste au catalogue mais n’est pas applicable à une échéance d’anomalie faute de modèle canonique de délai de ronde.
+
+### Droits, sécurité et historique
+
+- le Facility Manager peut déclarer les six motifs de blocage confirmés, remplacer une justification et confirmer les résolutions opérationnelles dans son périmètre global ;
+- l’Administration peut déclarer et confirmer les blocages `ADMIN_DECISION_PENDING` et `QUOTE_PENDING`, sans acquérir les commandes opérationnelles du Facility Manager ;
+- un agent ne peut déclarer ou proposer la résolution que sur un dossier ou une action qui lui est attribué et dans son périmètre ; il ne peut pas confirmer la résolution et ne peut compléter que sa propre justification avec le même motif ;
+- RLS active, aucun droit `anon`, lecture limitée par `can_access_anomaly()`, aucune écriture directe client et aucune exécution directe des fonctions de trigger ;
+- chaque déclaration, proposition, résolution, création et remplacement écrit atomiquement la donnée, l’historique métier et la nouvelle version du dossier ; les replays identiques sont sans doublon et les replays différents ou versions obsolètes sont refusés ;
+- une clôture est refusée tant qu’un blocage `active` ou `resolution_proposed` existe, sans modifier le verrou critique de preuve déjà en place.
+
+### Contrôles réalisés
+
+- reconstruction complète : **18 migrations**, seed idempotent et **10/10 suites pgTAP** réussies ;
+- recette C4 : blocage interne, externe et prestataire, instantané de l’acteur, blocage actif unique, proposition puis confirmation séparée, remplacement historisé, retard serveur, compatibilité motif/étape, échéance future refusée, idempotence, version obsolète, clôture bloquée, immutabilité et RLS Administration/FM/agent/hors périmètre/profil verrouillé ;
+- lint du schéma `public` : aucune erreur ; inventaire Lot 0 : **36 tables / 18 migrations / 10 tests SQL** ;
+- types TypeScript Supabase régénérés ; cinq comptes Auth locaux, changement obligatoire du premier mot de passe, périmètres RLS, workflow persistant critique et Storage privé : réussis ;
+- audit visuel **92/92**, personas **38/38**, authentification **20/20**, AntiZombieSummary **11/11**, hors ligne **17/17**, résilience **12/12**, lint et build réussis ;
+- aucune écriture Supabase distante, aucun secret, aucune publication, aucune modification de l’interface et aucune modification du dossier `tmp/`.
+
+- **Limites explicites :** `ARBITRATION_OVERDUE` reste inactif conformément au dictionnaire ; `ROUND_OVERDUE` attend un modèle d’échéance de ronde ; les décisions, validations finales et clôtures restent exclusivement en ligne. L’interface n’est pas encore raccordée à ces nouvelles sources.
+- **Suite proposée :** C5 local additif — définir et appliquer les exigences de preuve contextuelles au dossier, en séparant la règle, l’exigence figée, la preuve déposée et sa validation. Le raccordement final de `AntiZombieSummary` viendra ensuite, une fois les huit sources canoniques disponibles.
+
 ## DEV-022 — C3 local : prochaine action canonique de Qualification
 
 - **Date :** 30 août 2026
