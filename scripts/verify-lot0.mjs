@@ -32,6 +32,7 @@ const expectedMigrations = [
   "20260830040839_anti_zombie_c1_references_history_guardrails.sql",
   "20260830121913_confirm_qualification_action_sequence.sql",
   "20260830123210_anti_zombie_c2_canonical_deadlines.sql",
+  "20260830195601_anti_zombie_c3_canonical_actions.sql",
 ];
 check(JSON.stringify(migrations) === JSON.stringify(expectedMigrations), "Migration order or inventory is unexpected");
 
@@ -45,6 +46,7 @@ const requiredTables = [
   "next_action_codes", "next_action_code_stages", "block_reason_codes",
   "delay_reason_codes", "block_resolution_codes", "business_event_definitions",
   "anomaly_deadlines",
+  "anomaly_actions",
 ];
 for (const table of requiredTables) {
   check(new RegExp(`create table if not exists public\\.${table}\\s*\\(`, "i").test(migrationSql), `Missing table: ${table}`);
@@ -70,6 +72,9 @@ for (const marker of [
   "business_event_definitions",
   "anomaly_deadlines_one_active_idx",
   "prevent_legacy_deadline_update",
+  "anomaly_actions_one_pending_idx",
+  "set_anomaly_next_action",
+  "complete_qualification_action",
   "revoke execute on all functions in schema public from public, anon, authenticated",
 ]) {
   check(migrationSql.toLowerCase().includes(marker.toLowerCase()), `Missing business rule marker: ${marker}`);
@@ -106,7 +111,7 @@ check(migrationSql.includes("anomaly-proofs"), "Private anomaly proof bucket or 
 check(migrationSql.includes("vendor-intervention-reports"), "Private internal vendor-report bucket or policies are missing");
 
 const sqlTests = readdirSync(join(supabaseDir, "tests")).filter((name) => name.endsWith(".sql"));
-for (const expected of ["001_schema_seed.sql", "002_workflow_audit.sql", "003_rls.sql", "004_internal_vendor_reports.sql", "005_first_password_change.sql", "006_offline_sync.sql", "007_anti_zombie_c1.sql", "008_anti_zombie_c2_deadlines.sql"]) {
+for (const expected of ["001_schema_seed.sql", "002_workflow_audit.sql", "003_rls.sql", "004_internal_vendor_reports.sql", "005_first_password_change.sql", "006_offline_sync.sql", "007_anti_zombie_c1.sql", "008_anti_zombie_c2_deadlines.sql", "009_anti_zombie_c3_actions.sql"]) {
   check(sqlTests.includes(expected), `Missing SQL test: ${expected}`);
 }
 

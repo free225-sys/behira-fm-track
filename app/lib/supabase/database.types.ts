@@ -179,6 +179,151 @@ export type Database = {
           },
         ]
       }
+      anomaly_actions: {
+        Row: {
+          action_code_id: string
+          anomaly_id: string
+          assigned_profile_id: string | null
+          base_version_no: number
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by_profile_id: string | null
+          cancelled_by_system: boolean
+          client_occurred_at: string | null
+          comment: string | null
+          completed_at: string | null
+          completed_by_profile_id: string | null
+          created_at: string
+          created_by_profile_id: string | null
+          id: string
+          idempotency_key: string
+          previous_action_id: string | null
+          server_received_at: string
+          source_kind: string
+          source_record_id: string | null
+          state: string
+          superseded_at: string | null
+          superseded_by_action_id: string | null
+          superseded_by_profile_id: string | null
+        }
+        Insert: {
+          action_code_id: string
+          anomaly_id: string
+          assigned_profile_id?: string | null
+          base_version_no: number
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by_profile_id?: string | null
+          cancelled_by_system?: boolean
+          client_occurred_at?: string | null
+          comment?: string | null
+          completed_at?: string | null
+          completed_by_profile_id?: string | null
+          created_at?: string
+          created_by_profile_id?: string | null
+          id?: string
+          idempotency_key: string
+          previous_action_id?: string | null
+          server_received_at?: string
+          source_kind: string
+          source_record_id?: string | null
+          state?: string
+          superseded_at?: string | null
+          superseded_by_action_id?: string | null
+          superseded_by_profile_id?: string | null
+        }
+        Update: {
+          action_code_id?: string
+          anomaly_id?: string
+          assigned_profile_id?: string | null
+          base_version_no?: number
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by_profile_id?: string | null
+          cancelled_by_system?: boolean
+          client_occurred_at?: string | null
+          comment?: string | null
+          completed_at?: string | null
+          completed_by_profile_id?: string | null
+          created_at?: string
+          created_by_profile_id?: string | null
+          id?: string
+          idempotency_key?: string
+          previous_action_id?: string | null
+          server_received_at?: string
+          source_kind?: string
+          source_record_id?: string | null
+          state?: string
+          superseded_at?: string | null
+          superseded_by_action_id?: string | null
+          superseded_by_profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anomaly_actions_action_code_id_fkey"
+            columns: ["action_code_id"]
+            isOneToOne: false
+            referencedRelation: "next_action_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_actions_anomaly_id_fkey"
+            columns: ["anomaly_id"]
+            isOneToOne: false
+            referencedRelation: "anomalies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_actions_assigned_profile_id_fkey"
+            columns: ["assigned_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_actions_cancelled_by_profile_id_fkey"
+            columns: ["cancelled_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_actions_completed_by_profile_id_fkey"
+            columns: ["completed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_actions_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_actions_previous_action_id_fkey"
+            columns: ["previous_action_id"]
+            isOneToOne: false
+            referencedRelation: "anomaly_actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_actions_superseded_by_action_fkey"
+            columns: ["superseded_by_action_id"]
+            isOneToOne: false
+            referencedRelation: "anomaly_actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_actions_superseded_by_profile_id_fkey"
+            columns: ["superseded_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       anomaly_deadlines: {
         Row: {
           anomaly_id: string
@@ -2568,6 +2713,16 @@ export type Database = {
       }
       can_access_report: { Args: { p_report_id: string }; Returns: boolean }
       can_access_zone: { Args: { p_zone_id: string }; Returns: boolean }
+      complete_qualification_action: {
+        Args: {
+          p_action_id: string
+          p_base_version_no: number
+          p_comment: string
+          p_idempotency_key: string
+          p_reference: string
+        }
+        Returns: Json
+      }
       create_field_anomaly: {
         Args: {
           p_description: string
@@ -2640,6 +2795,17 @@ export type Database = {
           intervention_due_at: string
           qualification_due_at: string
         }[]
+      }
+      set_anomaly_next_action: {
+        Args: {
+          p_action_code: string
+          p_assigned_profile_id: string
+          p_base_version_no: number
+          p_comment: string
+          p_idempotency_key: string
+          p_reference: string
+        }
+        Returns: Json
       }
       submit_field_round_offline: {
         Args: {

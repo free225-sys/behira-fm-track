@@ -2,6 +2,47 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-022 — C3 local : prochaine action canonique de Qualification
+
+- **Date :** 30 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté et vérifié localement — non publié, non appliqué à distance
+- **Sources métier :** lots A, B, B2 et séquence Qualification validée dans DEV-020
+- **Périmètre :** prochaine action du dossier dans l’étape Qualification uniquement ; aucun nouvel écran, statut, rôle, droit, délai, seuil ou calcul métier
+
+La table `anomaly_actions` porte désormais la prochaine action canonique du dossier. Une contrainte partielle garantit qu’un dossier ne possède jamais plus d’une action `pending`. Les actions terminées, remplacées ou annulées restent immuables et reliées à leur succession ; aucun fait historique n’est écrasé. L’action utilise l’échéance canonique du dossier créée en C2 et ne crée donc pas une seconde date concurrente.
+
+La seule séquence active demeure celle validée dans Qualification :
+
+1. `QUALIFY_ASSIGN` — qualifier et affecter, sous responsabilité Facility Manager ;
+2. `PERFORM_DIAGNOSIS` — diagnostic attribué au responsable terrain interne et dans son périmètre ;
+3. `CHOOSE_TREATMENT_BRANCH` — choix de branche attribué au Facility Manager.
+
+Le système crée l’action initiale lorsqu’un dossier entre en Qualification. Sans acteur authentifié fiable, il conserve volontairement l’état « sans exécutant » au lieu d’inventer un responsable. Faustin peut confirmer ou remplacer l’action courante ; l’agent affecté peut terminer son diagnostic ; Faustin conserve la capacité de le terminer. Chaque opération verrouille le dossier, exige sa version courante et une clé d’idempotence, puis écrit atomiquement l’action suivante, l’historique et la nouvelle version du dossier. Une même clé rejouée par un autre acteur ou avec un contenu différent est refusée.
+
+Les trois codes contrôlés acceptent un commentaire facultatif. Le code `OTHER` reste inactif et conserve la règle de commentaire obligatoire. Aucun saut de séquence n’est autorisé et les trois actions restent dans `A_QUALIFIER` : elles ne créent aucune nouvelle étape métier.
+
+### Sécurité, historique et compatibilité
+
+- RLS active ; aucun droit `anon` ; les profils authentifiés disposent uniquement de `SELECT` dans le périmètre défini par `can_access_anomaly()` ;
+- aucune écriture directe client ; seules les deux commandes transactionnelles explicitement accordées sont appelables, tandis que les fonctions de trigger restent inexécutables par les rôles exposés ;
+- l’agent ne peut terminer que son diagnostic ; la Direction lit la timeline globale sans acquérir les actions du Facility Manager ; le verrou de première connexion neutralise tout accès métier ;
+- toute création, terminaison, substitution ou annulation est reliée à une définition d’événement et conserve acteur, étape, source, commentaire, heure serveur et clé d’idempotence ;
+- une sortie par l’ancien workflow annule proprement l’action Qualification encore active. Si aucun utilisateur fiable n’est présent, la provenance est explicitement marquée `Système BEHIRA` sans identité inventée ;
+- les champs et RPC Supabase sont présents dans les types TypeScript générés, mais aucun écran ne les consomme encore.
+
+### Contrôles réalisés
+
+- reconstruction complète : **17 migrations**, seed idempotent et **9/9 suites pgTAP** réussies ;
+- recette C3 : création système, action active unique, affectation FM, séquence sans saut, diagnostic par l’agent responsable, choix de branche rendu au FM, version obsolète refusée, rejeu identique sans doublon, rejeu différent refusé, annulation système historisée, grants et RLS Administration/FM/agent/profil verrouillé ;
+- lint du schéma `public` : aucune erreur ; inventaire Lot 0 : **34 tables / 17 migrations / 9 tests SQL** ;
+- cinq comptes Auth locaux, changement obligatoire du premier mot de passe, périmètres RLS, workflow persistant critique et Storage privé : réussis ;
+- audit visuel **92/92**, personas **38/38**, authentification **20/20**, AntiZombieSummary **11/11**, hors ligne **17/17**, résilience **12/12**, lint et build réussis ;
+- aucune écriture Supabase distante, aucun secret, aucune publication et aucune modification du dossier `tmp/`.
+
+- **Limite explicite :** `CHOOSE_TREATMENT_BRANCH` reste volontairement `pending`. Sa terminaison doit être intégrée à la transaction existante qui choisit réellement la branche ; C3 refuse une clôture isolée qui ferait avancer l’action sans faire avancer le dossier. L’interface continue d’utiliser son adaptateur de démonstration jusqu’au futur lot de projection.
+- **Suite proposée :** C4 local additif — modéliser un blocage principal actif et les justifications de retard, avec acteurs internes ou externes, résolution historisée et sans compte Prestataire. Le raccordement de la projection `AntiZombieSummary` reste différé jusqu’aux sources canoniques de blocage et de preuve attendue.
+
 ## DEV-021 — C2 local : échéance canonique historisée
 
 - **Date :** 30 août 2026
