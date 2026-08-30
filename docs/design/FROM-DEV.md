@@ -2,6 +2,32 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-026 — C7 local : raccordement transversal de la continuité de traitement
+
+- **Date :** 30 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté et vérifié localement — non publié, non appliqué à distance
+- **Source canonique :** vue RLS `public.anti_zombie_summary_v` validée en C6
+- **Périmètre :** raccordement de la projection existante au cockpit Faustin, au registre et au dossier central ; aucune migration, table, règle métier, permission, route ou modification visuelle
+
+Les trois surfaces consomment désormais le même résolveur `resolveAntiZombieSummary`. En session Supabase, il restitue exclusivement la synthèse construite depuis la projection canonique C6 ; en mode démonstration explicitement signalé, il conserve l’adaptateur de repli local. L’ancien raccordement direct du registre et du dossier central à l’adaptateur de démonstration a été supprimé. La variante visuelle reste propre à chaque contexte — `standard` chez Faustin, `compact` dans le registre et `detailed` dans le dossier — sans changer le contrat ni les valeurs.
+
+Le chargement live est maintenant atomique du point de vue de la continuité : `indexCanonicalAntiZombieSummaries` vérifie qu’une seule projection existe pour chaque anomalie visible. Une projection manquante, sans identifiant ou dupliquée est refusée explicitement ; l’application ne peut donc pas afficher silencieusement un mélange de valeurs canoniques et de valeurs déduites. Ce garde-fou n’ajoute aucune définition du retard, du SLA, du blocage ou de la preuve : ces décisions restent dans la vue PostgreSQL C6.
+
+La documentation Supabase courante et le changelog ont été contrôlés avant C7. Aucun changement récent n’affecte ce raccordement. La vue conserve `security_invoker = true`, les droits explicites de lecture et les politiques RLS des anomalies sous-jacentes. Aucun rôle privilégié ou secret n’est utilisé côté client.
+
+### Contrôles réalisés
+
+- **13/13** contrôles AntiZombieSummary : huit états fonctionnels, adaptateur canonique sans horloge navigateur, projection absente/dupliquée refusée et résolveur unique sur les trois surfaces ;
+- **12/12 suites pgTAP** après reconstruction des **20 migrations** ; lint des schémas `public` et `private` sans erreur ; Lot 0 : **41 tables / 20 migrations / 12 tests SQL** ;
+- Data API locale : les cinq comptes confirmés reçoivent exactement une projection par anomalie autorisée, avec périmètres RLS Administration, Facility Manager et agents respectés ; première connexion verrouillée, workflow critique et Storage privé réussis ;
+- audit visuel **92/92**, personas **38/38**, authentification **20/20**, hors ligne **17/17**, résilience **12/12**, lint et build réussis ;
+- recette navigateur des trois surfaces, puis registre et dossier central à **390 px** : huit champs visibles, synthèse placée avant les onglets du dossier, aucun débordement horizontal, plancher 12 px respecté et aucune erreur ou alerte console ;
+- aucune écriture Supabase distante, aucun push, aucune publication et aucune modification du dossier `tmp/`.
+
+- **Limite explicite :** la recette visuelle utilise le mode démonstration, tandis que le parcours Data API/RLS réel est couvert par les cinq comptes Auth locaux. Les commandes métier permettant de compléter directement toutes les informations depuis l’interface restent réparties dans les lots C1 à C5 et ne sont pas étendues par C7.
+- **Suite proposée :** C8, après validation de ce checkpoint — recette métier complète sur une fixture canonique représentative et préparation documentaire de l’application des migrations C1 à C6 en préproduction, avec dry-run obligatoire avant toute écriture distante.
+
 ## DEV-025 — C6 local : projection canonique AntiZombieSummary
 
 - **Date :** 30 août 2026

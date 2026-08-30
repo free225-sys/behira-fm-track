@@ -104,7 +104,7 @@ requireAll('Destination Seuils et paramètres réservée à Administration', app
   "administration:['workspace','dashboard','registry','equipment','costs','access','settings']",
 ])
 requireAll('Dossier central P6 sans seconde source métier', appSource, [
-  'dossier-continuity', 'adaptDossierToAntiZombieSummary(anomaly)', 'variant="detailed"',
+  'dossier-continuity', 'resolveAntiZombieSummary(anomaly)', 'variant="detailed"',
   '0 événement canonique', 'Historique métier indisponible', 'Preuve attendue non définie',
   'Consultation uniquement · aucune action métier accordée', 'criticalClosureLocked',
   'role="tablist"', 'role="tabpanel"',

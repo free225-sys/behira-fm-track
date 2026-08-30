@@ -60,6 +60,19 @@ for (const [email, employeeCode, expectedVisibleProfiles, expectedVisibleAnomali
     throw anomalyCountError ?? new Error(`Unexpected RLS anomaly count for ${email}: ${anomalyCount}`);
   }
 
+  const [{ data: visibleAnomalies, error: visibleAnomaliesError }, { data: continuityRows, error: continuityError }] = await Promise.all([
+    client.from("anomalies").select("id"),
+    client.from("anti_zombie_summary_v").select("anomaly_id, status_label, responsible_name, next_action_label, due_at, blocking_actor_label, blocking_or_delay_reason, expected_proof_label, last_activity_label"),
+  ]);
+  if (visibleAnomaliesError || continuityError) {
+    throw visibleAnomaliesError ?? continuityError;
+  }
+  const visibleAnomalyIds = new Set((visibleAnomalies ?? []).map((item) => item.id));
+  const continuityIds = new Set((continuityRows ?? []).map((item) => item.anomaly_id));
+  if (continuityIds.size !== visibleAnomalyIds.size || [...visibleAnomalyIds].some((id) => !continuityIds.has(id))) {
+    throw new Error(`Incomplete AntiZombie projection through the Data API for ${email}.`);
+  }
+
   const { count: equipmentCount, error: equipmentCountError } = await client
     .from("equipment")
     .select("id", { count: "exact", head: true })
@@ -70,7 +83,7 @@ for (const [email, employeeCode, expectedVisibleProfiles, expectedVisibleAnomali
 
   const { error: signOutError } = await client.auth.signOut();
   if (signOutError) throw signOutError;
-  console.log(`✓ ${employeeCode}: login, profile mapping and RLS data perimeter`);
+  console.log(`✓ ${employeeCode}: login, profile mapping, RLS perimeter and complete AntiZombie projection`);
 }
 
 const rejectionClient = createClient(url, publishableKey, {

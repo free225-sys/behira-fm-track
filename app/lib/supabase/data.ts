@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { AntiZombieSummaryData } from "../../components/anti-zombie-contract";
-import { adaptCanonicalAntiZombieSummary } from "./anti-zombie";
+import { indexCanonicalAntiZombieSummaries } from "./anti-zombie";
 import type { Database } from "./database.types";
 
 export type OperationalPriority = "Critique" | "Haute" | "Moyenne" | "Faible";
@@ -129,10 +129,9 @@ export async function loadOperationalSnapshot(
   const vendorById = new Map((vendorResult.data ?? []).map((item) => [item.id, item]));
   const provenAnomalies = new Set((proofResult.data ?? []).filter((item) => item.verification_status === "accepted").map((item) => item.anomaly_id).filter(Boolean));
   const pendingProofAnomalies = new Set((proofResult.data ?? []).filter((item) => item.verification_status === "pending").map((item) => item.anomaly_id).filter(Boolean));
-  const antiZombieByAnomalyId = new Map(
-    (antiZombieResult.data ?? [])
-      .filter((item) => item.anomaly_id)
-      .map((item) => [item.anomaly_id!, adaptCanonicalAntiZombieSummary(item)]),
+  const antiZombieByAnomalyId = indexCanonicalAntiZombieSummaries(
+    antiZombieResult.data ?? [],
+    anomalyResult.data ?? [],
   );
 
   const anomalies = (anomalyResult.data ?? []).map((item) => {

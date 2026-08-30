@@ -4,6 +4,11 @@ import type { Database } from "./database.types";
 export type AntiZombieProjectionRow =
   Database["public"]["Views"]["anti_zombie_summary_v"]["Row"];
 
+type AntiZombieAnomalyIdentity = {
+  id: string;
+  reference: string;
+};
+
 function formatMoment(value: string | null) {
   if (!value) return null;
   return new Intl.DateTimeFormat("fr-FR", {
@@ -46,4 +51,28 @@ export function adaptCanonicalAntiZombieSummary(
           stage: row.last_activity_stage_label,
         },
   };
+}
+
+export function indexCanonicalAntiZombieSummaries(
+  rows: AntiZombieProjectionRow[],
+  anomalies: AntiZombieAnomalyIdentity[],
+): Map<string, AntiZombieSummaryData> {
+  const indexed = new Map<string, AntiZombieSummaryData>();
+
+  for (const row of rows) {
+    if (!row.anomaly_id) {
+      throw new Error("Projection de continuité sans identifiant d'anomalie.");
+    }
+    if (indexed.has(row.anomaly_id)) {
+      throw new Error(`Projection de continuité dupliquée pour l'anomalie ${row.anomaly_id}.`);
+    }
+    indexed.set(row.anomaly_id, adaptCanonicalAntiZombieSummary(row));
+  }
+
+  const missing = anomalies.find((anomaly) => !indexed.has(anomaly.id));
+  if (missing) {
+    throw new Error(`Projection de continuité manquante pour l'anomalie ${missing.reference}.`);
+  }
+
+  return indexed;
 }
