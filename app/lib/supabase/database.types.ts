@@ -274,6 +274,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "anomaly_actions_anomaly_id_fkey"
+            columns: ["anomaly_id"]
+            isOneToOne: false
+            referencedRelation: "anti_zombie_summary_v"
+            referencedColumns: ["anomaly_id"]
+          },
+          {
             foreignKeyName: "anomaly_actions_assigned_profile_id_fkey"
             columns: ["assigned_profile_id"]
             isOneToOne: false
@@ -309,11 +316,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "anomaly_actions_previous_action_id_fkey"
+            columns: ["previous_action_id"]
+            isOneToOne: false
+            referencedRelation: "anti_zombie_summary_v"
+            referencedColumns: ["next_action_id"]
+          },
+          {
             foreignKeyName: "anomaly_actions_superseded_by_action_fkey"
             columns: ["superseded_by_action_id"]
             isOneToOne: false
             referencedRelation: "anomaly_actions"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_actions_superseded_by_action_fkey"
+            columns: ["superseded_by_action_id"]
+            isOneToOne: false
+            referencedRelation: "anti_zombie_summary_v"
+            referencedColumns: ["next_action_id"]
           },
           {
             foreignKeyName: "anomaly_actions_superseded_by_profile_id_fkey"
@@ -433,6 +454,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "anomaly_blocks_anomaly_id_fkey"
+            columns: ["anomaly_id"]
+            isOneToOne: false
+            referencedRelation: "anti_zombie_summary_v"
+            referencedColumns: ["anomaly_id"]
+          },
+          {
             foreignKeyName: "anomaly_blocks_block_reason_code_id_fkey"
             columns: ["block_reason_code_id"]
             isOneToOne: false
@@ -466,6 +494,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "anomaly_blocks"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_blocks_previous_block_id_fkey"
+            columns: ["previous_block_id"]
+            isOneToOne: false
+            referencedRelation: "anti_zombie_summary_v"
+            referencedColumns: ["active_block_id"]
           },
           {
             foreignKeyName: "anomaly_blocks_resolution_code_id_fkey"
@@ -554,6 +589,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "anomaly_deadlines_anomaly_id_fkey"
+            columns: ["anomaly_id"]
+            isOneToOne: false
+            referencedRelation: "anti_zombie_summary_v"
+            referencedColumns: ["anomaly_id"]
+          },
+          {
             foreignKeyName: "anomaly_deadlines_created_by_profile_id_fkey"
             columns: ["created_by_profile_id"]
             isOneToOne: false
@@ -568,6 +610,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "anomaly_deadlines_previous_deadline_id_fkey"
+            columns: ["previous_deadline_id"]
+            isOneToOne: false
+            referencedRelation: "anti_zombie_summary_v"
+            referencedColumns: ["deadline_id"]
+          },
+          {
             foreignKeyName: "anomaly_deadlines_sla_rule_id_fkey"
             columns: ["sla_rule_id"]
             isOneToOne: false
@@ -580,6 +629,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "anomaly_deadlines"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_deadlines_superseded_by_deadline_id_fkey"
+            columns: ["superseded_by_deadline_id"]
+            isOneToOne: false
+            referencedRelation: "anti_zombie_summary_v"
+            referencedColumns: ["deadline_id"]
           },
           {
             foreignKeyName: "anomaly_deadlines_superseded_by_profile_id_fkey"
@@ -661,11 +717,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "anomaly_delay_justifications_anomaly_id_fkey"
+            columns: ["anomaly_id"]
+            isOneToOne: false
+            referencedRelation: "anti_zombie_summary_v"
+            referencedColumns: ["anomaly_id"]
+          },
+          {
             foreignKeyName: "anomaly_delay_justifications_deadline_id_fkey"
             columns: ["deadline_id"]
             isOneToOne: false
             referencedRelation: "anomaly_deadlines"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_delay_justifications_deadline_id_fkey"
+            columns: ["deadline_id"]
+            isOneToOne: false
+            referencedRelation: "anti_zombie_summary_v"
+            referencedColumns: ["deadline_id"]
           },
           {
             foreignKeyName: "anomaly_delay_justifications_declared_by_profile_id_fkey"
@@ -779,6 +849,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "anomalies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_history_anomaly_id_fkey"
+            columns: ["anomaly_id"]
+            isOneToOne: false
+            referencedRelation: "anti_zombie_summary_v"
+            referencedColumns: ["anomaly_id"]
           },
           {
             foreignKeyName: "anomaly_history_event_definition_id_fkey"
@@ -905,6 +982,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "anomalies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_proof_requirements_anomaly_id_fkey"
+            columns: ["anomaly_id"]
+            isOneToOne: false
+            referencedRelation: "anti_zombie_summary_v"
+            referencedColumns: ["anomaly_id"]
           },
           {
             foreignKeyName: "anomaly_proof_requirements_created_by_profile_id_fkey"
@@ -1253,6 +1337,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "costs_anomaly_id_fkey"
+            columns: ["anomaly_id"]
+            isOneToOne: false
+            referencedRelation: "anti_zombie_summary_v"
+            referencedColumns: ["anomaly_id"]
+          },
+          {
             foreignKeyName: "costs_approved_by_profile_id_fkey"
             columns: ["approved_by_profile_id"]
             isOneToOne: false
@@ -1539,6 +1630,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "interventions_anomaly_id_fkey"
+            columns: ["anomaly_id"]
+            isOneToOne: false
+            referencedRelation: "anti_zombie_summary_v"
+            referencedColumns: ["anomaly_id"]
+          },
+          {
             foreignKeyName: "interventions_performed_by_profile_id_fkey"
             columns: ["performed_by_profile_id"]
             isOneToOne: false
@@ -1785,6 +1883,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "anomalies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_anomaly_id_fkey"
+            columns: ["anomaly_id"]
+            isOneToOne: false
+            referencedRelation: "anti_zombie_summary_v"
+            referencedColumns: ["anomaly_id"]
           },
           {
             foreignKeyName: "notifications_notification_rule_id_fkey"
@@ -2337,6 +2442,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "proofs_anomaly_id_fkey"
+            columns: ["anomaly_id"]
+            isOneToOne: false
+            referencedRelation: "anti_zombie_summary_v"
+            referencedColumns: ["anomaly_id"]
+          },
+          {
             foreignKeyName: "proofs_intervention_id_fkey"
             columns: ["intervention_id"]
             isOneToOne: false
@@ -2431,6 +2543,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "anomalies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qualifications_anomaly_id_fkey"
+            columns: ["anomaly_id"]
+            isOneToOne: false
+            referencedRelation: "anti_zombie_summary_v"
+            referencedColumns: ["anomaly_id"]
           },
           {
             foreignKeyName: "qualifications_confirmed_category_id_fkey"
@@ -3147,6 +3266,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "vendor_intervention_reports_anomaly_id_fkey"
+            columns: ["anomaly_id"]
+            isOneToOne: false
+            referencedRelation: "anti_zombie_summary_v"
+            referencedColumns: ["anomaly_id"]
+          },
+          {
             foreignKeyName: "vendor_intervention_reports_intervention_id_fkey"
             columns: ["intervention_id"]
             isOneToOne: false
@@ -3296,6 +3422,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "work_orders_anomaly_id_fkey"
+            columns: ["anomaly_id"]
+            isOneToOne: false
+            referencedRelation: "anti_zombie_summary_v"
+            referencedColumns: ["anomaly_id"]
+          },
+          {
             foreignKeyName: "work_orders_assigned_profile_id_fkey"
             columns: ["assigned_profile_id"]
             isOneToOne: false
@@ -3398,7 +3531,87 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      anti_zombie_summary_v: {
+        Row: {
+          active_block_id: string | null
+          anomaly_id: string | null
+          block_reason_code: string | null
+          block_reason_detail: string | null
+          block_reason_label: string | null
+          blocking_actor_label: string | null
+          blocking_actor_type: string | null
+          blocking_information_incomplete: boolean | null
+          blocking_or_delay_reason: string | null
+          deadline_id: string | null
+          deadline_missing: boolean | null
+          deadline_origin: string | null
+          deadline_source_kind: string | null
+          deadline_stage_code: string | null
+          deadline_stage_label: string | null
+          delay_reason_code: string | null
+          delay_reason_detail: string | null
+          delay_reason_label: string | null
+          dossier_state: string | null
+          due_at: string | null
+          expected_proof_label: string | null
+          expected_proof_missing: boolean | null
+          history_missing: boolean | null
+          is_blocked: boolean | null
+          is_closed: boolean | null
+          is_delayed: boolean | null
+          last_activity_actor_label: string | null
+          last_activity_actor_profile_id: string | null
+          last_activity_code: string | null
+          last_activity_comment: string | null
+          last_activity_id: string | null
+          last_activity_label: string | null
+          last_activity_occurred_at: string | null
+          last_activity_stage_code: string | null
+          last_activity_stage_label: string | null
+          next_action_assigned_profile_id: string | null
+          next_action_assigned_profile_name: string | null
+          next_action_code: string | null
+          next_action_comment: string | null
+          next_action_id: string | null
+          next_action_label: string | null
+          next_action_missing: boolean | null
+          pending_proof_requirement_count: number | null
+          pending_proof_requirements: Json | null
+          reference: string | null
+          responsible_missing: boolean | null
+          responsible_name: string | null
+          responsible_profile_id: string | null
+          sla_code: string | null
+          stage_code: string | null
+          stage_label: string | null
+          status_code: string | null
+          status_label: string | null
+          version_no: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anomalies_assigned_profile_id_fkey"
+            columns: ["responsible_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_actions_assigned_profile_id_fkey"
+            columns: ["next_action_assigned_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_history_actor_profile_id_fkey"
+            columns: ["last_activity_actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       add_anomaly_proof_requirement: {

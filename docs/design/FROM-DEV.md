@@ -2,6 +2,43 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-025 — C6 local : projection canonique AntiZombieSummary
+
+- **Date :** 30 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté et vérifié localement — non publié, non appliqué à distance
+- **Sources métier :** lots C1 à C5 et contrat validé de `AntiZombieSummary`
+- **Périmètre :** projection de lecture unique des huit informations de continuité et raccordement initial au cockpit Faustin uniquement ; aucun nouveau statut, rôle, seuil, droit, calcul de SLA ou écran métier
+
+La vue `public.anti_zombie_summary_v`, déclarée avec `security_invoker = true`, compose désormais les huit sources canoniques du dossier sans créer une seconde logique métier : statut et étape courante, responsable interne actif, prochaine action en attente, échéance canonique active et retard calculé à l’heure serveur, blocage principal, motif de blocage ou justification active du retard, exigences de preuve encore en attente et dernière activité issue de l’historique métier réel. La dernière activité est ordonnée de façon déterministe par heure de l’événement, heure de réception serveur puis identifiant ; `updated_at` et l’heure du navigateur ne sont pas utilisés comme substituts.
+
+La vue reste strictement en lecture seule. `anon` n’a aucun accès ; `authenticated` et `service_role` disposent uniquement de `SELECT`, et la vue respecte les politiques RLS des anomalies sous-jacentes. Les valeurs absentes restent explicitement signalées. Le motif du blocage actif prime sur la justification de retard ; la preuve attendue expose uniquement les exigences non satisfaites et ne se confond jamais avec une preuve déposée. Aucun cas particulier WILO-01, RIA-01, équipement ou catégorie n’a été inventé.
+
+L’adaptateur `app/lib/supabase/anti-zombie.ts` transforme exclusivement la projection en contrat d’affichage. Il formate les libellés et les dates mais ne recalcule ni statut, ni retard, ni règle de preuve. Le chargement Supabase joint cette synthèse à chaque anomalie persistante. Pour respecter le déploiement progressif validé, seul le cockpit Faustin consomme à ce stade la synthèse canonique ; le registre et le dossier central conservent leur raccordement antérieur en attendant la validation métier du rendu C6. Le mode démonstration garde son adaptateur local de repli, clairement identifié comme tel.
+
+### Correspondance des huit champs
+
+- **Statut :** `anomalies.status_id` → `workflow_statuses` et `workflow_stages` ; état ouvert/fermé conservé séparément.
+- **Responsable :** `anomalies.assigned_profile_id` → `profiles`, avec profil interne actif et première connexion déverrouillée.
+- **Prochaine action :** unique `anomaly_actions` en état `pending` → `action_code_definitions`, commentaire facultatif conservé.
+- **Échéance / SLA :** unique `anomaly_deadlines` active ; retard dérivé côté PostgreSQL avec l’heure serveur, sans définition concurrente.
+- **Acteur bloquant :** unique `anomaly_blocks` principal actif ou en résolution proposée, avec instantané interne, prestataire de référence, externe libre ou système.
+- **Motif :** motif du blocage principal ; à défaut, justification active d’une échéance réellement dépassée.
+- **Preuve attendue :** instantanés `anomaly_proof_requirements` obligatoires et non satisfaits ; nombre et libellés agrégés sans lire une preuve déposée comme une exigence.
+- **Dernière activité :** dernier `anomaly_history` réel, avec date/heure, action, acteur et étape concernée.
+
+### Contrôles réalisés
+
+- reconstruction complète : **20 migrations**, seed idempotent et **12/12 suites pgTAP** réussies ; lint des schémas `public` et `private` sans erreur ; inventaire Lot 0 : **41 tables / 20 migrations / 12 tests SQL** ;
+- projection C6 : droits de lecture seule, `security_invoker`, cas complet, retard, blocage incomplet, valeurs absentes, exigences de preuve, historique réel et périmètres RLS Administration/Facility Manager/agent/hors périmètre/profil verrouillé ;
+- AntiZombieSummary **12/12**, audit visuel **92/92**, personas **38/38**, authentification **20/20**, hors ligne **17/17**, résilience **12/12**, lint et build réussis ;
+- cinq comptes Auth locaux, verrou de première connexion et workflow persistant avec preuve critique/Storage privé : réussis ;
+- recette navigateur du cockpit Faustin sur desktop et à **390 px** : huit informations visibles sans modale, ordre mobile conservé, aucun débordement horizontal, focus clavier visible et aucune erreur ou alerte console ;
+- aucune écriture Supabase distante, aucun secret, aucune publication et aucune modification du dossier `tmp/`.
+
+- **Limites explicites :** le navigateur a vérifié le composant dans le mode démonstration ; la provenance canonique et son périmètre réel ont été validés par les tests SQL, l’adaptateur et les tests Auth/RLS locaux. Le registre et le dossier central ne consomment pas encore la projection C6.
+- **Suite proposée :** C7, après validation métier du présent checkpoint — raccorder la même projection au registre et au dossier central sans ajouter de logique, puis exécuter une recette transversale des trois surfaces avant toute application distante.
+
 ## DEV-024 — C5 local : règles, exigences et validation des preuves
 
 - **Date :** 30 août 2026

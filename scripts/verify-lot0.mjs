@@ -35,6 +35,7 @@ const expectedMigrations = [
   "20260830195601_anti_zombie_c3_canonical_actions.sql",
   "20260830202034_anti_zombie_c4_blocks_delays.sql",
   "20260830204742_anti_zombie_c5_proof_requirements.sql",
+  "20260830212342_anti_zombie_c6_canonical_projection.sql",
 ];
 check(JSON.stringify(migrations) === JSON.stringify(expectedMigrations), "Migration order or inventory is unexpected");
 
@@ -97,6 +98,8 @@ for (const marker of [
   "review_anomaly_proof",
   "link_proof_to_requirement",
   "guard_close_pending_proof_requirement",
+  "anti_zombie_summary_v",
+  "security_invoker = true",
   "revoke execute on all functions in schema public from public, anon, authenticated",
 ]) {
   check(migrationSql.toLowerCase().includes(marker.toLowerCase()), `Missing business rule marker: ${marker}`);
@@ -133,7 +136,7 @@ check(migrationSql.includes("anomaly-proofs"), "Private anomaly proof bucket or 
 check(migrationSql.includes("vendor-intervention-reports"), "Private internal vendor-report bucket or policies are missing");
 
 const sqlTests = readdirSync(join(supabaseDir, "tests")).filter((name) => name.endsWith(".sql"));
-for (const expected of ["001_schema_seed.sql", "002_workflow_audit.sql", "003_rls.sql", "004_internal_vendor_reports.sql", "005_first_password_change.sql", "006_offline_sync.sql", "007_anti_zombie_c1.sql", "008_anti_zombie_c2_deadlines.sql", "009_anti_zombie_c3_actions.sql", "010_anti_zombie_c4_blocks_delays.sql", "011_anti_zombie_c5_proof_requirements.sql"]) {
+for (const expected of ["001_schema_seed.sql", "002_workflow_audit.sql", "003_rls.sql", "004_internal_vendor_reports.sql", "005_first_password_change.sql", "006_offline_sync.sql", "007_anti_zombie_c1.sql", "008_anti_zombie_c2_deadlines.sql", "009_anti_zombie_c3_actions.sql", "010_anti_zombie_c4_blocks_delays.sql", "011_anti_zombie_c5_proof_requirements.sql", "012_anti_zombie_c6_projection.sql"]) {
   check(sqlTests.includes(expected), `Missing SQL test: ${expected}`);
 }
 

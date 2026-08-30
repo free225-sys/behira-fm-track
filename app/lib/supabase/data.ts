@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import type { AntiZombieSummaryData } from "../../components/anti-zombie-contract";
+import { adaptCanonicalAntiZombieSummary } from "./anti-zombie";
 import type { Database } from "./database.types";
 
 export type OperationalPriority = "Critique" | "Haute" | "Moyenne" | "Faible";
@@ -25,6 +27,7 @@ export type OperationalAnomaly = {
   proof: boolean;
   proofPending: boolean;
   description: string;
+  antiZombieSummary?: AntiZombieSummaryData;
 };
 
 export type OperationalEquipment = {
@@ -91,6 +94,7 @@ export async function loadOperationalSnapshot(
     vendorResult,
     proofResult,
     permissionResult,
+    antiZombieResult,
   ] = await Promise.all([
     client.from("anomalies").select("id, reference, title, description, equipment_id, zone_id, priority_id, current_status_id, assigned_profile_id, assigned_vendor_id, detected_at, qualification_due_at, intervention_due_at, closed_at").order("detected_at", { ascending: false }),
     client.from("equipment").select("id, code, name, location_label, health_score, health_status, lifecycle_scope").eq("lifecycle_scope", "mvp").order("code"),
@@ -101,6 +105,7 @@ export async function loadOperationalSnapshot(
     client.from("vendors").select("id, code, legal_name, operational_alias"),
     client.from("proofs").select("anomaly_id, verification_status"),
     client.rpc("has_permission", { p_permission_code: "upload_vendor_intervention_report" }),
+    client.from("anti_zombie_summary_v").select("*"),
   ]);
 
   const firstError = [
@@ -113,6 +118,7 @@ export async function loadOperationalSnapshot(
     vendorResult.error,
     proofResult.error,
     permissionResult.error,
+    antiZombieResult.error,
   ].find(Boolean);
   if (firstError) throw firstError;
 
@@ -123,6 +129,11 @@ export async function loadOperationalSnapshot(
   const vendorById = new Map((vendorResult.data ?? []).map((item) => [item.id, item]));
   const provenAnomalies = new Set((proofResult.data ?? []).filter((item) => item.verification_status === "accepted").map((item) => item.anomaly_id).filter(Boolean));
   const pendingProofAnomalies = new Set((proofResult.data ?? []).filter((item) => item.verification_status === "pending").map((item) => item.anomaly_id).filter(Boolean));
+  const antiZombieByAnomalyId = new Map(
+    (antiZombieResult.data ?? [])
+      .filter((item) => item.anomaly_id)
+      .map((item) => [item.anomaly_id!, adaptCanonicalAntiZombieSummary(item)]),
+  );
 
   const anomalies = (anomalyResult.data ?? []).map((item) => {
     const equipment = item.equipment_id ? equipmentById.get(item.equipment_id) : undefined;
@@ -151,6 +162,7 @@ export async function loadOperationalSnapshot(
       proof: provenAnomalies.has(item.id),
       proofPending: pendingProofAnomalies.has(item.id),
       description: item.description,
+      antiZombieSummary: antiZombieByAnomalyId.get(item.id),
     } satisfies OperationalAnomaly;
   });
 

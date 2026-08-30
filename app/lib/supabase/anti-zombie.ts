@@ -1,0 +1,49 @@
+import type { AntiZombieSummaryData } from "../../components/anti-zombie-contract";
+import type { Database } from "./database.types";
+
+export type AntiZombieProjectionRow =
+  Database["public"]["Views"]["anti_zombie_summary_v"]["Row"];
+
+function formatMoment(value: string | null) {
+  if (!value) return null;
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value)).replace(",", " ·");
+}
+
+export function adaptCanonicalAntiZombieSummary(
+  row: AntiZombieProjectionRow,
+): AntiZombieSummaryData {
+  const status = [row.stage_label, row.status_label].filter(Boolean).join(" · ") || null;
+  const requirementCount = row.pending_proof_requirement_count ?? 0;
+
+  return {
+    dossierState: row.is_closed ? "Clôturé" : "Ouvert",
+    status,
+    responsible: row.responsible_missing ? null : row.responsible_name,
+    nextAction: row.next_action_missing ? null : row.next_action_label,
+    nextActionDetail: row.next_action_comment,
+    deadline: row.deadline_missing ? null : formatMoment(row.due_at),
+    slaLabel: row.deadline_missing ? null : row.is_delayed ? "En retard" : "Dans le délai",
+    isDelayed: Boolean(row.is_delayed),
+    isBlocked: Boolean(row.is_blocked),
+    blockingActor: row.blocking_actor_label,
+    blockingOrDelayReason: row.blocking_or_delay_reason,
+    blockingInformationIncomplete: row.blocking_information_incomplete,
+    expectedProof: row.expected_proof_missing ? null : row.expected_proof_label,
+    expectedProofState: requirementCount > 0
+      ? `${requirementCount} exigence${requirementCount > 1 ? "s" : ""} en attente`
+      : null,
+    lastHistoryActivity: row.history_missing || !row.last_activity_label || !row.last_activity_occurred_at
+      ? null
+      : {
+          label: row.last_activity_label,
+          occurredAt: formatMoment(row.last_activity_occurred_at) ?? row.last_activity_occurred_at,
+          actor: row.last_activity_actor_label,
+          stage: row.last_activity_stage_label,
+        },
+  };
+}

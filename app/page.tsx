@@ -96,6 +96,7 @@ type Anomaly = {
   proofPending?: boolean;
   proofQueued?: boolean;
   description: string;
+  antiZombieSummary?: AntiZombieSummaryData;
 };
 
 type VendorReportInput = {
@@ -377,6 +378,10 @@ function adaptDossierToAntiZombieSummary(anomaly:Anomaly):AntiZombieSummaryData 
     expectedProofState:anomaly.proof ? 'Preuve déposée et acceptée' : anomaly.proofPending ? 'Preuve déposée · validation Facility Manager attendue' : 'Aucune preuve déposée',
     lastHistoryActivity:null,
   };
+}
+
+function antiZombieSummaryForManager(anomaly:Anomaly):AntiZombieSummaryData {
+  return anomaly.antiZombieSummary ?? adaptDossierToAntiZombieSummary(anomaly);
 }
 
 function AuthFrame({
@@ -1586,7 +1591,7 @@ function Manager({ anomalies, tab, setTab, onOpen }: { anomalies:Anomaly[]; tab:
           <Button variant="secondary" onClick={() => onOpen(focus.id)}>Voir le dossier complet</Button>
         </div>
 
-        <AntiZombieSummary data={adaptDossierToAntiZombieSummary(focus)} variant="standard" />
+        <AntiZombieSummary data={antiZombieSummaryForManager(focus)} variant="standard" />
 
         <div className="fm-section-title"><div><span>1</span><p><b>{branchLocked ? 'Préparer la qualification et l’affectation' : 'Choisir la branche de traitement'}</b><small>{branchLocked ? 'Le diagnostic agent doit être enregistré avant le choix de la branche.' : 'Une décision explicite oriente le reste du dossier.'}</small></p></div></div>
         <div className={`branch-selector ${branchLocked ? 'is-locked' : ''}`} aria-label="Branche de traitement" aria-disabled={branchLocked}>

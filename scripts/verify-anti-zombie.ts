@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { normalizeAntiZombieSummary, type AntiZombieSummaryData } from '../app/components/anti-zombie-contract.ts';
+import { adaptCanonicalAntiZombieSummary, type AntiZombieProjectionRow } from '../app/lib/supabase/anti-zombie.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -56,11 +57,45 @@ for (const testCase of cases) {
   console.log(`✓ ${testCase.name}`);
 }
 
-const [page, component, contract, css] = await Promise.all([
+const canonical = normalizeAntiZombieSummary(adaptCanonicalAntiZombieSummary({
+  is_closed:false,
+  stage_label:'Qualification',
+  status_label:'À qualifier',
+  responsible_name:'Évariste DJE',
+  responsible_missing:false,
+  next_action_label:'Réaliser et confirmer le diagnostic',
+  next_action_comment:'Contrôler la tension batterie',
+  next_action_missing:false,
+  due_at:'2026-08-30T10:00:00.000Z',
+  deadline_missing:false,
+  is_delayed:true,
+  is_blocked:true,
+  blocking_actor_label:'Exploitant technique externe',
+  blocking_or_delay_reason:'Diagnostic technique attendu — accès requis',
+  blocking_information_incomplete:false,
+  expected_proof_label:'Au moins une preuve acceptée conforme au dossier',
+  expected_proof_missing:false,
+  pending_proof_requirement_count:1,
+  history_missing:false,
+  last_activity_label:'Blocage déclaré',
+  last_activity_occurred_at:'2026-08-30T09:00:00.000Z',
+  last_activity_actor_label:'Évariste DJE',
+  last_activity_stage_label:'Qualification',
+} as AntiZombieProjectionRow));
+assert.equal(canonical.status, 'Qualification · À qualifier');
+assert.equal(canonical.nextActionDetail, 'Contrôler la tension batterie');
+assert.equal(canonical.expectedProofState, '1 exigence en attente');
+assert.match(canonical.lastActivityMeta ?? '', /Évariste DJE · Qualification$/);
+assert.equal(canonical.blockingInformationIncomplete, false);
+console.log('✓ projection canonique C6 adaptée sans recalcul métier');
+
+const [page, component, contract, css, dataSource, canonicalAdapter] = await Promise.all([
   readFile(path.join(root, 'app', 'page.tsx'), 'utf8'),
   readFile(path.join(root, 'app', 'components', 'AntiZombieSummary.tsx'), 'utf8'),
   readFile(path.join(root, 'app', 'components', 'anti-zombie-contract.ts'), 'utf8'),
   readFile(path.join(root, 'app', 'globals.css'), 'utf8'),
+  readFile(path.join(root, 'app', 'lib', 'supabase', 'data.ts'), 'utf8'),
+  readFile(path.join(root, 'app', 'lib', 'supabase', 'anti-zombie.ts'), 'utf8'),
 ]);
 
 const managerSource = page.slice(page.indexOf('function Manager('), page.indexOf('function Detail('));
@@ -69,8 +104,12 @@ const detailSource = page.slice(page.indexOf('function Detail('), page.indexOf('
 
 assert.equal((page.match(/<AntiZombieSummary\s/g) ?? []).length, 3, 'Le composant doit être intégré dans Facility Manager, le registre et le dossier central.');
 assert.match(managerSource, /<AntiZombieSummary\s/, 'AntiZombieSummary doit être intégré dans Manager.');
+assert.match(managerSource, /antiZombieSummaryForManager\(focus\)/, 'Facility Manager doit consommer la projection canonique C6 avec repli démo explicite.');
 assert.match(registrySource, /<AntiZombieSummary\s/, 'Le registre doit intégrer la variante compacte.');
 assert.match(detailSource, /<AntiZombieSummary\s/, 'Le dossier central doit intégrer la variante détaillée.');
+assert.match(dataSource, /from\("anti_zombie_summary_v"\)\.select\("\*"\)/, 'Le chargement Supabase doit lire la projection canonique unique.');
+assert.match(canonicalAdapter, /adaptCanonicalAntiZombieSummary/, 'L’adaptateur Supabase dédié doit rester distinct du composant visuel.');
+assert.doesNotMatch(canonicalAdapter, /Date\.now|new Date\(\)\.getTime/, 'L’adaptateur ne doit pas recalculer le retard avec l’horloge du navigateur.');
 
 for (const label of ['Étape actuelle','Responsable','Prochaine action','SLA / Échéance','Acteur bloquant','Motif du blocage ou du retard','Preuve attendue','Dernière activité']) {
   assert.ok(component.includes(label), `Libellé manquant : ${label}`);
@@ -92,4 +131,4 @@ assert.match(component, /NORMALE/, 'La continuité normale doit être distingué
 console.log('✓ intégration partagée Facility Manager, registre et dossier central');
 console.log('✓ huit informations visibles, valeurs de repli et alerte de blocage présentes');
 console.log('✓ contrôle statique desktop, mobile, clavier et absence de tooltip');
-console.log(`\n${cases.length + 3} contrôles AntiZombieSummary réussis.`);
+console.log(`\n${cases.length + 4} contrôles AntiZombieSummary réussis.`);
