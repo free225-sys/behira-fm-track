@@ -1013,6 +1013,8 @@ export type Database = {
         Row: {
           anomaly_id: string | null
           captured_at: string | null
+          client_mutation_id: string | null
+          client_payload_hash: string | null
           created_at: string
           external_url: string | null
           id: string
@@ -1037,6 +1039,8 @@ export type Database = {
         Insert: {
           anomaly_id?: string | null
           captured_at?: string | null
+          client_mutation_id?: string | null
+          client_payload_hash?: string | null
           created_at?: string
           external_url?: string | null
           id?: string
@@ -1061,6 +1065,8 @@ export type Database = {
         Update: {
           anomaly_id?: string | null
           captured_at?: string | null
+          client_mutation_id?: string | null
+          client_payload_hash?: string | null
           created_at?: string
           external_url?: string | null
           id?: string
@@ -1345,6 +1351,8 @@ export type Database = {
       reports: {
         Row: {
           analysis: string | null
+          client_mutation_id: string | null
+          client_payload_hash: string | null
           created_at: string
           equipment_id: string | null
           health_level: string | null
@@ -1364,6 +1372,8 @@ export type Database = {
         }
         Insert: {
           analysis?: string | null
+          client_mutation_id?: string | null
+          client_payload_hash?: string | null
           created_at?: string
           equipment_id?: string | null
           health_level?: string | null
@@ -1383,6 +1393,8 @@ export type Database = {
         }
         Update: {
           analysis?: string | null
+          client_mutation_id?: string | null
+          client_payload_hash?: string | null
           created_at?: string
           equipment_id?: string | null
           health_level?: string | null
@@ -2184,6 +2196,18 @@ export type Database = {
         }
         Returns: Json
       }
+      register_anomaly_proof_offline: {
+        Args: {
+          p_captured_at?: string
+          p_client_mutation_id: string
+          p_mime_type: string
+          p_proof_type?: string
+          p_reference: string
+          p_size_bytes: number
+          p_storage_path: string
+        }
+        Returns: Json
+      }
       register_vendor_intervention_report: {
         Args: {
           p_anomaly_reference: string
@@ -2213,6 +2237,20 @@ export type Database = {
           intervention_due_at: string
           qualification_due_at: string
         }[]
+      }
+      submit_field_round_offline: {
+        Args: {
+          p_anomaly_description?: string
+          p_anomaly_title?: string
+          p_checks: Json
+          p_client_mutation_id: string
+          p_equipment_code: string
+          p_performed_at: string
+          p_priority_label?: string
+          p_report_type: string
+          p_summary: string
+        }
+        Returns: Json
       }
       validate_anomaly_risk: {
         Args: { p_anomaly_id: string; p_comment: string; p_decision: string }

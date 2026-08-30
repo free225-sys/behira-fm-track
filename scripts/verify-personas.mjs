@@ -59,7 +59,7 @@ requireAll('Polish Direction et Faustin', page, [
   'decision-filters', 'direction-focus', 'Qualifier maintenant', 'qualify-action', 'escalate-action',
 ])
 requireAll('Pilote Wilo et saisie directe', page, [
-  'MODULE PILOTE · SURPRESSEUR', 'Mode hors ligne actif', 'Ronde Wilo prête à synchroniser', 'AUCUN IMPORT',
+  'MODULE PILOTE · SURPRESSEUR', 'OfflineSyncStatus', 'Ronde placée dans la file de synchronisation', 'AUCUN IMPORT',
 ])
 checks.push({
   label:'Aucun parcours d’import de reporting',

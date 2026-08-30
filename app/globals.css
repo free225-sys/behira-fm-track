@@ -16,6 +16,12 @@
   --success:#30956a;
   --warning:#b85d17;
   --danger:#c83f48;
+  --warning-surface:#fff8ef;
+  --warning-border:#e4b98e;
+  --warning-text:#874312;
+  --danger-surface:#fff1f2;
+  --danger-border:#e4a7ac;
+  --danger-text:#8d2d32;
   --info:#235ea7;
   --viz-series-1:#235ea7;
   --viz-series-2:#30956a;
@@ -666,4 +672,27 @@ button:focus,input:focus,select:focus,textarea:focus{outline:none}
   .registry-mobile-details span{padding:8px;border-radius:7px;background:var(--surface-muted);color:#354457;font-size:9px}
   .registry-mobile-details b{display:block;margin-bottom:3px;color:#708091;font-size:7px;text-transform:uppercase;letter-spacing:.05em}
   .registry-row .row-arrow{grid-column:2;grid-row:1/4;align-self:center}
+}
+
+/* P7B — statut réel de persistance terrain et reprise réseau */
+.sync-banner{min-height:58px;border-color:var(--border-strong);background:var(--surface-muted)}
+.sync-banner b,.sync-banner small,.sync-banner button{font-size:12px}
+.sync-banner small{color:var(--foreground-muted);line-height:1.45}
+.sync-banner .sync-error-detail{margin-top:5px;color:var(--danger-text);font-weight:650}
+.sync-banner button{min-height:44px;padding:0 13px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--brand);font-weight:750}
+.sync-banner button:disabled{cursor:not-allowed;opacity:.55}
+.sync-banner.is-offline{border-color:var(--warning-border);background:var(--warning-surface)}
+.sync-banner.has-error{border-color:var(--danger-border);background:var(--danger-surface)}
+.sync-banner.has-error button{border-color:var(--danger-border);color:var(--danger-text)}
+.sync-banner.is-demo{border-color:var(--border);background:var(--surface-muted)}
+.check-grid .unreviewed{border-style:dashed;background:var(--surface-muted)}
+.check-grid .unreviewed>span{background:var(--surface);color:var(--foreground-muted)}
+.check-grid .unreviewed em{color:var(--foreground-muted)}
+.evidence-drop.is-informational{border-style:solid;background:var(--surface-muted)}
+.evidence-drop.is-informational>span{background:var(--surface-emphasis);color:var(--brand)}
+.quick-round-card .field input,.quick-round-card .field select,.quick-round-card .field textarea{width:100%;max-width:100%}
+
+@media (max-width:700px){
+  .sync-banner{display:grid;grid-template-columns:auto minmax(0,1fr)}
+  .sync-banner button{grid-column:1/-1;width:100%}
 }

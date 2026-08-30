@@ -28,6 +28,7 @@ const expectedMigrations = [
   "20260826165211_grant_internal_vendor_report_permissions.sql",
   "20260826170559_normalize_internal_agent_scopes.sql",
   "20260826183000_require_first_password_change.sql",
+  "20260829234552_offline_field_sync_idempotency.sql",
 ];
 check(JSON.stringify(migrations) === JSON.stringify(expectedMigrations), "Migration order or inventory is unexpected");
 
@@ -57,6 +58,8 @@ for (const marker of [
   "has_permission",
   "get_my_auth_gate",
   "unlock_profile_after_password_change",
+  "submit_field_round_offline",
+  "register_anomaly_proof_offline",
   "revoke execute on all functions in schema public from public, anon, authenticated",
 ]) {
   check(migrationSql.toLowerCase().includes(marker.toLowerCase()), `Missing business rule marker: ${marker}`);
@@ -93,7 +96,7 @@ check(migrationSql.includes("anomaly-proofs"), "Private anomaly proof bucket or 
 check(migrationSql.includes("vendor-intervention-reports"), "Private internal vendor-report bucket or policies are missing");
 
 const sqlTests = readdirSync(join(supabaseDir, "tests")).filter((name) => name.endsWith(".sql"));
-for (const expected of ["001_schema_seed.sql", "002_workflow_audit.sql", "003_rls.sql", "004_internal_vendor_reports.sql"]) {
+for (const expected of ["001_schema_seed.sql", "002_workflow_audit.sql", "003_rls.sql", "004_internal_vendor_reports.sql", "005_first_password_change.sql", "006_offline_sync.sql"]) {
   check(sqlTests.includes(expected), `Missing SQL test: ${expected}`);
 }
 

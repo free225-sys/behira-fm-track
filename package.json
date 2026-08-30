@@ -14,6 +14,7 @@
     "verify:personas": "node scripts/verify-personas.mjs",
     "verify:auth": "node scripts/verify-auth.mjs",
     "verify:anti-zombie": "node scripts/verify-anti-zombie.ts",
+    "verify:offline": "node scripts/verify-offline-sync.mjs",
     "verify:supabase": "node scripts/verify-supabase-readiness.mjs",
     "test:fm-track": "node scripts/verify-fm-track-connection.mjs",
     "types:supabase": "supabase gen types typescript --local --schema public",

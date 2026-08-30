@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database, Json } from "./database.types";
+import type { AnomalyProofPayload, FieldRoundPayload } from "../offline/types";
 
 const PROOF_BUCKET = "anomaly-proofs";
 const VENDOR_REPORT_BUCKET = "vendor-intervention-reports";
@@ -98,6 +99,76 @@ export async function uploadAnomalyProof(
     await client.storage.from(PROOF_BUCKET).remove([path]);
     throw error;
   }
+  return asRpcResult(data);
+}
+
+export async function submitQueuedFieldRound(
+  client: SupabaseClient<Database>,
+  clientMutationId: string,
+  payload: FieldRoundPayload,
+) {
+  const { data, error } = await client.rpc("submit_field_round_offline", {
+    p_client_mutation_id: clientMutationId,
+    p_equipment_code: payload.equipmentCode,
+    p_report_type: payload.reportType,
+    p_performed_at: payload.performedAt,
+    p_summary: payload.summary,
+    p_checks: payload.checks.map((check) => ({
+      code: check.code,
+      label: check.label,
+      status: check.status,
+      ...(check.valueNumeric === undefined ? {} : { value_numeric: check.valueNumeric }),
+      ...(check.valueText === undefined ? {} : { value_text: check.valueText }),
+      ...(check.valueBoolean === undefined ? {} : { value_boolean: check.valueBoolean }),
+      ...(check.unit ? { unit: check.unit } : {}),
+      ...(check.notes ? { notes: check.notes } : {}),
+    })),
+    p_anomaly_title: payload.anomaly?.title,
+    p_anomaly_description: payload.anomaly?.description,
+    p_priority_label: payload.anomaly?.priority,
+  });
+  if (error) throw error;
+  return asRpcResult(data);
+}
+
+export async function uploadQueuedAnomalyProof(
+  client: SupabaseClient<Database>,
+  clientMutationId: string,
+  payload: AnomalyProofPayload,
+) {
+  const { file } = payload;
+  if (!ALLOWED_PROOF_TYPES.has(file.type)) {
+    throw new Error("Format non accepté : utilisez JPG, PNG, WebP ou PDF.");
+  }
+  if (file.size <= 0 || file.size > MAX_PROOF_BYTES) {
+    throw new Error("La preuve doit peser moins de 10 Mo.");
+  }
+
+  const objectName = `${clientMutationId}-${cleanFileName(file.name)}`;
+  const path = `${payload.anomalyId}/${objectName}`;
+  const { error: uploadError } = await client.storage.from(PROOF_BUCKET).upload(path, file, {
+    cacheControl: "3600",
+    contentType: file.type,
+    upsert: false,
+  });
+
+  if (uploadError) {
+    const { data: existing, error: listError } = await client.storage
+      .from(PROOF_BUCKET)
+      .list(payload.anomalyId, { limit: 10, search: objectName });
+    if (listError || !existing?.some((object) => object.name === objectName)) throw uploadError;
+  }
+
+  const { data, error } = await client.rpc("register_anomaly_proof_offline", {
+    p_client_mutation_id: clientMutationId,
+    p_reference: payload.anomalyReference,
+    p_storage_path: path,
+    p_mime_type: file.type,
+    p_size_bytes: file.size,
+    p_proof_type: payload.proofType,
+    p_captured_at: payload.capturedAt,
+  });
+  if (error) throw error;
   return asRpcResult(data);
 }
 

@@ -12,6 +12,7 @@ export type OperationalStatus =
 
 export type OperationalAnomaly = {
   id: string;
+  databaseId: string;
   asset: string;
   title: string;
   location: string;
@@ -133,6 +134,7 @@ export async function loadOperationalSnapshot(
 
     return {
       id: item.reference.replace(/^FIX-ANO-/, "ANO-"),
+      databaseId: item.id,
       asset: equipment?.code ?? "RND-LET",
       title: item.title,
       location: equipment?.location_label ?? "Zone à préciser",

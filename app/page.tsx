@@ -3,13 +3,15 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 import { AntiZombieSummary } from './components/AntiZombieSummary';
+import { OfflineSyncStatus } from './components/OfflineSyncStatus';
 import type { AntiZombieSummaryData } from './components/anti-zombie-contract';
 import { WorkflowAnalytics } from './components/WorkflowAnalytics';
+import { useOfflineSync } from './lib/offline/useOfflineSync';
 import { getAuthenticatedProfileGate, resolveAuthenticatedPersona } from './lib/supabase/auth';
 import { getBrowserSupabaseClient, setSupabaseRememberPreference } from './lib/supabase/client';
 import { getSupabaseIntegrationState, isSupabaseIntegrationEnabled } from './lib/supabase/config';
 import { loadOperationalSnapshot, type OperationalVendor } from './lib/supabase/data';
-import { advanceAnomalyWorkflow, uploadAnomalyProof, uploadVendorInterventionReport, verifyLatestAnomalyProof } from './lib/supabase/mutations';
+import { advanceAnomalyWorkflow, uploadVendorInterventionReport, verifyLatestAnomalyProof } from './lib/supabase/mutations';
 
 type View = 'workspace' | 'dashboard' | 'registry' | 'manager' | 'report' | 'detail';
 type Priority = 'Critique' | 'Haute' | 'Moyenne' | 'Faible';
@@ -74,6 +76,7 @@ type FieldRequest = {
 
 type Anomaly = {
   id: string;
+  databaseId?: string;
   asset: string;
   title: string;
   location: string;
@@ -85,6 +88,7 @@ type Anomaly = {
   delayed: boolean;
   proof: boolean;
   proofPending?: boolean;
+  proofQueued?: boolean;
   description: string;
 };
 
@@ -700,6 +704,19 @@ export default function Home() {
     setReferenceCounts(snapshot.counts);
     setDataState('live');
   };
+  const offlineSync = useOfflineSync({
+    enabled:session?.mode === 'supabase' && Boolean(session.userId),
+    userId:session?.mode === 'supabase' ? session.userId : undefined,
+  });
+  useEffect(() => {
+    if (!offlineSync.lastRun?.synced) return;
+    const timer = window.setTimeout(() => {
+      void syncOperationalData()
+        .then(() => flash(`${offlineSync.lastRun?.synced} saisie${offlineSync.lastRun?.synced === 1 ? '' : 's'} terrain synchronisée${offlineSync.lastRun?.synced === 1 ? '' : 's'}.`))
+        .catch(() => flash('Synchronisation terminée ; actualisation du registre à reprendre.'));
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [offlineSync.lastRun]);
   const mutationError = (error:unknown) => error instanceof Error ? error.message : 'Une erreur locale est survenue.';
   const persistWorkflowStatus = async (status:Status) => {
     if (status === selected.status) return;
@@ -724,18 +741,28 @@ export default function Home() {
     }
   };
   const persistProof = async (file:File) => {
-    if (session?.mode !== 'supabase' || dataState !== 'live') {
+    if (session?.mode !== 'supabase') {
       setAnomalies((items) => items.map((a) => a.id === selected.id ? { ...a, proof:true } : a));
       flash('Preuve ajoutée — simulation de repli.');
       return;
     }
+    if (dataState !== 'live' || !selected.databaseId) {
+      flash('Preuve non enregistrée : ce dossier de repli n’a pas d’identifiant Supabase canonique.');
+      return;
+    }
     setMutationBusy(true);
     try {
-      const result = await uploadAnomalyProof(getBrowserSupabaseClient(), selected.id, file);
-      await syncOperationalData();
-      flash(result.verification_status === 'accepted' ? 'Preuve déposée et acceptée dans Supabase.' : 'Preuve déposée ; validation de Faustin requise.');
+      await offlineSync.enqueueProof({
+        anomalyReference:selected.id,
+        anomalyId:selected.databaseId,
+        file,
+        capturedAt:new Date().toISOString(),
+        proofType:file.type === 'application/pdf' ? 'pv' : 'photo',
+      });
+      setAnomalies((items) => items.map((a) => a.id === selected.id ? { ...a, proofQueued:true } : a));
+      flash(offlineSync.online ? 'Preuve mise en file ; synchronisation lancée.' : 'Preuve protégée sur cet appareil ; envoi automatique au retour du réseau.');
     } catch (error) {
-      flash(`Preuve non enregistrée : ${mutationError(error)}`);
+      flash(`Preuve non mise en file : ${mutationError(error)}`);
     } finally {
       setMutationBusy(false);
     }
@@ -932,8 +959,8 @@ export default function Home() {
           {view === 'dashboard' && <Dashboard anomalies={anomalies} equipment={equipmentItems} audience={personaId === 'frederic' ? 'administration' : 'facility'} onOpen={openDetail} onNavigate={navigate} />}
           {view === 'registry' && <Registry anomalies={filtered} query={query} setQuery={setQuery} priority={priorityFilter} setPriority={setPriorityFilter} status={statusFilter} setStatus={setStatusFilter} onOpen={(id) => openDetail(id, 'registry')} />}
           {view === 'manager' && <Manager anomalies={anomalies} equipment={equipmentItems} tab={managerTab} setTab={setManagerTab} onOpen={(id) => openDetail(id, 'manager')} />}
-          {view === 'report' && <Report persona={persona} onNavigate={navigate} />}
-          {view === 'detail' && <Detail key={`${selected.id}-${selected.status}-${selected.proof}-${selected.proofPending}`} anomaly={selected} readOnly={personaId === 'frederic'} canVerify={personaId === 'faustin' && session.mode === 'supabase'} busy={mutationBusy} onBack={() => navigate(previousView)} onStatus={(status) => void persistWorkflowStatus(status)} onProof={(file) => void persistProof(file)} onVerify={() => void verifyProof()} />}
+          {view === 'report' && <Report persona={persona} onNavigate={navigate} persistenceEnabled={session.mode === 'supabase'} offlineSync={offlineSync} flash={flash} />}
+          {view === 'detail' && <Detail key={`${selected.id}-${selected.status}-${selected.proof}-${selected.proofPending}-${selected.proofQueued}`} anomaly={selected} readOnly={personaId === 'frederic'} canVerify={personaId === 'faustin' && session.mode === 'supabase'} busy={mutationBusy} persistenceEnabled={session.mode === 'supabase'} offlineSync={offlineSync} onBack={() => navigate(previousView)} onStatus={(status) => void persistWorkflowStatus(status)} onProof={(file) => void persistProof(file)} onVerify={() => void verifyProof()} />}
         </div>
       </section>
       {toast && <div className={`toast ${/impossible|non enregistrée/i.test(toast) ? 'toast-error' : ''}`} role="status"><span>{/impossible|non enregistrée/i.test(toast) ? '!' : '✓'}</span>{toast}</div>}
@@ -1402,7 +1429,7 @@ function Manager({ anomalies, equipment, tab, setTab, onOpen }: { anomalies:Anom
   </div>;
 }
 
-function Detail({ anomaly, onBack, onStatus, onProof, onVerify, readOnly = false, canVerify = false, busy = false }: { anomaly:Anomaly; onBack:()=>void; onStatus:(s:Status)=>void; onProof:(file:File)=>void; onVerify:()=>void; readOnly?:boolean; canVerify?:boolean; busy?:boolean }) {
+function Detail({ anomaly, onBack, onStatus, onProof, onVerify, offlineSync, persistenceEnabled, readOnly = false, canVerify = false, busy = false }: { anomaly:Anomaly; onBack:()=>void; onStatus:(s:Status)=>void; onProof:(file:File)=>void; onVerify:()=>void; offlineSync:ReturnType<typeof useOfflineSync>; persistenceEnabled:boolean; readOnly?:boolean; canVerify?:boolean; busy?:boolean }) {
   const nextStep:Partial<Record<Status,Status>> = { 'À qualifier':'Affectée', 'Affectée':'En intervention', 'En intervention':'En validation', 'En validation':'Clôturée' };
   const nextStatusOption = nextStep[anomaly.status];
   const [nextStatus, setNextStatus] = useState<Status>(nextStatusOption ?? anomaly.status);
@@ -1419,7 +1446,8 @@ function Detail({ anomaly, onBack, onStatus, onProof, onVerify, readOnly = false
     <button className="back-button dossier-back" onClick={onBack}>← Retour à la file</button>
     <section className="dossier-hero"><div><div className="detail-labels"><Badge tone={priorityTone(anomaly.priority)}>{anomaly.priority}</Badge>{anomaly.delayed && anomaly.status !== 'Clôturée' && <Badge tone="critical">EN RETARD</Badge>}{readOnly && <Badge tone="neutral">CONSULTATION</Badge>}<span>{anomaly.id}</span></div><h2>{anomaly.title}</h2><p>{anomaly.asset} · {anomaly.location}</p></div>{!readOnly && nextStatusOption && <div className="detail-actions"><select value={nextStatus} onChange={(event) => setNextStatus(event.target.value as Status)} aria-label="Étape suivante"><option value={nextStatusOption}>{nextStatusOption}</option></select><button className="primary-button" disabled={busy} onClick={() => onStatus(nextStatus)}>{busy ? 'Enregistrement…' : 'Valider l’étape'}</button></div>}</section>
     <section className="dossier-workflow" aria-label="Cycle du dossier">{workflow.map((item,index) => <div key={item} className={index < currentStep ? 'done' : index === currentStep ? 'current' : ''}><span>{index < currentStep ? '✓' : index+1}</span><b>{item}</b></div>)}</section>
-    {anomaly.priority === 'Critique' && !anomaly.proof && <section className="critical-banner dossier-critical"><span>!</span><div><b>Clôture verrouillée jusqu’à l’acceptation de la preuve</b><p>{anomaly.proofPending ? 'Une preuve a été déposée et attend le contrôle de Faustin.' : 'La matrice des preuves exige une pièce conforme avant clôture.'}</p></div>{!readOnly && !anomaly.proofPending && <button disabled={busy} onClick={chooseProof}>＋ Ajouter une preuve</button>}</section>}
+    <OfflineSyncStatus enabled={persistenceEnabled} online={offlineSync.online} running={offlineSync.running} counts={offlineSync.counts} latestIssue={offlineSync.latestIssue} onRetry={() => void offlineSync.retryFailed().then(() => offlineSync.synchronize())} />
+    {anomaly.priority === 'Critique' && !anomaly.proof && <section className="critical-banner dossier-critical"><span>!</span><div><b>Clôture verrouillée jusqu’à l’acceptation de la preuve</b><p>{anomaly.proofPending ? 'Une preuve a été déposée et attend le contrôle de Faustin.' : anomaly.proofQueued ? 'Une preuve est protégée sur cet appareil et attend sa synchronisation.' : 'La matrice des preuves exige une pièce conforme avant clôture.'}</p></div>{!readOnly && !anomaly.proofPending && !anomaly.proofQueued && <button disabled={busy} onClick={chooseProof}>＋ Ajouter une preuve</button>}</section>}
     <nav className="dossier-tabs" aria-label="Sections du dossier"><button className={section === 'overview' ? 'active' : ''} onClick={() => setSection('overview')}>Vue d’ensemble</button><button className={section === 'finance' ? 'active' : ''} onClick={() => setSection('finance')}>Coûts & décision</button><button className={section === 'evidence' ? 'active' : ''} onClick={() => setSection('evidence')}>Preuves <span>{anomaly.proof ? '1' : '0'}</span></button><button className={section === 'history' ? 'active' : ''} onClick={() => setSection('history')}>Historique</button></nav>
 
     {section === 'overview' && <section className="dossier-three-zone">
@@ -1440,7 +1468,7 @@ function Detail({ anomaly, onBack, onStatus, onProof, onVerify, readOnly = false
 
     {section === 'finance' && <section className="dossier-two-columns"><article className="panel finance-decision-card"><div className="panel-head"><div><p className="design-kicker">BRANCHE DE TRAITEMENT</p><h3>{estimatedCost ? 'Intervention avec coût' : 'Intervention interne sans coût'}</h3></div><Badge tone={overThreshold ? 'orange' : 'success'}>{overThreshold ? 'ADMINISTRATION' : 'DÉLÉGATION FM'}</Badge></div><div className="finance-amount"><span>Coût estimé</span><strong>{formatMoney(estimatedCost)}</strong><small>Seuil d’approbation : 350 000 FCFA</small></div><div className={`authority-result ${overThreshold ? 'escalate' : 'delegated'}`}><span>{overThreshold ? '↑' : '✓'}</span><div><b>{overThreshold ? 'Arbitrage de l’Administration' : 'Faustin peut décider'}</b><small>{overThreshold ? 'Le montant dépasse la délégation validée.' : 'Le montant reste sous le seuil validé.'}</small></div></div><div className="decision-audit"><span><b>Décision</b>{overThreshold ? 'À soumettre' : 'Autorisée dans la délégation'}</span><span><b>Motif</b>Continuité de service et prévention de récidive</span><span><b>Urgence</b>Non déclarée</span></div></article><aside className="panel quote-card"><p className="design-kicker">PIÈCES FINANCIÈRES</p><h3>Devis et engagement</h3><div className="quote-file"><span>▧</span><p><b>{estimatedCost ? 'DEVIS-INTERVENTION.pdf' : 'Aucun devis requis'}</b><small>{estimatedCost ? 'Reçu · à contrôler' : 'Branche interne sans coût'}</small></p></div><button className="secondary-button">Ajouter une pièce</button></aside></section>}
 
-    {section === 'evidence' && <section className="dossier-two-columns"><article className="panel evidence-panel"><div className="panel-head"><div><h3>Preuves du dossier</h3><p>Pièces adaptées au type d’intervention</p></div>{!readOnly && !anomaly.proofPending && <button disabled={busy} onClick={chooseProof}>＋ Ajouter</button>}</div>{anomaly.proof ? <div className="evidence-file"><span>▧</span><div><b>Preuve d’intervention acceptée</b><small>Fichier privé · contrôle Faustin terminé</small></div><Badge tone="success">ACCEPTÉE</Badge></div> : anomaly.proofPending ? <div className="evidence-file"><span>▧</span><div><b>Preuve reçue</b><small>Contrôle Facility Manager requis</small></div><Badge tone="orange">À VALIDER</Badge>{canVerify && <button className="primary-button" disabled={busy} onClick={onVerify}>Valider</button>}</div> : <div className="proof-requirement"><span>⌁</span><div><b>{anomaly.asset === 'WILO-01' ? 'Photo du manomètre et rapport d’intervention' : 'Preuve définie selon le type de dossier'}</b><p>La clôture reste impossible tant que la pièce obligatoire n’est pas acceptée.</p></div>{!readOnly && <button className="primary-button" onClick={chooseProof}>Déposer</button>}</div>}</article><aside className="panel proof-matrix-card"><p className="design-kicker">MATRICE APPLIQUÉE</p><h3>{anomaly.asset}</h3><ul><li><span>✓</span>Photo après intervention</li><li><span>{anomaly.asset === 'WILO-01' ? '✓' : '○'}</span>Valeur de contrôle finale</li><li><span>○</span>Rapport ou PV signé</li></ul></aside></section>}
+    {section === 'evidence' && <section className="dossier-two-columns"><article className="panel evidence-panel"><div className="panel-head"><div><h3>Preuves du dossier</h3><p>Pièces adaptées au type d’intervention</p></div>{!readOnly && !anomaly.proofPending && !anomaly.proofQueued && <button disabled={busy} onClick={chooseProof}>＋ Ajouter</button>}</div>{anomaly.proof ? <div className="evidence-file"><span>▧</span><div><b>Preuve d’intervention acceptée</b><small>Fichier privé · contrôle Faustin terminé</small></div><Badge tone="success">ACCEPTÉE</Badge></div> : anomaly.proofPending ? <div className="evidence-file"><span>▧</span><div><b>Preuve reçue</b><small>Contrôle Facility Manager requis</small></div><Badge tone="orange">À VALIDER</Badge>{canVerify && <button className="primary-button" disabled={busy} onClick={onVerify}>Valider</button>}</div> : anomaly.proofQueued ? <div className="evidence-file"><span>▧</span><div><b>Preuve en attente d’envoi</b><small>Fichier privé conservé dans la file locale de cette session</small></div><Badge tone="blue">À SYNCHRONISER</Badge></div> : <div className="proof-requirement"><span>⌁</span><div><b>{anomaly.asset === 'WILO-01' ? 'Photo du manomètre et rapport d’intervention' : 'Preuve définie selon le type de dossier'}</b><p>La clôture reste impossible tant que la pièce obligatoire n’est pas acceptée.</p></div>{!readOnly && <button className="primary-button" onClick={chooseProof}>Déposer</button>}</div>}</article><aside className="panel proof-matrix-card"><p className="design-kicker">MATRICE APPLIQUÉE</p><h3>{anomaly.asset}</h3><ul><li><span>✓</span>Photo après intervention</li><li><span>{anomaly.asset === 'WILO-01' ? '✓' : '○'}</span>Valeur de contrôle finale</li><li><span>○</span>Rapport ou PV signé</li></ul></aside></section>}
 
     {section === 'history' && <section className="panel dossier-history"><div className="panel-head"><div><h3>Historique complet</h3><p>Chaque action, auteur et date restent traçables</p></div><Badge>6 ÉTAPES</Badge></div><div className="history-grid">{workflow.map((item,index) => <article key={item} className={index < currentStep ? 'done' : index === currentStep ? 'current' : ''}><span>{index < currentStep ? '✓' : index+1}</span><div><b>{item}</b><small>{index === 0 ? anomaly.reported : index < currentStep ? 'Étape validée et historisée' : index === currentStep ? 'Étape actuelle du dossier' : 'En attente'}</small></div><em>{index < currentStep ? 'TERMINÉ' : index === currentStep ? 'EN COURS' : 'À VENIR'}</em></article>)}</div></section>}
   </>;
@@ -1457,79 +1485,164 @@ function MeasureRange({ label, value, min, max, unit }: { label:string; value:nu
   </article>;
 }
 
-function Report({ persona, onNavigate }: { persona:Persona; onNavigate:(v:View)=>void }) {
-  const wiloAccess = persona.id === 'sylvain' || persona.id === 'faustin';
-  const [step, setStep] = useState(0);
-  const [online, setOnline] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [pressure, setPressure] = useState('2.8');
-  const [tankLevel, setTankLevel] = useState('72');
-  const [observation, setObservation] = useState('Vibration légère sur la pompe P1 au démarrage.');
-  const [checks, setChecks] = useState<Record<string,boolean>>({ auto:true, p1:false, p2:true, leak:true, valves:true, alarm:true });
-  const setCheck = (key:string) => setChecks((items) => ({ ...items, [key]:!items[key] }));
+type RoundDraft = {
+  step:number;
+  pressure:string;
+  tankLevel:string;
+  observation:string;
+  checks:Record<string,boolean|null>;
+  quickTitle:string;
+  quickPriority:Priority;
+  quickZone:string;
+  quickControlType:string;
+  confirmed:boolean;
+};
 
-  if (!wiloAccess) {
-    const isLaetitia = persona.id === 'laetitia';
-    return <>
-      <section className="section-heading round-heading"><div><p className="design-kicker">SAISIE DIRECTE · MAQUETTE CIBLE</p><h2>{isLaetitia ? 'Ronde cleaning & jardinage' : 'Ronde technique'}</h2><p>Un constat terrain est enregistré dans l’application puis transmis à Faustin pour qualification.</p></div><Badge tone="blue">AUCUN IMPORT</Badge></section>
-      <section className="quick-round-layout">
-        <form className="panel quick-round-card" onSubmit={(event) => { event.preventDefault(); setSubmitted(true); }}>
-          <div className="round-card-head"><span className="round-icon">{isLaetitia ? 'R' : 'GE'}</span><div><b>{isLaetitia ? 'RND-LET' : 'GE-01'}</b><small>{isLaetitia ? 'Périmètre cleaning et jardinage' : 'Périmètre électrique autorisé'}</small></div><span className="mockup-label">MAQUETTE</span></div>
-          <div className="two-fields"><label className="field">Zone<select defaultValue={isLaetitia ? 'Jardin nord' : 'Local groupe électrogène'}><option>{isLaetitia ? 'Jardin nord' : 'Local groupe électrogène'}</option><option>{isLaetitia ? 'Atrium restaurant' : 'Local TGBT'}</option></select></label><label className="field">Type de contrôle<select><option>{isLaetitia ? 'Propreté & état' : 'Ronde préventive'}</option><option>{isLaetitia ? 'Jardinage' : 'Constat incident'}</option></select></label></div>
-          <label className="field">Constat<textarea defaultValue={isLaetitia ? 'Présence d’eau stagnante près de l’accès jardin nord.' : 'Mode AUTO confirmé. Tension batterie à contrôler au prochain démarrage.'} /></label>
-          <div className="evidence-drop"><span>＋</span><div><b>Ajouter une photo</b><small>La pièce reste attachée au constat, jamais importée comme reporting.</small></div></div>
-          <div className="round-submit"><p><span className="status-dot local" /> Brouillon conservé sur cet appareil</p><button className="primary-button" type="submit">Transmettre à Faustin</button></div>
-        </form>
-        <aside className="panel direct-flow-card"><p className="design-kicker">APRÈS L’ENVOI</p><h3>Un circuit court et lisible</h3>{['Constat enregistré','Qualification par Faustin','Affectation et échéance','Traitement avec preuve'].map((item,index) => <div key={item}><span>{index+1}</span><p><b>{item}</b><small>{index === 0 ? 'Vous gardez une trace immédiate' : 'Le dossier avance dans le même outil'}</small></p></div>)}</aside>
-      </section>
-      {submitted && <div className="prototype-success" role="status"><span>✓</span><div><b>Constat prêt à être transmis</b><small>Interaction de maquette : aucune donnée n’a été écrite en préproduction.</small></div><button onClick={() => onNavigate('workspace')}>Retour à mon espace</button></div>}
-    </>;
-  }
+function Report({ persona, onNavigate, persistenceEnabled, offlineSync, flash }: {
+  persona:Persona;
+  onNavigate:(v:View)=>void;
+  persistenceEnabled:boolean;
+  offlineSync:ReturnType<typeof useOfflineSync>;
+  flash:(message:string)=>void;
+}) {
+  const wiloAccess = persona.id === 'sylvain' || persona.id === 'faustin';
+  const isLaetitia = persona.id === 'laetitia';
+  const draftId = `round:${wiloAccess ? 'WILO-01' : isLaetitia ? 'RND-LET' : 'GE-01'}`;
+  const loadOfflineDraft = offlineSync.loadDraft;
+  const saveOfflineDraft = offlineSync.saveDraft;
+  const deleteOfflineDraft = offlineSync.deleteDraft;
+  const [step, setStep] = useState(0);
+  const [submitted, setSubmitted] = useState(false);
+  const [draftReady, setDraftReady] = useState(!persistenceEnabled);
+  const [pressure, setPressure] = useState(persistenceEnabled ? '' : '2.8');
+  const [tankLevel, setTankLevel] = useState(persistenceEnabled ? '' : '72');
+  const [observation, setObservation] = useState(persistenceEnabled ? '' : wiloAccess ? 'Vibration légère sur la pompe P1 au démarrage.' : isLaetitia ? 'Présence d’eau stagnante près de l’accès jardin nord.' : 'Mode AUTO confirmé. Tension batterie à contrôler au prochain démarrage.');
+  const [quickTitle, setQuickTitle] = useState(persistenceEnabled ? '' : isLaetitia ? 'Eau stagnante près de l’accès' : 'Tension batterie à contrôler');
+  const [quickPriority, setQuickPriority] = useState<Priority>('Moyenne');
+  const [quickZone, setQuickZone] = useState(isLaetitia ? 'Jardin nord' : 'Local groupe électrogène');
+  const [quickControlType, setQuickControlType] = useState(isLaetitia ? 'Propreté & état' : 'Ronde préventive');
+  const [confirmed, setConfirmed] = useState(!persistenceEnabled);
+  const [checks, setChecks] = useState<Record<string,boolean|null>>(persistenceEnabled
+    ? { auto:null, p1:null, p2:null, leak:null, valves:null, alarm:null }
+    : { auto:true, p1:false, p2:true, leak:true, valves:true, alarm:true });
+
+  const setCheck = (key:string) => setChecks((items) => ({ ...items, [key]:items[key] === null ? true : !items[key] }));
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!persistenceEnabled) return;
+    loadOfflineDraft<RoundDraft>(draftId).then((draft) => {
+      if (cancelled || !draft) return;
+      const value = draft.value;
+      setStep(value.step); setPressure(value.pressure); setTankLevel(value.tankLevel); setObservation(value.observation);
+      setChecks(value.checks); setQuickTitle(value.quickTitle); setQuickPriority(value.quickPriority); setQuickZone(value.quickZone);
+      setQuickControlType(value.quickControlType); setConfirmed(value.confirmed);
+    }).finally(() => { if (!cancelled) setDraftReady(true); });
+    return () => { cancelled = true; };
+  }, [draftId, loadOfflineDraft, persistenceEnabled]);
+
+  useEffect(() => {
+    if (!persistenceEnabled || !draftReady || submitted) return;
+    const timer = window.setTimeout(() => {
+      void saveOfflineDraft<RoundDraft>(draftId, { step, pressure, tankLevel, observation, checks, quickTitle, quickPriority, quickZone, quickControlType, confirmed });
+    }, 450);
+    return () => window.clearTimeout(timer);
+  }, [checks, confirmed, draftId, draftReady, observation, persistenceEnabled, pressure, quickControlType, quickPriority, quickTitle, quickZone, saveOfflineDraft, step, submitted, tankLevel]);
+
+  const finalizeQueuedRound = async () => {
+    await deleteOfflineDraft(draftId);
+    setSubmitted(true);
+    flash(offlineSync.online ? 'Ronde mise en file ; synchronisation lancée.' : 'Ronde protégée sur cet appareil ; synchronisation automatique au retour du réseau.');
+  };
+
+  const submitQuickRound = async (event:FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!persistenceEnabled) { setSubmitted(true); return; }
+    try {
+      await offlineSync.enqueueRound({
+        equipmentCode:isLaetitia ? 'RND-LET' : 'GE-01',
+        reportType:isLaetitia ? 'cleaning_gardening_round' : 'technical_round',
+        performedAt:new Date().toISOString(),
+        summary:observation.trim(),
+        checks:[
+          { code:'TYPE_CONTROLE', label:'Type de contrôle', status:'ok', valueText:quickControlType, notes:`Zone déclarée : ${quickZone}` },
+          { code:'CONSTAT_TERRAIN', label:'Constat terrain', status:'alert', valueText:observation.trim() },
+        ],
+        anomaly:{ title:quickTitle.trim(), description:observation.trim(), priority:quickPriority },
+      });
+      await finalizeQueuedRound();
+    } catch (error) {
+      flash(`Ronde non mise en file : ${error instanceof Error ? error.message : 'stockage local indisponible'}.`);
+    }
+  };
 
   const steps = ['Contexte','Pression','Pompes','Sécurité','Synthèse'];
   const pressureValue = Number(pressure.replace(',','.'));
-  const hasPressureAlert = Number.isFinite(pressureValue) && pressureValue < 3;
-  const completedChecks = Object.values(checks).filter(Boolean).length;
+  const tankValue = Number(tankLevel.replace(',','.'));
+  const hasPressureAlert = pressure.trim() !== '' && Number.isFinite(pressureValue) && pressureValue < 3;
+  const completedChecks = Object.values(checks).filter((value) => value === true).length;
+  const reviewedChecks = Object.values(checks).filter((value) => value !== null).length;
+  const hasCheckAlert = Object.values(checks).some((value) => value === false);
+
+  const submitWiloRound = async () => {
+    if (!persistenceEnabled) { setSubmitted(true); return; }
+    if (!Number.isFinite(pressureValue) || !Number.isFinite(tankValue) || reviewedChecks < 6 || !confirmed) {
+      flash('Complétez les deux mesures, les six contrôles et la confirmation avant l’envoi.');
+      return;
+    }
+    const anomalyTitle = hasPressureAlert ? 'Pression Wilo sous le seuil attendu' : hasCheckAlert ? 'Écart constaté pendant la ronde WILO-01' : undefined;
+    try {
+      await offlineSync.enqueueRound({
+        equipmentCode:'WILO-01',
+        reportType:'wilo_round',
+        performedAt:new Date().toISOString(),
+        summary:observation.trim(),
+        checks:[
+          { code:'PRESSION_RESEAU', label:'Pression réseau', status:hasPressureAlert ? 'alert' : 'ok', valueNumeric:pressureValue, unit:'bar' },
+          { code:'NIVEAU_BACHE', label:'Niveau de bâche', status:tankValue >= 40 && tankValue <= 100 ? 'ok' : 'alert', valueNumeric:tankValue, unit:'%' },
+          ...[['auto','Mode automatique actif'],['p1','Pompe P1 disponible'],['p2','Pompe P2 disponible'],['leak','Absence de fuite active'],['valves','Vannes en position normale'],['alarm','Aucune alarme active']].map(([code,label]) => ({ code:code.toUpperCase(), label, status:checks[code] ? 'ok' as const : 'alert' as const, valueBoolean:Boolean(checks[code]) })),
+        ],
+        ...(anomalyTitle ? { anomaly:{ title:anomalyTitle, description:observation.trim() || 'Écart relevé pendant la ronde WILO-01.', priority:hasPressureAlert || checks.p1 === false ? 'Haute' as const : 'Moyenne' as const } } : {}),
+      });
+      await finalizeQueuedRound();
+    } catch (error) {
+      flash(`Ronde non mise en file : ${error instanceof Error ? error.message : 'stockage local indisponible'}.`);
+    }
+  };
+
+  if (!wiloAccess) return <>
+    <section className="section-heading round-heading"><div><p className="design-kicker">SAISIE DIRECTE · {persistenceEnabled ? 'SUPABASE' : 'DÉMONSTRATION'}</p><h2>{isLaetitia ? 'Ronde cleaning & jardinage' : 'Ronde technique'}</h2><p>Un constat terrain est enregistré dans l’application puis transmis à Faustin pour qualification.</p></div><Badge tone="blue">AUCUN IMPORT</Badge></section>
+    <OfflineSyncStatus enabled={persistenceEnabled} online={offlineSync.online} running={offlineSync.running} counts={offlineSync.counts} latestIssue={offlineSync.latestIssue} onRetry={() => void offlineSync.retryFailed().then(() => offlineSync.synchronize())} />
+    <section className="quick-round-layout">
+      <form className="panel quick-round-card" onSubmit={(event) => void submitQuickRound(event)}>
+        <div className="round-card-head"><span className="round-icon">{isLaetitia ? 'R' : 'GE'}</span><div><b>{isLaetitia ? 'RND-LET' : 'GE-01'}</b><small>{isLaetitia ? 'Périmètre cleaning et jardinage' : 'Périmètre électrique autorisé'}</small></div><span className="mockup-label">{persistenceEnabled ? 'SAISIE RÉELLE' : 'DÉMO'}</span></div>
+        <div className="two-fields"><label className="field">Zone<select value={quickZone} onChange={(event) => setQuickZone(event.target.value)}><option>{isLaetitia ? 'Jardin nord' : 'Local groupe électrogène'}</option><option>{isLaetitia ? 'Atrium restaurant' : 'Local TGBT'}</option></select></label><label className="field">Type de contrôle<select value={quickControlType} onChange={(event) => setQuickControlType(event.target.value)}><option>{isLaetitia ? 'Propreté & état' : 'Ronde préventive'}</option><option>{isLaetitia ? 'Jardinage' : 'Constat incident'}</option></select></label></div>
+        <div className="two-fields"><label className="field">Intitulé court<input required value={quickTitle} onChange={(event) => setQuickTitle(event.target.value)} placeholder="Décrivez le problème en quelques mots" /></label><label className="field">Priorité proposée<select value={quickPriority} onChange={(event) => setQuickPriority(event.target.value as Priority)}><option>Critique</option><option>Haute</option><option>Moyenne</option><option>Faible</option></select></label></div>
+        <label className="field">Constat<textarea required value={observation} onChange={(event) => setObservation(event.target.value)} placeholder="Décrivez uniquement ce qui a été observé sur le terrain." /></label>
+        <div className="evidence-drop is-informational"><span>i</span><div><b>Preuve photo</b><small>Le dépôt hors ligne d’une preuve se fait depuis un dossier existant, après sa création canonique.</small></div></div>
+        <div className="round-submit"><p><span className={`status-dot ${persistenceEnabled && offlineSync.online ? 'online' : 'local'}`} /> {persistenceEnabled ? draftReady ? 'Brouillon enregistré automatiquement sur cet appareil' : 'Chargement du brouillon local…' : 'Simulation sans écriture Supabase'}</p><button className="primary-button" type="submit" disabled={!draftReady}>Transmettre à Faustin</button></div>
+      </form>
+      <aside className="panel direct-flow-card"><p className="design-kicker">APRÈS L’ENVOI</p><h3>Un circuit court et lisible</h3>{['Constat enregistré','Qualification par Faustin','Affectation et échéance','Traitement avec preuve'].map((item,index) => <div key={item}><span>{index+1}</span><p><b>{item}</b><small>{index === 0 ? 'Vous gardez une trace immédiate' : 'Le dossier avance dans le même outil'}</small></p></div>)}</aside>
+    </section>
+    {submitted && <div className="prototype-success" role="status"><span>✓</span><div><b>{persistenceEnabled ? 'Constat placé dans la file de synchronisation' : 'Constat prêt à être transmis'}</b><small>{persistenceEnabled ? 'L’identifiant unique empêche toute création en double lors d’une reprise.' : 'Démonstration : aucune donnée écrite dans Supabase.'}</small></div><button onClick={() => onNavigate('workspace')}>Retour à mon espace</button></div>}
+  </>;
 
   return <>
-    <section className="wilo-hero">
-      <div className="wilo-identity"><span className="wilo-monogram">WI</span><div><p className="design-kicker">MODULE PILOTE · SURPRESSEUR</p><h2>Ronde Wilo · WILO-01</h2><p>Sous-sol · Local surpresseur · Fréquence quotidienne</p></div></div>
-      <div className="wilo-health"><span>Score santé</span><strong>78<small>/100</small></strong><Badge tone="orange">SURVEILLANCE</Badge></div>
-    </section>
-
-    <section className={`sync-banner ${online ? 'is-online' : ''}`} role="status">
-      <span className={`status-dot ${online ? 'online' : 'local'}`} />
-      <div><b>{online ? 'Connexion retrouvée' : 'Mode hors ligne actif'}</b><small>{online ? 'Le brouillon local est prêt à être synchronisé.' : 'La ronde reste disponible. Vos réponses sont conservées sur cet appareil.'}</small></div>
-      <button onClick={() => setOnline((value) => !value)}>{online ? 'Repasser hors ligne' : 'Simuler le retour réseau'}</button>
-    </section>
-
-    <section className="wilo-progress" aria-label="Progression de la ronde">
-      {steps.map((item,index) => <button key={item} className={index === step ? 'active' : index < step ? 'done' : ''} onClick={() => setStep(index)}><span>{index < step ? '✓' : index+1}</span><b>{item}</b></button>)}
-    </section>
-
+    <section className="wilo-hero"><div className="wilo-identity"><span className="wilo-monogram">WI</span><div><p className="design-kicker">MODULE PILOTE · SURPRESSEUR</p><h2>Ronde Wilo · WILO-01</h2><p>Sous-sol · Local surpresseur · Fréquence quotidienne</p></div></div><div className="wilo-health"><span>Score santé</span><strong>78<small>/100</small></strong><Badge tone="orange">SURVEILLANCE</Badge></div></section>
+    <OfflineSyncStatus enabled={persistenceEnabled} online={offlineSync.online} running={offlineSync.running} counts={offlineSync.counts} latestIssue={offlineSync.latestIssue} onRetry={() => void offlineSync.retryFailed().then(() => offlineSync.synchronize())} />
+    <section className="wilo-progress" aria-label="Progression de la ronde">{steps.map((item,index) => <button key={item} className={index === step ? 'active' : index < step ? 'done' : ''} onClick={() => setStep(index)}><span>{index < step ? '✓' : index+1}</span><b>{item}</b></button>)}</section>
     <section className="wilo-layout">
       <article className="panel wilo-form-card">
-        <div className="wilo-section-head"><div><span>ÉTAPE {step+1} SUR 5</span><h3>{steps[step]}</h3></div><span className="mockup-label">MAQUETTE INTERACTIVE</span></div>
-
-        {step === 0 && <div className="wilo-fields"><div className="context-grid"><div><span>Agent</span><b>{persona.name}</b><small>{persona.role}</small></div><div><span>Début</span><b>09:42</b><small>27 août 2026</small></div><div><span>Dernière ronde</span><b>Hier · 08:11</b><small>1 anomalie ouverte</small></div></div><label className="field">Type de ronde<select defaultValue="Quotidienne"><option>Quotidienne</option><option>Après intervention</option><option>Contrôle exceptionnel</option></select></label><div className="wilo-callout"><span>i</span><p><b>Point d’attention transmis</b><small>Vérifier la récidive du défaut pompe P1 et la pression de refoulement.</small></p></div></div>}
-
-        {step === 1 && <div className="wilo-fields"><div className="measure-grid"><label><span>Pression réseau</span><div><input value={pressure} inputMode="decimal" onChange={(event) => setPressure(event.target.value)} /><b>bar</b></div><small>Plage attendue : 3,0 à 4,5 bar</small></label><label><span>Niveau bâche</span><div><input value={tankLevel} inputMode="numeric" onChange={(event) => setTankLevel(event.target.value)} /><b>%</b></div><small>Plage de contrôle : 40 à 100 %</small></label></div><div className="measure-range-grid"><MeasureRange label="Pression réseau" value={pressureValue} min={3} max={4.5} unit="bar" /><MeasureRange label="Niveau de bâche" value={Number(tankLevel)} min={40} max={100} unit="%" /></div>{hasPressureAlert && <div className="measure-alert"><span>!</span><div><b>Écart détecté automatiquement</b><small>La pression saisie est inférieure au seuil. Un constat sera proposé à Faustin.</small></div></div>}<label className="field">Stabilité du manomètre<select><option>Stable</option><option>Oscillation légère</option><option>Oscillation importante</option></select></label></div>}
-
-        {step === 2 && <div className="wilo-fields"><div className="check-grid">{[['auto','Mode automatique actif','Commande générale'],['p1','Pompe P1 disponible','Pompe prioritaire'],['p2','Pompe P2 disponible','Pompe de secours'],['leak','Absence de fuite active','Collecteur et raccords']].map(([key,title,detail]) => <button type="button" key={key} className={checks[key] ? 'checked' : 'unchecked'} onClick={() => setCheck(key)}><span>{checks[key] ? '✓' : '!'}</span><p><b>{title}</b><small>{detail}</small></p><em>{checks[key] ? 'Conforme' : 'À signaler'}</em></button>)}</div></div>}
-
-        {step === 3 && <div className="wilo-fields"><div className="check-grid compact">{[['valves','Vannes en position normale','Aspiration et refoulement'],['alarm','Aucune alarme active','Coffret et supervision']].map(([key,title,detail]) => <button type="button" key={key} className={checks[key] ? 'checked' : 'unchecked'} onClick={() => setCheck(key)}><span>{checks[key] ? '✓' : '!'}</span><p><b>{title}</b><small>{detail}</small></p><em>{checks[key] ? 'Conforme' : 'À signaler'}</em></button>)}</div><label className="field">Observation terrain<textarea value={observation} onChange={(event) => setObservation(event.target.value)} /></label><div className="evidence-drop"><span>＋</span><div><b>Photo du manomètre ou du coffret</b><small>JPEG, PNG ou WebP · compression prévue avant synchronisation</small></div><button type="button">Choisir</button></div></div>}
-
-        {step === 4 && <div className="wilo-fields"><div className="round-summary"><div><span>MESURES</span><b className={hasPressureAlert ? 'warning' : ''}>{pressure} bar</b><small>Pression réseau</small></div><div><span>NIVEAU</span><b>{tankLevel} %</b><small>Bâche de stockage</small></div><div><span>CONTRÔLES</span><b>{completedChecks}/6</b><small>Points conformes</small></div></div><div className="proposed-finding"><span>!</span><div><p>CONSTAT PROPOSÉ</p><h4>Pression Wilo sous le seuil attendu</h4><small>Priorité proposée : Haute · Transmission à la file de qualification de Faustin.</small></div><Badge tone="orange">À QUALIFIER</Badge></div><label className="confirmation-line"><input type="checkbox" defaultChecked /><span>Je confirme que les valeurs correspondent à la ronde réalisée sur WILO-01.</span></label></div>}
-
-        <div className="wilo-actions"><button className="secondary-button" disabled={step === 0} onClick={() => setStep((value) => Math.max(0,value-1))}>← Précédent</button><p><span className="status-dot local" /> Brouillon enregistré localement</p>{step < 4 ? <button className="primary-button" onClick={() => setStep((value) => Math.min(4,value+1))}>Continuer →</button> : <button className="primary-button" onClick={() => setSubmitted(true)}>Terminer la ronde</button>}</div>
+        <div className="wilo-section-head"><div><span>ÉTAPE {step+1} SUR 5</span><h3>{steps[step]}</h3></div><span className="mockup-label">{persistenceEnabled ? 'SAISIE RÉELLE' : 'DÉMO INTERACTIVE'}</span></div>
+        {step === 0 && <div className="wilo-fields"><div className="context-grid"><div><span>Agent</span><b>{persona.name}</b><small>{persona.role}</small></div><div><span>Horodatage</span><b>À la transmission</b><small>Date et heure conservées</small></div><div><span>Synchronisation</span><b>{offlineSync.online ? 'Réseau disponible' : 'Hors ligne'}</b><small>{persistenceEnabled ? 'File idempotente active' : 'Démonstration'}</small></div></div><label className="field">Type de ronde<select defaultValue="Quotidienne"><option>Quotidienne</option><option>Après intervention</option><option>Contrôle exceptionnel</option></select></label><div className="wilo-callout"><span>i</span><p><b>Point d’attention transmis</b><small>Vérifier la récidive du défaut pompe P1 et la pression de refoulement.</small></p></div></div>}
+        {step === 1 && <div className="wilo-fields"><div className="measure-grid"><label><span>Pression réseau</span><div><input required value={pressure} inputMode="decimal" onChange={(event) => setPressure(event.target.value)} /><b>bar</b></div><small>Plage attendue : 3,0 à 4,5 bar</small></label><label><span>Niveau bâche</span><div><input required value={tankLevel} inputMode="numeric" onChange={(event) => setTankLevel(event.target.value)} /><b>%</b></div><small>Plage de contrôle : 40 à 100 %</small></label></div><div className="measure-range-grid"><MeasureRange label="Pression réseau" value={pressureValue} min={3} max={4.5} unit="bar" /><MeasureRange label="Niveau de bâche" value={tankValue} min={40} max={100} unit="%" /></div>{hasPressureAlert && <div className="measure-alert"><span>!</span><div><b>Écart détecté automatiquement</b><small>La pression saisie est inférieure au seuil. Un constat sera proposé à Faustin.</small></div></div>}<label className="field">Stabilité du manomètre<select><option>Stable</option><option>Oscillation légère</option><option>Oscillation importante</option></select></label></div>}
+        {step === 2 && <div className="wilo-fields"><div className="check-grid">{[['auto','Mode automatique actif','Commande générale'],['p1','Pompe P1 disponible','Pompe prioritaire'],['p2','Pompe P2 disponible','Pompe de secours'],['leak','Absence de fuite active','Collecteur et raccords']].map(([key,title,detail]) => <button type="button" key={key} className={checks[key] === null ? 'unreviewed' : checks[key] ? 'checked' : 'unchecked'} onClick={() => setCheck(key)}><span>{checks[key] === null ? '○' : checks[key] ? '✓' : '!'}</span><p><b>{title}</b><small>{detail}</small></p><em>{checks[key] === null ? 'À contrôler' : checks[key] ? 'Conforme' : 'À signaler'}</em></button>)}</div></div>}
+        {step === 3 && <div className="wilo-fields"><div className="check-grid compact">{[['valves','Vannes en position normale','Aspiration et refoulement'],['alarm','Aucune alarme active','Coffret et supervision']].map(([key,title,detail]) => <button type="button" key={key} className={checks[key] === null ? 'unreviewed' : checks[key] ? 'checked' : 'unchecked'} onClick={() => setCheck(key)}><span>{checks[key] === null ? '○' : checks[key] ? '✓' : '!'}</span><p><b>{title}</b><small>{detail}</small></p><em>{checks[key] === null ? 'À contrôler' : checks[key] ? 'Conforme' : 'À signaler'}</em></button>)}</div><label className="field">Observation terrain<textarea value={observation} onChange={(event) => setObservation(event.target.value)} placeholder="Observation factuelle ou précision sur un écart." /></label><div className="evidence-drop is-informational"><span>i</span><div><b>Photo du manomètre ou du coffret</b><small>La preuve sera déposée depuis le dossier canonique créé après synchronisation.</small></div></div></div>}
+        {step === 4 && <div className="wilo-fields"><div className="round-summary"><div><span>MESURES</span><b className={hasPressureAlert ? 'warning' : ''}>{pressure || '—'} bar</b><small>Pression réseau</small></div><div><span>NIVEAU</span><b>{tankLevel || '—'} %</b><small>Bâche de stockage</small></div><div><span>CONTRÔLES</span><b>{completedChecks}/6</b><small>{reviewedChecks}/6 vérifiés</small></div></div>{(hasPressureAlert || hasCheckAlert) ? <div className="proposed-finding"><span>!</span><div><p>CONSTAT PROPOSÉ</p><h4>{hasPressureAlert ? 'Pression Wilo sous le seuil attendu' : 'Écart constaté pendant la ronde'}</h4><small>Priorité proposée : {hasPressureAlert || checks.p1 === false ? 'Haute' : 'Moyenne'} · Transmission à Faustin.</small></div><Badge tone="orange">À QUALIFIER</Badge></div> : <div className="wilo-callout"><span>✓</span><p><b>Aucun écart déclaré</b><small>La ronde sera conservée sans créer d’anomalie.</small></p></div>}<label className="confirmation-line"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} /><span>Je confirme que les valeurs correspondent à la ronde réalisée sur WILO-01.</span></label></div>}
+        <div className="wilo-actions"><button className="secondary-button" disabled={step === 0} onClick={() => setStep((value) => Math.max(0,value-1))}>← Précédent</button><p><span className={`status-dot ${persistenceEnabled && offlineSync.online ? 'online' : 'local'}`} /> {persistenceEnabled ? draftReady ? 'Brouillon local automatique' : 'Chargement du brouillon…' : 'Simulation locale'}</p>{step < 4 ? <button className="primary-button" onClick={() => setStep((value) => Math.min(4,value+1))}>Continuer →</button> : <button className="primary-button" disabled={!draftReady} onClick={() => void submitWiloRound()}>Terminer la ronde</button>}</div>
       </article>
-
-      <aside className="wilo-aside">
-        <article className="panel next-action-card"><p className="design-kicker">À SURVEILLER</p><span className="next-action-icon">!</span><h3>Pompe P1 indisponible</h3><p>Deuxième défaut en sept jours. Le réarmement provisoire ne permet pas la clôture.</p><div><span>Responsable pressenti</span><b>Sylvain DOUANE</b></div></article>
-        <article className="panel score-explain-card"><div><span>SCORE WILO</span><b>78/100</b></div><div className="score-freshness"><span><b>État</b>Surveillance</span><span><b>Variation</b>Indisponible</span><span><b>Fraîcheur</b>Non synchronisée</span></div><ul><li><i className="down" /> Pression sous le seuil <b>-8</b></li><li><i className="down" /> Défaut P1 récurrent <b>-10</b></li><li><i className="up" /> Maintenance à jour <b>+6</b></li></ul><p className="analytics-note">Score de maquette : la date de calcul et l’historique réel ne sont pas encore disponibles.</p><button type="button">Voir le détail du calcul</button></article>
-      </aside>
+      <aside className="wilo-aside"><article className="panel next-action-card"><p className="design-kicker">À SURVEILLER</p><span className="next-action-icon">!</span><h3>Pompe P1 indisponible</h3><p>Deuxième défaut en sept jours. Le réarmement provisoire ne permet pas la clôture.</p><div><span>Responsable pressenti</span><b>Sylvain DOUANE</b></div></article><article className="panel score-explain-card"><div><span>SCORE WILO</span><b>78/100</b></div><div className="score-freshness"><span><b>État</b>Surveillance</span><span><b>Variation</b>Indisponible</span><span><b>Fraîcheur</b>Non synchronisée</span></div><ul><li><i className="down" /> Pression sous le seuil <b>-8</b></li><li><i className="down" /> Défaut P1 récurrent <b>-10</b></li><li><i className="up" /> Maintenance à jour <b>+6</b></li></ul><p className="analytics-note">Score de maquette : la date de calcul et l’historique réel ne sont pas encore disponibles.</p><button type="button">Voir le détail du calcul</button></article></aside>
     </section>
-
-    {submitted && <div className="prototype-success" role="status"><span>✓</span><div><b>Ronde Wilo prête à synchroniser</b><small>Maquette validable : aucune donnée n’a été écrite dans Supabase.</small></div><button onClick={() => setSubmitted(false)}>Continuer la revue</button></div>}
+    {submitted && <div className="prototype-success" role="status"><span>✓</span><div><b>{persistenceEnabled ? 'Ronde placée dans la file de synchronisation' : 'Ronde Wilo prête à synchroniser'}</b><small>{persistenceEnabled ? 'Une reprise réseau ne créera pas de doublon.' : 'Démonstration : aucune donnée écrite dans Supabase.'}</small></div><button onClick={() => setSubmitted(false)}>Continuer</button></div>}
   </>;
 }

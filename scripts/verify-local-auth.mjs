@@ -20,11 +20,11 @@ if (!url || !publishableKey || environment.NEXT_PUBLIC_USE_SUPABASE !== "true") 
 }
 
 const accounts = [
-  ["direction@demo.behira.invalid", "DIR-FRED", 6, 8],
-  ["facility.manager@demo.behira.invalid", "FAU-FM", 6, 8],
-  ["electricite@demo.behira.invalid", "EVAR-ELEC", 1, 4],
+  ["direction@demo.behira.invalid", "DIR-FRED", 5, 8],
+  ["facility.manager@demo.behira.invalid", "FAU-FM", 5, 8],
+  ["electricite@demo.behira.invalid", "EVAR-ELEC", 1, 2],
   ["eau.incendie@demo.behira.invalid", "SYL-PLB", 1, 3],
-  ["rondes@demo.behira.invalid", "LET-RND", 1, 2],
+  ["rondes@demo.behira.invalid", "LET-RND", 1, 1],
 ];
 
 for (const [email, employeeCode, expectedVisibleProfiles, expectedVisibleAnomalies] of accounts) {
