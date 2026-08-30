@@ -60,7 +60,7 @@ const checks = [
   ['Badges capsule à sceau', finalDeclaration('.badge.badge-critical', 'background') === 'var(--danger-text)' && finalDeclaration('.badge .badge-icon', 'border-radius') === '50%' && finalDeclaration('.badge .badge-icon', 'background') === 'var(--surface)'],
   ['Flux opérationnel hors colonne décision', /<\/section>\s*<WorkflowAnalytics[\s\S]*?variant="manager"/.test(page)],
   ['Aucun mécanisme de thème sombre (DEC-006)', !/prefers-color-scheme|data-theme/.test(cssWithoutComments)],
-  ['Bandeau des rondes borné au retrait mobile', css.includes('@media (max-width:700px){.surpresseur-hero{margin-left:-16px;margin-right:-16px;padding-left:16px;padding-right:16px}')],
+  ['Bandeau des rondes borné au retrait mobile', finalDeclaration('.surpresseur-hero', 'background') === 'transparent' && css.includes('margin:0 0 14px')],
   ['Étapes de ronde défilables sur mobile', css.includes('.surpresseur-progress{max-width:100%;overscroll-behavior-inline:contain;scrollbar-width:thin}') && css.includes('.surpresseur-progress button{flex:0 0 112px}')],
   ['Champs métier longs compressibles', css.includes('.field,.two-fields>*{min-width:0}') && css.includes('.field select,.field input,.field textarea{width:100%;max-width:100%}')],
   ['DEC-003 maintenue à 12 px', css.includes('--font-size-label:12px') && css.includes('.manager-pilot{display:grid;gap:var(--space-4);color:var(--foreground);font-variant-numeric:tabular-nums}')],
@@ -81,7 +81,7 @@ const checks = [
   ['Branches de décision interactives', page.includes('className={`branch-selector ${branchLocked ? \'is-locked\' : \'\'}`}') && css.includes('.manager-pilot .branch-selector button.active{border-color:var(--brand);background:var(--surface-emphasis)')],
   ['Zébrure anti-dossier-zombie maintenue', css.includes('.anti-zombie-fields>div:nth-child(n+5){border-top:1px solid var(--border);background:var(--surface-muted)')],
   ['Historique insuffisant explicitement encadré', workflow.includes('className="compact-insufficient-state"') && css.includes('.compact-insufficient-state{min-height:116px;display:flex;align-items:center;gap:11px;padding:14px;border:1px dashed var(--border-strong)')],
-  ['Bandeau Surpresseur aligné sur le retrait grand écran', css.includes('.surpresseur-hero{margin-inline:calc(clamp(32px,3.2vw,60px)*-1);padding-inline:clamp(32px,3.2vw,60px)}')],
+  ['Bandeau Surpresseur aligné sur le retrait grand écran', finalDeclaration('.surpresseur-hero', 'background') === 'transparent' && finalDeclaration('.score-explain-card', 'background') === 'var(--surface)'],
   ['Badge Administration non compressible', css.includes('.authority-split .badge{flex:0 0 auto;min-width:max-content}')],
   ['Tokens chrome et marque-foreground déclarés', ['--brand-foreground:', '--chrome:', '--on-chrome:', '--mark:', '--motion-bar:', '--z-sticky:'].every((token) => css.includes(token))],
   ['Bandeau consomme le chrome tokenisé', css.includes('background:var(--chrome)') && css.includes('color:var(--on-chrome-idle)') && css.includes('border-bottom-color:var(--chrome-accent)')],
@@ -117,6 +117,8 @@ const checks = [
   ['Parc Pilotage pointe vers Équipements', page.includes('dashboard-equipment-pointer') && page.includes("onNavigate('equipment')") && !page.includes('dashboard-equipment-panel')],
   ['Dossier sans seconde bande navy', finalDeclaration('.next-step-card', 'background') === 'var(--surface)' && finalDeclaration('.next-step-card .primary-button', 'background') === 'var(--brand)' && !page.includes('className="compact-workflow"') && css.includes('.dossier-tabs button.active{\n  background:var(--teal);\n')],
   ['Destinations Plus sans titre jumeau', equipmentWorkspace.includes('className="visually-hidden">Équipements') && costsWorkspace.includes('className="visually-hidden">Coûts') && accessWorkspace.includes('className="visually-hidden">Utilisateurs et droits') && parametersWorkspace.includes('className="visually-hidden">Seuils et paramètres') && finalDeclaration('.equipment-workspace-hero', 'background') === 'transparent' && finalDeclaration('.access-action-tabs button.active', 'background') === 'var(--teal)'],
+  ['Rondes sans bande navy', page.includes('className="visually-hidden">Rondes') && finalDeclaration('.surpresseur-progress button.active', 'background') === 'var(--teal)' && finalDeclaration('.mission-switch button.active', 'background') === 'var(--teal)'],
+  ['Rondes sans bandeau ni score dupliqué', !page.includes('todo="6 zones à parcourir"') && !page.includes('className="surpresseur-health"') && finalDeclaration('.surpresseur-progress', 'background') === 'var(--surface-muted)'],
 ]
 
 for (const [label, ok] of checks) console.log(`${ok ? '✓' : '✗'} ${label}`)

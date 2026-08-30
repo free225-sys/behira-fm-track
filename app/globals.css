@@ -2577,6 +2577,143 @@ button.executive-metric.is-link:hover{
   color:var(--brand-foreground);
 }
 
+/* DESIGN-038 — Rondes / Surpresseur : plus de bande navy, étape pétrole */
+.surpresseur-hero{
+  margin:0 0 16px;
+  padding:0 0 var(--space-4);
+  background:transparent;
+  color:var(--foreground);
+}
+.surpresseur-monogram{
+  border:1px solid var(--border);
+  background:var(--teal);
+  color:var(--brand-foreground);
+}
+.surpresseur-identity .design-kicker{color:var(--teal)}
+.surpresseur-identity h2{margin:0}
+.surpresseur-identity>div>p:last-child{margin:0;color:var(--foreground-muted);font-size:var(--font-size-body);line-height:1.5}
+.surpresseur-health{
+  border:1px solid var(--border);
+  background:var(--surface);
+  color:var(--foreground);
+}
+.surpresseur-health>span{color:var(--foreground-muted)}
+.surpresseur-progress button.active{
+  border-color:transparent;
+  background:var(--teal);
+  color:var(--brand-foreground);
+}
+.surpresseur-progress button.active>span{
+  background:var(--surface);
+  color:var(--teal);
+}
+.round-icon{
+  background:var(--teal);
+  color:var(--brand-foreground);
+}
+.mission-switch button.active{
+  background:var(--teal);
+  color:var(--brand-foreground);
+}
+.mission-switch button.active small{color:rgba(255,255,255,.82)}
+.mission-switch button.active>span{
+  background:var(--surface);
+  color:var(--teal);
+}
+.score-explain-card{
+  background:var(--surface);
+  color:var(--foreground);
+  border:1px solid var(--border);
+}
+.score-explain-card>div span{color:var(--foreground-muted)}
+.score-explain-card>div b{color:var(--brand-strong)}
+.score-explain-card li{color:var(--foreground-muted)}
+.score-explain-card li b{color:var(--foreground)}
+.score-explain-card .analytics-note{color:var(--foreground-muted)}
+.score-explain-card button{
+  border-color:var(--border);
+  background:var(--surface-muted);
+  color:var(--brand-strong);
+}
+.report-tabs button.active{
+  background:var(--teal);
+  color:var(--brand-foreground);
+}
+@media (max-width:760px){
+  .surpresseur-hero{padding-block:0}
+  .surpresseur-health{display:grid}
+}
+@media (max-width:700px){
+  .surpresseur-hero{
+    margin:0 0 14px;
+    padding:0 0 var(--space-4);
+  }
+}
+@media (max-width:430px){
+  .surpresseur-hero{margin-top:0}
+}
+
+/* DESIGN-039 — Rondes approfondies : un rail d’étapes, un score, pas de bandeau doublon */
+.surpresseur-progress{
+  gap:4px;
+  padding:4px;
+  border:1px solid var(--border);
+  border-radius:var(--radius-md);
+  background:var(--surface-muted);
+}
+.surpresseur-progress button{
+  border:0;
+  background:transparent;
+}
+.surpresseur-progress button.active{
+  border:0;
+  background:var(--teal);
+  color:var(--brand-foreground);
+}
+.measure-grid input{
+  color:var(--brand-strong);
+  border-bottom-color:var(--border-strong);
+}
+.confirmation-line input{accent-color:var(--teal)}
+.zone-rounds>button>span.current{
+  background:var(--teal);
+  color:var(--brand-foreground);
+}
+.evidence-drop{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-top:14px;
+  padding:12px;
+  border:1px dashed var(--border-strong);
+  border-radius:var(--radius-md);
+  background:var(--surface-muted);
+}
+.evidence-drop>span{
+  width:36px;
+  height:36px;
+  display:grid;
+  place-items:center;
+  border-radius:var(--radius-sm);
+  background:var(--surface);
+  color:var(--teal);
+  font-weight:850;
+}
+.evidence-drop button{
+  margin-left:auto;
+  min-height:var(--control-height);
+  padding:0 12px;
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  background:var(--surface);
+  color:var(--brand-strong);
+  font-size:var(--font-size-label);
+  font-weight:750;
+  cursor:pointer;
+}
+
+
+
 
 
 

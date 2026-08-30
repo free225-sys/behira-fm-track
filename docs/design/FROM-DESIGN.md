@@ -8,6 +8,8 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 | id | date | sujet | attendu de | bloque |
 | --- | --- | --- | --- | --- |
+| DESIGN-039 | 2026-08-30 | Rondes approfondies : un rail, un score, pas de bandeau doublon | Wilkam | — |
+| DESIGN-038 | 2026-08-30 | Rondes / Surpresseur : plus de bande navy, étape pétrole | Wilkam | — |
 | DESIGN-037 | 2026-08-30 | Destinations Plus : un titre, intro plate, onglet pétrole | Wilkam | — |
 | DESIGN-036 | 2026-08-30 | Dossier central : une navy, un cycle, action claire | Wilkam | — |
 | DESIGN-035 | 2026-08-30 | Cohérence des destinations : un sujet, une page | Wilkam | — |
@@ -46,7 +48,40 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 ---
 
+## DESIGN-039 — Rondes approfondies
+
+- **Date :** 30 août 2026
+- **Auteur :** Revue design
+- **Statut :** Livré dans le miroir
+- **Périmètre :** Accueil Agente et destination Rondes — cinq étapes, mesures et seuils inchangés
+
+Après DESIGN-038, deux doublons restaient.
+
+- Accueil Agente : bandeau 4 KPI retiré ; Terrain / Administratif porte le sujet.
+- Surpresseur : le score 78 n’apparaît plus dans le hero, uniquement dans la carte WILO (état, variation, fraîcheur, facteurs).
+- Les cinq étapes tiennent dans un rail unique, comme le menu compact.
+- Champs de mesure et zone en cours : tokens `--brand-strong` / `--teal`, plus de `#17334f`.
+
+---
+
+## DESIGN-038 — Rondes / Surpresseur dans le même chrome
+
+
+- **Date :** 30 août 2026
+- **Auteur :** Revue design
+- **Statut :** Livré dans le miroir
+- **Périmètre :** destination Rondes (Surpresseur + saisie directe) et switch Terrain / Administratif — cinq étapes, seuils et scores inchangés
+
+Le Surpresseur restait un écran navy collé au bandeau, avec un score WILO sombre et des étapes bleu `#1e639e`.
+
+- Hero et carte score : surface claire (DEC-009).
+- Étape active, monogramme WI, icône de ronde, switch Terrain/Administratif : `--teal`.
+- H1 du catalogue seulement ; le H2 visuel est masqué.
+
+---
+
 ## DESIGN-037 — Destinations Plus, même contrat de page
+
 
 - **Date :** 30 août 2026
 - **Auteur :** Revue design
