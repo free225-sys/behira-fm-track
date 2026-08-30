@@ -56,8 +56,8 @@ export function CostsWorkspace({ items, audience, threshold, onOpenDossier }: {
     <header className="costs-workspace-hero">
       <div>
         <p className="design-kicker">PILOTAGE</p>
-        <h2 id="costs-workspace-title">Coûts documentés</h2>
-        <p>{audience === 'administration' ? 'Vue globale des montants soumis à arbitrage. Les décisions restent dans l’espace Administration.' : 'Lecture opérationnelle des montants liés aux dossiers. Les arbitrages au-delà du seuil restent réservés à l’Administration.'}</p>
+        <h2 id="costs-workspace-title" className="visually-hidden">Coûts</h2>
+        <p>{audience === 'administration' ? 'Coûts documentés soumis à arbitrage. Les décisions restent dans l’espace Administration.' : 'Coûts documentés liés aux dossiers. Les arbitrages au-delà du seuil restent réservés à l’Administration.'}</p>
       </div>
       <Badge tone={audience === 'administration' ? 'blue' : 'neutral'}>{audience === 'administration' ? 'VUE GLOBALE' : 'LECTURE OPÉRATIONNELLE'}</Badge>
     </header>

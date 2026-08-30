@@ -52,8 +52,8 @@ export function EquipmentWorkspace({ equipment }: { equipment:EquipmentWorkspace
     <header className="equipment-workspace-hero">
       <div>
         <p className="design-kicker">LE BÂTIMENT</p>
-        <h2 id="equipment-workspace-title">Parc technique</h2>
-        <p>Lecture autonome du parc déjà disponible. Les informations absentes restent explicitement signalées.</p>
+        <h2 id="equipment-workspace-title" className="visually-hidden">Équipements</h2>
+        <p>Parc technique déjà disponible. Les informations absentes restent explicitement signalées.</p>
       </div>
       <span className="mockup-label">Données existantes</span>
     </header>

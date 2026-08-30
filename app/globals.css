@@ -2553,5 +2553,30 @@ button.executive-metric.is-link:hover{
   .dossier-activity-column{order:3}
 }
 
+/* DESIGN-037 — destinations Plus : un titre, intro plate, onglet pétrole */
+.equipment-workspace-hero,
+.costs-workspace-hero,
+.access-workspace-hero,
+.parameters-workspace-hero{
+  align-items:flex-end;
+  padding:0 0 var(--space-4);
+  border:0;
+  border-radius:0;
+  background:transparent;
+}
+.access-action-tabs button.active{
+  border-color:transparent;
+  background:var(--teal);
+  color:var(--brand-foreground);
+}
+.access-user-list article.active{
+  border-color:var(--teal);
+}
+.access-user-list article.active .access-avatar{
+  background:var(--teal);
+  color:var(--brand-foreground);
+}
+
+
 
 

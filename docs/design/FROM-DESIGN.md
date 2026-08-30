@@ -8,6 +8,7 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 | id | date | sujet | attendu de | bloque |
 | --- | --- | --- | --- | --- |
+| DESIGN-037 | 2026-08-30 | Destinations Plus : un titre, intro plate, onglet pétrole | Wilkam | — |
 | DESIGN-036 | 2026-08-30 | Dossier central : une navy, un cycle, action claire | Wilkam | — |
 | DESIGN-035 | 2026-08-30 | Cohérence des destinations : un sujet, une page | Wilkam | — |
 | DESIGN-034 | 2026-08-30 | Menu compact sans double bordure ; onglet actif pétrole | Wilkam | — |
@@ -45,7 +46,23 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 ---
 
+## DESIGN-037 — Destinations Plus, même contrat de page
+
+- **Date :** 30 août 2026
+- **Auteur :** Revue design
+- **Statut :** Livré dans le miroir
+- **Périmètre :** Équipements, Coûts, Utilisateurs et droits, Seuils et paramètres — aucun droit, montant ou paramètre modifié
+
+Les quatre destinations Plus répétaient le H1 du catalogue dans un hero encadré.
+
+- H2 visuel retiré (conservé masqué pour `aria-labelledby`).
+- Intro : kicker + lede, sans carte.
+- Onglets Créer / Désactiver et profil actif : `--teal`, comme le reste de l’app.
+
+---
+
 ## DESIGN-036 — Dossier central, même langage que l’app
+
 
 - **Date :** 30 août 2026
 - **Auteur :** Revue design

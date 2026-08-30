@@ -116,6 +116,7 @@ const checks = [
   ['Analytique santé unique sur Pilotage', page.includes("{dashboardTab === 'health' &&") && page.includes('<OperationalAnalytics equipment={equipment} />') && !page.includes('<OperationalAnalytics equipment={equipment} variant="direction" />')],
   ['Parc Pilotage pointe vers Équipements', page.includes('dashboard-equipment-pointer') && page.includes("onNavigate('equipment')") && !page.includes('dashboard-equipment-panel')],
   ['Dossier sans seconde bande navy', finalDeclaration('.next-step-card', 'background') === 'var(--surface)' && finalDeclaration('.next-step-card .primary-button', 'background') === 'var(--brand)' && !page.includes('className="compact-workflow"') && css.includes('.dossier-tabs button.active{\n  background:var(--teal);\n')],
+  ['Destinations Plus sans titre jumeau', equipmentWorkspace.includes('className="visually-hidden">Équipements') && costsWorkspace.includes('className="visually-hidden">Coûts') && accessWorkspace.includes('className="visually-hidden">Utilisateurs et droits') && parametersWorkspace.includes('className="visually-hidden">Seuils et paramètres') && finalDeclaration('.equipment-workspace-hero', 'background') === 'transparent' && finalDeclaration('.access-action-tabs button.active', 'background') === 'var(--teal)'],
 ]
 
 for (const [label, ok] of checks) console.log(`${ok ? '✓' : '✗'} ${label}`)
