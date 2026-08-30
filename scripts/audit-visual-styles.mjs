@@ -108,6 +108,8 @@ const checks = [
   ['Historique du dossier sans événements inventés', page.includes('0 événement canonique') && page.includes('Historique métier indisponible') && page.includes('Les repères ci-dessous ne remplacent pas un journal métier') && !page.includes('Étape validée et historisée') && !page.includes('Historique complet')],
   ['Preuve attendue non généralisée', page.includes("expectedProof ?? 'Preuve attendue non définie'") && page.includes('Aucune règle de preuve canonique n’est raccordée à ce dossier') && !page.includes('Preuve définie selon le type de dossier') && !page.includes('MATRICE APPLIQUÉE')],
   ['Actions du dossier conformes au rôle et au verrou critique', page.includes('Consultation uniquement · aucune action métier accordée') && page.includes("const criticalClosureLocked = nextStatusOption === 'Clôturée'") && page.includes('disabled={busy || criticalClosureLocked}') && page.includes('Preuve requise avant clôture')],
+  ['Score WILO sans collision de disposition', css.includes('.score-explain-card>.score-freshness{\n  display:grid;') && css.includes('grid-template-columns:1fr;')],
+  ['Actions principales tactiles sur mobile', css.includes('.manager-pilot .primary-button,\n  .manager-pilot .secondary-button,\n  .score-explain-card button{min-height:44px}') && css.includes('.auth-signout-top{width:44px;height:44px;min-width:44px;min-height:44px}')],
 ]
 
 for (const [label, ok] of checks) console.log(`${ok ? '✓' : '✗'} ${label}`)

@@ -1057,6 +1057,12 @@ button:focus,input:focus,select:focus,textarea:focus{outline:none}
 .score-explain-card .score-freshness span{
   color:var(--neutral-text);
 }
+.score-explain-card>.score-freshness{
+  display:grid;
+  grid-template-columns:1fr;
+  align-items:stretch;
+  justify-content:normal;
+}
 .score-explain-card .analytics-note{
   color:#bed0df;
 }
@@ -1988,3 +1994,14 @@ button.manager-health-card:hover{
 .threshold-card .text-button:hover{text-decoration:underline}
 @media (max-width:1050px){.parameters-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.parameters-layout{grid-template-columns:1fr}.parameters-aside{grid-template-columns:1fr 1fr}}
 @media (max-width:700px){.parameters-workspace-hero{display:block;padding:var(--space-4)}.parameters-workspace-hero>.badge{margin-top:var(--space-3)}.parameter-detail-card,.parameter-governance,.parameter-gaps{padding:var(--space-4)}.parameter-detail-head{display:block}.parameter-detail-head>.badge{margin-top:var(--space-3)}.parameter-value-panel{padding:var(--space-4)}.parameter-value-panel>strong{font-size:var(--font-size-title)}.parameter-facts,.parameter-impact-grid,.parameters-aside{grid-template-columns:1fr}.parameter-facts>div+div{border-top:1px solid var(--border)}.parameter-impact .secondary-button{width:100%}}
+
+/* P8 — cibles tactiles des actions principales et contrôles de session */
+@media (max-width:700px){
+  .persona-trigger,
+  .primary-button,
+  .secondary-button,
+  .manager-pilot .primary-button,
+  .manager-pilot .secondary-button,
+  .score-explain-card button{min-height:44px}
+  .auth-signout-top{width:44px;height:44px;min-width:44px;min-height:44px}
+}

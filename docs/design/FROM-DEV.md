@@ -2,6 +2,20 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-016 — P8 : fermeture visuelle du miroir public
+
+- **Date :** 30 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté et vérifié — publié sur la branche design
+- **Périmètre :** correctifs de rendu uniquement ; aucun backend, secret, schéma, droit ou mécanisme de déploiement ajouté au miroir
+
+La recette finale a confirmé deux écarts visuels ciblés. La carte **Score WILO** héritait de la disposition flex de son en-tête et comprimait État, Variation et Fraîcheur ; ces informations sont maintenant présentées sur trois lignes stables. Sur mobile, les actions principales, le sélecteur de persona et la commande de déconnexion respectent désormais un plancher tactile de 44 px.
+
+Deux garde-fous complètent l'audit visuel et protègent ces corrections. Le miroir conserve le design DEC-013, les cinq personas anonymisés, le plancher typographique de 12 px et l'absence de connexion Supabase réelle.
+
+- **Contrôles réalisés :** audit visuel 83/83, personas 38/38, résilience 11/11, lint et build.
+- **Suite proposée :** conserver cette branche comme miroir public de référence ; poursuivre les raccordements privés uniquement dans le dépôt non public.
+
 ## DEV-015 — P7A Résilience terrain et contrat d’enregistrement honnête
 
 - **Date :** 30 août 2026
