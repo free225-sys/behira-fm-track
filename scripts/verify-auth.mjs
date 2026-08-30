@@ -11,7 +11,7 @@ const checks = [
   ['Session locale', page.includes('localStorage') && page.includes('sessionStorage') && page.includes('behira_demo_session_v1')],
   ['Cinq comptes fictifs internes', (page.match(/@demo\.behira\.invalid/g) ?? []).length === 5 && !page.includes('prestataire@demo.behira.invalid') && !page.includes('lecture.seule@demo.behira.invalid')],
   ['Domaine non réel', page.includes('.invalid') && !/@gmail\.|@outlook\.|@yahoo\./i.test(page)],
-  ['Redirections par rôle', page.includes("faustin:'manager'") && page.includes("frederic:'workspace'") && page.includes("laetitia:'workspace'")],
+  ['Redirections par rôle', page.includes("facility:'manager'") && page.includes("administration:'workspace'") && page.includes("rondes_assistance:'workspace'")],
   ['Protection des vues', page.includes('allowedViewsByPersona') && page.includes('Accès masqué pour ce rôle')],
   ['Aucun compte Lecture seule', !page.includes("personaId:'readonly'") && !page.includes('lecture.seule@demo.behira.invalid')],
   ['Mode démonstration explicite', page.includes('MODE DÉMONSTRATION') && page.includes('DÉMONSTRATION LOCALE')],
@@ -21,7 +21,7 @@ const checks = [
   ['Déverrouillage Auth confirmé', page.includes('updateUser({ password:newPassword, currentPassword })') && page.includes('gate.mustChangePassword')],
   ['Persona imposé par RLS', page.includes('resolveAuthenticatedPersona') && page.includes("session.mode === 'demo'")],
   ['Responsive 390 / 768 / 1440', ['max-width:430px','max-width:900px','.auth-shell'].every((value) => css.includes(value))],
-  ['Focus clavier unique', css.includes('.keyboard-nav .password-control:focus-within') && css.includes('outline:2px solid var(--focus)') && css.includes('border-color:#d5dee7;box-shadow:none')],
+  ['Focus clavier unique', css.includes('.keyboard-nav .password-control:focus-within') && css.includes('outline:2px solid var(--focus-ring)') && css.includes('border-color:#d5dee7;box-shadow:none')],
   ['Aucun secret Supabase', !/(SUPABASE_(URL|KEY)|anon[_-]?key|service[_-]?role)/i.test(page)],
 ];
 

@@ -5,7 +5,7 @@ Principe : un seul lot atomique à la fois, puis validation avant le suivant.
 
 ## 0. Checkpoint du code actuel — terminé
 
-- Fondation visuelle UI-0 et pilote Faustin UI-1 enregistrés.
+- Fondation visuelle UI-0 et pilote Facility Manager UI-1 enregistrés.
 - Modification atomique UI-2 arrêtée après compilation : score ring, barres équipements, scores agents existants et état « données historiques insuffisantes ».
 - Aucun déploiement de ce checkpoint tant que le recalage global n’est pas validé.
 - Aucun changement de rôle, permission, workflow, seuil, validation, preuve, mode hors ligne ou responsabilité.
@@ -22,11 +22,11 @@ Critère de sortie : nouveaux composants construits uniquement avec les tokens d
 
 Créer `AntiZombieSummary` avec les huit champs définis dans `DESIGN.md`, variantes compacte et détaillée, état des données manquantes et action autorisée.
 
-Première intégration : Faustin. Intégrations suivantes : registre puis dossier central.
+Première intégration : Facility Manager. Intégrations suivantes : registre puis dossier central.
 
 Critère de sortie : le composant n’effectue aucun changement de workflow et présente toutes les informations sans dépendre uniquement de la couleur.
 
-## 3. Pilote Faustin complet — partiellement conforme
+## 3. Pilote Facility Manager complet — partiellement conforme
 
 À conserver : À qualifier, En retard, Preuves manquantes, file dense, branches de traitement, seuil de délégation et décision motivée.
 
@@ -48,7 +48,7 @@ Critère de sortie : aucune information critique perdue sur mobile ; CTA princip
 
 Critère de sortie : chaque KPI relie valeur, contexte, explication et action ; aucune tendance artificielle.
 
-## 6. Wilo — partiellement conforme
+## 6. Surpresseur — partiellement conforme
 
 À conserver : mobile-first, cinq étapes, alertes, contrôles et simulation hors ligne.
 
@@ -56,7 +56,7 @@ Critère de sortie : chaque KPI relie valeur, contexte, explication et action ; 
 
 Critère de sortie : toute mesure indique clairement dans/hors plage ; absence de seuil explicitée.
 
-## 7. Laetitia — à adapter
+## 7. Agente Rondes & Assistance — à adapter
 
 Séparer Terrain et Administratif par contrôle segmenté. Préserver rondes, constats, zones, brouillons hors ligne, devis, paiements, autorisations et arbitrages selon les droits existants.
 
@@ -64,7 +64,7 @@ Critère de sortie : les deux fonctions sont explicites et aucune permission n�
 
 ## 8. Autres écrans — non commencé dans le recalage
 
-Appliquer les composants validés aux agents, au registre, aux rondes hors Wilo, à l’authentification et aux états secondaires.
+Appliquer les composants validés aux agents, au registre, aux rondes hors Surpresseur, à l’authentification et aux états secondaires.
 
 ## 9. Nettoyage CSS et documentation finale — non commencé
 
@@ -76,14 +76,14 @@ Appliquer les composants validés aux agents, au registre, aux rondes hors Wilo,
 
 ## Prochain lot atomique proposé
 
-### UI-2A — `AntiZombieSummary` partagé + intégration Faustin
+### UI-2A — `AntiZombieSummary` partagé + intégration Facility Manager
 
 Périmètre strict :
 
 1. créer le composant partagé avec ses huit champs ;
 2. alimenter uniquement avec les données déjà disponibles ;
 3. afficher « À définir » pour les champs absents ;
-4. remplacer la synthèse locale du dossier prioritaire dans Faustin ;
+4. remplacer la synthèse locale du dossier prioritaire dans Facility Manager ;
 5. conserver tous les boutons, seuils et handlers existants ;
 6. tester desktop/mobile, clavier et non-régression.
 

@@ -32,7 +32,7 @@ Un composant partagé `AntiZombieSummary` devra présenter ensemble, pour tout d
 - Un champ absent est explicitement marqué « À définir » ou « Non renseigné ».
 - Une échéance dépassée affiche le retard en texte, pas uniquement en couleur.
 - Le composant ne calcule ni ne change le workflow ; il résume des données existantes.
-- La version compacte sert la file Faustin et le registre ; la version détaillée sert le dossier central.
+- La version compacte sert la file Facility Manager et le registre ; la version détaillée sert le dossier central.
 - L’action associée doit mener vers la prochaine opération autorisée pour le rôle courant.
 
 ## 3. Catalogue des visualisations
@@ -47,9 +47,9 @@ Un composant partagé `AntiZombieSummary` devra présenter ensemble, pour tout d
 | Ouvertures / clôtures | La charge se résorbe-t-elle ? | Dates d’ouverture et de clôture | 7, 30 et 90 j | Équipement, zone, responsable | Historique insuffisant | Ouvrir les dossiers non résorbés |
 | Retards | Où les SLA sont-ils dépassés ? | Échéance, SLA, statut, responsable, motif | Actuel + tendance | Priorité, étape, responsable | Aucun retard | Relancer ou arbitrer |
 | Coûts | Quels engagements nécessitent une décision ? | Estimé, devis, engagé, payé, seuil, décision | Mois, trimestre | Statut financier, équipement, prestataire référencé | Montants insuffisants | Ouvrir l’arbitrage ou la pièce financière |
-| Heatmap 76 zones | Où les anomalies se répètent-elles ? | Zone, volume, gravité, récurrence, période | 30 et 90 j | Niveau, famille, gravité | Données de zone insuffisantes | Ouvrir la liste filtrée de la zone |
+| Heatmap 24 zones | Où les anomalies se répètent-elles ? | Zone, volume, gravité, récurrence, période | 30 et 90 j | Niveau, famille, gravité | Données de zone insuffisantes | Ouvrir la liste filtrée de la zone |
 | Sparkline | Une petite tendance aide-t-elle la lecture du KPI ? | Série temporelle fiable et comparable | Selon KPI | Aucun ou période unique | Ne pas afficher la sparkline | Ouvrir le graphique détaillé |
-| Plage Wilo | La mesure est-elle dans la plage attendue ? | Valeur, unité, seuil bas/haut, plage attendue, date | Dernière mesure + historique | Type de mesure | Seuil non configuré | Créer un constat ou poursuivre la ronde |
+| Plage Surpresseur | La mesure est-elle dans la plage attendue ? | Valeur, unité, seuil bas/haut, plage attendue, date | Dernière mesure + historique | Type de mesure | Seuil non configuré | Créer un constat ou poursuivre la ronde |
 | Score agent | Le traitement nécessite-t-il un accompagnement ? | Période, échantillon, méthode, délais, preuves, variation, facteurs | 30/90 j | Agent, périmètre, type de dossier | Échantillon insuffisant | Ouvrir l’explication, jamais sanctionner automatiquement |
 
 ### Règles communes aux graphiques
@@ -60,9 +60,9 @@ Un composant partagé `AntiZombieSummary` devra présenter ensemble, pour tout d
 - `prefers-reduced-motion` désactive les transitions.
 - Les actions et informations essentielles restent disponibles sans survol.
 
-## 4. Écran pilote Faustin
+## 4. Écran pilote Facility Manager
 
-Le cockpit Faustin doit contenir :
+Le cockpit Facility Manager doit contenir :
 
 - les files À qualifier, En retard, Sans responsable, Preuves à vérifier, Réceptions, Réserves et Dossiers rouverts ;
 - une file dense avec priorité, statut, équipement, zone, responsable, SLA et preuve ;
@@ -89,23 +89,23 @@ Ordre prioritaire : identité et risque → prochaine action → échéance et b
 
 L’écran doit réunir santé bâtiment enrichie, risques critiques, coûts à valider, retards, seuil de délégation, évolution de la santé, pipeline, coûts à arbitrer, comparaison des scores, zones récurrentes et tableau « Arbitrages à décider ».
 
-Le rôle affiché est « Administration ». Frédéric AMANY est un utilisateur représentant ce rôle, pas le nom du rôle lui-même.
+Le rôle affiché est « Administration ». Administration Démo est un utilisateur représentant ce rôle, pas le nom du rôle lui-même.
 
-## 7. Wilo
+## 7. Surpresseur
 
 - Conserver mobile-first, cinq étapes, alertes, seuils et mode hors ligne.
 - Afficher chaque mesure sur une plage attendue avec valeur, unité, seuil bas/haut et état textuel.
-- Le score Wilo affiche score, état textuel, variation, fraîcheur, facteurs positifs et facteurs négatifs.
+- Le score Surpresseur affiche score, état textuel, variation, fraîcheur, facteurs positifs et facteurs négatifs.
 - Si un seuil ou un historique manque, afficher l’absence au lieu de l’inventer.
 
-## 8. Laetitia
+## 8. Agente Rondes & Assistance
 
 Séparer visuellement deux fonctions par onglets ou segmented control :
 
 - Terrain : rondes, constats, zones et brouillons hors ligne ;
 - Administratif : devis, paiements, autorisations et arbitrages.
 
-Laetitia reste agente et assistante de direction. Évariste et Sylvain réalisent la majorité des rondes techniques.
+Agente Rondes & Assistance reste agente et assistante de direction. Agent Électricité et Agent Eau & Incendie réalisent la majorité des rondes techniques.
 
 ## 9. Scores de performance
 
@@ -129,3 +129,21 @@ Un échantillon insuffisant rend le score non interprétable. Le système ne doi
 - Aucun changement implicite de rôle, permission, workflow, seuil, preuve ou responsabilité.
 - Tests existants réussis avant chaque publication.
 - Chaque lot documente précisément ce qui est complet, partiel ou absent.
+
+## 11. Système de tokens (DEC-010)
+
+Source unique : `:root` dans `app/globals.css`. Spécimen vivant : `/design-system` (hors navigation produit).
+
+| Couche | Tokens | Règle |
+| --- | --- | --- |
+| Surfaces | `--background` `--surface` `--surface-muted` `--surface-emphasis` | Canvas clair, cartes par bordure |
+| Encres | `--foreground` `--foreground-muted` `--brand-foreground` | Texte ≥ 12 px à 4,5:1 |
+| Marque | `--brand` `--brand-strong` `--mark` `--teal` `--accent` | DEC-013 : `--mark #20b2aa` (glyphe B) ≠ `--teal #0e6a66` (accent). `--accent` alias de `--teal`. `--orange` alias de compatibilité vers `--teal`. Le triplet `warning` reste distinct. |
+| Chrome | `--chrome` `--on-chrome*` `--chrome-accent` `--chrome-rule` | Seule bande navy |
+| Triplets | `--{role}-surface/border/text` | Encre dédiée, rôle pour barres |
+| Score | `--score-part-1…4` | Rampe séquentielle, pas d’état |
+| Type | `--font-size-label…display` | Plancher 12 px |
+| Mouvement | `--motion-fast/bar/ring` | Uniquement au changement de valeur |
+| Empilement | `--z-sticky` … `--z-modal` | Pas de z-index magique |
+
+Ne pas déclarer de thème sombre. Ne pas migrer les hex métier restants sans lot dédié par surface.

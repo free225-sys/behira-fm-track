@@ -5,7 +5,13 @@ import path from 'node:path'
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const page = await readFile(path.join(root, 'app', 'page.tsx'), 'utf8')
 const css = await readFile(path.join(root, 'app', 'globals.css'), 'utf8')
-const appSource = `${page}\n${css}`
+const badge = await readFile(path.join(root, 'app', 'components', 'ui', 'badge.tsx'), 'utf8')
+const equipmentWorkspace = await readFile(path.join(root, 'app', 'components', 'EquipmentWorkspace.tsx'), 'utf8')
+const costsWorkspace = await readFile(path.join(root, 'app', 'components', 'CostsWorkspace.tsx'), 'utf8')
+const accessWorkspace = await readFile(path.join(root, 'app', 'components', 'AccessWorkspace.tsx'), 'utf8')
+const parametersWorkspace = await readFile(path.join(root, 'app', 'components', 'ParametersWorkspace.tsx'), 'utf8')
+const syncStatusNotice = await readFile(path.join(root, 'app', 'components', 'SyncStatusNotice.tsx'), 'utf8')
+const appSource = `${page}\n${css}\n${badge}\n${equipmentWorkspace}\n${costsWorkspace}\n${accessWorkspace}\n${parametersWorkspace}\n${syncStatusNotice}`
 
 const checks = []
 const requireAll = (label, source, values) => {
@@ -14,26 +20,26 @@ const requireAll = (label, source, values) => {
 }
 
 requireAll('Personas métier', page, [
-  'Faustin SIAPO', 'Frédéric AMANY', 'Évariste DJE', 'Sylvain DOUANE', 'Laetitia ATTOH',
+  'Facility Manager Démo', 'Administration Démo', 'Agent Électricité Démo', 'Agent Eau & Incendie Démo', 'Agente Rondes & Assistance Démo',
 ])
 requireAll('Espaces personnalisés', page, [
-  'DirectionWorkspace', 'FaustinWorkspace', 'AgentWorkspace', 'LaetitiaWorkspace',
+  'DirectionWorkspace', 'FacilityManagerWorkspace', 'AgentWorkspace', 'RoundsAssistanceWorkspace',
 ])
 requireAll('Modules initiaux', page, [
-  'GE-01', 'WILO-01', 'RIA-01', 'ASC-A1', 'ASC-A2', 'IRR-01', 'RND-LET',
+  'DEMO-GE', 'DEMO-EAU', 'DEMO-SSI', 'DEMO-ASC-1', 'DEMO-ASC-2', 'DEMO-ESP', 'DEMO-RND',
 ])
-requireAll('Référentiel prestataires sans accès direct', page, ['DMC', 'ATA-CI', 'SECURISYS', 'ALTA-VENTURE', 'Aucun accès direct pour les prestataires'])
-requireAll('Décisions Administration', page, ['Approuver', 'Refuser', 'Renvoyer à Faustin', 'CAPEX', 'OPEX'])
+requireAll('Référentiel prestataires sans accès direct', page, ['PREST-GE', 'PREST-ASC', 'PREST-SSI', 'PREST-ESP', 'Aucun accès direct pour les prestataires'])
+requireAll('Décisions Administration', page, ['Approuver', 'Refuser', 'Renvoyer à Facility Manager', 'CAPEX', 'OPEX'])
 requireAll('Parcours terrain et preuve', page, [
-  'Soumettre à l’Administration', 'Réarmement provisoire', 'Ajouter une preuve', 'Déposer pour validation de Faustin',
+  'Soumettre à l’Administration', 'Réarmement provisoire', 'Ajouter une preuve', 'Déposer pour validation de Facility Manager',
 ])
 requireAll('Cycle métier', page, ['Constat', 'Qualification', 'Décision', 'Intervention', 'Preuve', 'Clôture'])
 requireAll('États opérationnels', page, ['Critique', 'En retard', 'PREUVE MANQUANTE', 'Terminées'])
 requireAll('Droits visibles par persona', page, [
-  "['workspace','dashboard','registry','manager','report']",
-  "['workspace','dashboard','registry']",
+  "['workspace','dashboard','registry','equipment','costs','access','manager','report']",
+  "['workspace','dashboard','registry','equipment','costs','access','settings']",
   "['workspace','report']",
-  "personaId === 'evariste' || personaId === 'sylvain'",
+  "personaId === 'electricite' || personaId === 'eau_incendie'",
   "Cleaning · jardinage · suivi administratif",
 ])
 requireAll('Responsive', css, [
@@ -47,7 +53,7 @@ requireAll('Listbox persona accessible', page, [
 requireAll('Groupes de personas', page, ["label:'Administration'", "label:'Management'", "label:'Terrain'"])
 checks.push({
   label:'Matrice de dépôt nominative visible',
-  ok:page.includes('Évariste et Sylvain sont les seuls agents internes habilités') && !page.includes("personaId:'readonly'"),
+  ok:page.includes('Agent Électricité et Agent Eau & Incendie sont les seuls agents internes habilités') && !page.includes("personaId:'readonly'"),
   missing:[],
 })
 checks.push({
@@ -55,11 +61,11 @@ checks.push({
   ok:!page.includes("id:'vendor'") && !page.includes('VendorWorkspace') && !page.includes('PORTAIL PRESTATAIRE'),
   missing:[],
 })
-requireAll('Polish Direction et Faustin', page, [
+requireAll('Polish Direction et Facility Manager', page, [
   'decision-filters', 'direction-focus', 'Qualifier maintenant', 'qualify-action', 'escalate-action',
 ])
-requireAll('Pilote Wilo et saisie directe', page, [
-  'MODULE PILOTE · SURPRESSEUR', 'OfflineSyncStatus', 'Ronde placée dans la file de synchronisation', 'AUCUN IMPORT',
+requireAll('Pilote Surpresseur et saisie directe', page, [
+  'MODULE PILOTE · SURPRESSEUR', 'Brouillon local automatique', 'Ronde placée dans la file de synchronisation', 'AUCUN IMPORT',
 ])
 checks.push({
   label:'Aucun parcours d’import de reporting',
@@ -67,7 +73,7 @@ checks.push({
   missing:page.includes('Importer un rapport de ronde') ? ['ancien import encore présent'] : [],
 })
 requireAll('Délégation et dossier cible', page, [
-  '350 000 FCFA', 'Décision dans la délégation de Faustin', 'AntiZombieSummary', 'dossier-workflow', 'dossier-three-zone',
+  'DECISION_THRESHOLD_FCFA = 400_000', 'Décision dans la délégation de Facility Manager', 'AntiZombieSummary', 'dossier-workflow', 'dossier-three-zone',
 ])
 requireAll('Clôture design des cockpits', page, [
   'WorkflowAnalytics', 'Sans responsable', 'Preuves à vérifier', 'Réceptions', 'Réserves', 'Dossiers rouverts',
@@ -76,18 +82,49 @@ requireAll('Navigation analytique du tableau de bord', appSource, [
   'dashboard-section-tabs', 'Vue d’ensemble', 'Actions & risques', 'Santé & scores', 'Parc technique',
   'scroll-snap-type:x proximity', 'PILOTAGE FACILITY MANAGER', 'Disponibilité technique 92%',
 ])
-requireAll('Double mission Laetitia', page, [
-  'mission-switch', 'Rondes, constats et brouillons hors ligne', 'Devis, paiements et autorisations',
+requireAll('Destination Équipements limitée à Administration et Facility Manager', appSource, [
+  "key:'equipment'", "secondary:true", 'EquipmentWorkspace', 'Parc technique',
+  'Fraîcheur du score', 'Facteurs explicatifs', 'Données insuffisantes',
 ])
-requireAll('Mesures Wilo explicables', page, [
+requireAll('Destination Coûts limitée à Administration et Facility Manager', appSource, [
+  "key:'costs'", "label:'Coûts'", 'CostsWorkspace', 'Coûts documentés',
+  'Montant engagé', 'Montant payé', 'Données insuffisantes', 'DECISION_THRESHOLD_FCFA',
+])
+requireAll('Destination Utilisateurs et droits conforme à la délégation', appSource, [
+  "key:'access'", "label:'Utilisateurs et droits'", 'AccessWorkspace',
+  'GESTION ADMINISTRATION', 'PROPOSITION UNIQUEMENT', 'Préparer la désactivation',
+  'Aucun compte réel n’a été créé', 'aucun compte, rôle ou périmètre réel n’est modifié',
+  "users.filter((user) => user.id !== 'administration')",
+  "audience === 'administration' && <option>Administration</option>",
+])
+requireAll('Destination Seuils et paramètres réservée à Administration', appSource, [
+  "key:'settings'", "label:'Seuils et paramètres'", 'ParametersWorkspace',
+  'LECTURE SEULE', 'Seuil de décision financière', 'Historique persistant indisponible',
+  'Délais SLA par priorité', 'Seuils techniques des équipements', 'Méthodes de calcul des scores',
+  "administration:['workspace','dashboard','registry','equipment','costs','access','settings']",
+])
+requireAll('Dossier central P6 sans seconde source métier', appSource, [
+  'dossier-continuity', 'adaptDossierToAntiZombieSummary(anomaly)', 'variant="detailed"',
+  '0 événement canonique', 'Historique métier indisponible', 'Preuve attendue non définie',
+  'Consultation uniquement · aucune action métier accordée', 'criticalClosureLocked',
+  'role="tablist"', 'role="tabpanel"',
+])
+requireAll('Double mission Agente Rondes & Assistance', page, [
+  'mission-switch', 'Rondes, constats et brouillons de démonstration', 'Devis, paiements et autorisations',
+])
+requireAll('Résilience terrain sans promesse hors ligne fictive', appSource, [
+  'SyncStatusNotice', 'Démonstration locale — non enregistrée', 'Connexion requise pour enregistrer',
+  'Aucun mode hors ligne ni reprise automatique', 'Échec de l’enregistrement', 'Réessayer',
+])
+requireAll('Mesures Surpresseur explicables', page, [
   'MeasureRange', 'DANS LA PLAGE', 'HORS PLAGE', 'Variation</b>Indisponible', 'Fraîcheur</b>Non synchronisée',
 ])
 requireAll('Verrou critique et retour Direction', page, [
-  "selected.priority === 'Critique' && !selected.proof", 'retour envoyé à Faustin', 'Confirmer et notifier Faustin',
+  "selected.priority === 'Critique' && !selected.proof", 'retour envoyé à Facility Manager', 'Confirmer et notifier Facility Manager',
 ])
-requireAll('Badges structurés', page, ['badge-icon', 'badge-label'])
+requireAll('Badges structurés', appSource, ['badge-icon', 'badge-label'])
 requireAll('Focus P2 et protection navigation mobile', css, [
-  'outline:2px solid var(--focus)', '.keyboard-nav button:focus-visible', '.main-column{padding-bottom:92px}', '.persona-popover{position:fixed',
+  'outline:2px solid var(--focus-ring)', '.keyboard-nav button:focus-visible', '.main-column{padding-bottom:92px}', '.persona-popover{position:fixed',
 ])
 checks.push({
   label: 'Sélecteur natif persona supprimé',
@@ -107,9 +144,14 @@ const contrastPairs = [
   ['bleu', '#174f89', '#eaf2fb'],
   ['succès', '#176340', '#e7f5ed'],
   ['neutre', '#465360', '#f0f3f5'],
+  ['encre danger', '#c33841', '#fde8e9'],
+  ['encre avertissement', '#ad5716', '#fff0e1'],
+  ['encre succès', '#287c58', '#e7f5ed'],
+  ['encre information', '#235ea7', '#edf5fc'],
+  ['encre neutre', '#596777', '#f7f9fb'],
 ]
 const failedContrasts = contrastPairs.filter(([, foreground, background]) => contrast(foreground, background) < 4.5).map(([label, foreground, background]) => `${label} ${contrast(foreground, background).toFixed(2)}:1`)
-checks.push({ label:'Contrastes de badges ≥ 4,5:1', ok:failedContrasts.length === 0, missing:failedContrasts })
+checks.push({ label:'Contrastes sémantiques et badges ≥ 4,5:1', ok:failedContrasts.length === 0, missing:failedContrasts })
 
 const forbidden = [
   /createClient\s*\(/,

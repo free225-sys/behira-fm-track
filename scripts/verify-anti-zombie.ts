@@ -10,12 +10,12 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const cases: Array<{ name:string; data:AntiZombieSummaryData; verify:(result:ReturnType<typeof normalizeAntiZombieSummary>)=>void }> = [
   {
     name:'dossier actif complet',
-    data:{ status:'Affectée', responsible:'Évariste DJE', nextAction:'Contrôler la batterie', deadline:'28 août · 15:00', slaLabel:'Dans le délai', blockingOrDelayReason:'Aucun retard déclaré', expectedProof:'Photo du voltmètre', lastHistoryActivity:{ label:'Affectation confirmée', occurredAt:'28 août · 09:10', actor:'Faustin SIAPO' } },
-    verify:(result) => { assert.equal(result.responsible, 'Évariste DJE'); assert.equal(result.lastActivityLabel, 'Affectation confirmée'); },
+    data:{ status:'Affectée', responsible:'Agent Électricité Démo', nextAction:'Contrôler la batterie', deadline:'28 août · 15:00', slaLabel:'Dans le délai', blockingOrDelayReason:'Aucun retard déclaré', expectedProof:'Photo du voltmètre', lastHistoryActivity:{ label:'Affectation confirmée', occurredAt:'28 août · 09:10', actor:'Facility Manager Démo' } },
+    verify:(result) => { assert.equal(result.responsible, 'Agent Électricité Démo'); assert.equal(result.lastActivityLabel, 'Affectation confirmée'); },
   },
   {
     name:'dossier en retard',
-    data:{ status:'En intervention', responsible:'Sylvain DOUANE', nextAction:'Terminer le diagnostic', deadline:'27 août · 12:00', slaLabel:'En retard', isDelayed:true },
+    data:{ status:'En intervention', responsible:'Agent Eau & Incendie Démo', nextAction:'Terminer le diagnostic', deadline:'27 août · 12:00', slaLabel:'En retard', isDelayed:true },
     verify:(result) => { assert.equal(result.isDelayed, true); assert.equal(result.blockingOrDelayReason, 'Motif non renseigné'); },
   },
   {
@@ -67,7 +67,7 @@ const managerSource = page.slice(page.indexOf('function Manager('), page.indexOf
 const registrySource = page.slice(page.indexOf('function Registry('), page.indexOf('function Manager('));
 const detailSource = page.slice(page.indexOf('function Detail('), page.indexOf('function ' , page.indexOf('function Detail(') + 20));
 
-assert.equal((page.match(/<AntiZombieSummary\s/g) ?? []).length, 3, 'Le composant doit être intégré dans Faustin, le registre et le dossier central.');
+assert.equal((page.match(/<AntiZombieSummary\s/g) ?? []).length, 3, 'Le composant doit être intégré dans Facility Manager, le registre et le dossier central.');
 assert.match(managerSource, /<AntiZombieSummary\s/, 'AntiZombieSummary doit être intégré dans Manager.');
 assert.match(registrySource, /<AntiZombieSummary\s/, 'Le registre doit intégrer la variante compacte.');
 assert.match(detailSource, /<AntiZombieSummary\s/, 'Le dossier central doit intégrer la variante détaillée.');
@@ -83,11 +83,13 @@ assert.match(component, /tabIndex=\{0\}/, 'La synthèse doit être atteignable a
 assert.doesNotMatch(component, /title=/, 'Aucun contenu essentiel ne doit dépendre d’un tooltip.');
 assert.match(css, /\.anti-zombie-summary:focus-visible/, 'Le focus clavier de la synthèse doit être visible.');
 assert.match(css, /@media \(max-width:700px\)[\s\S]*?\.anti-zombie-fields/, 'La disposition mobile doit être définie.');
-assert.match(css, /\.anti-zombie-fields[\s\S]*?font-size:12px/, 'Les contenus essentiels doivent faire au moins 12 px.');
+assert.match(css, /--font-size-label:12px/, 'Le plancher typographique doit rester fixé à 12 px.');
+assert.match(css, /\.anti-zombie-fields dt\{[^}]*font-size:var\(--font-size-label\)/, 'Les libellés doivent consommer le plancher typographique.');
+assert.match(css, /\.anti-zombie-fields dd\{[^}]*font-size:var\(--font-size-body\)/, 'Les valeurs essentielles doivent rester au-dessus du plancher typographique.');
 assert.match(component, /CONTINUITÉ DE TRAITEMENT/, 'Le libellé métier validé doit remplacer le vocabulaire anti-zombie.');
 assert.match(component, /NORMALE/, 'La continuité normale doit être distinguée du statut du workflow.');
 
-console.log('✓ intégration partagée Faustin, registre et dossier central');
+console.log('✓ intégration partagée Facility Manager, registre et dossier central');
 console.log('✓ huit informations visibles, valeurs de repli et alerte de blocage présentes');
 console.log('✓ contrôle statique desktop, mobile, clavier et absence de tooltip');
 console.log(`\n${cases.length + 3} contrôles AntiZombieSummary réussis.`);

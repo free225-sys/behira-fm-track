@@ -3,11 +3,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "./database.types";
 
 export type AuthPersonaId =
-  | "faustin"
-  | "frederic"
-  | "evariste"
-  | "sylvain"
-  | "laetitia";
+  | "facility"
+  | "administration"
+  | "electricite"
+  | "eau_incendie"
+  | "rondes_assistance";
 
 export type AuthProfileGate = {
   profileId: string;
@@ -28,14 +28,14 @@ type AuthGatePayload = {
 };
 
 const fieldPersonaByEmployeeCode: Partial<Record<string, AuthPersonaId>> = {
-  "EVAR-ELEC": "evariste",
-  "SYL-PLB": "sylvain",
-  "LET-RND": "laetitia",
+  "EVAR-ELEC": "electricite",
+  "SYL-PLB": "eau_incendie",
+  "LET-RND": "rondes_assistance",
 };
 
 const personaByRoleCode: Partial<Record<string, AuthPersonaId>> = {
-  direction: "frederic",
-  facility_manager: "faustin",
+  direction: "administration",
+  facility_manager: "facility",
 };
 
 export async function getAuthenticatedProfileGate(

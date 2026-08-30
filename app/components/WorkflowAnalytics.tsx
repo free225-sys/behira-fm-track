@@ -26,6 +26,7 @@ export function WorkflowAnalytics({ items, variant = 'manager', onOpenRegistry }
     { label:'Moyenne', count:active.filter((item) => item.priority === 'Moyenne').length, className:'info' },
     { label:'Faible', count:active.filter((item) => item.priority === 'Faible').length, className:'neutral' },
   ];
+  const severityMax = Math.max(1, ...severity.map((item) => item.count));
   const unassigned = active.filter((item) => item.owner === 'Non affectée').length;
   const proofsToReview = active.filter((item) => item.proofPending || (item.status === 'En validation' && item.proof)).length;
   const late = active.filter((item) => item.delayed).length;
@@ -38,7 +39,7 @@ export function WorkflowAnalytics({ items, variant = 'manager', onOpenRegistry }
   return <section className={`workflow-analytics workflow-${variant}`} aria-labelledby={`workflow-title-${variant}`}>
     <div className="workflow-analytics-heading">
       <div><p className="design-kicker">FLUX OPÉRATIONNEL</p><h3 id={`workflow-title-${variant}`}>{variant === 'administration' ? 'Exposition et progression des dossiers' : 'Où le traitement doit avancer'}</h3><p>Lecture calculée uniquement à partir des dossiers actuellement visibles.</p></div>
-      <span className="data-origin-badge">DONNÉES COURANTES</span>
+      <span className="mockup-label">Données courantes</span>
     </div>
     <div className="workflow-analytics-grid">
       <article className="panel workflow-pipeline-card">
@@ -54,7 +55,17 @@ export function WorkflowAnalytics({ items, variant = 'manager', onOpenRegistry }
 
       <article className="panel severity-card">
         <div className="analytics-card-head"><div><span>GRAVITÉ</span><h4>Exposition des dossiers actifs</h4></div><strong>{active.length}</strong></div>
-        <div className="severity-stack" aria-label="Répartition textuelle par gravité">{severity.map((item) => <div key={item.label}><span><i className={item.className} />{item.label}</span><b>{item.count}</b></div>)}</div>
+        <div className="severity-bars" aria-label="Répartition des dossiers actifs par gravité">
+          {severity.map((item) => (
+            <div className={`severity-bar-row severity-${item.className}`} key={item.label}>
+              <span><i aria-hidden="true" />{item.label}</span>
+              <div className="severity-bar-track" role="progressbar" aria-label={`${item.label} : ${item.count} dossier${item.count > 1 ? 's' : ''}`} aria-valuemin={0} aria-valuemax={severityMax} aria-valuenow={item.count}>
+                <i style={{ width:`${(item.count / severityMax) * 100}%` }} />
+              </div>
+              <b>{item.count}</b>
+            </div>
+          ))}
+        </div>
         {onOpenRegistry && <button className="text-action" type="button" onClick={onOpenRegistry}>Examiner dans le registre →</button>}
       </article>
 

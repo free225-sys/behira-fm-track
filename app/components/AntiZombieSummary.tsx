@@ -5,6 +5,7 @@ import { normalizeAntiZombieSummary, type AntiZombieSummaryData } from './anti-z
 export function AntiZombieSummary({ data, variant = 'standard' }: { data: AntiZombieSummaryData; variant?:'compact'|'standard'|'detailed' }) {
   const headingId = useId();
   const summary = normalizeAntiZombieSummary(data);
+  const stateTone = summary.isBlocked ? 'danger' : summary.isDelayed ? 'warning' : 'neutral';
 
   const fields = [
     { label:'Prochaine action', value:summary.nextAction, priority:true, missing:summary.nextAction === 'Prochaine action non renseignée' },
@@ -25,7 +26,7 @@ export function AntiZombieSummary({ data, variant = 'standard' }: { data: AntiZo
           <p>CONTINUITÉ DE TRAITEMENT</p>
           <h4 id={headingId}>Synthèse de pilotage</h4>
         </div>
-        <strong>{summary.isBlocked ? 'BLOQUÉ' : summary.isDelayed ? 'EN RETARD' : 'NORMALE'}</strong>
+        <strong className={`anti-zombie-state ${stateTone}`}><span aria-hidden="true">{summary.isBlocked ? '!' : summary.isDelayed ? '↗' : '✓'}</span>{summary.isBlocked ? 'BLOQUÉ' : summary.isDelayed ? 'EN RETARD' : 'NORMALE'}</strong>
       </header>
 
       {summary.blockingInformationIncomplete && (
