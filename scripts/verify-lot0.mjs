@@ -36,6 +36,7 @@ const expectedMigrations = [
   "20260830202034_anti_zombie_c4_blocks_delays.sql",
   "20260830204742_anti_zombie_c5_proof_requirements.sql",
   "20260830212342_anti_zombie_c6_canonical_projection.sql",
+  "20260830233549_restore_canonical_action_stage_mappings.sql",
 ];
 check(JSON.stringify(migrations) === JSON.stringify(expectedMigrations), "Migration order or inventory is unexpected");
 
@@ -134,6 +135,14 @@ check(new Set(fixture.match(/'FIX-ANO-[0-9]{4}'/g) ?? []).size === 8, "Local int
 check(fixture.includes("non_production"), "Local fixture must be explicitly marked non-production");
 check(migrationSql.includes("anomaly-proofs"), "Private anomaly proof bucket or policies are missing");
 check(migrationSql.includes("vendor-intervention-reports"), "Private internal vendor-report bucket or policies are missing");
+check(
+  migrationSql.includes("insert into public.next_action_code_stages"),
+  "Canonical next-action stage mappings must be owned by a migration",
+);
+check(
+  migrationSql.includes("insert into public.workflow_stages"),
+  "Canonical workflow stages must be available before the development seed",
+);
 
 const sqlTests = readdirSync(join(supabaseDir, "tests")).filter((name) => name.endsWith(".sql"));
 for (const expected of ["001_schema_seed.sql", "002_workflow_audit.sql", "003_rls.sql", "004_internal_vendor_reports.sql", "005_first_password_change.sql", "006_offline_sync.sql", "007_anti_zombie_c1.sql", "008_anti_zombie_c2_deadlines.sql", "009_anti_zombie_c3_actions.sql", "010_anti_zombie_c4_blocks_delays.sql", "011_anti_zombie_c5_proof_requirements.sql", "012_anti_zombie_c6_projection.sql", "013_anti_zombie_c8_end_to_end.sql"]) {

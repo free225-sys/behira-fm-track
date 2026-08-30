@@ -26,7 +26,8 @@
     "test:auth:local": "node scripts/verify-local-auth.mjs",
     "test:first-password:local": "node scripts/verify-first-password-change.mjs",
     "test:workflow:local": "node scripts/verify-operational-workflow.mjs",
-    "test:c8:local": "pnpm test:db && pnpm setup:auth:local && pnpm verify:anti-zombie && pnpm test:workflow:local && pnpm test:auth:local",
+    "test:migration-data:local": "node scripts/verify-migration-owned-reference-data.mjs",
+    "test:c8:local": "pnpm test:migration-data:local && pnpm test:db && pnpm setup:auth:local && pnpm verify:anti-zombie && pnpm test:workflow:local && pnpm test:auth:local",
     "preflight:preprod": "node scripts/preflight-preproduction.mjs",
     "test:db": "pwsh -NoProfile -File supabase/tests/run.ps1",
     "audit:visual": "node scripts/audit-visual-styles.mjs"
