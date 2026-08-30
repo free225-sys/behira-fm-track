@@ -2,6 +2,27 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-017 — P8 Release candidate : recette visuelle réelle et correctifs ciblés
+
+- **Date :** 30 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté et vérifié localement — en attente de validation avant publication
+- **Checkpoint de départ :** `2c47353`
+- **Périmètre :** recette du design unifié et des parcours privés P7B ; aucune migration, règle métier, permission ou écriture Supabase distante
+
+La passe navigateur précédemment impossible a été exécutée sur l'application locale. Les écrans Administration, Facility Manager et Agent Eau & Incendie ont été contrôlés à 1440, 768 et 390 px : navigation et menu Plus, files AQ/SLA/PV, ticket actif, synthèse anti-dossier-zombie, dossier central, registre, Accueil santé & performance et ronde Surpresseur. Les filtres AQ/SLA/PV restent exclusifs, les droits visibles dépendent du persona, le registre et les vues mobiles ne débordent pas, aucun texte visible n'est inférieur à 12 px et la console reste vide.
+
+Deux écarts de rendu ont été confirmés puis corrigés sans toucher au comportement :
+
+- la carte **Score WILO** héritait de la disposition flex de son en-tête ; État, Variation et Fraîcheur sont désormais trois lignes stables sur desktop et mobile ;
+- certaines actions principales et commandes de session restaient sous le minimum tactile de 44 px sur mobile ; le sélecteur de persona, la déconnexion, les boutons primaire/secondaire et le détail du score respectent maintenant ce plancher.
+
+Deux garde-fous portent l'audit visuel à **83/83** et protègent ces contrats. La recette complète réussit également : 38/38 contrôles personas, 12/12 résilience, 17/17 hors ligne, 20/20 authentification, 11/11 AntiZombieSummary, polices Geist HTTP 200, lint et build. La base locale a été reconstruite depuis zéro ; les 13 migrations, le seed, les 6/6 suites pgTAP, les cinq comptes locaux, le changement obligatoire du premier mot de passe, les périmètres RLS, le workflow critique et le stockage privé ont tous réussi. Le lint du schéma `public` ne remonte aucune erreur.
+
+Le dossier `tmp/` préexistant reste volontairement non suivi. Aucun secret, déploiement ou appel Supabase distant n'a été ajouté.
+
+- **Suite proposée :** soumettre le checkpoint P8 à validation locale ; après un GO explicite distinct, publier la version de validation.
+
 ## DEV-016 — Unification du design validé et du socle privé P7B
 
 - **Date :** 30 août 2026

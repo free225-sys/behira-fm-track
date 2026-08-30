@@ -1058,6 +1058,12 @@ button:focus,input:focus,select:focus,textarea:focus{outline:none}
 .score-explain-card .score-freshness span{
   color:var(--neutral-text);
 }
+.score-explain-card>.score-freshness{
+  display:grid;
+  grid-template-columns:1fr;
+  align-items:stretch;
+  justify-content:normal;
+}
 .score-explain-card .analytics-note{
   color:#bed0df;
 }
@@ -2006,3 +2012,14 @@ button.manager-health-card:hover{
 .check-grid .unreviewed>span{background:var(--surface);color:var(--foreground-muted)}
 .check-grid .unreviewed em{color:var(--foreground-muted)}
 @media (max-width:760px){.sync-banner{display:grid;grid-template-columns:auto minmax(0,1fr)}.sync-banner button{grid-column:1/-1;width:100%}}
+
+/* P8 — cibles tactiles des actions principales et contrôles de session */
+@media (max-width:700px){
+  .persona-trigger,
+  .primary-button,
+  .secondary-button,
+  .manager-pilot .primary-button,
+  .manager-pilot .secondary-button,
+  .score-explain-card button{min-height:44px}
+  .auth-signout-top{width:44px;height:44px;min-width:44px;min-height:44px}
+}
