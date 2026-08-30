@@ -252,6 +252,49 @@ on conflict (code) do update set
   source_system = excluded.source_system,
   source_row = excluded.source_row;
 
+-- C1 catalogue compatibility is seeded only after workflow stages exist.
+-- Every next-action code remains inactive until the outstanding B2 catalogue
+-- arbitration is explicitly approved; these rows therefore grant no workflow
+-- capability and are currently visible only to Direction/FM for review.
+insert into public.next_action_code_stages(action_code_id, workflow_stage_id, is_default_for_stage)
+select c.id, s.id, false
+from (
+  values
+    ('QUALIFY_ASSIGN', 'QUALIFICATION'),
+    ('PERFORM_DIAGNOSIS', 'QUALIFICATION'),
+    ('CHOOSE_TREATMENT_BRANCH', 'QUALIFICATION'),
+    ('MONITOR_REASSESS', 'DECISION'),
+    ('OBTAIN_QUOTE', 'DECISION'),
+    ('SUBMIT_ADMIN_ARBITRATION', 'QUALIFICATION'),
+    ('SUBMIT_ADMIN_ARBITRATION', 'DECISION'),
+    ('PLAN_INTERVENTION', 'DECISION'),
+    ('PLAN_INTERVENTION', 'INTERVENTION'),
+    ('EXECUTE_INTERVENTION', 'INTERVENTION'),
+    ('FOLLOW_UP_BLOCKER', 'CONSTAT'),
+    ('FOLLOW_UP_BLOCKER', 'QUALIFICATION'),
+    ('FOLLOW_UP_BLOCKER', 'DECISION'),
+    ('FOLLOW_UP_BLOCKER', 'INTERVENTION'),
+    ('FOLLOW_UP_BLOCKER', 'PREUVE'),
+    ('RECEIVE_INTERVENTION', 'INTERVENTION'),
+    ('RECEIVE_INTERVENTION', 'PREUVE'),
+    ('LIFT_RESERVATIONS', 'PREUVE'),
+    ('SUBMIT_REQUIRED_PROOF', 'INTERVENTION'),
+    ('SUBMIT_REQUIRED_PROOF', 'PREUVE'),
+    ('VALIDATE_PROOF', 'PREUVE'),
+    ('CLOSE_DOSSIER', 'PREUVE'),
+    ('REVIEW_REOPENED_DOSSIER', 'QUALIFICATION'),
+    ('REVIEW_REOPENED_DOSSIER', 'INTERVENTION'),
+    ('OTHER', 'CONSTAT'),
+    ('OTHER', 'QUALIFICATION'),
+    ('OTHER', 'DECISION'),
+    ('OTHER', 'INTERVENTION'),
+    ('OTHER', 'PREUVE')
+) as mapping(action_code, stage_code)
+join public.next_action_codes c on c.code = mapping.action_code
+join public.workflow_stages s on s.code = mapping.stage_code
+on conflict (action_code_id, workflow_stage_id) do update set
+  is_default_for_stage = excluded.is_default_for_stage;
+
 insert into public.status_transitions (from_status_id, to_status_id, requires_comment) values
   ((select id from public.status_definitions where code = 'NOUVEAU'), (select id from public.status_definitions where code = 'A_QUALIFIER'), false),
   ((select id from public.status_definitions where code = 'A_QUALIFIER'), (select id from public.status_definitions where code = 'FAUSSE_ALERTE'), true),

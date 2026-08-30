@@ -2,6 +2,45 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-019 — C1 local : référentiels anti-dossier-zombie et provenance de l’historique
+
+- **Date :** 30 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté et vérifié localement — non publié, non appliqué à distance
+- **Source métier :** lots A, B et B2 du 28 août 2026
+- **Périmètre :** référentiels contrôlés et enrichissement append-only de `anomaly_history` ; aucun raccordement UI ni objet opérationnel
+
+Le premier lot technique de continuité de traitement est volontairement additif. Il crée les référentiels `next_action_codes`, `next_action_code_stages`, `block_reason_codes`, `delay_reason_codes`, `block_resolution_codes` et `business_event_definitions`, puis enrichit l’historique avec l’étape, la source, l’identité lisible de l’acteur, les heures client/serveur et une clé d’idempotence.
+
+### Décisions non inventées
+
+- les 16 codes de prochaine action et leurs compatibilités sont chargés comme **candidats inactifs** ; ils n’accordent aucune capacité et restent réservés à la revue Administration/Facility Manager tant que le catalogue et le maintien du diagnostic dans Qualification ne sont pas explicitement validés ;
+- seuls six motifs de blocage, six motifs de retard et cinq motifs de résolution déjà qualifiés comme confirmés dans B2 sont actifs ; les recommandations `INTERNAL_DEPENDENCY`, `SITE_ACCESS_CONSTRAINT`, `ARBITRATION_OVERDUE`, `BLOCK_DECLARED_IN_ERROR` et les variantes `OTHER` concernées restent inactives ;
+- le catalogue d’événements actif couvre seulement les six types déjà produits par le trigger historique existant ; `ANOMALY_UPDATED` est explicitement exclu de la dernière activité métier ;
+- aucune action, échéance, déclaration de blocage, justification de retard ou exigence de preuve n’est créée ; aucune règle WILO n’est généralisée ;
+- aucun statut, rôle, périmètre, permission, seuil financier, verrou critique ou règle hors ligne n’est modifié.
+
+### Sécurité et provenance
+
+- RLS activée sur les six nouveaux objets exposés ; `anon` ne reçoit aucun accès ;
+- les profils authentifiés ne disposent que de `SELECT` et le verrou de première connexion continue de neutraliser l’accès métier ;
+- les agents ne voient que les codes actifs, tandis que l’Administration et le Facility Manager peuvent relire les candidats inactifs ;
+- aucun `INSERT`, `UPDATE` ou `DELETE` client n’est accordé sur `anomaly_history` ;
+- chaque nouvel événement produit par `record_anomaly_history()` reçoit sa définition, son étape, sa table et son enregistrement source, son acteur et l’heure serveur ;
+- l’index d’idempotence empêche l’enregistrement en double d’un événement porteur de la même clé.
+
+### Contrôles réalisés
+
+- reconstruction complète : **14 migrations**, seed idempotent et **7/7 suites pgTAP** réussies ;
+- nouveau test C1 : catalogues, candidats inactifs, provenance, idempotence, grants et RLS Administration/FM/agent réussis ;
+- lint du schéma `public` : aucune erreur ; les alertes générales de l’extension pgTAP sont hors schéma produit ;
+- inventaire Lot 0 : **32 tables**, 14 migrations et 7 fichiers SQL ;
+- cinq comptes Auth locaux, changement obligatoire du premier mot de passe, périmètres RLS, workflow critique et Storage privé : réussis ;
+- lint et build frontend réussis ; audit visuel **92/92**, personas **38/38**, authentification **20/20**, AntiZombieSummary **11/11**, résilience **12/12**, hors ligne **17/17**, polices HTTP 200 ;
+- aucun secret, appel Supabase distant, publication ou modification du dossier `tmp/`.
+
+- **Suite proposée :** soumettre le catalogue C1 à validation métier. Après validation, ouvrir C2 sur l’échéance canonique historisée, puis C3 sur la prochaine action enregistrée. Le raccordement de `AntiZombieSummary` reste différé jusqu’à l’existence de toutes les sources canoniques nécessaires.
+
 ## DEV-018 — Raccordement des checkpoints DESIGN-033 à DESIGN-039 au socle privé
 
 - **Date :** 30 août 2026
