@@ -179,42 +179,173 @@ export type Database = {
           },
         ]
       }
+      anomaly_deadlines: {
+        Row: {
+          anomaly_id: string
+          base_version_no: number
+          created_at: string
+          created_by_profile_id: string | null
+          due_at: string
+          id: string
+          idempotency_key: string
+          justification: string
+          origin: string
+          previous_deadline_id: string | null
+          sla_rule_id: string | null
+          source_kind: string
+          superseded_at: string | null
+          superseded_by_deadline_id: string | null
+          superseded_by_profile_id: string | null
+          workflow_stage_id: string
+        }
+        Insert: {
+          anomaly_id: string
+          base_version_no: number
+          created_at?: string
+          created_by_profile_id?: string | null
+          due_at: string
+          id?: string
+          idempotency_key: string
+          justification: string
+          origin: string
+          previous_deadline_id?: string | null
+          sla_rule_id?: string | null
+          source_kind: string
+          superseded_at?: string | null
+          superseded_by_deadline_id?: string | null
+          superseded_by_profile_id?: string | null
+          workflow_stage_id: string
+        }
+        Update: {
+          anomaly_id?: string
+          base_version_no?: number
+          created_at?: string
+          created_by_profile_id?: string | null
+          due_at?: string
+          id?: string
+          idempotency_key?: string
+          justification?: string
+          origin?: string
+          previous_deadline_id?: string | null
+          sla_rule_id?: string | null
+          source_kind?: string
+          superseded_at?: string | null
+          superseded_by_deadline_id?: string | null
+          superseded_by_profile_id?: string | null
+          workflow_stage_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anomaly_deadlines_anomaly_id_fkey"
+            columns: ["anomaly_id"]
+            isOneToOne: false
+            referencedRelation: "anomalies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_deadlines_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_deadlines_previous_deadline_id_fkey"
+            columns: ["previous_deadline_id"]
+            isOneToOne: false
+            referencedRelation: "anomaly_deadlines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_deadlines_sla_rule_id_fkey"
+            columns: ["sla_rule_id"]
+            isOneToOne: false
+            referencedRelation: "sla_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_deadlines_superseded_by_deadline_id_fkey"
+            columns: ["superseded_by_deadline_id"]
+            isOneToOne: false
+            referencedRelation: "anomaly_deadlines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_deadlines_superseded_by_profile_id_fkey"
+            columns: ["superseded_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_deadlines_workflow_stage_id_fkey"
+            columns: ["workflow_stage_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       anomaly_history: {
         Row: {
+          actor_label_snapshot: string | null
           actor_profile_id: string | null
           anomaly_id: string
           change_set: Json
+          client_occurred_at: string | null
           comment: string | null
+          event_definition_id: string | null
           event_type: string
           from_status_id: string | null
           id: string
+          idempotency_key: string | null
           occurred_at: string
+          server_received_at: string
+          source_record_id: string | null
+          source_table: string | null
           to_status_id: string | null
           transaction_id: number
+          workflow_stage_id: string | null
         }
         Insert: {
+          actor_label_snapshot?: string | null
           actor_profile_id?: string | null
           anomaly_id: string
           change_set?: Json
+          client_occurred_at?: string | null
           comment?: string | null
+          event_definition_id?: string | null
           event_type: string
           from_status_id?: string | null
           id?: string
+          idempotency_key?: string | null
           occurred_at?: string
+          server_received_at?: string
+          source_record_id?: string | null
+          source_table?: string | null
           to_status_id?: string | null
           transaction_id?: number
+          workflow_stage_id?: string | null
         }
         Update: {
+          actor_label_snapshot?: string | null
           actor_profile_id?: string | null
           anomaly_id?: string
           change_set?: Json
+          client_occurred_at?: string | null
           comment?: string | null
+          event_definition_id?: string | null
           event_type?: string
           from_status_id?: string | null
           id?: string
+          idempotency_key?: string | null
           occurred_at?: string
+          server_received_at?: string
+          source_record_id?: string | null
+          source_table?: string | null
           to_status_id?: string | null
           transaction_id?: number
+          workflow_stage_id?: string | null
         }
         Relationships: [
           {
@@ -232,6 +363,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "anomaly_history_event_definition_id_fkey"
+            columns: ["event_definition_id"]
+            isOneToOne: false
+            referencedRelation: "business_event_definitions"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "anomaly_history_from_status_id_fkey"
             columns: ["from_status_id"]
             isOneToOne: false
@@ -243,6 +381,13 @@ export type Database = {
             columns: ["to_status_id"]
             isOneToOne: false
             referencedRelation: "status_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_history_workflow_stage_id_fkey"
+            columns: ["workflow_stage_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_stages"
             referencedColumns: ["id"]
           },
         ]
@@ -299,6 +444,126 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      block_reason_codes: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          requires_comment: boolean
+          sort_order: number
+          source_document: string
+          updated_at: string
+          validation_status: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          requires_comment?: boolean
+          sort_order?: number
+          source_document: string
+          updated_at?: string
+          validation_status?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          requires_comment?: boolean
+          sort_order?: number
+          source_document?: string
+          updated_at?: string
+          validation_status?: string
+        }
+        Relationships: []
+      }
+      block_resolution_codes: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          requires_comment: boolean
+          sort_order: number
+          source_document: string
+          updated_at: string
+          validation_status: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          requires_comment?: boolean
+          sort_order?: number
+          source_document: string
+          updated_at?: string
+          validation_status?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          requires_comment?: boolean
+          sort_order?: number
+          source_document?: string
+          updated_at?: string
+          validation_status?: string
+        }
+        Relationships: []
+      }
+      business_event_definitions: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          is_activity: boolean
+          is_sensitive: boolean
+          label: string
+          sort_order: number
+          source_document: string
+          updated_at: string
+          validation_status: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_activity?: boolean
+          is_sensitive?: boolean
+          label: string
+          sort_order?: number
+          source_document: string
+          updated_at?: string
+          validation_status?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_activity?: boolean
+          is_sensitive?: boolean
+          label?: string
+          sort_order?: number
+          source_document?: string
+          updated_at?: string
+          validation_status?: string
+        }
+        Relationships: []
       }
       categories: {
         Row: {
@@ -458,6 +723,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      delay_reason_codes: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          requires_comment: boolean
+          sort_order: number
+          source_document: string
+          updated_at: string
+          validation_status: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          requires_comment?: boolean
+          sort_order?: number
+          source_document: string
+          updated_at?: string
+          validation_status?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          requires_comment?: boolean
+          sort_order?: number
+          source_document?: string
+          updated_at?: string
+          validation_status?: string
+        }
+        Relationships: []
       }
       equipment: {
         Row: {
@@ -688,6 +992,105 @@ export type Database = {
             columns: ["work_order_id"]
             isOneToOne: false
             referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      next_action_code_stages: {
+        Row: {
+          action_code_id: string
+          created_at: string
+          is_default_for_stage: boolean
+          workflow_stage_id: string
+        }
+        Insert: {
+          action_code_id: string
+          created_at?: string
+          is_default_for_stage?: boolean
+          workflow_stage_id: string
+        }
+        Update: {
+          action_code_id?: string
+          created_at?: string
+          is_default_for_stage?: boolean
+          workflow_stage_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "next_action_code_stages_action_code_id_fkey"
+            columns: ["action_code_id"]
+            isOneToOne: false
+            referencedRelation: "next_action_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "next_action_code_stages_workflow_stage_id_fkey"
+            columns: ["workflow_stage_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      next_action_codes: {
+        Row: {
+          code: string
+          created_at: string
+          created_by_profile_id: string | null
+          description: string
+          id: string
+          is_active: boolean
+          label: string
+          requires_comment: boolean
+          sort_order: number
+          source_document: string
+          updated_at: string
+          updated_by_profile_id: string | null
+          validation_status: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by_profile_id?: string | null
+          description: string
+          id?: string
+          is_active?: boolean
+          label: string
+          requires_comment?: boolean
+          sort_order?: number
+          source_document: string
+          updated_at?: string
+          updated_by_profile_id?: string | null
+          validation_status?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by_profile_id?: string | null
+          description?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          requires_comment?: boolean
+          sort_order?: number
+          source_document?: string
+          updated_at?: string
+          updated_by_profile_id?: string | null
+          validation_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "next_action_codes_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "next_action_codes_updated_by_profile_id_fkey"
+            columns: ["updated_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -957,8 +1360,8 @@ export type Database = {
           source_notes: string | null
           source_row: string | null
           source_system: string
-          updated_at: string
           temporary_password_set_at: string | null
+          updated_at: string
           vendor_id: string | null
         }
         Insert: {
@@ -976,8 +1379,8 @@ export type Database = {
           source_notes?: string | null
           source_row?: string | null
           source_system?: string
-          updated_at?: string
           temporary_password_set_at?: string | null
+          updated_at?: string
           vendor_id?: string | null
         }
         Update: {
@@ -995,8 +1398,8 @@ export type Database = {
           source_notes?: string | null
           source_row?: string | null
           source_system?: string
-          updated_at?: string
           temporary_password_set_at?: string | null
+          updated_at?: string
           vendor_id?: string | null
         }
         Relationships: [

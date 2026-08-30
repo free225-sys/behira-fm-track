@@ -2,6 +2,39 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-021 — C2 local : échéance canonique historisée
+
+- **Date :** 30 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté et vérifié localement — non publié, non appliqué à distance
+- **Source métier :** validation du lot B documentaire et séquence Qualification confirmée dans DEV-020
+- **Périmètre :** échéances existantes du dossier uniquement ; aucun nouveau délai, statut, rôle, droit, écran ou calcul métier
+
+La table `anomaly_deadlines` porte désormais une seule échéance active par dossier. Elle reprend exclusivement les deux instantanés SLA existants : `qualification_due_at` pour Constat/Qualification, puis `intervention_due_at` pour Décision/Intervention/Preuve. Aucun délai de devis, preuve, réserve ou arbitrage n’est inventé. Les dossiers préexistants sont repris sans recalcul ; les dossiers clôturés ou sans échéance fiable ne reçoivent aucune valeur artificielle.
+
+Chaque création, remplacement et fin d’échéance produit un événement métier dans `anomaly_history`. L’historique conserve l’ancienne et la nouvelle valeur, l’ancienne et la nouvelle étape, l’auteur, l’origine automatique, la justification, la source et une clé d’idempotence. Une transition d’étape crée une nouvelle version liée à la précédente, même lorsque l’heure limite reste identique. Une clôture termine la version active sans effacer les versions antérieures.
+
+Les anciennes colonnes SLA restent temporairement disponibles aux consommateurs existants, mais leur modification directe après création est refusée : aucun recalcul ou changement silencieux n’est possible. Le futur raccordement applicatif devra lire l’échéance active depuis `anomaly_deadlines` avant de retirer cette compatibilité ; C2 ne crée pas encore de commande manuelle de report d’échéance.
+
+### Sécurité et performance
+
+- RLS active ; aucun droit `anon` ; les profils authentifiés disposent uniquement de `SELECT` dans le périmètre des dossiers déjà autorisés par `can_access_anomaly()` ;
+- aucun droit client d’insertion, modification ou suppression ; les écritures sont réalisées par les triggers internes, dont l’exécution directe est révoquée ;
+- unicité partielle garantissant une seule échéance active par dossier ; index de timeline, étape/échéance et toutes les clés étrangères ;
+- verrouillage de la version active pendant son remplacement et ordre de traitement déterministe pour la reprise initiale.
+
+### Contrôles réalisés
+
+- reconstruction complète : **16 migrations**, seed idempotent et **8/8 suites pgTAP** réussies ;
+- recette C2 : instantané SLA initial, transitions Constat → Qualification → Intervention, liens entre versions, refus d’un changement silencieux, unicité active, clôture et conservation historique, grants et RLS agent/Facility Manager ;
+- lint du schéma `public` : aucune erreur ; inventaire Lot 0 : **33 tables / 16 migrations / 8 tests SQL** ;
+- cinq comptes Auth locaux, changement obligatoire du premier mot de passe, périmètres RLS, workflow persistant critique et Storage privé : réussis ;
+- audit visuel **92/92**, personas **38/38**, authentification **20/20**, AntiZombieSummary **11/11**, hors ligne **17/17**, résilience **12/12**, lint et build réussis ;
+- aucune écriture Supabase distante, aucun secret, aucune publication et aucune modification du dossier `tmp/`.
+
+- **Limite explicite :** l’échéance n’est pas encore raccordée à l’interface ; celle-ci continue de lire les instantanés historiques jusqu’au lot de projection prévu. La modification manuelle justifiée reste hors périmètre tant que sa commande transactionnelle n’est pas validée.
+- **Suite proposée :** C3 local additif — enregistrer la prochaine action au niveau du dossier avec le catalogue Qualification validé, commentaire facultatif et commentaire obligatoire pour `OTHER`, sans créer de nouvelle étape de workflow.
+
 ## DEV-020 — Validation de la séquence Qualification
 
 - **Date :** 30 août 2026

@@ -65,9 +65,9 @@ begin
     raise exception 'C1 block resolution catalogue counts are incorrect';
   end if;
 
-  if (select count(*) from public.business_event_definitions) <> 6
-    or (select count(*) from public.business_event_definitions where is_activity) <> 5 then
-    raise exception 'Only existing history event kinds may be active in C1';
+  if (select count(*) from public.business_event_definitions) <> 9
+    or (select count(*) from public.business_event_definitions where is_activity) <> 8 then
+    raise exception 'C1 and C2 history event catalogues are incomplete';
   end if;
 
   if (select count(*) from public.next_action_code_stages) <> 29 then
@@ -111,6 +111,7 @@ begin
   into v_history, v_event, v_stage
   from public.anomaly_history h
   where h.anomaly_id = v_anomaly
+    and h.source_table = 'anomalies'
   order by h.occurred_at desc, h.id desc
   limit 1;
 
