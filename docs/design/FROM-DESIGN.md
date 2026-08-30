@@ -8,6 +8,13 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 | id | date | sujet | attendu de | bloque |
 | --- | --- | --- | --- | --- |
+| DESIGN-039 | 2026-08-30 | Rondes approfondies : un rail, un score, pas de bandeau doublon | Wilkam | — |
+| DESIGN-038 | 2026-08-30 | Rondes / Surpresseur : plus de bande navy, étape pétrole | Wilkam | — |
+| DESIGN-037 | 2026-08-30 | Destinations Plus : un titre, intro plate, onglet pétrole | Wilkam | — |
+| DESIGN-036 | 2026-08-30 | Dossier central : une navy, un cycle, action claire | Wilkam | — |
+| DESIGN-035 | 2026-08-30 | Cohérence des destinations : un sujet, une page | Wilkam | — |
+| DESIGN-034 | 2026-08-30 | Menu compact sans double bordure ; onglet actif pétrole | Wilkam | — |
+| DESIGN-033 | 2026-08-30 | Porte d’authentification : chrome unique, briefing clair | Wilkam | — |
 | DESIGN-032 | 2026-08-29 | Bandeau contexte lisible ; score KPI teal | Wilkam | — |
 | DESIGN-031 | 2026-08-29 | Ruban 3 files lisible ; accent teal (DEC-013) | Wilkam | DEC-013 |
 | DESIGN-030 | 2026-08-29 | Onglets compact : 4 files + 3 codes + score à droite | Wilkam | — |
@@ -41,6 +48,115 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 ---
 
+## DESIGN-039 — Rondes approfondies
+
+- **Date :** 30 août 2026
+- **Auteur :** Revue design
+- **Statut :** Livré dans le miroir
+- **Périmètre :** Accueil Agente et destination Rondes — cinq étapes, mesures et seuils inchangés
+
+Après DESIGN-038, deux doublons restaient.
+
+- Accueil Agente : bandeau 4 KPI retiré ; Terrain / Administratif porte le sujet.
+- Surpresseur : le score 78 n’apparaît plus dans le hero, uniquement dans la carte WILO (état, variation, fraîcheur, facteurs).
+- Les cinq étapes tiennent dans un rail unique, comme le menu compact.
+- Champs de mesure et zone en cours : tokens `--brand-strong` / `--teal`, plus de `#17334f`.
+
+---
+
+## DESIGN-038 — Rondes / Surpresseur dans le même chrome
+
+
+- **Date :** 30 août 2026
+- **Auteur :** Revue design
+- **Statut :** Livré dans le miroir
+- **Périmètre :** destination Rondes (Surpresseur + saisie directe) et switch Terrain / Administratif — cinq étapes, seuils et scores inchangés
+
+Le Surpresseur restait un écran navy collé au bandeau, avec un score WILO sombre et des étapes bleu `#1e639e`.
+
+- Hero et carte score : surface claire (DEC-009).
+- Étape active, monogramme WI, icône de ronde, switch Terrain/Administratif : `--teal`.
+- H1 du catalogue seulement ; le H2 visuel est masqué.
+
+---
+
+## DESIGN-037 — Destinations Plus, même contrat de page
+
+
+- **Date :** 30 août 2026
+- **Auteur :** Revue design
+- **Statut :** Livré dans le miroir
+- **Périmètre :** Équipements, Coûts, Utilisateurs et droits, Seuils et paramètres — aucun droit, montant ou paramètre modifié
+
+Les quatre destinations Plus répétaient le H1 du catalogue dans un hero encadré.
+
+- H2 visuel retiré (conservé masqué pour `aria-labelledby`).
+- Intro : kicker + lede, sans carte.
+- Onglets Créer / Désactiver et profil actif : `--teal`, comme le reste de l’app.
+
+---
+
+## DESIGN-036 — Dossier central, même langage que l’app
+
+
+- **Date :** 30 août 2026
+- **Auteur :** Revue design
+- **Statut :** Livré dans le miroir
+- **Périmètre :** `Detail` — aucun statut, preuve, montant ou droit modifié
+
+Le dossier cessait d’être une page BEHIRA : carte d’action navy + bouton orange, cycle affiché deux fois, onglets `#173d66`.
+
+- **Action principale** : surface claire, CTA `--brand`. Plus de seconde bande navy (DEC-009) ni d’orange de marque (DEC-013).
+- **Cycle** : uniquement le stepper du haut. Mini-pipeline du diagnostic retiré.
+- **Onglets** : actif `--teal`, comme le ruban et le menu compact.
+- **Identité** : badge d’étape seulement (la priorité reste dans le hero).
+- **Mobile** : identité → action → constat, conformément à DESIGN.md §5.
+
+---
+
+## DESIGN-035 — Cohérence des destinations
+
+
+- **Date :** 30 août 2026
+- **Auteur :** Revue design
+- **Statut :** Livré dans le miroir
+- **Périmètre :** Accueil, Pilotage, Registre, Rondes — sans changer `navItems` ni les droits
+
+Chaque destination garde son sujet. Les doublons deviennent des aperçus + CTA :
+
+- Accueil FM : santé du bâtiment + remontées. Plus de bandeau opérationnel ni libellé « poste de pilotage ».
+- Accueil Administration : l’analytique complète quitte la page ; le score 82 ouvre Pilotage.
+- Pilotage / Parc : aperçu des modules à surveiller, catalogue dans Équipements.
+- Accueil Rondes & Assistance : plus de second formulaire de constat ; la saisie reste dans Rondes.
+- Registre : le H1 du catalogue suffit, plus de « Registre central ».
+
+Aucune destination n’est retirée du menu (DEC-002 / DEC-014).
+
+---
+
+## DESIGN-034 — Menu compact, actif pétrole
+
+
+- **Date :** 30 août 2026
+- **Auteur :** Revue design
+- **Statut :** Livré dans le miroir
+- **Périmètre :** navigation mobile/tablette, ruban AQ/SLA/PV
+
+Plus de trait supérieur + pastille (double bordure). L’item actif est un segment `--teal` (bleu pétrole DEC-013), texte blanc. Même remplissage sur l’onglet de file actif. Tablette haute : soulignement pétrole, sans second trait.
+
+---
+
+## DESIGN-033 — Porte d’authentification
+
+
+- **Date :** 30 août 2026
+- **Auteur :** Revue design
+- **Statut :** Livré dans le miroir
+- **Périmètre :** login, mot de passe oublié, invitation, changement obligatoire
+
+Le panneau navy plein écran et le dégradé décoratif quittent l’entrée. Une **seule bande chrome** (comme l’app) ouvre un canvas clair : briefing à gauche, formulaire et accès de démonstration à droite. Compte sélectionné = carte interne + monogramme inversé. Aucun changement d’identifiants, de rôles ni de session.
+
+---
 ## DESIGN-029 — Files sans masquage
 
 - **Date :** 29 août 2026

@@ -2,6 +2,47 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-018 — Raccordement des checkpoints DESIGN-033 à DESIGN-039 au socle privé
+
+- **Date :** 30 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté et vérifié localement — non publié
+- **Sources design :** `e2a3313`, `d95a206`, `0e8ccd1`, `50ee722`
+- **Branche privée :** `integration/design-p7b`
+- **Périmètre :** interface et documentation design uniquement ; aucune migration, règle métier, permission, donnée ou écriture Supabase distante
+
+Les sept checkpoints validés du miroir public sont maintenant raccordés à l’application privée sans remplacer ses parcours Supabase, son authentification réelle ni sa file hors ligne.
+
+### Raccordements réalisés
+
+- porte d’authentification ramenée à un chrome unique et clair, avec les mêmes mécanismes de session, de mot de passe oublié et de changement obligatoire ;
+- Accueil Facility Manager centré sur Santé & performance et renvoi explicite vers À traiter, sans ruban opérationnel dupliqué ;
+- menu compact et ruban AQ/SLA/PV avec état actif pétrole, sans double bordure ;
+- Pilotage / Parc réduit à un aperçu qui ouvre la destination Équipements ;
+- Registre avec un seul titre visuel ;
+- dossier central avec un seul cycle, une action principale claire et des onglets pétrole ;
+- destinations Équipements, Coûts, Utilisateurs et droits, Seuils et paramètres avec une seule hiérarchie de titre ;
+- accueil Rondes & Assistance sans second formulaire de constat, la saisie persistante restant dans Rondes ;
+- pilote Surpresseur sans seconde bande navy ni score dupliqué, avec cinq étapes et score WILO conservés dans leur carte dédiée.
+
+### Préservation du socle privé
+
+- les 13 migrations, RLS, rôles, permissions, statuts et seuil de `400 000 FCFA` sont inchangés ;
+- les rondes `GE-01`, `RND-LET` et `WILO-01`, les brouillons IndexedDB, la file de synchronisation et les preuves privées restent raccordés ;
+- le verrou critique, le changement obligatoire du premier mot de passe et les cinq périmètres métier restent actifs ;
+- aucune clé serveur, fixture réelle, publication ou appel Supabase distant n’est ajouté.
+
+### Contrôles réalisés
+
+- lint et build : réussis ;
+- audit visuel statique : **92/92** ; personas : **38/38** ; authentification : **20/20** ; AntiZombieSummary : **11/11** ; résilience : **12/12** ; hors ligne : **17/17** ;
+- polices Geist servies en HTTP 200 et console navigateur sans erreur ;
+- recette navigateur réelle à 390, 768, 1024 et 1440 px : aucun débordement horizontal, plancher visible à 12 px, états actifs pétrole, dossier mobile identité → action → constat, cinq étapes Surpresseur et score WILO unique ;
+- reconstruction Supabase locale : 13 migrations, seed, 6/6 suites pgTAP, cinq comptes Auth locaux, changement obligatoire du mot de passe, périmètres RLS, workflow critique et stockage privé réussis ;
+- lint du schéma `public` : aucune erreur.
+
+- **Suite proposée :** figer ce checkpoint d’intégration, puis ouvrir le prochain lot produit sur les sources canoniques de la continuité de traitement, sans publier avant une validation explicite.
+
 ## DEV-017 — P8 Release candidate : recette visuelle réelle et correctifs ciblés
 
 - **Date :** 30 août 2026

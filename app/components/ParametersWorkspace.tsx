@@ -30,7 +30,7 @@ export function ParametersWorkspace({ parameter, onOpenCosts }: {
     <header className="parameters-workspace-hero">
       <div>
         <p className="design-kicker">ADMINISTRATION</p>
-        <h2 id="parameters-workspace-title">Seuils et paramètres</h2>
+        <h2 id="parameters-workspace-title" className="visually-hidden">Seuils et paramètres</h2>
         <p>Consultez les règles actuellement justifiables. Une valeur sans source, historique ou autorité explicite n’est jamais présentée comme un paramètre actif.</p>
       </div>
       <Badge tone="neutral">LECTURE SEULE</Badge>

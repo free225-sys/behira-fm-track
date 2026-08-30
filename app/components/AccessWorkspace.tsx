@@ -49,7 +49,7 @@ export function AccessWorkspace({ users, audience }: {
     <header className="access-workspace-hero">
       <div>
         <p className="design-kicker">ADMINISTRATION</p>
-        <h2 id="access-workspace-title">Utilisateurs et droits</h2>
+        <h2 id="access-workspace-title" className="visually-hidden">Utilisateurs et droits</h2>
         <p>{audience === 'administration' ? 'Préparez la création ou la désactivation d’un accès. L’exécution réelle restera un traitement serveur sécurisé.' : 'Consultez les profils métier et proposez un rôle ou un périmètre. Seule l’Administration peut appliquer la modification.'}</p>
       </div>
       <Badge tone={audience === 'administration' ? 'blue' : 'neutral'}>{audience === 'administration' ? 'GESTION ADMINISTRATION' : 'PROPOSITION UNIQUEMENT'}</Badge>
