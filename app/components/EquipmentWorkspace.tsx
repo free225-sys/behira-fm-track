@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 
-import { Badge, Card, Field } from './ui';
+import { Badge, Card, Field, Select } from './ui';
 
 export type EquipmentWorkspaceItem = {
   code:string;
@@ -83,10 +83,10 @@ export function EquipmentWorkspace({ equipment }: { equipment:EquipmentWorkspace
           <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Code, libellé ou état" />
         </Field>
         <Field label="État enregistré">
-          <select value={stateFilter} onChange={(event) => setStateFilter(event.target.value)}>
+          <Select value={stateFilter} onChange={(event) => setStateFilter(event.target.value)}>
             <option value="all">Tous les états</option>
             {states.map((state) => <option key={state} value={state}>{state}</option>)}
-          </select>
+          </Select>
         </Field>
       </div>
 

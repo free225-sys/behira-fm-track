@@ -119,6 +119,7 @@ const checks = [
   ['Destinations Plus sans titre jumeau', equipmentWorkspace.includes('className="visually-hidden">Équipements') && costsWorkspace.includes('className="visually-hidden">Coûts') && accessWorkspace.includes('className="visually-hidden">Utilisateurs et droits') && parametersWorkspace.includes('className="visually-hidden">Seuils et paramètres') && finalDeclaration('.equipment-workspace-hero', 'background') === 'transparent' && finalDeclaration('.access-action-tabs button.active', 'background') === 'var(--teal)'],
   ['Rondes sans bande navy', page.includes('className="visually-hidden">Rondes') && finalDeclaration('.surpresseur-progress button.active', 'background') === 'var(--teal)' && finalDeclaration('.mission-switch button.active', 'background') === 'var(--teal)'],
   ['Rondes sans bandeau ni score dupliqué', !page.includes('todo="6 zones à parcourir"') && !page.includes('className="surpresseur-health"') && finalDeclaration('.surpresseur-progress', 'background') === 'var(--surface-muted)'],
+  ['Listes déroulantes Behira', page.includes('<Select') && !page.includes('<select') && costsWorkspace.includes('<Select') && accessWorkspace.includes('<Select') && finalDeclaration('.app-select-list button.is-selected', 'background') === 'var(--teal)'],
 ]
 
 for (const [label, ok] of checks) console.log(`${ok ? '✓' : '✗'} ${label}`)

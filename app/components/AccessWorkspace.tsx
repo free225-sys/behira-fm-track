@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from 'react';
 
-import { Badge, Button, Card, Field } from './ui';
+import { Badge, Button, Card, Field, Select } from './ui';
 
 export type AccessWorkspaceUser = {
   id:string;
@@ -85,11 +85,11 @@ export function AccessWorkspace({ users, audience }: {
           {audience === 'administration' && adminAction === 'create' ? <>
             <Field label="Nom complet"><input required value={name} onChange={(event) => setName(event.target.value)} placeholder="Prénom et nom" /></Field>
             <Field label="Email professionnel"><input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="nom@entreprise.com" /></Field>
-          </> : <Field label="Profil concerné"><select required value={selectedUserId} onChange={(event) => setSelectedUserId(event.target.value)}>{users.filter((user) => user.id !== 'administration').map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}</select></Field>}
+          </> : <Field label="Profil concerné"><Select required value={selectedUserId} onChange={(event) => setSelectedUserId(event.target.value)}>{users.filter((user) => user.id !== 'administration').map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}</Select></Field>}
 
           {(audience === 'facility' || adminAction === 'create') && <div className="access-form-grid">
-            <Field label={audience === 'facility' ? 'Rôle proposé' : 'Rôle'}><select value={role} onChange={(event) => setRole(event.target.value)}><option>Agent terrain</option><option>Facility Manager</option><option>Agente & assistante</option>{audience === 'administration' && <option>Administration</option>}</select></Field>
-            <Field label={audience === 'facility' ? 'Périmètre proposé' : 'Périmètre'}><select value={scope} onChange={(event) => setScope(event.target.value)}><option>Périmètre à confirmer</option><option>DEMO-GE</option><option>DEMO-EAU · DEMO-SSI · DEMO-ESP</option><option>DEMO-RND</option><option>Tous périmètres</option></select></Field>
+            <Field label={audience === 'facility' ? 'Rôle proposé' : 'Rôle'}><Select value={role} onChange={(event) => setRole(event.target.value)}><option>Agent terrain</option><option>Facility Manager</option><option>Agente & assistante</option>{audience === 'administration' && <option>Administration</option>}</Select></Field>
+            <Field label={audience === 'facility' ? 'Périmètre proposé' : 'Périmètre'}><Select value={scope} onChange={(event) => setScope(event.target.value)}><option>Périmètre à confirmer</option><option>DEMO-GE</option><option>DEMO-EAU · DEMO-SSI · DEMO-ESP</option><option>DEMO-RND</option><option>Tous périmètres</option></Select></Field>
           </div>}
 
           <Field label="Justification"><textarea required value={reason} onChange={(event) => setReason(event.target.value)} placeholder={audience === 'facility' ? 'Expliquez le besoin métier et le périmètre demandé.' : adminAction === 'create' ? 'Expliquez pourquoi cet accès doit être créé.' : 'Expliquez pourquoi cet accès doit être désactivé.'} /></Field>

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 
-import { Badge, Button, Card, Field } from './ui';
+import { Badge, Button, Card, Field, Select } from './ui';
 
 export type CostsWorkspaceItem = {
   id:string;
@@ -87,12 +87,12 @@ export function CostsWorkspace({ items, audience, threshold, onOpenDossier }: {
           <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Décision, anomalie, équipement…" />
         </Field>
         <Field label="Disponibilité du montant">
-          <select value={filter} onChange={(event) => setFilter(event.target.value as CostFilter)}>
+          <Select value={filter} onChange={(event) => setFilter(event.target.value as CostFilter)}>
             <option value="all">Tous les arbitrages</option>
             <option value="documented">Montant renseigné</option>
             <option value="above-threshold">Au-dessus du seuil</option>
             <option value="missing">Montant non renseigné</option>
-          </select>
+          </Select>
         </Field>
       </div>
 

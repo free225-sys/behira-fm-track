@@ -8,6 +8,7 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 | id | date | sujet | attendu de | bloque |
 | --- | --- | --- | --- | --- |
+| DESIGN-040 | 2026-08-30 | Listes déroulantes Behira, plus de bleu système | Wilkam | — |
 | DESIGN-039 | 2026-08-30 | Rondes approfondies : un rail, un score, pas de bandeau doublon | Wilkam | — |
 | DESIGN-038 | 2026-08-30 | Rondes / Surpresseur : plus de bande navy, étape pétrole | Wilkam | — |
 | DESIGN-037 | 2026-08-30 | Destinations Plus : un titre, intro plate, onglet pétrole | Wilkam | — |
@@ -48,7 +49,23 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 ---
 
+## DESIGN-040 — Listes déroulantes Behira
+
+- **Date :** 30 août 2026
+- **Auteur :** Revue design
+- **Statut :** Livré dans le miroir
+- **Périmètre visuel :** primitive `Select` — aucun métier, filtre ou statut modifié
+
+Le `<select>` natif ouvrait un panneau OS avec surlignage bleu électrique, hors tokens.
+
+- Primitive `Select` : déclencheur + liste portail, option active `--teal`.
+- Remplace tous les `<select>` produit (Rondes, registre, dossier, Coûts, Équipements, Droits).
+- Clavier : Entrée / flèche pour ouvrir, Échap pour fermer.
+
+---
+
 ## DESIGN-039 — Rondes approfondies
+
 
 - **Date :** 30 août 2026
 - **Auteur :** Revue design

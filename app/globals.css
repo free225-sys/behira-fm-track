@@ -2712,6 +2712,69 @@ button.executive-metric.is-link:hover{
   cursor:pointer;
 }
 
+/* DESIGN-040 — listes déroulantes Behira, plus de bleu système */
+.app-select{position:relative;min-width:0;width:100%}
+.app-select>button{
+  width:100%;
+  min-height:var(--control-height);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:0 10px 0 11px;
+  border:1px solid var(--border-strong);
+  border-radius:var(--radius-sm);
+  background:var(--surface);
+  color:var(--foreground);
+  font-size:var(--font-size-label);
+  font-weight:650;
+  text-align:left;
+  cursor:pointer;
+}
+.app-select>button>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.app-select>button>i{
+  width:7px;
+  height:7px;
+  flex:0 0 auto;
+  margin-bottom:3px;
+  border-right:2px solid var(--foreground-muted);
+  border-bottom:2px solid var(--foreground-muted);
+  transform:rotate(45deg);
+}
+.app-select.is-open>button{border-color:var(--teal)}
+.app-select.is-open>button>i{margin-bottom:0;margin-top:3px;transform:rotate(225deg)}
+.app-select-list{
+  position:fixed;
+  z-index:40;
+  max-height:240px;
+  margin:0;
+  padding:4px;
+  overflow:auto;
+  list-style:none;
+  border:1px solid var(--border);
+  border-radius:var(--radius-md);
+  background:var(--surface);
+}
+.app-select-list li{margin:0}
+.app-select-list button{
+  width:100%;
+  min-height:40px;
+  padding:8px 10px;
+  border:0;
+  border-radius:var(--radius-sm);
+  background:transparent;
+  color:var(--foreground);
+  font-size:var(--font-size-label);
+  font-weight:650;
+  text-align:left;
+  cursor:pointer;
+}
+.app-select-list button:hover{background:var(--surface-emphasis);color:var(--brand-strong)}
+.app-select-list button.is-selected{background:var(--teal);color:var(--brand-foreground)}
+.filter-bar .app-select{width:auto;min-width:148px}
+.detail-actions .app-select{width:auto;min-width:150px}
+
+
 
 
 
