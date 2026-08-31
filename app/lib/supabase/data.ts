@@ -12,6 +12,18 @@ export type OperationalStatus =
   | "En validation"
   | "Clôturée";
 
+export type OperationalProof = {
+  id: string;
+  reference: string;
+  proofType: string;
+  storagePath: string | null;
+  mimeType: string | null;
+  capturedAt: string;
+  verificationStatus: "pending" | "accepted" | "rejected";
+  rejectionReason: string | null;
+  reviewComment: string | null;
+};
+
 export type OperationalAnomaly = {
   id: string;
   databaseId: string;
@@ -26,6 +38,7 @@ export type OperationalAnomaly = {
   delayed: boolean;
   proof: boolean;
   proofPending: boolean;
+  proofs: OperationalProof[];
   description: string;
   antiZombieSummary?: AntiZombieSummaryData;
 };
@@ -53,6 +66,7 @@ export type OperationalWorkOrder = {
   status: "À faire" | "En cours" | "Terminé";
   proof: boolean;
   proofPending: boolean;
+  proofs: OperationalProof[];
   delayed: boolean;
   detail: string;
 };
@@ -124,7 +138,7 @@ export async function loadOperationalSnapshot(
     client.from("priority_definitions").select("id, code"),
     client.from("status_definitions").select("id, code, is_closed"),
     client.from("vendors").select("id, code, legal_name, operational_alias"),
-    client.from("proofs").select("anomaly_id, verification_status"),
+    client.from("proofs").select("id, reference, anomaly_id, proof_type, storage_bucket, storage_path, mime_type, captured_at, verification_status, rejection_reason, review_comment, created_at").order("created_at", { ascending: false }),
     client.rpc("has_permission", { p_permission_code: "upload_vendor_intervention_report" }),
     client.from("anti_zombie_summary_v").select("*"),
     client
@@ -157,6 +171,22 @@ export async function loadOperationalSnapshot(
   const vendorById = new Map((vendorResult.data ?? []).map((item) => [item.id, item]));
   const provenAnomalies = new Set((proofResult.data ?? []).filter((item) => item.verification_status === "accepted").map((item) => item.anomaly_id).filter(Boolean));
   const pendingProofAnomalies = new Set((proofResult.data ?? []).filter((item) => item.verification_status === "pending").map((item) => item.anomaly_id).filter(Boolean));
+  const proofsByAnomalyId = new Map<string, OperationalProof[]>();
+  for (const proof of proofResult.data ?? []) {
+    if (!proof.anomaly_id || proof.storage_bucket !== "anomaly-proofs") continue;
+    const item = {
+      id: proof.id,
+      reference: proof.reference,
+      proofType: proof.proof_type,
+      storagePath: proof.storage_path,
+      mimeType: proof.mime_type,
+      capturedAt: proof.captured_at ?? proof.created_at,
+      verificationStatus: proof.verification_status,
+      rejectionReason: proof.rejection_reason,
+      reviewComment: proof.review_comment,
+    } satisfies OperationalProof;
+    proofsByAnomalyId.set(proof.anomaly_id, [...(proofsByAnomalyId.get(proof.anomaly_id) ?? []), item]);
+  }
   const antiZombieByAnomalyId = indexCanonicalAntiZombieSummaries(
     antiZombieResult.data ?? [],
     anomalyResult.data ?? [],
@@ -188,6 +218,7 @@ export async function loadOperationalSnapshot(
       delayed: mappedStatus !== "Clôturée" && Boolean(dueAt && new Date(dueAt).getTime() < Date.now()),
       proof: provenAnomalies.has(item.id),
       proofPending: pendingProofAnomalies.has(item.id),
+      proofs: proofsByAnomalyId.get(item.id) ?? [],
       description: item.description,
       antiZombieSummary: antiZombieByAnomalyId.get(item.id),
     } satisfies OperationalAnomaly;
@@ -229,6 +260,7 @@ export async function loadOperationalSnapshot(
       status,
       proof: anomaly.proof,
       proofPending: anomaly.proofPending,
+      proofs: anomaly.proofs,
       delayed: !completed && Boolean(item.due_at && new Date(item.due_at).getTime() < Date.now()),
       detail: item.instructions,
     } satisfies OperationalWorkOrder];

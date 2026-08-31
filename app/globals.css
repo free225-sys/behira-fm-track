@@ -1077,6 +1077,138 @@ button:focus,input:focus,select:focus,textarea:focus{outline:none}
   }
 }
 
+/* C9-FIX-04 — consultation sécurisée des preuves privées */
+.evidence-list{
+  display:grid;
+  gap:var(--space-2);
+}
+.evidence-file-record{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto auto;
+  align-items:center;
+}
+.evidence-file-record>div>em{
+  display:block;
+  margin-top:var(--space-1);
+  color:var(--danger-text);
+  font-size:var(--font-size-label);
+  font-style:normal;
+}
+.evidence-consult-button{
+  min-width:104px;
+  min-height:44px;
+}
+.proof-preview-error{
+  display:grid;
+  gap:var(--space-1);
+  margin-top:var(--space-3);
+  padding:var(--space-3);
+  border:1px solid var(--danger-border);
+  border-radius:var(--radius-sm);
+  background:var(--danger-surface);
+  color:var(--danger-text);
+  font-size:var(--font-size-label);
+}
+.proof-preview{
+  display:grid;
+  gap:var(--space-3);
+  margin-top:var(--space-3);
+  padding:var(--space-4);
+  border:1px solid var(--border);
+  border-radius:var(--radius-md);
+  background:var(--surface-muted);
+}
+.proof-preview-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:var(--space-3);
+}
+.proof-preview-head b,
+.proof-preview-head small{
+  display:block;
+}
+.proof-preview-head b{font-size:var(--font-size-body)}
+.proof-preview-head small{
+  margin-top:var(--space-1);
+  color:var(--foreground-muted);
+  font-size:var(--font-size-label);
+}
+.proof-preview img{
+  width:100%;
+  max-height:520px;
+  object-fit:contain;
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  background:var(--surface);
+}
+.proof-document-preview{
+  display:flex;
+  align-items:center;
+  gap:var(--space-3);
+  padding:var(--space-4);
+  border:1px dashed var(--border-strong);
+  border-radius:var(--radius-sm);
+  background:var(--surface);
+}
+.proof-document-preview>span{
+  display:grid;
+  place-items:center;
+  width:48px;
+  height:48px;
+  flex:0 0 auto;
+  border-radius:var(--radius-sm);
+  background:var(--danger-surface);
+  color:var(--danger-text);
+  font-size:var(--font-size-label);
+  font-weight:850;
+}
+.proof-document-preview p{
+  margin:var(--space-1) 0 0;
+  color:var(--foreground-muted);
+  font-size:var(--font-size-label);
+}
+.proof-open-link{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  justify-self:start;
+  min-height:44px;
+  text-decoration:none;
+}
+.task-proof-dialog{
+  width:min(820px,calc(100vw - 32px));
+}
+.task-proof-dialog>img{
+  width:100%;
+  max-height:520px;
+  object-fit:contain;
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  background:var(--surface-muted);
+}
+.task-proof-dialog .modal-actions a{
+  flex:1;
+}
+@media (max-width:700px){
+  .evidence-file-record{
+    grid-template-columns:auto minmax(0,1fr);
+  }
+  .evidence-file-record>.badge,
+  .evidence-consult-button{
+    grid-column:1 / -1;
+    width:100%;
+  }
+  .proof-preview-head{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+  .proof-preview-head button,
+  .proof-open-link{
+    width:100%;
+  }
+}
+
 /* Badges : forme canonique en fin de feuille (DESIGN-023 / DESIGN-024). */
 
 .auth-brand-panel{

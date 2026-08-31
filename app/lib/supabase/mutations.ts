@@ -187,6 +187,19 @@ export async function verifyLatestAnomalyProof(
   return asRpcResult(data);
 }
 
+export async function createAnomalyProofConsultationUrl(
+  client: SupabaseClient<Database>,
+  storagePath: string,
+) {
+  if (!storagePath.trim()) throw new Error("Le fichier de preuve n’est pas relié au dossier.");
+  const { data, error } = await client.storage
+    .from(PROOF_BUCKET)
+    .createSignedUrl(storagePath, 5 * 60);
+  if (error) throw error;
+  if (!data.signedUrl) throw new Error("Le lien temporaire de consultation n’a pas été généré.");
+  return data.signedUrl;
+}
+
 export async function uploadVendorInterventionReport(
   client: SupabaseClient<Database>,
   input: {

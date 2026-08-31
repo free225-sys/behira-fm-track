@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import Image from 'next/image';
 
 import { AntiZombieSummary } from './components/AntiZombieSummary';
 import type { AntiZombieSummaryData } from './components/anti-zombie-contract';
@@ -15,8 +16,8 @@ import { WorkflowAnalytics } from './components/WorkflowAnalytics';
 import { getAuthenticatedProfileGate, resolveAuthenticatedPersona } from './lib/supabase/auth';
 import { getBrowserSupabaseClient, setSupabaseRememberPreference } from './lib/supabase/client';
 import { getSupabaseIntegrationState, isSupabaseIntegrationEnabled } from './lib/supabase/config';
-import { loadOperationalSnapshot, type OperationalVendor, type OperationalWorkOrder } from './lib/supabase/data';
-import { advanceAnomalyWorkflow, uploadVendorInterventionReport, verifyLatestAnomalyProof } from './lib/supabase/mutations';
+import { loadOperationalSnapshot, type OperationalProof, type OperationalVendor, type OperationalWorkOrder } from './lib/supabase/data';
+import { advanceAnomalyWorkflow, createAnomalyProofConsultationUrl, uploadVendorInterventionReport, verifyLatestAnomalyProof } from './lib/supabase/mutations';
 import { useOfflineSync } from './lib/offline/useOfflineSync';
 
 type View = 'workspace' | 'dashboard' | 'registry' | 'equipment' | 'costs' | 'access' | 'settings' | 'manager' | 'report' | 'detail';
@@ -106,6 +107,7 @@ type Anomaly = {
   proof: boolean;
   proofPending?: boolean;
   proofQueued?: boolean;
+  proofs?: OperationalProof[];
   description: string;
   antiZombieSummary?: AntiZombieSummaryData;
 };
@@ -941,6 +943,13 @@ export default function Home() {
       setMutationBusy(false);
     }
   };
+  const consultProof = async (proof:OperationalProof) => {
+    if (session?.mode !== 'supabase' || dataState !== 'live') {
+      throw new Error('Consultation réelle indisponible hors de la session métier connectée.');
+    }
+    if (!proof.storagePath) throw new Error('Le fichier de preuve n’est pas relié au dossier.');
+    return createAnomalyProofConsultationUrl(getBrowserSupabaseClient(), proof.storagePath);
+  };
   const verifyProof = async (decision:'accepted'|'rejected', comment:string) => {
     setMutationBusy(true);
     try {
@@ -1178,7 +1187,7 @@ export default function Home() {
         </header>
 
         <div className="content">
-          {view === 'workspace' && <PersonaWorkspace persona={persona} anomalies={anomalies} equipment={equipmentItems} vendors={vendorReferences} workOrders={workOrders} dataState={dataState} canUploadVendorReport={effectiveCanUploadVendorReport} vendorReportBusy={mutationBusy} onVendorReport={persistVendorReport} onWorkOrderTransition={persistAssignedIntervention} onWorkOrderProof={persistAssignedProof} workOrderBusy={mutationBusy} escalations={escalations} fieldRequests={fieldRequests} onEscalationDecision={decideEscalation} onEscalateToDirection={escalateToDirection} onFieldRequest={submitFieldRequest} onOpen={(id) => openDetail(id, 'workspace')} onNavigate={navigate} flash={flash} />}
+          {view === 'workspace' && <PersonaWorkspace persona={persona} anomalies={anomalies} equipment={equipmentItems} vendors={vendorReferences} workOrders={workOrders} dataState={dataState} canUploadVendorReport={effectiveCanUploadVendorReport} vendorReportBusy={mutationBusy} onVendorReport={persistVendorReport} onWorkOrderTransition={persistAssignedIntervention} onWorkOrderProof={persistAssignedProof} onConsultProof={consultProof} workOrderBusy={mutationBusy} escalations={escalations} fieldRequests={fieldRequests} onEscalationDecision={decideEscalation} onEscalateToDirection={escalateToDirection} onFieldRequest={submitFieldRequest} onOpen={(id) => openDetail(id, 'workspace')} onNavigate={navigate} flash={flash} />}
           {view === 'dashboard' && <Dashboard anomalies={anomalies} equipment={equipmentItems} escalations={escalations} audience={personaId === 'administration' ? 'administration' : 'facility'} onOpen={openDetail} onNavigate={navigate} />}
           {view === 'registry' && <Registry anomalies={filtered} query={query} setQuery={setQuery} priority={priorityFilter} setPriority={setPriorityFilter} status={statusFilter} setStatus={setStatusFilter} onOpen={(id) => openDetail(id, 'registry')} />}
           {view === 'equipment' && <EquipmentWorkspace equipment={equipmentItems} />}
@@ -1187,7 +1196,7 @@ export default function Home() {
           {view === 'settings' && <ParametersWorkspace parameter={FINANCIAL_DECISION_PARAMETER} onOpenCosts={() => navigate('costs')} />}
           {view === 'manager' && <Manager anomalies={anomalies} tab={managerTab} setTab={setManagerTab} onOpen={(id) => openDetail(id, 'manager')} />}
           {view === 'report' && <Report persona={persona} onNavigate={navigate} persistenceEnabled={session.mode === 'supabase'} offlineSync={offlineSync} flash={flash} />}
-          {view === 'detail' && <Detail key={`${selected.id}-${selected.status}-${selected.proof}-${selected.proofPending}-${selected.proofQueued}`} anomaly={selected} decisionAmount={escalations.find((item) => item.anomaly === selected.id)?.amount ?? null} persistenceMode={session.mode === 'supabase' && dataState === 'live' ? 'server' : 'demo'} persistenceEnabled={session.mode === 'supabase'} offlineSync={offlineSync} readOnly={personaId === 'administration'} canVerify={personaId === 'facility' && session.mode === 'supabase'} busy={mutationBusy} onBack={() => navigate(previousView)} onStatus={(status) => void persistWorkflowStatus(status)} onProof={persistProof} onVerify={verifyProof} />}
+          {view === 'detail' && <Detail key={`${selected.id}-${selected.status}-${selected.proof}-${selected.proofPending}-${selected.proofQueued}`} anomaly={selected} decisionAmount={escalations.find((item) => item.anomaly === selected.id)?.amount ?? null} persistenceMode={session.mode === 'supabase' && dataState === 'live' ? 'server' : 'demo'} persistenceEnabled={session.mode === 'supabase'} offlineSync={offlineSync} readOnly={personaId === 'administration'} canVerify={personaId === 'facility' && session.mode === 'supabase'} busy={mutationBusy} onBack={() => navigate(previousView)} onStatus={(status) => void persistWorkflowStatus(status)} onProof={persistProof} onConsultProof={consultProof} onVerify={verifyProof} />}
         </div>
       </main>
       {toast && <div className={`toast ${/impossible|non enregistrée/i.test(toast) ? 'toast-error' : ''}`} role="status"><span>{/impossible|non enregistrée/i.test(toast) ? '!' : '✓'}</span>{toast}</div>}
@@ -1196,7 +1205,7 @@ export default function Home() {
   );
 }
 
-function PersonaWorkspace({ persona, anomalies, equipment, vendors, workOrders, dataState, canUploadVendorReport, vendorReportBusy, onVendorReport, onWorkOrderTransition, onWorkOrderProof, workOrderBusy, escalations, fieldRequests, onEscalationDecision, onEscalateToDirection, onFieldRequest, onOpen, onNavigate, flash }: {
+function PersonaWorkspace({ persona, anomalies, equipment, vendors, workOrders, dataState, canUploadVendorReport, vendorReportBusy, onVendorReport, onWorkOrderTransition, onWorkOrderProof, onConsultProof, workOrderBusy, escalations, fieldRequests, onEscalationDecision, onEscalateToDirection, onFieldRequest, onOpen, onNavigate, flash }: {
   persona:Persona;
   anomalies:Anomaly[];
   equipment:EquipmentItem[];
@@ -1208,6 +1217,7 @@ function PersonaWorkspace({ persona, anomalies, equipment, vendors, workOrders, 
   onVendorReport:(input:{ anomalyReference:string; vendorCode:string; file:File; reportType:'intervention_report'|'pv'|'quote'|'photo_bundle'; reportDate:string; summary:string; reserveNotes?:string; costAmount?:number })=>Promise<void>;
   onWorkOrderTransition:(order:OperationalWorkOrder,target:'En intervention'|'En validation',comment:string)=>Promise<boolean>;
   onWorkOrderProof:(order:OperationalWorkOrder,file:File)=>Promise<boolean>;
+  onConsultProof:(proof:OperationalProof)=>Promise<string>;
   workOrderBusy:boolean;
   escalations:Escalation[];
   fieldRequests:FieldRequest[];
@@ -1220,7 +1230,7 @@ function PersonaWorkspace({ persona, anomalies, equipment, vendors, workOrders, 
 }) {
   if (persona.id === 'administration') return <DirectionWorkspace anomalies={anomalies} escalations={escalations} onDecision={onEscalationDecision} onOpen={onOpen} onNavigate={onNavigate} />;
   if (persona.id === 'facility') return <FacilityManagerWorkspace anomalies={anomalies} equipment={equipment} escalations={escalations} fieldRequests={fieldRequests} onEscalate={onEscalateToDirection} onOpen={onOpen} onNavigate={onNavigate} />;
-  if (persona.id === 'electricite' || persona.id === 'eau_incendie') return <AgentWorkspace key={persona.id} persona={persona} anomalies={anomalies} vendors={vendors} workOrders={workOrders} dataState={dataState} canUploadVendorReport={canUploadVendorReport} vendorReportBusy={vendorReportBusy} onVendorReport={onVendorReport} onWorkOrderTransition={onWorkOrderTransition} onWorkOrderProof={onWorkOrderProof} workOrderBusy={workOrderBusy} onFieldRequest={onFieldRequest} flash={flash} />;
+  if (persona.id === 'electricite' || persona.id === 'eau_incendie') return <AgentWorkspace key={persona.id} persona={persona} anomalies={anomalies} vendors={vendors} workOrders={workOrders} dataState={dataState} canUploadVendorReport={canUploadVendorReport} vendorReportBusy={vendorReportBusy} onVendorReport={onVendorReport} onWorkOrderTransition={onWorkOrderTransition} onWorkOrderProof={onWorkOrderProof} onConsultProof={onConsultProof} workOrderBusy={workOrderBusy} onFieldRequest={onFieldRequest} flash={flash} />;
   if (persona.id === 'rondes_assistance') return <RoundsAssistanceWorkspace fieldRequests={fieldRequests} onNavigate={onNavigate} flash={flash} />;
   return null;
 }
@@ -1316,6 +1326,7 @@ type AgentTask = {
   status:'À faire'|'En cours'|'Terminé'|'Rétabli provisoirement';
   proof:boolean;
   proofPending?:boolean;
+  proofs?:OperationalProof[];
   delayed?:boolean;
   escalated?:boolean;
   detail:string;
@@ -1334,13 +1345,15 @@ const agentTaskSets: Record<'electricite'|'eau_incendie', AgentTask[]> = {
   ],
 };
 
-function AgentWorkspace({ persona, anomalies, vendors, workOrders, dataState, canUploadVendorReport, vendorReportBusy, onVendorReport, onWorkOrderTransition, onWorkOrderProof, workOrderBusy, onFieldRequest, flash }: { persona:Persona; anomalies:Anomaly[]; vendors:OperationalVendor[]; workOrders:OperationalWorkOrder[]; dataState:'demo'|'loading'|'live'|'fallback'; canUploadVendorReport:boolean; vendorReportBusy:boolean; onVendorReport:(input:VendorReportInput)=>Promise<void>; onWorkOrderTransition:(order:OperationalWorkOrder,target:'En intervention'|'En validation',comment:string)=>Promise<boolean>; onWorkOrderProof:(order:OperationalWorkOrder,file:File)=>Promise<boolean>; workOrderBusy:boolean; onFieldRequest:(request:Omit<FieldRequest,'id'|'status'>)=>void; flash:(message:string)=>void }) {
+function AgentWorkspace({ persona, anomalies, vendors, workOrders, dataState, canUploadVendorReport, vendorReportBusy, onVendorReport, onWorkOrderTransition, onWorkOrderProof, onConsultProof, workOrderBusy, onFieldRequest, flash }: { persona:Persona; anomalies:Anomaly[]; vendors:OperationalVendor[]; workOrders:OperationalWorkOrder[]; dataState:'demo'|'loading'|'live'|'fallback'; canUploadVendorReport:boolean; vendorReportBusy:boolean; onVendorReport:(input:VendorReportInput)=>Promise<void>; onWorkOrderTransition:(order:OperationalWorkOrder,target:'En intervention'|'En validation',comment:string)=>Promise<boolean>; onWorkOrderProof:(order:OperationalWorkOrder,file:File)=>Promise<boolean>; onConsultProof:(proof:OperationalProof)=>Promise<string>; workOrderBusy:boolean; onFieldRequest:(request:Omit<FieldRequest,'id'|'status'>)=>void; flash:(message:string)=>void }) {
   const agentKey = persona.id as 'electricite'|'eau_incendie';
   const [demoTasks, setDemoTasks] = useState(agentTaskSets[agentKey]);
   const [tab, setTab] = useState<'active'|'done'>('active');
   const [action, setAction] = useState<{type:'measure'|'proof'|'escalate'|'reset'|'start'|'finish'; id:string}|null>(null);
   const [note, setNote] = useState('');
   const [actionFile, setActionFile] = useState<File|null>(null);
+  const [taskProofPreview, setTaskProofPreview] = useState<{ proof:OperationalProof; url:string }|null>(null);
+  const [taskProofLoading, setTaskProofLoading] = useState<string|null>(null);
   const liveMode = dataState === 'live';
   const loading = dataState === 'loading';
   const tasks:AgentTask[] = liveMode ? workOrders : demoTasks;
@@ -1355,6 +1368,16 @@ function AgentWorkspace({ persona, anomalies, vendors, workOrders, dataState, ca
   const missingProofs = activeTasks.filter((task) => !task.proof).length;
   const answerProof = loading ? 'Chargement…' : `${missingProofs} requise${missingProofs === 1 ? '' : 's'}`;
   const closeAction = () => { setAction(null); setNote(''); setActionFile(null); };
+  const consultTaskProof = async (proof:OperationalProof) => {
+    setTaskProofLoading(proof.id);
+    try {
+      setTaskProofPreview({ proof, url:await onConsultProof(proof) });
+    } catch (error) {
+      flash(`Consultation impossible : ${error instanceof Error ? error.message : 'accès au fichier refusé.'}`);
+    } finally {
+      setTaskProofLoading(null);
+    }
+  };
   const completeAction = async () => {
     if (!action || !activeTask) return;
     if (liveMode) {
@@ -1404,6 +1427,7 @@ function AgentWorkspace({ persona, anomalies, vendors, workOrders, dataState, ca
             {task.status === 'Terminé' && !task.proof && !task.proofPending && <button className="primary-button" disabled={workOrderBusy} onClick={() => {setAction({type:'proof',id:task.id});setNote('');setActionFile(null)}}>＋ Ajouter la preuve</button>}
             {task.proofPending && <span className="task-proof-state" role="status">Preuve transmise · contrôle Faustin attendu</span>}
             {task.proof && <span className="task-proof-state is-accepted" role="status">✓ Preuve acceptée</span>}
+            {task.proofs?.[0] && <button className="secondary-button" disabled={taskProofLoading === task.proofs[0].id} onClick={() => void consultTaskProof(task.proofs![0])}>{taskProofLoading === task.proofs[0].id ? 'Ouverture…' : 'Consulter la preuve'}</button>}
           </div>}
           {tab === 'active' && !liveMode && <div className="task-actions"><button onClick={() => {setAction({type:'measure',id:task.id});setNote('')}}>Saisie rapide</button>{agentKey === 'eau_incendie' && task.asset === 'DEMO-EAU' && <button className="reset-action" onClick={() => {setAction({type:'reset',id:task.id});setNote('')}}>↻ Réarmement provisoire</button>}<button onClick={() => {setAction({type:'proof',id:task.id});setNote('')}}>＋ Ajouter preuve</button><button onClick={() => {setAction({type:'escalate',id:task.id});setNote('')}}>{task.escalated ? '✓ Escalade envoyée' : '↑ Escalader à Facility Manager'}</button></div>}
         </article>)}
@@ -1421,6 +1445,16 @@ function AgentWorkspace({ persona, anomalies, vendors, workOrders, dataState, ca
         {action.type === 'proof' && !liveMode && <div className="simulated-file"><span>▧</span><div><b>photo_terrain_demo.jpg</b><small>Illustration de maquette · aucun fichier téléversé</small></div></div>}
         <SyncStatusNotice state={liveMode ? action.type === 'proof' ? 'queued-local' : 'online-required' : 'demo-volatile'} compact label="État de l’action terrain" />
         <div className="modal-actions"><button className="secondary-button" disabled={workOrderBusy} onClick={closeAction}>Annuler</button><button className="primary-button" disabled={workOrderBusy || (action.type === 'proof' && liveMode ? !actionFile : !note.trim())} onClick={() => void completeAction()}>{workOrderBusy ? 'Enregistrement…' : liveMode ? action.type === 'start' ? 'Démarrer et historiser' : action.type === 'finish' ? 'Terminer et transmettre' : 'Mettre la preuve en file' : 'Appliquer dans la démonstration'}</button></div>
+      </section>
+    </div>}
+    {taskProofPreview && <div className="demo-modal-backdrop" role="presentation" onMouseDown={(event) => {if (event.target === event.currentTarget) setTaskProofPreview(null)}}>
+      <section className="demo-modal task-proof-dialog" role="dialog" aria-modal="true" aria-labelledby="task-proof-dialog-title">
+        <button className="modal-close" aria-label="Fermer" onClick={() => setTaskProofPreview(null)}>×</button>
+        <Badge tone={taskProofPreview.proof.verificationStatus === 'accepted' ? 'success' : taskProofPreview.proof.verificationStatus === 'rejected' ? 'critical' : 'orange'}>{taskProofPreview.proof.verificationStatus === 'accepted' ? 'ACCEPTÉE' : taskProofPreview.proof.verificationStatus === 'rejected' ? 'REFUSÉE' : 'À VALIDER'}</Badge>
+        <h3 id="task-proof-dialog-title">{taskProofPreview.proof.reference}</h3>
+        <p>Fichier privé · lien temporaire valable cinq minutes.</p>
+        {taskProofPreview.proof.mimeType?.startsWith('image/') ? <Image src={taskProofPreview.url} alt={`Preuve ${taskProofPreview.proof.reference}`} width={1200} height={800} unoptimized /> : <div className="proof-document-preview"><span>PDF</span><div><b>Document prêt à consulter</b><p>Le PDF s’ouvre dans un onglet sécurisé distinct.</p></div></div>}
+        <div className="modal-actions"><button className="secondary-button" onClick={() => setTaskProofPreview(null)}>Fermer</button><a className="primary-button proof-open-link" href={taskProofPreview.url} target="_blank" rel="noreferrer">Ouvrir dans un nouvel onglet</a></div>
       </section>
     </div>}
   </>;
@@ -1770,7 +1804,7 @@ function Manager({ anomalies, tab, setTab, onOpen }: { anomalies:Anomaly[]; tab:
   </div>;
 }
 
-function Detail({ anomaly, decisionAmount, persistenceMode, persistenceEnabled, offlineSync, onBack, onStatus, onProof, onVerify, readOnly = false, canVerify = false, busy = false }: { anomaly:Anomaly; decisionAmount:number|null; persistenceMode:'demo'|'server'; persistenceEnabled:boolean; offlineSync:ReturnType<typeof useOfflineSync>; onBack:()=>void; onStatus:(s:Status)=>void; onProof:(file:File)=>Promise<SyncStatusState>; onVerify:(decision:'accepted'|'rejected',comment:string)=>Promise<boolean>; readOnly?:boolean; canVerify?:boolean; busy?:boolean }) {
+function Detail({ anomaly, decisionAmount, persistenceMode, persistenceEnabled, offlineSync, onBack, onStatus, onProof, onConsultProof, onVerify, readOnly = false, canVerify = false, busy = false }: { anomaly:Anomaly; decisionAmount:number|null; persistenceMode:'demo'|'server'; persistenceEnabled:boolean; offlineSync:ReturnType<typeof useOfflineSync>; onBack:()=>void; onStatus:(s:Status)=>void; onProof:(file:File)=>Promise<SyncStatusState>; onConsultProof:(proof:OperationalProof)=>Promise<string>; onVerify:(decision:'accepted'|'rejected',comment:string)=>Promise<boolean>; readOnly?:boolean; canVerify?:boolean; busy?:boolean }) {
   const nextStep:Partial<Record<Status,Status>> = { 'À qualifier':'Affectée', 'Affectée':'En intervention', 'En intervention':'En validation', 'En validation':'Clôturée' };
   const nextStatusOption = nextStep[anomaly.status];
   const [nextStatus, setNextStatus] = useState<Status>(nextStatusOption ?? anomaly.status);
@@ -1780,6 +1814,9 @@ function Detail({ anomaly, decisionAmount, persistenceMode, persistenceEnabled, 
   const [proofTransferState, setProofTransferState] = useState<SyncStatusState>(persistenceMode === 'server' ? 'online-required' : 'demo-volatile');
   const [proofReviewDecision, setProofReviewDecision] = useState<'accepted'|'rejected'|null>(null);
   const [proofReviewComment, setProofReviewComment] = useState('');
+  const [proofPreview, setProofPreview] = useState<{ proof:OperationalProof; url:string }|null>(null);
+  const [proofPreviewLoading, setProofPreviewLoading] = useState<string|null>(null);
+  const [proofPreviewError, setProofPreviewError] = useState('');
   const chooseProof = () => proofInput.current?.click();
   const submitProof = async (file:File) => {
     setPendingProof(file);
@@ -1795,11 +1832,25 @@ function Detail({ anomaly, decisionAmount, persistenceMode, persistenceEnabled, 
       setProofReviewComment('');
     }
   };
+  const consultProof = async (proof:OperationalProof) => {
+    setProofPreviewLoading(proof.id);
+    setProofPreviewError('');
+    try {
+      const url = await onConsultProof(proof);
+      setProofPreview({ proof, url });
+    } catch (error) {
+      setProofPreview(null);
+      setProofPreviewError(error instanceof Error ? error.message : 'Consultation de la preuve impossible.');
+    } finally {
+      setProofPreviewLoading(null);
+    }
+  };
   const workflow = ['Constat','Qualification','Décision','Intervention','Preuve','Clôture'];
   const statusStep:Record<Status,number> = { 'À qualifier':1, 'Affectée':2, 'En intervention':3, 'En validation':4, 'Clôturée':5 };
   const currentStep = statusStep[anomaly.status];
   const overThreshold = decisionAmount !== null && decisionAmount >= DECISION_THRESHOLD_FCFA;
   const expectedProof = expectedProofFor(anomaly);
+  const proofs = anomaly.proofs ?? [];
   const criticalClosureLocked = nextStatusOption === 'Clôturée' && anomaly.priority === 'Critique' && !anomaly.proof;
   const proofRequiresAttention = anomaly.proofPending || criticalClosureLocked;
   const primaryActionLabel = proofRequiresAttention ? 'Ouvrir les preuves' : overThreshold ? 'Examiner la décision financière' : nextStatusOption ? `Valider : ${nextStatus}` : 'Consulter les repères du dossier';
@@ -1838,13 +1889,27 @@ function Detail({ anomaly, decisionAmount, persistenceMode, persistenceEnabled, 
 
     {section === 'evidence' && <section id="dossier-evidence-panel" role="tabpanel" className="dossier-two-columns">
       <article className="panel evidence-panel">
-        <div className="panel-head"><div><h3>Preuves du dossier</h3><p>Exigence appliquée au dossier lorsqu’elle est disponible</p></div>{!readOnly && !anomaly.proofPending && !anomaly.proofQueued && <button disabled={busy} onClick={chooseProof}>＋ Ajouter</button>}</div>
+        <div className="panel-head"><div><h3>Preuves du dossier</h3><p>Fichiers privés consultables uniquement par les profils autorisés</p></div>{!readOnly && !anomaly.proofPending && !anomaly.proofQueued && <button disabled={busy} onClick={chooseProof}>＋ Ajouter</button>}</div>
         {!readOnly && !anomaly.proof && !anomaly.proofPending && <SyncStatusNotice state={anomaly.proofQueued ? 'queued-local' : proofTransferState} compact label="État du dépôt de preuve" onRetry={proofTransferState === 'error' && pendingProof ? () => void submitProof(pendingProof) : undefined} />}
-        {anomaly.proof ? <div className="evidence-file"><span>▧</span><div><b>Preuve d’intervention acceptée</b><small>Fichier privé · contrôle Facility Manager terminé</small></div><Badge tone="success">ACCEPTÉE</Badge></div> : anomaly.proofPending ? <>
-          <div className="evidence-file"><span>▧</span><div><b>Preuve reçue</b><small>Contrôle Facility Manager requis</small></div><Badge tone="orange">À VALIDER</Badge></div>
-          {canVerify && !proofReviewDecision && <div className="proof-review-actions" aria-label="Décision sur la preuve"><button className="reject-action" disabled={busy} onClick={() => {setProofReviewDecision('rejected');setProofReviewComment('')}}>Refuser avec motif</button><button className="primary-button" disabled={busy} onClick={() => {setProofReviewDecision('accepted');setProofReviewComment('')}}>Accepter la preuve</button></div>}
-          {canVerify && proofReviewDecision && <div className={`proof-review-form is-${proofReviewDecision}`}><div><Badge tone={proofReviewDecision === 'accepted' ? 'success' : 'critical'}>{proofReviewDecision === 'accepted' ? 'ACCEPTATION' : 'REFUS'}</Badge><b>{proofReviewDecision === 'accepted' ? 'Confirmer la conformité de la preuve' : 'Motiver le refus de la preuve'}</b></div><label className="field">{proofReviewDecision === 'rejected' ? 'Motif obligatoire' : 'Commentaire facultatif'}<textarea autoFocus value={proofReviewComment} onChange={(event) => setProofReviewComment(event.target.value)} placeholder={proofReviewDecision === 'rejected' ? 'Indiquez ce qui manque ou ce qui doit être repris…' : 'Précision de contrôle éventuelle…'} /></label><div className="modal-actions"><button className="secondary-button" disabled={busy} onClick={() => {setProofReviewDecision(null);setProofReviewComment('')}}>Annuler</button><button className="primary-button" disabled={busy || (proofReviewDecision === 'rejected' && !proofReviewComment.trim())} onClick={() => void submitProofReview()}>{busy ? 'Enregistrement…' : proofReviewDecision === 'accepted' ? 'Confirmer l’acceptation' : 'Confirmer le refus'}</button></div></div>}
-        </> : anomaly.proofQueued ? <div className="evidence-file"><span>↓</span><div><b>Preuve protégée localement</b><small>En attente de synchronisation vers le stockage privé sécurisé</small></div><Badge tone="blue">EN FILE</Badge></div> : <div className="proof-requirement"><span>⌁</span><div><b>{expectedProof ?? 'Preuve attendue non définie'}</b><p>{expectedProof ? 'La clôture reste impossible tant que la pièce obligatoire n’est pas acceptée.' : 'Aucune règle de preuve canonique n’est raccordée à ce dossier.'}</p></div>{!readOnly && <button className="primary-button" onClick={chooseProof}>Déposer</button>}</div>}
+        {proofs.length > 0 && <div className="evidence-list" aria-label="Fichiers de preuve enregistrés">
+          {proofs.map((proof) => <article key={proof.id} className="evidence-file evidence-file-record">
+            <span aria-hidden="true">{proof.mimeType === 'application/pdf' ? 'PDF' : '▧'}</span>
+            <div><b>{proof.reference || 'Preuve enregistrée'}</b><small>{proof.mimeType === 'application/pdf' ? 'Document PDF' : 'Image'} · {new Date(proof.capturedAt).toLocaleString('fr-FR')}</small>{proof.verificationStatus === 'rejected' && proof.rejectionReason && <em>Motif : {proof.rejectionReason}</em>}</div>
+            <Badge tone={proof.verificationStatus === 'accepted' ? 'success' : proof.verificationStatus === 'rejected' ? 'critical' : 'orange'}>{proof.verificationStatus === 'accepted' ? 'ACCEPTÉE' : proof.verificationStatus === 'rejected' ? 'REFUSÉE' : 'À VALIDER'}</Badge>
+            <button className="secondary-button evidence-consult-button" disabled={!proof.storagePath || proofPreviewLoading === proof.id} onClick={() => void consultProof(proof)}>{proofPreviewLoading === proof.id ? 'Ouverture…' : 'Consulter'}</button>
+          </article>)}
+        </div>}
+        {proofs.length === 0 && (anomaly.proof || anomaly.proofPending) && <div className="evidence-file"><span>▧</span><div><b>{anomaly.proof ? 'Preuve acceptée' : 'Preuve reçue'}</b><small>Métadonnées de consultation indisponibles dans cette source</small></div><Badge tone={anomaly.proof ? 'success' : 'orange'}>{anomaly.proof ? 'ACCEPTÉE' : 'À VALIDER'}</Badge></div>}
+        {anomaly.proofQueued && <div className="evidence-file"><span>↓</span><div><b>Preuve protégée localement</b><small>En attente de synchronisation vers le stockage privé sécurisé</small></div><Badge tone="blue">EN FILE</Badge></div>}
+        {proofs.length === 0 && !anomaly.proof && !anomaly.proofPending && !anomaly.proofQueued && <div className="proof-requirement"><span>⌁</span><div><b>{expectedProof ?? 'Preuve attendue non définie'}</b><p>{expectedProof ? 'La clôture reste impossible tant que la pièce obligatoire n’est pas acceptée.' : 'Aucune règle de preuve canonique n’est raccordée à ce dossier.'}</p></div>{!readOnly && <button className="primary-button" onClick={chooseProof}>Déposer</button>}</div>}
+        {proofPreviewError && <div className="proof-preview-error" role="alert"><b>Consultation impossible</b><span>{proofPreviewError}</span></div>}
+        {proofPreview && <section className="proof-preview" aria-label={`Aperçu de ${proofPreview.proof.reference}`}>
+          <div className="proof-preview-head"><div><b>{proofPreview.proof.reference}</b><small>Lien privé temporaire · validité 5 minutes</small></div><button className="secondary-button" onClick={() => setProofPreview(null)}>Fermer l’aperçu</button></div>
+          {proofPreview.proof.mimeType?.startsWith('image/') ? <Image src={proofPreview.url} alt={`Preuve ${proofPreview.proof.reference}`} width={1200} height={800} unoptimized /> : <div className="proof-document-preview"><span>PDF</span><div><b>Document prêt à consulter</b><p>Le PDF s’ouvre dans un onglet sécurisé distinct.</p></div></div>}
+          <a className="primary-button proof-open-link" href={proofPreview.url} target="_blank" rel="noreferrer">Ouvrir dans un nouvel onglet</a>
+        </section>}
+        {anomaly.proofPending && canVerify && !proofReviewDecision && <div className="proof-review-actions" aria-label="Décision sur la preuve"><button className="reject-action" disabled={busy} onClick={() => {setProofReviewDecision('rejected');setProofReviewComment('')}}>Refuser avec motif</button><button className="primary-button" disabled={busy} onClick={() => {setProofReviewDecision('accepted');setProofReviewComment('')}}>Accepter la preuve</button></div>}
+        {anomaly.proofPending && canVerify && proofReviewDecision && <div className={`proof-review-form is-${proofReviewDecision}`}><div><Badge tone={proofReviewDecision === 'accepted' ? 'success' : 'critical'}>{proofReviewDecision === 'accepted' ? 'ACCEPTATION' : 'REFUS'}</Badge><b>{proofReviewDecision === 'accepted' ? 'Confirmer la conformité de la preuve' : 'Motiver le refus de la preuve'}</b></div><label className="field">{proofReviewDecision === 'rejected' ? 'Motif obligatoire' : 'Commentaire facultatif'}<textarea autoFocus value={proofReviewComment} onChange={(event) => setProofReviewComment(event.target.value)} placeholder={proofReviewDecision === 'rejected' ? 'Indiquez ce qui manque ou ce qui doit être repris…' : 'Précision de contrôle éventuelle…'} /></label><div className="modal-actions"><button className="secondary-button" disabled={busy} onClick={() => {setProofReviewDecision(null);setProofReviewComment('')}}>Annuler</button><button className="primary-button" disabled={busy || (proofReviewDecision === 'rejected' && !proofReviewComment.trim())} onClick={() => void submitProofReview()}>{busy ? 'Enregistrement…' : proofReviewDecision === 'accepted' ? 'Confirmer l’acceptation' : 'Confirmer le refus'}</button></div></div>}
       </article>
       <aside className="panel proof-matrix-card"><p className="design-kicker">EXIGENCE APPLIQUÉE</p><h3>{anomaly.asset}</h3>{expectedProof ? <ul><li><span>✓</span>{expectedProof}</li></ul> : <div className="compact-insufficient-state"><b>Preuve attendue non définie</b><p>La règle contextuelle doit être confirmée avant d’afficher une matrice.</p></div>}</aside>
     </section>}

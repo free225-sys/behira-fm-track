@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (path) => readFileSync(join(root, path), "utf8");
 const data = read("app/lib/supabase/data.ts");
+const mutations = read("app/lib/supabase/mutations.ts");
 const page = read("app/page.tsx");
 
 const checks = [
@@ -22,10 +23,16 @@ const checks = [
   ["états de preuve distincts", data.includes("proofPending: anomaly.proofPending") && page.includes("À valider par Faustin") && page.includes("Preuve acceptée")],
   ["acceptation et refus Facility Manager visibles", page.includes("Refuser avec motif") && page.includes("Accepter la preuve") && page.includes("proofReviewDecision === 'rejected'")],
   ["motif de refus obligatoire côté interface", page.includes("proofReviewDecision === 'rejected' && !proofReviewComment.trim()")],
+  ["métadonnées de preuve projetées depuis la source canonique", data.includes("export type OperationalProof") && data.includes("storage_bucket, storage_path") && data.includes("proofsByAnomalyId")],
+  ["bucket privé imposé pour la consultation", mutations.includes('const PROOF_BUCKET = "anomaly-proofs"') && mutations.includes("createAnomalyProofConsultationUrl")],
+  ["lien de consultation temporaire sans URL publique", mutations.includes("createSignedUrl(storagePath, 5 * 60)") && !mutations.includes("getPublicUrl")],
+  ["consultation image et PDF proposée dans le dossier", page.includes("Consulter") && page.includes("Ouvrir dans un nouvel onglet") && page.includes("proofPreview.proof.mimeType?.startsWith('image/')")],
+  ["preuve consultable depuis la file personnelle de l’agent", data.includes("proofs: anomaly.proofs") && page.includes("Consulter la preuve") && page.includes("consultTaskProof")],
+  ["états accepté, refusé et à valider conservés", page.includes("ACCEPTÉE") && page.includes("REFUSÉE") && page.includes("À VALIDER")],
   ["données de démonstration séparées", page.includes("const [demoTasks, setDemoTasks]") && page.includes("Vue terrain de démonstration")],
 ];
 
 const failures = checks.filter(([, passed]) => !passed);
 for (const [label, passed] of checks) console.log(`${passed ? "✓" : "✗"} ${label}`);
-if (failures.length) throw new Error(`${failures.length} contrôle(s) C9-FIX-03 en échec`);
-console.log(`\n${checks.length} contrôles C9-FIX-03 réussis.`);
+if (failures.length) throw new Error(`${failures.length} contrôle(s) C9-FIX-04 en échec`);
+console.log(`\n${checks.length} contrôles C9-FIX-04 réussis.`);

@@ -196,13 +196,39 @@ try {
   });
   if (!prematureClosureError) throw new Error("Critical closure succeeded while the mandatory proof requirement remained pending.");
 
-  await addAgentProof(reference, `${anomalyId}/${crypto.randomUUID()}-preuve-acceptee.png`);
+  const acceptedProofPath = `${anomalyId}/${crypto.randomUUID()}-preuve-acceptee.png`;
+  await addAgentProof(reference, acceptedProofPath);
   const { error: acceptanceError } = await facility.rpc("verify_latest_anomaly_proof", {
     p_reference: reference,
     p_decision: "accepted",
     p_comment: "Preuve lisible et conforme à l’intervention déclarée.",
   });
   if (acceptanceError) throw acceptanceError;
+
+  const { data: projectedProof, error: projectedProofError } = await facility
+    .from("proofs")
+    .select("id, reference, storage_bucket, storage_path, mime_type, verification_status, captured_at")
+    .eq("anomaly_id", anomalyId)
+    .eq("storage_path", acceptedProofPath)
+    .single();
+  if (projectedProofError || projectedProof.storage_bucket !== "anomaly-proofs" || projectedProof.verification_status !== "accepted") {
+    throw projectedProofError ?? new Error("Accepted proof metadata cannot be projected for consultation.");
+  }
+
+  const [{ data: facilitySigned, error: facilitySignedError }, { data: agentSigned, error: agentSignedError }] = await Promise.all([
+    facility.storage.from("anomaly-proofs").createSignedUrl(projectedProof.storage_path, 300),
+    sylvain.storage.from("anomaly-proofs").createSignedUrl(projectedProof.storage_path, 300),
+  ]);
+  if (facilitySignedError || !facilitySigned.signedUrl) throw facilitySignedError ?? new Error("Facility Manager could not consult the private proof.");
+  if (agentSignedError || !agentSigned.signedUrl) throw agentSignedError ?? new Error("Assigned agent could not consult the private proof.");
+  const proofResponse = await fetch(facilitySigned.signedUrl);
+  if (!proofResponse.ok || proofResponse.headers.get("content-type") !== "image/png") {
+    throw new Error("The signed private proof URL did not return the expected image.");
+  }
+  const { data: foreignSigned, error: foreignSignedError } = await evariste.storage
+    .from("anomaly-proofs")
+    .createSignedUrl(projectedProof.storage_path, 300);
+  if (!foreignSignedError || foreignSigned?.signedUrl) throw new Error("An out-of-scope agent consulted Sylvain's private proof.");
 
   const { data: proofRequirement, error: requirementError } = await facility
     .from("anomaly_proof_requirements")
@@ -229,6 +255,7 @@ try {
   console.log("✓ Work order and intervention preserve their canonical states and summary");
   console.log("✓ Agent proof remains pending; Facility Manager rejection requires a reason");
   console.log("✓ A replacement proof can be accepted and satisfies the critical requirement");
+  console.log("✓ Facility Manager and assigned agent consult a signed private proof; out-of-scope agent is refused");
   console.log("✓ Critical closure stays locked before acceptance and succeeds afterwards");
 } finally {
   const failures = [];
@@ -249,7 +276,7 @@ try {
     catch (error) { failures.push(`database: ${error instanceof Error ? error.message : String(error)}`); }
   }
   await Promise.all([facility.auth.signOut(), sylvain.auth.signOut(), evariste.auth.signOut()]);
-  if (failures.length) throw new Error(`C9-FIX-03 cleanup failed: ${failures.join("; ")}`);
+  if (failures.length) throw new Error(`C9-FIX-04 cleanup failed: ${failures.join("; ")}`);
 }
 
-console.log("C9-FIX-03 local transaction and RLS verification passed; fixture removed.");
+console.log("C9-FIX-04 local transaction, private proof consultation and RLS verification passed; fixture removed.");

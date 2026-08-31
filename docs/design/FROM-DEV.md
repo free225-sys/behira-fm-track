@@ -2,6 +2,43 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-045 — C9-FIX-04 : consultation sécurisée des preuves privées
+
+- **Date :** 31 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté et vérifié localement — prêt pour publication en préproduction
+- **Périmètre :** consultation des preuves déjà enregistrées depuis la file personnelle de l’agent et le dossier central ; aucun schéma, bucket, rôle, droit, statut ou seuil modifié
+
+Le défaut provenait de la projection frontend : elle ne chargeait que la présence
+et l’état de contrôle d’une preuve. Le fichier, sa référence, son format et son
+chemin privé existaient en base mais n’étaient pas fournis à l’interface. Le
+dossier affichait donc une ligne générique impossible à ouvrir.
+
+La projection charge maintenant les métadonnées canoniques des preuves visibles
+sous RLS. L’agent retrouve le bouton « Consulter la preuve » dans sa file
+personnelle et Facility Manager retrouve la même pièce dans l’onglet « Preuves »
+du dossier. Au clic, le client authentifié demande une URL signée valable cinq
+minutes dans le bucket privé `anomaly-proofs`. Aucune URL publique n’est créée.
+Les images disposent d’un aperçu intégré ; les PDF s’ouvrent dans un nouvel
+onglet sécurisé. Les états en attente, accepté et refusé restent distincts et le
+motif de refus demeure visible.
+
+### Vérifications réalisées
+
+- contrôle distant en lecture seule : `PRV-2026-000001` est reliée à
+  `ANO-2026-000005`, au format JPEG et à l’état `accepted` ;
+- garde-fous C9-FIX-04 : **21/21** ;
+- test transactionnel local : Faustin et Sylvain obtiennent une URL signée et
+  lisent le fichier privé, tandis qu’Évariste hors périmètre est refusé ;
+- cycle intervention, refus motivé, preuve de remplacement, acceptation et
+  verrou critique revérifiés ; fixture et objets de test supprimés ;
+- audit visuel **92/92**, personas **38/38**, Auth **22/22**, hors ligne
+  **27/27**, résilience **12/12**, lint sans avertissement et build réussi.
+
+- **Suite proposée :** publier le correctif, reconnecter Sylvain, ouvrir
+  « Terminées » puis « Consulter la preuve » sur `OT-2026-000001`, et répéter la
+  consultation depuis l’onglet « Preuves » du dossier avec Faustin.
+
 ## DEV-044 — C9-FIX-03 : intervention agent, preuve et décision Facility Manager
 
 - **Date :** 31 août 2026
