@@ -1,5 +1,9 @@
 # C10 — décisions et coûts en préproduction
 
+> **Mise à jour du 31 août 2026.** Le dry-run puis l'application de la migration
+> C10 ont été autorisés séparément et réussis sur `fm_track`. La publication de
+> l'interface et la recette humaine restent suspendues.
+
 ## Objet
 
 C10 commence après la validation complète du parcours critique C9. Le lot relie
@@ -102,7 +106,7 @@ les décisions et l’historique en lecture pour audit.
 
 ### Prochaine porte de validation
 
-La migration distante, la publication et C10-C restent suspendues. L’ordre
-recommandé est : dry-run distant, revue du diff, autorisation explicite
-d’application, publication de l’interface, puis recette humaine avec Faustin et
-l’Administration.
+La migration distante est appliquée et contrôlée. La publication et C10-C
+restent suspendues. L’ordre recommandé est : autorisation explicite de
+publication de l’interface, contrôle de disponibilité, puis recette humaine avec
+Faustin et l’Administration.

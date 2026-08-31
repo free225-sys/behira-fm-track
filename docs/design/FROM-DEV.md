@@ -2,6 +2,29 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-049 — C10 : migration appliquée en préproduction
+
+- **Date :** 31 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** migration C10 appliquée et contrôlée sur `fm_track` — interface non publiée
+- **Périmètre :** application de `20260831143754_c10_financial_decisions.sql` uniquement ; aucun seed, rôle, secret, compte Auth, coût métier ou publication
+
+Après un dry-run présentant exactement une migration, l’autorisation distincte
+d’application a été reçue. La migration est enregistrée à distance et un second
+dry-run confirme que la base est à jour. Le seuil actif est unique à 400 000
+FCFA, RLS reste active sur les tables concernées, les trois événements C10 sont
+présents, les RPC sont refusées à `anon` et les cinq comptes Auth sont intacts.
+Aucune donnée de coût n’a été créée par l’opération.
+
+Les advisors ne remontent aucun constat propre à C10. Les avertissements hérités
+sur les fonctions `SECURITY DEFINER`, la protection contre les mots de passe
+compromis et certaines politiques permissives multiples restent consignés pour
+un chantier de durcissement séparé.
+
+- **Suite proposée :** demander un GO de publication de l’interface C10, vérifier
+  la disponibilité de la version, puis exécuter la recette humaine sous le seuil
+  et au seuil exact avec Facility Manager et Administration.
+
 ## DEV-048 — C10 : décisions de coûts canoniques
 
 - **Date :** 31 août 2026
