@@ -430,8 +430,9 @@ function AuthExperience({ onAuthenticate, onDemoAuthenticate, onForgot, onReset,
   environmentLabel:string;
 }) {
   const [screen, setScreen] = useState<AuthScreen>('login');
-  const [email, setEmail] = useState(demoAccounts[1].email);
-  const [password, setPassword] = useState(DEMO_PASSWORD);
+  const demoFallbackVisible = !supabaseMode || allowDemoFallback;
+  const [email, setEmail] = useState(demoFallbackVisible ? demoAccounts[1].email : '');
+  const [password, setPassword] = useState(demoFallbackVisible ? DEMO_PASSWORD : '');
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
   const [status, setStatus] = useState<'idle'|'loading'|'error'|'success'>('idle');
@@ -512,7 +513,7 @@ function AuthExperience({ onAuthenticate, onDemoAuthenticate, onForgot, onReset,
       kicker="PILOTAGE TECHNIQUE & MAINTENANCE"
       title="Une vision claire du bâtiment, jusqu’à la preuve."
       lede="Centralisez les constats, priorisez les risques et suivez chaque intervention jusqu’à sa clôture."
-      note={<>{supabaseMode ? `${environmentLabel} prêt · mode démonstration conservé` : 'Prototype local · authentification et données simulées'} · <a href="/design-system">Système de design</a></>}
+      note={<>{supabaseMode ? `${environmentLabel} prêt · ${allowDemoFallback ? 'mode démonstration conservé' : 'authentification réelle uniquement'}` : 'Prototype local · authentification et données simulées'} · <a href="/design-system">Système de design</a></>}
     >
       <div className="auth-card">
         {screen === 'login' && <>
@@ -547,7 +548,7 @@ function AuthExperience({ onAuthenticate, onDemoAuthenticate, onForgot, onReset,
         </>}
       </div>
 
-      {screen === 'login' && <aside className="demo-accounts" aria-label="Comptes de démonstration">
+      {screen === 'login' && demoFallbackVisible && <aside className="demo-accounts" aria-label="Comptes de démonstration">
         <div><span>{supabaseMode ? 'MODE DÉMONSTRATION DE SECOURS' : 'COMPTES DE DÉMONSTRATION'}</span><p>Profils fictifs en <code>.invalid</code> · {supabaseMode ? 'séparés de Supabase Auth et sans écriture distante' : 'session simulée'}.</p></div>
         {!supabaseMode && <p className="demo-password"><span>Mot de passe commun</span><b>{DEMO_PASSWORD}</b></p>}
         {(!supabaseMode || allowDemoFallback) && <div className="demo-account-grid">{demoAccounts.map((account) => {const person = personas.find((item) => item.id === account.personaId)!; const selected = email.trim().toLowerCase() === account.email.toLowerCase(); return <button type="button" key={account.email} className={selected ? 'is-selected' : ''} aria-pressed={selected} aria-label={`${person.shortName} · ${account.destination}`} onClick={() => {if (supabaseMode) void openDemoAccount(account); else {chooseAccount(account);switchScreen('login')}}}><span>{person.initials}</span><div><b>{person.shortName}</b><small>{account.email}</small><em>{account.destination}</em></div><i>{selected ? 'Sélectionné' : supabaseMode ? 'Ouvrir la démo' : 'Utiliser'}</i></button>})}</div>}

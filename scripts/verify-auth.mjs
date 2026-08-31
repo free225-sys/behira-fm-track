@@ -15,6 +15,7 @@ const checks = [
   ['Protection des vues', page.includes('allowedViewsByPersona') && page.includes('Accès masqué pour ce rôle')],
   ['Aucun compte Lecture seule', !page.includes("personaId:'readonly'") && !page.includes('lecture.seule@demo.behira.invalid')],
   ['Mode démonstration explicite', page.includes('MODE DÉMONSTRATION') && page.includes('DÉMONSTRATION LOCALE')],
+  ['Préproduction sans démo visible si le repli est désactivé', page.includes('const demoFallbackVisible = !supabaseMode || allowDemoFallback') && page.includes("useState(demoFallbackVisible ? demoAccounts[1].email : '')") && page.includes("screen === 'login' && demoFallbackVisible && <aside") && page.includes("'authentification réelle uniquement'")],
   ['Supabase local branché', page.includes('signInWithPassword') && page.includes('resetPasswordForEmail') && page.includes("mode:'supabase'")],
   ['Première connexion verrouillée', page.includes('RequiredPasswordChange') && page.includes('getAuthenticatedProfileGate') && page.includes('currentPassword')],
   ['Mot de passe robuste obligatoire', page.includes('16 caractères minimum') && page.includes('Différent du temporaire') && page.includes('Confirmation identique')],
