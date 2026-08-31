@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 
@@ -17,70 +18,238 @@ const serviceKey = environment.SUPABASE_LOCAL_SERVICE_ROLE_KEY;
 const password = "Behira-Demo-2026!";
 if (!url || !key || !serviceKey) throw new Error("Local Supabase credentials are unavailable.");
 
+const config = readFileSync(new URL("../supabase/config.toml", import.meta.url), "utf8");
+const projectId = config.match(/^project_id\s*=\s*"([^"]+)"/m)?.[1];
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+if (!projectId) throw new Error("Local Supabase project id is unavailable.");
+
 const service = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
-const reference = `OT-C9-${crypto.randomUUID()}`;
-let workOrderId;
+const facility = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+const sylvain = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+const evariste = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 
-try {
-  const [{ data: sylvain, error: sylvainError }, { data: faustin, error: faustinError }] = await Promise.all([
-    service.from("profiles").select("id").eq("employee_code", "SYL-PLB").single(),
-    service.from("profiles").select("id").eq("employee_code", "FAU-FM").single(),
-  ]);
-  if (sylvainError || faustinError) throw sylvainError ?? faustinError;
+let anomalyId;
+let reportId;
+const proofPaths = [];
 
-  const { data: anomaly, error: anomalyError } = await service
-    .from("anomalies")
-    .select("id")
-    .eq("assigned_profile_id", sylvain.id)
-    .limit(1)
-    .single();
-  if (anomalyError) throw anomalyError;
-
-  const { data: workOrder, error: insertError } = await service
-    .from("work_orders")
-    .insert({
-      reference,
-      anomaly_id: anomaly.id,
-      work_order_type: "internal",
-      assigned_profile_id: sylvain.id,
-      status: "in_progress",
-      instructions: "Fixture C9-FIX-02 supprimée après vérification.",
-      due_at: new Date(Date.now() + 3_600_000).toISOString(),
-      created_by_profile_id: faustin.id,
-    })
-    .select("id")
-    .single();
-  if (insertError) throw insertError;
-  workOrderId = workOrder.id;
-
-  const sylvainClient = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-  const { error: sylvainLoginError } = await sylvainClient.auth.signInWithPassword({ email: "eau.incendie@demo.behira.invalid", password });
-  if (sylvainLoginError) throw sylvainLoginError;
-  const { data: sylvainProfileId, error: sylvainProfileError } = await sylvainClient.rpc("current_profile_id");
-  if (sylvainProfileError || sylvainProfileId !== sylvain.id) throw sylvainProfileError ?? new Error("Sylvain profile resolution failed.");
-  const { data: ownOrders, error: ownOrdersError } = await sylvainClient
-    .from("work_orders")
-    .select("reference, assigned_profile_id")
-    .eq("assigned_profile_id", sylvainProfileId)
-    .eq("reference", reference);
-  if (ownOrdersError || ownOrders?.length !== 1) throw ownOrdersError ?? new Error("Sylvain cannot read his assigned work order.");
-
-  const evaristeClient = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-  const { error: evaristeLoginError } = await evaristeClient.auth.signInWithPassword({ email: "electricite@demo.behira.invalid", password });
-  if (evaristeLoginError) throw evaristeLoginError;
-  const { data: foreignOrders, error: foreignOrdersError } = await evaristeClient
-    .from("work_orders")
-    .select("reference")
-    .eq("reference", reference);
-  if (foreignOrdersError || foreignOrders?.length !== 0) throw foreignOrdersError ?? new Error("Another field agent can read Sylvain's work order.");
-
-  console.log("✓ Sylvain reads the work order assigned to his canonical profile");
-  console.log("✓ Another field agent cannot read Sylvain's work order through RLS");
-} finally {
-  if (workOrderId) {
-    const { error } = await service.from("work_orders").delete().eq("id", workOrderId);
-    if (error) throw error;
-  }
+function cleanupFixture(targetAnomalyId, targetReportId) {
+  if (targetAnomalyId && !uuidPattern.test(targetAnomalyId)) throw new Error("Invalid local anomaly fixture id.");
+  if (targetReportId && !uuidPattern.test(targetReportId)) throw new Error("Invalid local report fixture id.");
+  const anomalyFilter = targetAnomalyId ? `'${targetAnomalyId}'::uuid` : "null::uuid";
+  const reportFilter = targetReportId ? `'${targetReportId}'::uuid` : "null::uuid";
+  const sql = `
+begin;
+alter table public.proof_requirement_evidence disable trigger validate_proof_requirement_evidence_row;
+alter table public.anomaly_proof_requirements disable trigger validate_proof_requirement_row;
+delete from public.proof_requirement_evidence where requirement_id in (
+  select id from public.anomaly_proof_requirements where anomaly_id = ${anomalyFilter}
+);
+delete from public.anomaly_proof_requirements where anomaly_id = ${anomalyFilter};
+alter table public.anomaly_proof_requirements enable trigger validate_proof_requirement_row;
+alter table public.proof_requirement_evidence enable trigger validate_proof_requirement_evidence_row;
+delete from public.proofs where anomaly_id = ${anomalyFilter};
+delete from public.costs where anomaly_id = ${anomalyFilter};
+delete from public.interventions where anomaly_id = ${anomalyFilter};
+delete from public.work_orders where anomaly_id = ${anomalyFilter};
+delete from public.qualifications where anomaly_id = ${anomalyFilter};
+delete from public.anomaly_history where anomaly_id = ${anomalyFilter};
+delete from public.anomalies where id = ${anomalyFilter};
+delete from public.reports where id = ${reportFilter};
+commit;
+`;
+  execFileSync(
+    "docker",
+    ["exec", "-i", `supabase_db_${projectId}`, "psql", "-v", "ON_ERROR_STOP=1", "-U", "postgres", "-d", "postgres"],
+    { input: sql, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] },
+  );
 }
 
-console.log("C9-FIX-02 local RLS verification passed and its fixture was removed.");
+async function login(client, email) {
+  const { error } = await client.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+}
+
+async function addAgentProof(reference, path) {
+  const tinyPng = Uint8Array.from([137,80,78,71,13,10,26,10,0,0,0,0,73,69,78,68,174,66,96,130]);
+  const { error: uploadError } = await sylvain.storage
+    .from("anomaly-proofs")
+    .upload(path, tinyPng, { contentType: "image/png", upsert: false });
+  if (uploadError) throw uploadError;
+  proofPaths.push(path);
+  const { data, error } = await sylvain.rpc("register_anomaly_proof", {
+    p_reference: reference,
+    p_storage_path: path,
+    p_mime_type: "image/png",
+    p_size_bytes: tinyPng.byteLength,
+    p_proof_type: "photo",
+  });
+  if (error) throw error;
+  if (data.verification_status !== "pending") throw new Error("Agent proof did not remain pending for Facility Manager review.");
+  return data;
+}
+
+try {
+  await Promise.all([
+    login(facility, "facility.manager@demo.behira.invalid"),
+    login(sylvain, "eau.incendie@demo.behira.invalid"),
+    login(evariste, "electricite@demo.behira.invalid"),
+  ]);
+
+  const { data: created, error: createError } = await facility.rpc("create_field_anomaly", {
+    p_equipment_code: "WILO-01",
+    p_title: "TEST C9-FIX-03 — intervention et preuve agent",
+    p_description: "Fixture locale supprimée après le contrôle transactionnel.",
+    p_priority_label: "Critique",
+  });
+  if (createError) throw createError;
+  const reference = created.reference;
+
+  const { data: anomaly, error: anomalyError } = await facility
+    .from("anomalies")
+    .select("id, source_report_id")
+    .eq("reference", reference)
+    .single();
+  if (anomalyError) throw anomalyError;
+  anomalyId = anomaly.id;
+  reportId = anomaly.source_report_id;
+
+  const { error: assignError } = await facility.rpc("advance_anomaly_workflow", {
+    p_reference: reference,
+    p_target: "Affectée",
+    p_comment: "Affectation locale C9-FIX-03 au périmètre WILO-01.",
+  });
+  if (assignError) throw assignError;
+
+  const { data: assignedOrder, error: orderError } = await sylvain
+    .from("work_orders")
+    .select("id, reference, status, assigned_profile_id")
+    .eq("anomaly_id", anomalyId)
+    .single();
+  if (orderError) throw orderError;
+  if (assignedOrder.status !== "planned") throw new Error("The assigned order did not start as planned.");
+
+  const { error: foreignStartError } = await evariste.rpc("advance_anomaly_workflow", {
+    p_reference: reference,
+    p_target: "En intervention",
+    p_comment: "Cette tentative hors périmètre doit être refusée.",
+  });
+  if (!foreignStartError) throw new Error("Another field agent started Sylvain's assigned intervention.");
+
+  const { error: startError } = await sylvain.rpc("advance_anomaly_workflow", {
+    p_reference: reference,
+    p_target: "En intervention",
+    p_comment: "Diagnostic agent : pression vérifiée, pompe contrôlée.",
+  });
+  if (startError) throw startError;
+
+  const { data: startedOrder, error: startedOrderError } = await sylvain
+    .from("work_orders")
+    .select("status")
+    .eq("id", assignedOrder.id)
+    .single();
+  if (startedOrderError || startedOrder.status !== "in_progress") throw startedOrderError ?? new Error("The work order did not enter in_progress.");
+
+  const { error: finishError } = await sylvain.rpc("advance_anomaly_workflow", {
+    p_reference: reference,
+    p_target: "En validation",
+    p_comment: "Intervention terminée : réglage effectué, essai concluant.",
+  });
+  if (finishError) throw finishError;
+
+  const [{ data: completedOrder, error: completedOrderError }, { data: intervention, error: interventionError }] = await Promise.all([
+    sylvain.from("work_orders").select("status, completed_at").eq("id", assignedOrder.id).single(),
+    sylvain.from("interventions").select("ended_at, outcome, summary").eq("work_order_id", assignedOrder.id).single(),
+  ]);
+  if (completedOrderError || completedOrder.status !== "completed" || !completedOrder.completed_at) throw completedOrderError ?? new Error("The work order did not complete.");
+  if (interventionError || !intervention.ended_at || intervention.outcome !== "resolved" || !intervention.summary.includes("essai concluant")) throw interventionError ?? new Error("The intervention result was not preserved.");
+
+  await addAgentProof(reference, `${anomalyId}/${crypto.randomUUID()}-preuve-refusee.png`);
+
+  const { error: emptyRejectionError } = await facility.rpc("verify_latest_anomaly_proof", {
+    p_reference: reference,
+    p_decision: "rejected",
+    p_comment: "",
+  });
+  if (!emptyRejectionError) throw new Error("A proof rejection without reason was accepted.");
+
+  const rejectionReason = "Photo illisible : reprendre le cadrage du manomètre.";
+  const { error: rejectionError } = await facility.rpc("verify_latest_anomaly_proof", {
+    p_reference: reference,
+    p_decision: "rejected",
+    p_comment: rejectionReason,
+  });
+  if (rejectionError) throw rejectionError;
+
+  const { data: rejectedProof, error: rejectedProofError } = await facility
+    .from("proofs")
+    .select("verification_status, rejection_reason")
+    .eq("anomaly_id", anomalyId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+  if (rejectedProofError || rejectedProof.verification_status !== "rejected" || rejectedProof.rejection_reason !== rejectionReason) throw rejectedProofError ?? new Error("Proof rejection was not preserved.");
+
+  const { error: prematureClosureError } = await facility.rpc("advance_anomaly_workflow", {
+    p_reference: reference,
+    p_target: "Clôturée",
+    p_comment: "Cette clôture doit rester bloquée.",
+  });
+  if (!prematureClosureError) throw new Error("Critical closure succeeded while the mandatory proof requirement remained pending.");
+
+  await addAgentProof(reference, `${anomalyId}/${crypto.randomUUID()}-preuve-acceptee.png`);
+  const { error: acceptanceError } = await facility.rpc("verify_latest_anomaly_proof", {
+    p_reference: reference,
+    p_decision: "accepted",
+    p_comment: "Preuve lisible et conforme à l’intervention déclarée.",
+  });
+  if (acceptanceError) throw acceptanceError;
+
+  const { data: proofRequirement, error: requirementError } = await facility
+    .from("anomaly_proof_requirements")
+    .select("state")
+    .eq("anomaly_id", anomalyId)
+    .eq("is_mandatory", true)
+    .single();
+  if (requirementError || proofRequirement.state !== "satisfied") throw requirementError ?? new Error("Accepted proof did not satisfy the critical proof requirement.");
+
+  const { error: closureError } = await facility.rpc("advance_anomaly_workflow", {
+    p_reference: reference,
+    p_target: "Clôturée",
+    p_comment: "Intervention et preuve contrôlées ; clôture autorisée.",
+  });
+  if (closureError) throw closureError;
+
+  const { count: historyCount, error: historyError } = await facility
+    .from("anomaly_history")
+    .select("id", { count: "exact", head: true })
+    .eq("anomaly_id", anomalyId);
+  if (historyError || (historyCount ?? 0) < 8) throw historyError ?? new Error("The audit history is incomplete.");
+
+  console.log("✓ Assigned agent alone starts and finishes the intervention");
+  console.log("✓ Work order and intervention preserve their canonical states and summary");
+  console.log("✓ Agent proof remains pending; Facility Manager rejection requires a reason");
+  console.log("✓ A replacement proof can be accepted and satisfies the critical requirement");
+  console.log("✓ Critical closure stays locked before acceptance and succeeds afterwards");
+} finally {
+  const failures = [];
+  for (const path of proofPaths) {
+    const { error } = await service.storage.from("anomaly-proofs").remove([path]);
+    if (error) failures.push(`storage ${path}: ${error.message}`);
+  }
+  if (anomalyId) {
+    const { data: lowPriority, error: lowPriorityError } = await service.from("priority_definitions").select("id").eq("code", "LOW").single();
+    if (lowPriorityError) failures.push(`priority: ${lowPriorityError.message}`);
+    else {
+      const { error } = await service.from("anomalies").update({ priority_id: lowPriority.id }).eq("id", anomalyId);
+      if (error) failures.push(`demotion: ${error.message}`);
+    }
+  }
+  if (anomalyId || reportId) {
+    try { cleanupFixture(anomalyId, reportId); }
+    catch (error) { failures.push(`database: ${error instanceof Error ? error.message : String(error)}`); }
+  }
+  await Promise.all([facility.auth.signOut(), sylvain.auth.signOut(), evariste.auth.signOut()]);
+  if (failures.length) throw new Error(`C9-FIX-03 cleanup failed: ${failures.join("; ")}`);
+}
+
+console.log("C9-FIX-03 local transaction and RLS verification passed; fixture removed.");

@@ -13,14 +13,19 @@ const checks = [
   ["file limitée au profil connecté", data.includes('.eq("assigned_profile_id", currentProfileId)')],
   ["statuts métier existants uniquement", data.includes('.in("status", ["planned", "accepted", "in_progress", "completed"])')],
   ["RLS complétée par un filtre explicite", data.includes('.from("work_orders")') && data.includes('assigned_profile_id')],
-  ["références OT et anomalie conservées", data.includes("id: item.reference") && data.includes("anomalyReference: anomaly.id")],
+  ["références OT et anomalie conservées", data.includes("id: item.reference") && data.includes("anomalyReference: anomaly.id") && data.includes("anomalyDatabaseId: anomaly.databaseId")],
   ["file réelle injectée dans l’espace agent", page.includes("workOrders={workOrders}") && page.includes("liveMode ? workOrders : demoTasks")],
   ["chargement et file vide explicites", page.includes("Chargement de vos affectations") && page.includes("Aucun ordre de travail attribué")],
-  ["actions simulées absentes en mode réel", page.includes("tab === 'active' && !liveMode") && page.includes("!liveMode && action && activeTask")],
+  ["actions simulées isolées du mode réel", page.includes("tab === 'active' && !liveMode") && page.includes("Appliquer dans la démonstration")],
+  ["cycle réel rattaché à la référence canonique", page.includes("persistAssignedIntervention") && page.includes("order.anomalyReference") && page.includes("'En intervention'|'En validation'")],
+  ["preuve terrain mise dans la file hors ligne existante", page.includes("persistAssignedProof") && page.includes("offlineSync.enqueueProof") && page.includes("order.anomalyDatabaseId")],
+  ["états de preuve distincts", data.includes("proofPending: anomaly.proofPending") && page.includes("À valider par Faustin") && page.includes("Preuve acceptée")],
+  ["acceptation et refus Facility Manager visibles", page.includes("Refuser avec motif") && page.includes("Accepter la preuve") && page.includes("proofReviewDecision === 'rejected'")],
+  ["motif de refus obligatoire côté interface", page.includes("proofReviewDecision === 'rejected' && !proofReviewComment.trim()")],
   ["données de démonstration séparées", page.includes("const [demoTasks, setDemoTasks]") && page.includes("Vue terrain de démonstration")],
 ];
 
 const failures = checks.filter(([, passed]) => !passed);
 for (const [label, passed] of checks) console.log(`${passed ? "✓" : "✗"} ${label}`);
-if (failures.length) throw new Error(`${failures.length} contrôle(s) C9-FIX-02 en échec`);
-console.log(`\n${checks.length} contrôles C9-FIX-02 réussis.`);
+if (failures.length) throw new Error(`${failures.length} contrôle(s) C9-FIX-03 en échec`);
+console.log(`\n${checks.length} contrôles C9-FIX-03 réussis.`);

@@ -2,6 +2,49 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-044 — C9-FIX-03 : intervention agent, preuve et décision Facility Manager
+
+- **Date :** 31 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté et vérifié localement — prêt pour publication en préproduction
+- **Périmètre :** actions sur l’ordre de travail réellement affecté, dépôt de preuve dans la file sécurisée existante et acceptation/refus par Facility Manager ; aucun schéma, statut, rôle, droit ou seuil ajouté
+
+L’espace agent raccorde désormais les actions à la référence canonique de
+`work_orders`. Un ordre planifié peut être démarré avec une observation
+obligatoire ; un ordre en cours peut être terminé avec un compte rendu
+obligatoire. Ces deux transitions réutilisent exclusivement
+`advance_anomaly_workflow` et restent soumises à la RLS : seul l’agent interne
+affecté ou Facility Manager peut les exécuter.
+
+Après la fin de l’intervention, l’agent peut joindre une preuve JPG, PNG, WebP
+ou PDF. Le fichier passe par la file hors ligne existante, conserve l’identifiant
+canonique du dossier et rejoint le bucket privé sans créer une seconde règle de
+stockage. Une preuve agent reste `pending`. Dans le dossier, Faustin peut ensuite
+l’accepter ou la refuser ; un refus exige un motif et ce motif est conservé par
+le service métier. Les états « manquante », « à valider » et « acceptée » restent
+distincts dans la file personnelle.
+
+### Vérifications réalisées
+
+- garde-fous C9-FIX-03 : **15/15** ;
+- reconstruction complète locale et suites SQL : **13/13** ;
+- cycle transactionnel sous RLS : agent non affecté refusé, Sylvain autorisé,
+  ordre `planned → in_progress → completed`, intervention horodatée et compte
+  rendu conservé ;
+- preuve agent maintenue en attente, refus vide interdit, motif de refus
+  conservé, seconde preuve acceptée et exigence critique satisfaite ;
+- clôture critique refusée avant preuve acceptée puis autorisée après contrôle ;
+- cycle historique Lot 3, Storage privé et cinq comptes Auth locaux revérifiés ;
+- audit visuel **92/92**, personas **38/38**, Auth **22/22**, hors ligne
+  **27/27**, résilience **12/12**, polices HTTP 200, lint, build et HTTP 200 ;
+- lecture distante uniquement : `ANO-2026-000005` reste `EN_COURS`,
+  `OT-2026-000001` reste `in_progress`, sans preuve déposée ni mutation distante.
+
+- **Suite proposée :** publier ce checkpoint en préproduction, reconnecter
+  Sylvain, terminer `OT-2026-000001`, déposer une preuve réelle, puis reconnecter
+  Faustin pour la refuser avec motif et contrôler le retour agent avant de
+  déposer une preuve conforme et de l’accepter.
+
 ## DEV-043 — C9-FIX-02 : file personnelle raccordée aux ordres de travail
 
 - **Date :** 31 août 2026

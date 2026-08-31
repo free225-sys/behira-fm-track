@@ -45,12 +45,14 @@ export type OperationalVendor = {
 export type OperationalWorkOrder = {
   id: string;
   anomalyReference: string;
+  anomalyDatabaseId: string;
   asset: string;
   title: string;
   due: string;
   risk: string;
   status: "À faire" | "En cours" | "Terminé";
   proof: boolean;
+  proofPending: boolean;
   delayed: boolean;
   detail: string;
 };
@@ -219,12 +221,14 @@ export async function loadOperationalSnapshot(
     return [{
       id: item.reference,
       anomalyReference: anomaly.id,
+      anomalyDatabaseId: anomaly.databaseId,
       asset: anomaly.asset,
       title: anomaly.title,
       due: formatMoment(dueAt),
       risk: `${anomaly.priority} · ${anomaly.status}`,
       status,
       proof: anomaly.proof,
+      proofPending: anomaly.proofPending,
       delayed: !completed && Boolean(item.due_at && new Date(item.due_at).getTime() < Date.now()),
       detail: item.instructions,
     } satisfies OperationalWorkOrder];

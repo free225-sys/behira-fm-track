@@ -896,14 +896,61 @@ export default function Home() {
       setMutationBusy(false);
     }
   };
-  const verifyProof = async () => {
+  const persistAssignedIntervention = async (order:OperationalWorkOrder, target:'En intervention'|'En validation', comment:string) => {
+    if (session?.mode !== 'supabase' || dataState !== 'live') {
+      flash('Action réelle indisponible hors de la session métier connectée.');
+      return false;
+    }
     setMutationBusy(true);
     try {
-      await verifyLatestAnomalyProof(getBrowserSupabaseClient(), selected.id, 'accepted');
+      await advanceAnomalyWorkflow(getBrowserSupabaseClient(), order.anomalyReference, target, comment);
       await syncOperationalData();
-      flash('Preuve validée par le Facility Manager.');
+      flash(target === 'En intervention'
+        ? `${order.id} · intervention démarrée et historisée.`
+        : `${order.id} · intervention terminée et transmise à Facility Manager.`);
+      return true;
     } catch (error) {
-      flash(`Validation non enregistrée : ${mutationError(error)}`);
+      flash(`Intervention non enregistrée : ${mutationError(error)}`);
+      return false;
+    } finally {
+      setMutationBusy(false);
+    }
+  };
+  const persistAssignedProof = async (order:OperationalWorkOrder, file:File) => {
+    if (session?.mode !== 'supabase' || dataState !== 'live') {
+      flash('Dépôt réel indisponible hors de la session métier connectée.');
+      return false;
+    }
+    setMutationBusy(true);
+    try {
+      await offlineSync.enqueueProof({
+        anomalyReference:order.anomalyReference,
+        anomalyId:order.anomalyDatabaseId,
+        file,
+        capturedAt:new Date().toISOString(),
+        proofType:file.type === 'application/pdf' ? 'pv' : 'photo',
+      });
+      flash(offlineSync.online
+        ? `${order.id} · preuve mise en file sécurisée ; transmission lancée.`
+        : `${order.id} · preuve protégée sur cet appareil jusqu’au retour du réseau.`);
+      return true;
+    } catch (error) {
+      flash(`Preuve non mise en file : ${mutationError(error)}`);
+      return false;
+    } finally {
+      setMutationBusy(false);
+    }
+  };
+  const verifyProof = async (decision:'accepted'|'rejected', comment:string) => {
+    setMutationBusy(true);
+    try {
+      await verifyLatestAnomalyProof(getBrowserSupabaseClient(), selected.id, decision, comment);
+      await syncOperationalData();
+      flash(decision === 'accepted' ? 'Preuve acceptée par Facility Manager.' : 'Preuve refusée ; le motif est conservé dans le dossier.');
+      return true;
+    } catch (error) {
+      flash(`Décision sur la preuve non enregistrée : ${mutationError(error)}`);
+      return false;
     } finally {
       setMutationBusy(false);
     }
@@ -1131,7 +1178,7 @@ export default function Home() {
         </header>
 
         <div className="content">
-          {view === 'workspace' && <PersonaWorkspace persona={persona} anomalies={anomalies} equipment={equipmentItems} vendors={vendorReferences} workOrders={workOrders} dataState={dataState} canUploadVendorReport={effectiveCanUploadVendorReport} vendorReportBusy={mutationBusy} onVendorReport={persistVendorReport} escalations={escalations} fieldRequests={fieldRequests} onEscalationDecision={decideEscalation} onEscalateToDirection={escalateToDirection} onFieldRequest={submitFieldRequest} onOpen={(id) => openDetail(id, 'workspace')} onNavigate={navigate} flash={flash} />}
+          {view === 'workspace' && <PersonaWorkspace persona={persona} anomalies={anomalies} equipment={equipmentItems} vendors={vendorReferences} workOrders={workOrders} dataState={dataState} canUploadVendorReport={effectiveCanUploadVendorReport} vendorReportBusy={mutationBusy} onVendorReport={persistVendorReport} onWorkOrderTransition={persistAssignedIntervention} onWorkOrderProof={persistAssignedProof} workOrderBusy={mutationBusy} escalations={escalations} fieldRequests={fieldRequests} onEscalationDecision={decideEscalation} onEscalateToDirection={escalateToDirection} onFieldRequest={submitFieldRequest} onOpen={(id) => openDetail(id, 'workspace')} onNavigate={navigate} flash={flash} />}
           {view === 'dashboard' && <Dashboard anomalies={anomalies} equipment={equipmentItems} escalations={escalations} audience={personaId === 'administration' ? 'administration' : 'facility'} onOpen={openDetail} onNavigate={navigate} />}
           {view === 'registry' && <Registry anomalies={filtered} query={query} setQuery={setQuery} priority={priorityFilter} setPriority={setPriorityFilter} status={statusFilter} setStatus={setStatusFilter} onOpen={(id) => openDetail(id, 'registry')} />}
           {view === 'equipment' && <EquipmentWorkspace equipment={equipmentItems} />}
@@ -1140,7 +1187,7 @@ export default function Home() {
           {view === 'settings' && <ParametersWorkspace parameter={FINANCIAL_DECISION_PARAMETER} onOpenCosts={() => navigate('costs')} />}
           {view === 'manager' && <Manager anomalies={anomalies} tab={managerTab} setTab={setManagerTab} onOpen={(id) => openDetail(id, 'manager')} />}
           {view === 'report' && <Report persona={persona} onNavigate={navigate} persistenceEnabled={session.mode === 'supabase'} offlineSync={offlineSync} flash={flash} />}
-          {view === 'detail' && <Detail key={`${selected.id}-${selected.status}-${selected.proof}-${selected.proofPending}-${selected.proofQueued}`} anomaly={selected} decisionAmount={escalations.find((item) => item.anomaly === selected.id)?.amount ?? null} persistenceMode={session.mode === 'supabase' && dataState === 'live' ? 'server' : 'demo'} persistenceEnabled={session.mode === 'supabase'} offlineSync={offlineSync} readOnly={personaId === 'administration'} canVerify={personaId === 'facility' && session.mode === 'supabase'} busy={mutationBusy} onBack={() => navigate(previousView)} onStatus={(status) => void persistWorkflowStatus(status)} onProof={persistProof} onVerify={() => void verifyProof()} />}
+          {view === 'detail' && <Detail key={`${selected.id}-${selected.status}-${selected.proof}-${selected.proofPending}-${selected.proofQueued}`} anomaly={selected} decisionAmount={escalations.find((item) => item.anomaly === selected.id)?.amount ?? null} persistenceMode={session.mode === 'supabase' && dataState === 'live' ? 'server' : 'demo'} persistenceEnabled={session.mode === 'supabase'} offlineSync={offlineSync} readOnly={personaId === 'administration'} canVerify={personaId === 'facility' && session.mode === 'supabase'} busy={mutationBusy} onBack={() => navigate(previousView)} onStatus={(status) => void persistWorkflowStatus(status)} onProof={persistProof} onVerify={verifyProof} />}
         </div>
       </main>
       {toast && <div className={`toast ${/impossible|non enregistrée/i.test(toast) ? 'toast-error' : ''}`} role="status"><span>{/impossible|non enregistrée/i.test(toast) ? '!' : '✓'}</span>{toast}</div>}
@@ -1149,7 +1196,7 @@ export default function Home() {
   );
 }
 
-function PersonaWorkspace({ persona, anomalies, equipment, vendors, workOrders, dataState, canUploadVendorReport, vendorReportBusy, onVendorReport, escalations, fieldRequests, onEscalationDecision, onEscalateToDirection, onFieldRequest, onOpen, onNavigate, flash }: {
+function PersonaWorkspace({ persona, anomalies, equipment, vendors, workOrders, dataState, canUploadVendorReport, vendorReportBusy, onVendorReport, onWorkOrderTransition, onWorkOrderProof, workOrderBusy, escalations, fieldRequests, onEscalationDecision, onEscalateToDirection, onFieldRequest, onOpen, onNavigate, flash }: {
   persona:Persona;
   anomalies:Anomaly[];
   equipment:EquipmentItem[];
@@ -1159,6 +1206,9 @@ function PersonaWorkspace({ persona, anomalies, equipment, vendors, workOrders, 
   canUploadVendorReport:boolean;
   vendorReportBusy:boolean;
   onVendorReport:(input:{ anomalyReference:string; vendorCode:string; file:File; reportType:'intervention_report'|'pv'|'quote'|'photo_bundle'; reportDate:string; summary:string; reserveNotes?:string; costAmount?:number })=>Promise<void>;
+  onWorkOrderTransition:(order:OperationalWorkOrder,target:'En intervention'|'En validation',comment:string)=>Promise<boolean>;
+  onWorkOrderProof:(order:OperationalWorkOrder,file:File)=>Promise<boolean>;
+  workOrderBusy:boolean;
   escalations:Escalation[];
   fieldRequests:FieldRequest[];
   onEscalationDecision:(id:string, state:DecisionState, motive:string)=>void;
@@ -1170,7 +1220,7 @@ function PersonaWorkspace({ persona, anomalies, equipment, vendors, workOrders, 
 }) {
   if (persona.id === 'administration') return <DirectionWorkspace anomalies={anomalies} escalations={escalations} onDecision={onEscalationDecision} onOpen={onOpen} onNavigate={onNavigate} />;
   if (persona.id === 'facility') return <FacilityManagerWorkspace anomalies={anomalies} equipment={equipment} escalations={escalations} fieldRequests={fieldRequests} onEscalate={onEscalateToDirection} onOpen={onOpen} onNavigate={onNavigate} />;
-  if (persona.id === 'electricite' || persona.id === 'eau_incendie') return <AgentWorkspace key={persona.id} persona={persona} anomalies={anomalies} vendors={vendors} workOrders={workOrders} dataState={dataState} canUploadVendorReport={canUploadVendorReport} vendorReportBusy={vendorReportBusy} onVendorReport={onVendorReport} onFieldRequest={onFieldRequest} flash={flash} />;
+  if (persona.id === 'electricite' || persona.id === 'eau_incendie') return <AgentWorkspace key={persona.id} persona={persona} anomalies={anomalies} vendors={vendors} workOrders={workOrders} dataState={dataState} canUploadVendorReport={canUploadVendorReport} vendorReportBusy={vendorReportBusy} onVendorReport={onVendorReport} onWorkOrderTransition={onWorkOrderTransition} onWorkOrderProof={onWorkOrderProof} workOrderBusy={workOrderBusy} onFieldRequest={onFieldRequest} flash={flash} />;
   if (persona.id === 'rondes_assistance') return <RoundsAssistanceWorkspace fieldRequests={fieldRequests} onNavigate={onNavigate} flash={flash} />;
   return null;
 }
@@ -1255,7 +1305,21 @@ function FacilityManagerWorkspace({ anomalies, equipment, escalations, fieldRequ
   </>;
 }
 
-type AgentTask = { id:string; anomalyReference?:string; asset:string; title:string; due:string; risk:string; status:'À faire'|'En cours'|'Terminé'|'Rétabli provisoirement'; proof:boolean; delayed?:boolean; escalated?:boolean; detail:string };
+type AgentTask = {
+  id:string;
+  anomalyReference?:string;
+  anomalyDatabaseId?:string;
+  asset:string;
+  title:string;
+  due:string;
+  risk:string;
+  status:'À faire'|'En cours'|'Terminé'|'Rétabli provisoirement';
+  proof:boolean;
+  proofPending?:boolean;
+  delayed?:boolean;
+  escalated?:boolean;
+  detail:string;
+};
 
 const agentTaskSets: Record<'electricite'|'eau_incendie', AgentTask[]> = {
   electricite:[
@@ -1270,12 +1334,13 @@ const agentTaskSets: Record<'electricite'|'eau_incendie', AgentTask[]> = {
   ],
 };
 
-function AgentWorkspace({ persona, anomalies, vendors, workOrders, dataState, canUploadVendorReport, vendorReportBusy, onVendorReport, onFieldRequest, flash }: { persona:Persona; anomalies:Anomaly[]; vendors:OperationalVendor[]; workOrders:OperationalWorkOrder[]; dataState:'demo'|'loading'|'live'|'fallback'; canUploadVendorReport:boolean; vendorReportBusy:boolean; onVendorReport:(input:VendorReportInput)=>Promise<void>; onFieldRequest:(request:Omit<FieldRequest,'id'|'status'>)=>void; flash:(message:string)=>void }) {
+function AgentWorkspace({ persona, anomalies, vendors, workOrders, dataState, canUploadVendorReport, vendorReportBusy, onVendorReport, onWorkOrderTransition, onWorkOrderProof, workOrderBusy, onFieldRequest, flash }: { persona:Persona; anomalies:Anomaly[]; vendors:OperationalVendor[]; workOrders:OperationalWorkOrder[]; dataState:'demo'|'loading'|'live'|'fallback'; canUploadVendorReport:boolean; vendorReportBusy:boolean; onVendorReport:(input:VendorReportInput)=>Promise<void>; onWorkOrderTransition:(order:OperationalWorkOrder,target:'En intervention'|'En validation',comment:string)=>Promise<boolean>; onWorkOrderProof:(order:OperationalWorkOrder,file:File)=>Promise<boolean>; workOrderBusy:boolean; onFieldRequest:(request:Omit<FieldRequest,'id'|'status'>)=>void; flash:(message:string)=>void }) {
   const agentKey = persona.id as 'electricite'|'eau_incendie';
   const [demoTasks, setDemoTasks] = useState(agentTaskSets[agentKey]);
   const [tab, setTab] = useState<'active'|'done'>('active');
-  const [action, setAction] = useState<{type:'measure'|'proof'|'escalate'|'reset'; id:string}|null>(null);
+  const [action, setAction] = useState<{type:'measure'|'proof'|'escalate'|'reset'|'start'|'finish'; id:string}|null>(null);
   const [note, setNote] = useState('');
+  const [actionFile, setActionFile] = useState<File|null>(null);
   const liveMode = dataState === 'live';
   const loading = dataState === 'loading';
   const tasks:AgentTask[] = liveMode ? workOrders : demoTasks;
@@ -1289,9 +1354,27 @@ function AgentWorkspace({ persona, anomalies, vendors, workOrders, dataState, ca
   const answerDue = loading ? 'Chargement…' : firstDueTask ? firstDueTask.due : 'Aucune échéance active';
   const missingProofs = activeTasks.filter((task) => !task.proof).length;
   const answerProof = loading ? 'Chargement…' : `${missingProofs} requise${missingProofs === 1 ? '' : 's'}`;
-  const completeAction = () => {
-    if (!action || !activeTask || !note.trim()) return;
-    if (liveMode) return;
+  const closeAction = () => { setAction(null); setNote(''); setActionFile(null); };
+  const completeAction = async () => {
+    if (!action || !activeTask) return;
+    if (liveMode) {
+      const order = workOrders.find((item) => item.id === activeTask.id);
+      if (!order) return;
+      if (action.type === 'proof') {
+        if (!actionFile) return;
+        if (await onWorkOrderProof(order, actionFile)) closeAction();
+        return;
+      }
+      if ((action.type === 'start' || action.type === 'finish') && note.trim()) {
+        const target = action.type === 'start' ? 'En intervention' : 'En validation';
+        if (await onWorkOrderTransition(order, target, note.trim())) {
+          if (action.type === 'finish') setTab('done');
+          closeAction();
+        }
+      }
+      return;
+    }
+    if (!note.trim()) return;
     if (action.type === 'proof') setDemoTasks((items) => items.map((task) => task.id === action.id ? { ...task, proof:true } : task));
     if (action.type === 'measure') setDemoTasks((items) => items.map((task) => task.id === action.id ? { ...task, status:'En cours' } : task));
     if (action.type === 'reset') setDemoTasks((items) => items.map((task) => task.id === action.id ? { ...task, status:'Rétabli provisoirement', proof:false } : task));
@@ -1299,16 +1382,47 @@ function AgentWorkspace({ persona, anomalies, vendors, workOrders, dataState, ca
       setDemoTasks((items) => items.map((task) => task.id === action.id ? { ...task, escalated:true } : task));
       onFieldRequest({ from:persona.name, subject:`${activeTask.asset} · ${activeTask.title}`, note:note.trim() });
     } else flash(`${activeTask.id} · action enregistrée en simulation.`);
-    setAction(null); setNote('');
+    closeAction();
   };
   return <>
     <WorkspaceIntro kicker={persona.role.toUpperCase()} description={`Votre périmètre aujourd’hui : ${persona.scope}.`} badge={liveMode ? 'Affectations réelles' : loading ? 'Chargement des affectations' : 'Vue terrain de démonstration'} />
     <AnswerStrip todo={answerTodo} risk={answerRisk} due={answerDue} proof={answerProof} />
     {!liveMode && !loading && <section className="agent-equipment-grid">{(agentKey === 'electricite' ? [{code:'DEMO-GE',label:'Mode AUTO',value:'À confirmer',tone:'orange'},{code:'DEMO-ASC-1',label:'Disponibilité',value:'Opérationnel',tone:'success'},{code:'DEMO-ASC-2',label:'Disponibilité',value:'Dégradée',tone:'critical'}] : [{code:'DEMO-EAU',label:'Redondance P1/P2',value:'P1 en défaut',tone:'orange'},{code:'DEMO-SSI',label:'Pression réseau',value:'Instable',tone:'critical'},{code:'DEMO-EAU',label:'Fuite active',value:'Non',tone:'success'}]).map((item,index) => <article className="panel equipment-glance" key={`${item.code}-${index}`}><span>{item.code}</span><b>{item.value}</b><Badge tone={item.tone}>{item.label}</Badge></article>)}</section>}
     {agentKey === 'eau_incendie' && <section className="provisional-rule"><span>↻</span><div><b>Réarmement = rétablissement provisoire</b><p>L’anomalie reste ouverte jusqu’au diagnostic, à l’intervention corrective et à la preuve validée par Facility Manager.</p></div></section>}
-    <section className="panel task-board"><div className="workspace-tabs"><button className={tab === 'active' ? 'active' : ''} onClick={() => setTab('active')}>Mes actions <span>{activeTasks.length}</span></button><button className={tab === 'done' ? 'active' : ''} onClick={() => setTab('done')}>Terminées <span>{tasks.filter((task) => task.status === 'Terminé').length}</span></button></div><div className="agent-task-list">{loading ? <div className="empty-state compact" role="status"><span>↻</span><h3>Chargement de vos affectations</h3><p>La file personnelle est vérifiée auprès du serveur métier.</p></div> : visible.length === 0 ? <div className="empty-state compact"><span>✓</span><h3>{liveMode ? 'Aucun ordre de travail attribué' : 'Tout est terminé'}</h3><p>{liveMode ? 'Aucune affectation ne correspond à cette file.' : 'Aucune action dans cette file.'}</p></div> : visible.map((task) => <article key={task.id} className={task.delayed ? 'late' : ''}><div className="task-status"><Badge tone={task.delayed ? 'critical' : task.status === 'Terminé' ? 'success' : task.status === 'Rétabli provisoirement' ? 'orange' : 'blue'}>{task.delayed ? 'EN RETARD' : task.status}</Badge><span>{task.id}{task.anomalyReference ? ` · ${task.anomalyReference}` : ''}</span>{liveMode && <Badge tone="success">AFFECTATION RÉELLE</Badge>}</div><div className="task-copy"><span className="asset-square">{task.asset.slice(0,2)}</span><div><h3>{task.asset} · {task.title}</h3><p>{task.detail}</p><div><span><b>Risque</b>{task.risk}</span><span><b>Échéance</b>{task.due}</span><span><b>Preuve</b>{task.proof ? 'Acceptée' : 'Manquante'}</span></div></div></div>{tab === 'active' && !liveMode && <div className="task-actions"><button onClick={() => {setAction({type:'measure',id:task.id});setNote('')}}>Saisie rapide</button>{agentKey === 'eau_incendie' && task.asset === 'DEMO-EAU' && <button className="reset-action" onClick={() => {setAction({type:'reset',id:task.id});setNote('')}}>↻ Réarmement provisoire</button>}<button onClick={() => {setAction({type:'proof',id:task.id});setNote('')}}>＋ Ajouter preuve</button><button onClick={() => {setAction({type:'escalate',id:task.id});setNote('')}}>{task.escalated ? '✓ Escalade envoyée' : '↑ Escalader à Facility Manager'}</button></div>}</article>)}</div>{liveMode && <div className="field-feed-note" role="status">File personnelle lue depuis le serveur métier. Les actions d’intervention seront raccordées dans un lot séparé.</div>}</section>
+    <section className="panel task-board">
+      <div className="workspace-tabs">
+        <button className={tab === 'active' ? 'active' : ''} onClick={() => setTab('active')}>Mes actions <span>{activeTasks.length}</span></button>
+        <button className={tab === 'done' ? 'active' : ''} onClick={() => setTab('done')}>Terminées <span>{tasks.filter((task) => task.status === 'Terminé').length}</span></button>
+      </div>
+      <div className="agent-task-list">
+        {loading ? <div className="empty-state compact" role="status"><span>↻</span><h3>Chargement de vos affectations</h3><p>La file personnelle est vérifiée auprès du serveur métier.</p></div> : visible.length === 0 ? <div className="empty-state compact"><span>✓</span><h3>{liveMode ? 'Aucun ordre de travail attribué' : 'Tout est terminé'}</h3><p>{liveMode ? 'Aucune affectation ne correspond à cette file.' : 'Aucune action dans cette file.'}</p></div> : visible.map((task) => <article key={task.id} className={task.delayed ? 'late' : ''}>
+          <div className="task-status"><Badge tone={task.delayed ? 'critical' : task.status === 'Terminé' ? 'success' : task.status === 'Rétabli provisoirement' ? 'orange' : 'blue'}>{task.delayed ? 'EN RETARD' : task.status}</Badge><span>{task.id}{task.anomalyReference ? ` · ${task.anomalyReference}` : ''}</span>{liveMode && <Badge tone="success">AFFECTATION RÉELLE</Badge>}</div>
+          <div className="task-copy"><span className="asset-square">{task.asset.slice(0,2)}</span><div><h3>{task.asset} · {task.title}</h3><p>{task.detail}</p><div><span><b>Risque</b>{task.risk}</span><span><b>Échéance</b>{task.due}</span><span><b>Preuve</b>{task.proof ? 'Acceptée' : task.proofPending ? 'À valider par Faustin' : 'Manquante'}</span></div></div></div>
+          {liveMode && <div className="task-actions real-task-actions">
+            {task.status === 'À faire' && <button disabled={workOrderBusy} onClick={() => {setAction({type:'start',id:task.id});setNote('');setActionFile(null)}}>Démarrer l’intervention</button>}
+            {task.status === 'En cours' && <button className="primary-button" disabled={workOrderBusy} onClick={() => {setAction({type:'finish',id:task.id});setNote('');setActionFile(null)}}>Terminer et transmettre</button>}
+            {task.status === 'Terminé' && !task.proof && !task.proofPending && <button className="primary-button" disabled={workOrderBusy} onClick={() => {setAction({type:'proof',id:task.id});setNote('');setActionFile(null)}}>＋ Ajouter la preuve</button>}
+            {task.proofPending && <span className="task-proof-state" role="status">Preuve transmise · contrôle Faustin attendu</span>}
+            {task.proof && <span className="task-proof-state is-accepted" role="status">✓ Preuve acceptée</span>}
+          </div>}
+          {tab === 'active' && !liveMode && <div className="task-actions"><button onClick={() => {setAction({type:'measure',id:task.id});setNote('')}}>Saisie rapide</button>{agentKey === 'eau_incendie' && task.asset === 'DEMO-EAU' && <button className="reset-action" onClick={() => {setAction({type:'reset',id:task.id});setNote('')}}>↻ Réarmement provisoire</button>}<button onClick={() => {setAction({type:'proof',id:task.id});setNote('')}}>＋ Ajouter preuve</button><button onClick={() => {setAction({type:'escalate',id:task.id});setNote('')}}>{task.escalated ? '✓ Escalade envoyée' : '↑ Escalader à Facility Manager'}</button></div>}
+        </article>)}
+      </div>
+      {liveMode && <div className="field-feed-note" role="status">Les étapes sont enregistrées dans le dossier. Une preuve déposée par l’agent reste en attente jusqu’à la décision de Faustin.</div>}
+    </section>
     {!loading && <InternalVendorReportPanel anomalies={anomalies.filter((item) => (liveMode || (agentKey === 'electricite' ? ['DEMO-GE'] : ['DEMO-EAU','DEMO-SSI','DEMO-ESP']).includes(item.asset)) && item.status !== 'Clôturée')} vendors={vendors} canUpload={canUploadVendorReport} busy={vendorReportBusy} onSubmit={onVendorReport} />}
-    {!liveMode && action && activeTask && <div className="demo-modal-backdrop"><section className="demo-modal" role="dialog" aria-modal="true" aria-labelledby="agent-action-title"><button className="modal-close" aria-label="Fermer" onClick={() => setAction(null)}>×</button><Badge tone={action.type === 'escalate' ? 'orange' : action.type === 'reset' ? 'critical' : 'blue'}>{action.type === 'measure' ? 'SAISIE RAPIDE' : action.type === 'proof' ? 'PREUVE' : action.type === 'reset' ? 'RÉARMEMENT PROVISOIRE' : 'ESCALADE FACILITY MANAGER'}</Badge><h3 id="agent-action-title">{activeTask.asset} · {activeTask.title}</h3><p>{action.type === 'reset' ? 'Le service sera indiqué comme rétabli provisoirement. Le dossier restera ouvert.' : action.type === 'proof' ? 'Décrivez la photo ou le document illustré dans la maquette.' : action.type === 'escalate' ? 'Expliquez le risque ou le blocage qui nécessite Facility Manager.' : 'Saisissez les mesures et observations relevées.'}</p><label className="field">{action.type === 'proof' ? 'Description de la preuve' : 'Observation obligatoire'}<textarea autoFocus value={note} onChange={(e) => setNote(e.target.value)} placeholder={action.type === 'measure' ? 'Ex. batterie 25,8 V · mode AUTO confirmé…' : 'Ajoutez un commentaire précis…'} /></label>{action.type === 'proof' && <div className="simulated-file"><span>▧</span><div><b>photo_terrain_demo.jpg</b><small>Illustration de maquette · aucun fichier téléversé</small></div></div>}<SyncStatusNotice state="demo-volatile" compact label="État de l’action terrain" /><div className="modal-actions"><button className="secondary-button" onClick={() => setAction(null)}>Annuler</button><button className="primary-button" disabled={!note.trim()} onClick={completeAction}>Appliquer dans la démonstration</button></div></section></div>}
+    {action && activeTask && <div className="demo-modal-backdrop" role="presentation" onMouseDown={(event) => {if (event.target === event.currentTarget && !workOrderBusy) closeAction()}}>
+      <section className="demo-modal" role="dialog" aria-modal="true" aria-labelledby="agent-action-title">
+        <button className="modal-close" aria-label="Fermer" disabled={workOrderBusy} onClick={closeAction}>×</button>
+        <Badge tone={action.type === 'escalate' ? 'orange' : action.type === 'reset' ? 'critical' : action.type === 'finish' ? 'success' : 'blue'}>{action.type === 'start' ? 'DÉMARRAGE INTERVENTION' : action.type === 'finish' ? 'FIN D’INTERVENTION' : action.type === 'measure' ? 'SAISIE RAPIDE' : action.type === 'proof' ? 'PREUVE' : action.type === 'reset' ? 'RÉARMEMENT PROVISOIRE' : 'ESCALADE FACILITY MANAGER'}</Badge>
+        <h3 id="agent-action-title">{activeTask.id} · {activeTask.asset}</h3>
+        <p>{action.type === 'start' ? 'Décrivez le diagnostic ou la première observation. Le démarrage sera horodaté dans le dossier.' : action.type === 'finish' ? 'Résumez l’intervention réalisée et son résultat avant transmission à Facility Manager.' : action.type === 'reset' ? 'Le service sera indiqué comme rétabli provisoirement. Le dossier restera ouvert.' : action.type === 'proof' ? liveMode ? 'Joignez la photo, le PDF ou le procès-verbal qui documente l’intervention.' : 'Décrivez la photo ou le document illustré dans la maquette.' : action.type === 'escalate' ? 'Expliquez le risque ou le blocage qui nécessite Facility Manager.' : 'Saisissez les mesures et observations relevées.'}</p>
+        {action.type === 'proof' && liveMode ? <label className="field report-file">Fichier de preuve<input autoFocus type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={(event) => setActionFile(event.target.files?.[0] ?? null)} /><small>{actionFile ? `${actionFile.name} · ${Math.max(1,Math.round(actionFile.size/1024))} Ko` : 'PDF, JPG, PNG ou WebP · 10 Mo maximum'}</small></label> : <label className="field">{action.type === 'proof' ? 'Description de la preuve' : action.type === 'finish' ? 'Compte rendu obligatoire' : 'Observation obligatoire'}<textarea autoFocus value={note} onChange={(e) => setNote(e.target.value)} placeholder={action.type === 'measure' ? 'Ex. batterie 25,8 V · mode AUTO confirmé…' : action.type === 'finish' ? 'Diagnostic, action réalisée, essais et résultat…' : 'Ajoutez un commentaire précis…'} /></label>}
+        {action.type === 'proof' && !liveMode && <div className="simulated-file"><span>▧</span><div><b>photo_terrain_demo.jpg</b><small>Illustration de maquette · aucun fichier téléversé</small></div></div>}
+        <SyncStatusNotice state={liveMode ? action.type === 'proof' ? 'queued-local' : 'online-required' : 'demo-volatile'} compact label="État de l’action terrain" />
+        <div className="modal-actions"><button className="secondary-button" disabled={workOrderBusy} onClick={closeAction}>Annuler</button><button className="primary-button" disabled={workOrderBusy || (action.type === 'proof' && liveMode ? !actionFile : !note.trim())} onClick={() => void completeAction()}>{workOrderBusy ? 'Enregistrement…' : liveMode ? action.type === 'start' ? 'Démarrer et historiser' : action.type === 'finish' ? 'Terminer et transmettre' : 'Mettre la preuve en file' : 'Appliquer dans la démonstration'}</button></div>
+      </section>
+    </div>}
   </>;
 }
 
@@ -1656,7 +1770,7 @@ function Manager({ anomalies, tab, setTab, onOpen }: { anomalies:Anomaly[]; tab:
   </div>;
 }
 
-function Detail({ anomaly, decisionAmount, persistenceMode, persistenceEnabled, offlineSync, onBack, onStatus, onProof, onVerify, readOnly = false, canVerify = false, busy = false }: { anomaly:Anomaly; decisionAmount:number|null; persistenceMode:'demo'|'server'; persistenceEnabled:boolean; offlineSync:ReturnType<typeof useOfflineSync>; onBack:()=>void; onStatus:(s:Status)=>void; onProof:(file:File)=>Promise<SyncStatusState>; onVerify:()=>void; readOnly?:boolean; canVerify?:boolean; busy?:boolean }) {
+function Detail({ anomaly, decisionAmount, persistenceMode, persistenceEnabled, offlineSync, onBack, onStatus, onProof, onVerify, readOnly = false, canVerify = false, busy = false }: { anomaly:Anomaly; decisionAmount:number|null; persistenceMode:'demo'|'server'; persistenceEnabled:boolean; offlineSync:ReturnType<typeof useOfflineSync>; onBack:()=>void; onStatus:(s:Status)=>void; onProof:(file:File)=>Promise<SyncStatusState>; onVerify:(decision:'accepted'|'rejected',comment:string)=>Promise<boolean>; readOnly?:boolean; canVerify?:boolean; busy?:boolean }) {
   const nextStep:Partial<Record<Status,Status>> = { 'À qualifier':'Affectée', 'Affectée':'En intervention', 'En intervention':'En validation', 'En validation':'Clôturée' };
   const nextStatusOption = nextStep[anomaly.status];
   const [nextStatus, setNextStatus] = useState<Status>(nextStatusOption ?? anomaly.status);
@@ -1664,6 +1778,8 @@ function Detail({ anomaly, decisionAmount, persistenceMode, persistenceEnabled, 
   const proofInput = useRef<HTMLInputElement>(null);
   const [pendingProof, setPendingProof] = useState<File|null>(null);
   const [proofTransferState, setProofTransferState] = useState<SyncStatusState>(persistenceMode === 'server' ? 'online-required' : 'demo-volatile');
+  const [proofReviewDecision, setProofReviewDecision] = useState<'accepted'|'rejected'|null>(null);
+  const [proofReviewComment, setProofReviewComment] = useState('');
   const chooseProof = () => proofInput.current?.click();
   const submitProof = async (file:File) => {
     setPendingProof(file);
@@ -1671,6 +1787,13 @@ function Detail({ anomaly, decisionAmount, persistenceMode, persistenceEnabled, 
     const result = await onProof(file);
     setProofTransferState(result);
     if (result !== 'error') setPendingProof(null);
+  };
+  const submitProofReview = async () => {
+    if (!proofReviewDecision || (proofReviewDecision === 'rejected' && !proofReviewComment.trim())) return;
+    if (await onVerify(proofReviewDecision, proofReviewComment.trim())) {
+      setProofReviewDecision(null);
+      setProofReviewComment('');
+    }
   };
   const workflow = ['Constat','Qualification','Décision','Intervention','Preuve','Clôture'];
   const statusStep:Record<Status,number> = { 'À qualifier':1, 'Affectée':2, 'En intervention':3, 'En validation':4, 'Clôturée':5 };
@@ -1713,7 +1836,18 @@ function Detail({ anomaly, decisionAmount, persistenceMode, persistenceEnabled, 
 
     {section === 'finance' && <section id="dossier-finance-panel" role="tabpanel" className="dossier-two-columns"><article className="panel finance-decision-card"><div className="panel-head"><div><p className="design-kicker">BRANCHE DE TRAITEMENT</p><h3>{decisionAmount === null ? 'Montant non renseigné' : 'Intervention avec montant documenté'}</h3></div><Badge tone={decisionAmount === null ? 'neutral' : overThreshold ? 'orange' : 'success'}>{decisionAmount === null ? 'DONNÉES INSUFFISANTES' : overThreshold ? 'ADMINISTRATION' : 'DÉLÉGATION FM'}</Badge></div><div className="finance-amount"><span>Montant de décision</span><strong>{decisionAmount === null ? 'Non renseigné' : formatMoney(decisionAmount)}</strong><small>Seuil d’approbation : {formatMoney(DECISION_THRESHOLD_FCFA)}</small></div>{decisionAmount === null ? <div className="compact-insufficient-state"><b>Qualification financière incomplète</b><p>Aucun montant canonique n’est relié à ce dossier.</p></div> : <><div className={`authority-result ${overThreshold ? 'escalate' : 'delegated'}`}><span>{overThreshold ? '↑' : '✓'}</span><div><b>{overThreshold ? 'Arbitrage de l’Administration' : 'Facility Manager peut décider'}</b><small>{overThreshold ? 'Le montant dépasse la délégation validée.' : 'Le montant reste sous le seuil validé.'}</small></div></div><div className="decision-audit"><span><b>Décision</b>{overThreshold ? 'À soumettre' : 'Autorisée dans la délégation'}</span><span><b>Montant engagé</b>Non renseigné</span><span><b>Montant payé</b>Non renseigné</span></div></>}</article><aside className="panel quote-card"><p className="design-kicker">PIÈCES FINANCIÈRES</p><h3>Devis et engagement</h3><div className="quote-file"><span>▧</span><p><b>Pièce financière non reliée</b><small>Données insuffisantes dans la source actuelle</small></p></div></aside></section>}
 
-    {section === 'evidence' && <section id="dossier-evidence-panel" role="tabpanel" className="dossier-two-columns"><article className="panel evidence-panel"><div className="panel-head"><div><h3>Preuves du dossier</h3><p>Exigence appliquée au dossier lorsqu’elle est disponible</p></div>{!readOnly && !anomaly.proofPending && !anomaly.proofQueued && <button disabled={busy} onClick={chooseProof}>＋ Ajouter</button>}</div>{!readOnly && !anomaly.proof && !anomaly.proofPending && <SyncStatusNotice state={anomaly.proofQueued ? 'queued-local' : proofTransferState} compact label="État du dépôt de preuve" onRetry={proofTransferState === 'error' && pendingProof ? () => void submitProof(pendingProof) : undefined} />}{anomaly.proof ? <div className="evidence-file"><span>▧</span><div><b>Preuve d’intervention acceptée</b><small>Fichier privé · contrôle Facility Manager terminé</small></div><Badge tone="success">ACCEPTÉE</Badge></div> : anomaly.proofPending ? <div className="evidence-file"><span>▧</span><div><b>Preuve reçue</b><small>Contrôle Facility Manager requis</small></div><Badge tone="orange">À VALIDER</Badge>{canVerify && <button className="primary-button" disabled={busy} onClick={onVerify}>Valider</button>}</div> : anomaly.proofQueued ? <div className="evidence-file"><span>↓</span><div><b>Preuve protégée localement</b><small>En attente de synchronisation vers le stockage privé sécurisé</small></div><Badge tone="blue">EN FILE</Badge></div> : <div className="proof-requirement"><span>⌁</span><div><b>{expectedProof ?? 'Preuve attendue non définie'}</b><p>{expectedProof ? 'La clôture reste impossible tant que la pièce obligatoire n’est pas acceptée.' : 'Aucune règle de preuve canonique n’est raccordée à ce dossier.'}</p></div>{!readOnly && <button className="primary-button" onClick={chooseProof}>Déposer</button>}</div>}</article><aside className="panel proof-matrix-card"><p className="design-kicker">EXIGENCE APPLIQUÉE</p><h3>{anomaly.asset}</h3>{expectedProof ? <ul><li><span>✓</span>{expectedProof}</li></ul> : <div className="compact-insufficient-state"><b>Preuve attendue non définie</b><p>La règle contextuelle doit être confirmée avant d’afficher une matrice.</p></div>}</aside></section>}
+    {section === 'evidence' && <section id="dossier-evidence-panel" role="tabpanel" className="dossier-two-columns">
+      <article className="panel evidence-panel">
+        <div className="panel-head"><div><h3>Preuves du dossier</h3><p>Exigence appliquée au dossier lorsqu’elle est disponible</p></div>{!readOnly && !anomaly.proofPending && !anomaly.proofQueued && <button disabled={busy} onClick={chooseProof}>＋ Ajouter</button>}</div>
+        {!readOnly && !anomaly.proof && !anomaly.proofPending && <SyncStatusNotice state={anomaly.proofQueued ? 'queued-local' : proofTransferState} compact label="État du dépôt de preuve" onRetry={proofTransferState === 'error' && pendingProof ? () => void submitProof(pendingProof) : undefined} />}
+        {anomaly.proof ? <div className="evidence-file"><span>▧</span><div><b>Preuve d’intervention acceptée</b><small>Fichier privé · contrôle Facility Manager terminé</small></div><Badge tone="success">ACCEPTÉE</Badge></div> : anomaly.proofPending ? <>
+          <div className="evidence-file"><span>▧</span><div><b>Preuve reçue</b><small>Contrôle Facility Manager requis</small></div><Badge tone="orange">À VALIDER</Badge></div>
+          {canVerify && !proofReviewDecision && <div className="proof-review-actions" aria-label="Décision sur la preuve"><button className="reject-action" disabled={busy} onClick={() => {setProofReviewDecision('rejected');setProofReviewComment('')}}>Refuser avec motif</button><button className="primary-button" disabled={busy} onClick={() => {setProofReviewDecision('accepted');setProofReviewComment('')}}>Accepter la preuve</button></div>}
+          {canVerify && proofReviewDecision && <div className={`proof-review-form is-${proofReviewDecision}`}><div><Badge tone={proofReviewDecision === 'accepted' ? 'success' : 'critical'}>{proofReviewDecision === 'accepted' ? 'ACCEPTATION' : 'REFUS'}</Badge><b>{proofReviewDecision === 'accepted' ? 'Confirmer la conformité de la preuve' : 'Motiver le refus de la preuve'}</b></div><label className="field">{proofReviewDecision === 'rejected' ? 'Motif obligatoire' : 'Commentaire facultatif'}<textarea autoFocus value={proofReviewComment} onChange={(event) => setProofReviewComment(event.target.value)} placeholder={proofReviewDecision === 'rejected' ? 'Indiquez ce qui manque ou ce qui doit être repris…' : 'Précision de contrôle éventuelle…'} /></label><div className="modal-actions"><button className="secondary-button" disabled={busy} onClick={() => {setProofReviewDecision(null);setProofReviewComment('')}}>Annuler</button><button className="primary-button" disabled={busy || (proofReviewDecision === 'rejected' && !proofReviewComment.trim())} onClick={() => void submitProofReview()}>{busy ? 'Enregistrement…' : proofReviewDecision === 'accepted' ? 'Confirmer l’acceptation' : 'Confirmer le refus'}</button></div></div>}
+        </> : anomaly.proofQueued ? <div className="evidence-file"><span>↓</span><div><b>Preuve protégée localement</b><small>En attente de synchronisation vers le stockage privé sécurisé</small></div><Badge tone="blue">EN FILE</Badge></div> : <div className="proof-requirement"><span>⌁</span><div><b>{expectedProof ?? 'Preuve attendue non définie'}</b><p>{expectedProof ? 'La clôture reste impossible tant que la pièce obligatoire n’est pas acceptée.' : 'Aucune règle de preuve canonique n’est raccordée à ce dossier.'}</p></div>{!readOnly && <button className="primary-button" onClick={chooseProof}>Déposer</button>}</div>}
+      </article>
+      <aside className="panel proof-matrix-card"><p className="design-kicker">EXIGENCE APPLIQUÉE</p><h3>{anomaly.asset}</h3>{expectedProof ? <ul><li><span>✓</span>{expectedProof}</li></ul> : <div className="compact-insufficient-state"><b>Preuve attendue non définie</b><p>La règle contextuelle doit être confirmée avant d’afficher une matrice.</p></div>}</aside>
+    </section>}
 
     {section === 'history' && <section id="dossier-history-panel" role="tabpanel" className="panel dossier-history"><div className="panel-head"><div><h3>Historique du dossier</h3><p>Seuls les événements métier datés et attribués peuvent constituer l’historique</p></div><span className="panel-count">0 événement canonique</span></div><div className="dossier-history-missing" role="note"><span>⌁</span><div><b>Historique métier indisponible</b><p>Aucune source chargée ne fournit actuellement l’action, l’acteur, l’étape et l’horodatage complets. Les repères ci-dessous ne remplacent pas un journal métier.</p></div></div><div className="dossier-current-markers" aria-label="Repères disponibles hors historique"><article><span>R</span><div><b>Constat d’origine</b><small>{anomaly.reported} · auteur non renseigné</small></div><em>REPÈRE DOSSIER</em></article><article className="current"><span>{currentStep+1}</span><div><b>Étape actuelle : {anomaly.status}</b><small>Date et auteur de transition non disponibles</small></div><em>ÉTAT ACTUEL</em></article></div></section>}
   </>;
