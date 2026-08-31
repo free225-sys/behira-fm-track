@@ -2,6 +2,47 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-052 — C11-A : porte de calcul des scores canoniques
+
+- **Date :** 31 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** audit de préparation terminé — modèle et décisions à valider
+- **Périmètre :** provenance, couverture et séquencement des scores équipement, bâtiment et agent ; aucune migration, formule active, donnée ou écriture distante
+
+L’audit confirme que les sept scores équipements sont des valeurs initiales du
+référentiel Excel, que le `82/100` bâtiment est encore une valeur d’interface et
+que les scores agents sont explicitement de démonstration. La préproduction
+contient six rondes et trente-quatre contrôles, mais seulement WILO-01 et GE-01
+sont couverts. La maintenance préventive, la criticité vital/important/confort,
+les contrôles de conformité, l’état des zones et la continuité de service ne
+forment pas encore des sources canoniques suffisantes.
+
+Le cadrage `C11_CADRAGE_SCORES_CANONIQUES_2026-08-31.md` interdit de redistribuer
+le poids d’une composante absente et impose l’état « Score non calculable —
+données insuffisantes » tant que la complétude minimale n’est pas atteinte. Le
+pilote recommandé porte d’abord sur WILO-01. Le score agent reste conditionné à
+une validation métier, RH et juridique.
+
+- **Suite proposée :** valider les sept décisions C11-A avec l’Administration et
+  Facility Manager, puis ouvrir C11-B local sur WILO-01 avec migration et tests
+  séparés. Aucun dry-run ni changement distant n’est autorisé à ce stade.
+
+## DEV-051 — C10-FIX-02 : publication et recette inter-onglets réussies
+
+- **Date :** 31 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** publié et validé en préproduction
+- **Périmètre :** disponibilité du correctif et contrôle humain Faustin → Frédéric ; aucune migration ni donnée métier modifiée
+
+La version C10-FIX-02 a été publiée sur l’environnement de préproduction. Après
+connexion de deux comptes dans le même navigateur, l’ancien onglet a été
+invalidé et le message attendu « Votre session a changé, veuillez reprendre
+l’action. » a été confirmé par le responsable de recette. Aucune action n’est
+restée disponible sous l’ancien rôle.
+
+- **Suite proposée :** clôturer C10 et ouvrir C11 sur les scores canoniques, en
+  commençant par un audit de calculabilité avant toute migration.
+
 ## DEV-050 — C10-FIX-02 : cohérence Auth entre onglets
 
 - **Date :** 31 août 2026
