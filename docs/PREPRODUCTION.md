@@ -6,11 +6,12 @@ Valider le produit sur un projet Supabase isolé avant toute donnée réelle ou
 ouverture aux utilisateurs. La pile locale ne doit jamais être exposée sur
 Internet.
 
-## État au 26 août 2026
+## État au 31 août 2026
 
 - Projet Supabase `fm_track` actif en région `eu-west-1`.
-- Douze migrations versionnées appliquées, dont le retrait des accès prestataires,
-  les deux droits de dépôt internes et le verrou de première connexion.
+- Vingt et une migrations versionnées appliquées, dont le retrait des accès
+  prestataires, les deux droits de dépôt internes, le verrou de première
+  connexion, le hors-ligne terrain et les contrats anti-dossier-zombie C1 à C6.
 - Référentiel V3 chargé : rôles, profils métier non connectés, équipements,
   zones, prestataires, catégories, SLA, statuts et seuils.
 - Cinq utilisateurs internes Supabase Auth auto-confirmés, reliés aux cinq profils
@@ -21,6 +22,11 @@ Internet.
   `upload_vendor_intervention_report`; le profil Lecture seule précréé a été retiré.
 - Frontend local raccordé avec une clé publique et un mode démonstration de
   secours sans écriture distante.
+- Les cinq identifiants temporaires ont été vérifiés en connexion réelle sans
+  changer les mots de passe de leurs titulaires. Le changement obligatoire et
+  la restauration du rôle ont été validés avec une fixture distante supprimée.
+- La recette C8 distante a réussi avec annulation transactionnelle : 46/46 tables
+  publiques sous RLS, 6 étapes, 29 correspondances action/étape et aucun résidu.
 
 Restent à confirmer avant la préproduction ouverte : l’organisation
 propriétaire définitive, la région validée par la Direction et l’URL du
@@ -57,10 +63,10 @@ Le workflow manuel `supabase-preproduction.yml` réalise toujours un `dry-run`
 avant l’application. Il n’importe jamais les fixtures de démo. Le référentiel
 de production reste appliqué séparément avec le seed idempotent contrôlé.
 
-La procédure C8 détaillée, les huit migrations locales encore absentes de
-`fm_track`, les critères d’arrêt et le contrôle de retour arrière sont consignés
-dans `C8_RECETTE_ET_DRY_RUN_PREPRODUCTION.md`. C8 ne lie pas la copie locale au
-projet distant et n’exécute aucune migration distante.
+La clôture C8, les migrations appliquées, les critères d'arrêt et les preuves de
+nettoyage sont consignés dans `C8_RECETTE_ET_DRY_RUN_PREPRODUCTION.md`. La recette
+humaine des cinq comptes est définie séparément dans
+`C9_RECETTE_METIER_5_COMPTES_PREPRODUCTION.md`.
 
 ## Recette métier minimale
 

@@ -2,6 +2,49 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-029 — C9 : accès réels vérifiés et recette métier des cinq comptes cadrée
+
+- **Date :** 31 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Phase technique réussie — recette humaine prête, publication distincte requise
+- **Périmètre :** authentification réelle, verrou de première connexion, périmètres RLS et cadrage de la recette métier ; aucune donnée métier, interface, migration, permission ou publication modifiée
+
+Les cinq identifiants temporaires ont été lus uniquement en mémoire depuis le
+classeur local protégé. Chaque compte réel s'est connecté à `fm_track`, a reçu le
+verrou `must_change_password`, puis a été contrôlé sans modifier son mot de passe :
+`current_profile_id()` reste nul, les rôles métier sont neutralisés et la permission
+de dépôt de rapport prestataire est refusée tant que le titulaire n'a pas choisi
+son mot de passe personnel.
+
+Une fixture Auth distante auto-confirmée a ensuite validé le parcours complet :
+connexion verrouillée, refus RLS, changement effectif du mot de passe, déverrouillage
+par le trigger, restauration du rôle, déconnexion et suppression. Le contrôle final
+confirme exactement cinq utilisateurs Auth, cinq profils reliés, cinq profils encore
+verrouillés, aucun profil personnalisé et aucune fixture résiduelle. Les journaux
+Auth ne montrent pas d'erreur sur cette séquence.
+
+Le site publié de validation des maquettes reste public, démonstratif et dépourvu
+de variables Supabase. Il ne doit pas accueillir les comptes réels. Le document
+`C9_RECETTE_METIER_5_COMPTES_PREPRODUCTION.md` exige une URL distincte, sans mode
+démo, avant la séance collective et distingue les fonctions persistantes des
+écrans encore simulés : décisions financières, administration des utilisateurs,
+seuil distant, scores et notifications.
+
+### Contrôles réalisés
+
+- cinq connexions réelles réussies sans changement de mot de passe utilisateur ;
+- cinq verrous et cinq neutralisations RLS confirmés ;
+- fixture de première connexion : changement, déverrouillage et rôle restauré ;
+- nettoyage distant : **5** Auth, **5** profils reliés, **5** verrouillés,
+  **0** personnalisé, **0** fixture Auth et **0** profil fixture ;
+- site de maquettes observé public et sans variable d'environnement Supabase ;
+- aucun secret affiché, ajouté au dépôt ou conservé dans un rapport.
+
+- **Suite proposée :** créer une publication de préproduction distincte raccordée
+  à `fm_track`, puis accompagner les cinq titulaires dans la séquence C9. Toute
+  diffusion d'un message ou d'identifiants reste soumise à validation préalable
+  du contenu par Wilkam.
+
 ## DEV-028 — C8 préproduction : application contrôlée et correctif de provenance
 
 - **Date :** 31 août 2026
