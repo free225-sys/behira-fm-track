@@ -2892,6 +2892,28 @@ button.executive-metric.is-link:hover{
   background:var(--success-surface);
   color:var(--success-text);
 }
+.task-proof-rejection{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  align-items:start;
+  gap:var(--space-3);
+  margin-top:var(--space-3);
+  padding:var(--space-3);
+  border:1px solid var(--danger-border);
+  border-radius:var(--radius-md);
+  background:var(--danger-surface);
+  color:var(--danger-text);
+}
+.task-proof-rejection b{
+  display:block;
+  font-size:var(--font-size-label);
+}
+.task-proof-rejection p{
+  margin:var(--space-1) 0 0;
+  color:var(--danger-text);
+  font-size:var(--font-size-label);
+  line-height:1.5;
+}
 .proof-review-actions{
   display:flex;
   justify-content:flex-end;
@@ -2937,5 +2959,8 @@ button.executive-metric.is-link:hover{
     width:100%;
     min-height:44px;
     justify-content:center;
+  }
+  .task-proof-rejection{
+    grid-template-columns:1fr;
   }
 }

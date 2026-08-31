@@ -29,6 +29,9 @@ const checks = [
   ["consultation image et PDF proposée dans le dossier", page.includes("Consulter") && page.includes("Ouvrir dans un nouvel onglet") && page.includes("proofPreview.proof.mimeType?.startsWith('image/')")],
   ["preuve consultable depuis la file personnelle de l’agent", data.includes("proofs: anomaly.proofs") && page.includes("Consulter la preuve") && page.includes("consultTaskProof")],
   ["états accepté, refusé et à valider conservés", page.includes("ACCEPTÉE") && page.includes("REFUSÉE") && page.includes("À VALIDER")],
+  ["refus visible dans la carte agent", page.includes("Refusée · remplacement requis") && page.includes("task-proof-rejection") && page.includes("Preuve à remplacer")],
+  ["motif canonique du refus affiché sans invention", page.includes("latestProof.rejectionReason ?? 'Motif non renseigné par Facility Manager.'")],
+  ["nouveau dépôt présenté comme remplacement", page.includes("proofRejected ? '↻ Remplacer la preuve' : '＋ Ajouter la preuve'")],
   ["historique canonique projeté depuis anomaly_history", data.includes('from("anomaly_history")') && data.includes("historyByAnomalyId") && data.includes("history: historyByAnomalyId.get(item.id) ?? []")],
   ["libellé, acteur, étape et heure proviennent des référentiels métier", data.includes('from("business_event_definitions")') && data.includes('from("workflow_stages")') && data.includes("actor_label_snapshot") && data.includes("occurredAt: history.occurred_at")],
   ["historique réel injecté dans le dossier", page.includes("const historyEvents = anomaly.history ?? []") && page.includes("Événements métier du dossier") && page.includes("formatHistoryMoment(event.occurredAt)")],
@@ -38,5 +41,5 @@ const checks = [
 
 const failures = checks.filter(([, passed]) => !passed);
 for (const [label, passed] of checks) console.log(`${passed ? "✓" : "✗"} ${label}`);
-if (failures.length) throw new Error(`${failures.length} contrôle(s) C9-FIX-05 en échec`);
-console.log(`\n${checks.length} contrôles C9-FIX-05 réussis.`);
+if (failures.length) throw new Error(`${failures.length} contrôle(s) C9-FIX-06 en échec`);
+console.log(`\n${checks.length} contrôles C9-FIX-06 réussis.`);

@@ -1429,19 +1429,23 @@ function AgentWorkspace({ persona, anomalies, vendors, workOrders, dataState, ca
         <button className={tab === 'done' ? 'active' : ''} onClick={() => setTab('done')}>Terminées <span>{tasks.filter((task) => task.status === 'Terminé').length}</span></button>
       </div>
       <div className="agent-task-list">
-        {loading ? <div className="empty-state compact" role="status"><span>↻</span><h3>Chargement de vos affectations</h3><p>La file personnelle est vérifiée auprès du serveur métier.</p></div> : visible.length === 0 ? <div className="empty-state compact"><span>✓</span><h3>{liveMode ? 'Aucun ordre de travail attribué' : 'Tout est terminé'}</h3><p>{liveMode ? 'Aucune affectation ne correspond à cette file.' : 'Aucune action dans cette file.'}</p></div> : visible.map((task) => <article key={task.id} className={task.delayed ? 'late' : ''}>
+        {loading ? <div className="empty-state compact" role="status"><span>↻</span><h3>Chargement de vos affectations</h3><p>La file personnelle est vérifiée auprès du serveur métier.</p></div> : visible.length === 0 ? <div className="empty-state compact"><span>✓</span><h3>{liveMode ? 'Aucun ordre de travail attribué' : 'Tout est terminé'}</h3><p>{liveMode ? 'Aucune affectation ne correspond à cette file.' : 'Aucune action dans cette file.'}</p></div> : visible.map((task) => {
+          const latestProof = task.proofs?.[0];
+          const proofRejected = latestProof?.verificationStatus === 'rejected';
+          return <article key={task.id} className={task.delayed ? 'late' : ''}>
           <div className="task-status"><Badge tone={task.delayed ? 'critical' : task.status === 'Terminé' ? 'success' : task.status === 'Rétabli provisoirement' ? 'orange' : 'blue'}>{task.delayed ? 'EN RETARD' : task.status}</Badge><span>{task.id}{task.anomalyReference ? ` · ${task.anomalyReference}` : ''}</span>{liveMode && <Badge tone="success">AFFECTATION RÉELLE</Badge>}</div>
-          <div className="task-copy"><span className="asset-square">{task.asset.slice(0,2)}</span><div><h3>{task.asset} · {task.title}</h3><p>{task.detail}</p><div><span><b>Risque</b>{task.risk}</span><span><b>Échéance</b>{task.due}</span><span><b>Preuve</b>{task.proof ? 'Acceptée' : task.proofPending ? 'À valider par Faustin' : 'Manquante'}</span></div></div></div>
+          <div className="task-copy"><span className="asset-square">{task.asset.slice(0,2)}</span><div><h3>{task.asset} · {task.title}</h3><p>{task.detail}</p><div><span><b>Risque</b>{task.risk}</span><span><b>Échéance</b>{task.due}</span><span><b>Preuve</b>{task.proof ? 'Acceptée' : task.proofPending ? 'À valider par Faustin' : proofRejected ? 'Refusée · remplacement requis' : 'Manquante'}</span></div></div></div>
           {liveMode && <div className="task-actions real-task-actions">
             {task.status === 'À faire' && <button disabled={workOrderBusy} onClick={() => {setAction({type:'start',id:task.id});setNote('');setActionFile(null)}}>Démarrer l’intervention</button>}
             {task.status === 'En cours' && <button className="primary-button" disabled={workOrderBusy} onClick={() => {setAction({type:'finish',id:task.id});setNote('');setActionFile(null)}}>Terminer et transmettre</button>}
-            {task.status === 'Terminé' && !task.proof && !task.proofPending && <button className="primary-button" disabled={workOrderBusy} onClick={() => {setAction({type:'proof',id:task.id});setNote('');setActionFile(null)}}>＋ Ajouter la preuve</button>}
+            {task.status === 'Terminé' && !task.proof && !task.proofPending && <button className="primary-button" disabled={workOrderBusy} onClick={() => {setAction({type:'proof',id:task.id});setNote('');setActionFile(null)}}>{proofRejected ? '↻ Remplacer la preuve' : '＋ Ajouter la preuve'}</button>}
             {task.proofPending && <span className="task-proof-state" role="status">Preuve transmise · contrôle Faustin attendu</span>}
             {task.proof && <span className="task-proof-state is-accepted" role="status">✓ Preuve acceptée</span>}
-            {task.proofs?.[0] && <button className="secondary-button" disabled={taskProofLoading === task.proofs[0].id} onClick={() => void consultTaskProof(task.proofs![0])}>{taskProofLoading === task.proofs[0].id ? 'Ouverture…' : 'Consulter la preuve'}</button>}
+            {latestProof && <button className="secondary-button" disabled={taskProofLoading === latestProof.id} onClick={() => void consultTaskProof(latestProof)}>{taskProofLoading === latestProof.id ? 'Ouverture…' : 'Consulter la preuve'}</button>}
           </div>}
+          {liveMode && proofRejected && <div className="task-proof-rejection" role="alert"><Badge tone="critical">REFUSÉE</Badge><div><b>Preuve à remplacer</b><p>{latestProof.rejectionReason ?? 'Motif non renseigné par Facility Manager.'}</p></div></div>}
           {tab === 'active' && !liveMode && <div className="task-actions"><button onClick={() => {setAction({type:'measure',id:task.id});setNote('')}}>Saisie rapide</button>{agentKey === 'eau_incendie' && task.asset === 'DEMO-EAU' && <button className="reset-action" onClick={() => {setAction({type:'reset',id:task.id});setNote('')}}>↻ Réarmement provisoire</button>}<button onClick={() => {setAction({type:'proof',id:task.id});setNote('')}}>＋ Ajouter preuve</button><button onClick={() => {setAction({type:'escalate',id:task.id});setNote('')}}>{task.escalated ? '✓ Escalade envoyée' : '↑ Escalader à Facility Manager'}</button></div>}
-        </article>)}
+        </article>;})}
       </div>
       {liveMode && <div className="field-feed-note" role="status">Les étapes sont enregistrées dans le dossier. Une preuve déposée par l’agent reste en attente jusqu’à la décision de Faustin.</div>}
     </section>

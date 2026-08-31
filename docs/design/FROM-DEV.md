@@ -2,6 +2,32 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-047 — C9-FIX-06 : retour de refus visible pour l’agent
+
+- **Date :** 31 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté — validations et publication en cours
+- **Périmètre :** affichage dans la file personnelle de l’état et du motif de refus déjà enregistrés ; aucune migration, table, politique RLS, permission, statut ou règle métier modifié
+
+La recette critique `ANO-2026-000006` a confirmé que Faustin pouvait refuser une
+preuve avec un motif canonique. Dans l’espace de Sylvain, l’ordre terminé revenait
+cependant à l’état générique « Preuve manquante ». Le fichier refusé restait
+consultable et un nouveau dépôt était possible, mais aucun libellé n’indiquait le
+refus ni sa raison. L’agent ne pouvait donc pas comprendre ce qui devait être
+corrigé.
+
+La carte de l’ordre de travail lit désormais la preuve la plus récente déjà
+chargée sous RLS. Lorsqu’elle est `rejected`, elle affiche simultanément
+« Refusée · remplacement requis », un encart textuel `REFUSÉE`, le motif exact de
+Facility Manager et l’action « Remplacer la preuve ». Le motif de repli
+« Motif non renseigné par Facility Manager » n’est utilisé que si la source ne
+contient réellement aucun motif. Le fichier refusé demeure consultable et une
+preuve de remplacement suit le même parcours privé existant.
+
+- **Suite proposée :** publier le correctif, vérifier le retour avec Sylvain sur
+  `OT-2026-000002`, déposer une preuve conforme, puis reprendre avec Faustin
+  l’acceptation et la clôture critique.
+
 ## DEV-046 — C9-FIX-05 : historique métier réel dans le dossier central
 
 - **Date :** 31 août 2026
