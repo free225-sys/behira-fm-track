@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { AntiZombieSummary } from './components/AntiZombieSummary';
 import type { AntiZombieSummaryData } from './components/anti-zombie-contract';
 import { AccessWorkspace } from './components/AccessWorkspace';
-import { CostsWorkspace } from './components/CostsWorkspace';
+import { CostsWorkspace, type CostReviewInput, type CostSubmissionInput } from './components/CostsWorkspace';
 import { EquipmentWorkspace } from './components/EquipmentWorkspace';
 import { OfflineSyncStatus } from './components/OfflineSyncStatus';
 import { ParametersWorkspace, type ParameterWorkspaceData } from './components/ParametersWorkspace';
@@ -16,8 +16,8 @@ import { WorkflowAnalytics } from './components/WorkflowAnalytics';
 import { getAuthenticatedProfileGate, resolveAuthenticatedPersona } from './lib/supabase/auth';
 import { getBrowserSupabaseClient, setSupabaseRememberPreference } from './lib/supabase/client';
 import { getSupabaseIntegrationState, isSupabaseIntegrationEnabled } from './lib/supabase/config';
-import { loadOperationalSnapshot, type OperationalHistoryEvent, type OperationalProof, type OperationalVendor, type OperationalWorkOrder } from './lib/supabase/data';
-import { advanceAnomalyWorkflow, createAnomalyProofConsultationUrl, uploadVendorInterventionReport, verifyLatestAnomalyProof } from './lib/supabase/mutations';
+import { loadOperationalSnapshot, type OperationalCostDecision, type OperationalHistoryEvent, type OperationalProof, type OperationalVendor, type OperationalWorkOrder } from './lib/supabase/data';
+import { advanceAnomalyWorkflow, createAnomalyProofConsultationUrl, reviewAnomalyCostDecision, submitAnomalyCostDecision, uploadVendorInterventionReport, verifyLatestAnomalyProof } from './lib/supabase/mutations';
 import { useOfflineSync } from './lib/offline/useOfflineSync';
 
 type View = 'workspace' | 'dashboard' | 'registry' | 'equipment' | 'costs' | 'access' | 'settings' | 'manager' | 'report' | 'detail';
@@ -82,6 +82,12 @@ type Escalation = {
   recommendation: string;
   state: DecisionState;
   motive?: string;
+  costReference?:string;
+  decisionScope?:'facility_manager'|'administration';
+  thresholdAmount?:number;
+  budgetType?:'opex'|'capex';
+  submittedBy?:string|null;
+  reviewedBy?:string|null;
 };
 
 type FieldRequest = {
@@ -245,6 +251,36 @@ const FINANCIAL_DECISION_PARAMETER: ParameterWorkspaceData = {
   effectiveDate:'30 août 2026',
   authority:'Administration de SCI Groupe Behira',
 };
+
+function mapOperationalCostDecision(item:OperationalCostDecision):Escalation {
+  const state:DecisionState = item.approvalStatus === 'approved'
+    ? 'Approuvée'
+    : item.approvalStatus === 'rejected'
+      ? 'Refusée'
+      : 'À décider';
+  const due = item.reviewedAt
+    ? `Décidée le ${new Date(item.reviewedAt).toLocaleString('fr-FR')}`
+    : `Soumise le ${new Date(item.createdAt).toLocaleString('fr-FR')}`;
+  return {
+    id:item.id,
+    costReference:item.id,
+    anomaly:item.anomalyReference,
+    asset:item.asset,
+    title:item.title,
+    kind:'Coût',
+    amount:item.amount,
+    due,
+    risk:`${item.budgetType.toUpperCase()} · ${item.decisionScope === 'administration' ? 'Arbitrage Administration' : 'Délégation Facility Manager'}`,
+    recommendation:item.title,
+    state,
+    motive:item.reviewComment ?? undefined,
+    decisionScope:item.decisionScope,
+    thresholdAmount:item.thresholdAmount,
+    budgetType:item.budgetType,
+    submittedBy:item.submittedBy,
+    reviewedBy:item.reviewedBy,
+  };
+}
 
 const personaGroups: { label:string; ids:PersonaId[] }[] = [
   { label:'Administration', ids:['administration'] },
@@ -660,6 +696,8 @@ export default function Home() {
   const [dataState, setDataState] = useState<'demo'|'loading'|'live'|'fallback'>('demo');
   const [referenceCounts, setReferenceCounts] = useState({ anomalies:seedAnomalies.length, equipment:fallbackEquipment.length, zones:0, profiles:0 });
   const [escalations, setEscalations] = useState(seedEscalations);
+  const [decisionThreshold, setDecisionThreshold] = useState(DECISION_THRESHOLD_FCFA);
+  const [financialDecisionParameter, setFinancialDecisionParameter] = useState<ParameterWorkspaceData>(FINANCIAL_DECISION_PARAMETER);
   const [fieldRequests, setFieldRequests] = useState<FieldRequest[]>([
     { id:'REQ-031', from:'Agente Rondes & Assistance Démo', subject:'Infiltration légère · Atrium restaurant', note:'Photo ajoutée, origine à qualifier après la pluie.', status:'À traiter par Facility Manager' },
     { id:'REQ-030', from:'Agent Eau & Incendie Démo', subject:'DEMO-EAU · deuxième réarmement en 7 jours', note:'Service rétabli provisoirement, diagnostic demandé.', status:'À traiter par Facility Manager' },
@@ -702,6 +740,19 @@ export default function Home() {
         if (snapshot.equipment.length) setEquipmentItems(snapshot.equipment);
         if (snapshot.vendors.length) setVendorReferences(snapshot.vendors);
         setWorkOrders(snapshot.workOrders);
+        setEscalations(snapshot.costs.map(mapOperationalCostDecision));
+        if (snapshot.financialDecisionParameter) {
+          setDecisionThreshold(snapshot.financialDecisionParameter.value);
+          setFinancialDecisionParameter({
+            code:'financial_decision_threshold',
+            label:snapshot.financialDecisionParameter.label,
+            value:snapshot.financialDecisionParameter.value,
+            unit:snapshot.financialDecisionParameter.unit,
+            scope:'Décisions avec montant documenté',
+            effectiveDate:new Date(snapshot.financialDecisionParameter.effectiveFrom).toLocaleDateString('fr-FR'),
+            authority:'Administration de SCI Groupe Behira',
+          });
+        }
         setCanUploadVendorReport(snapshot.canUploadVendorReport);
         setReferenceCounts(snapshot.counts);
         setDataState('live');
@@ -833,6 +884,19 @@ export default function Home() {
     setEquipmentItems(snapshot.equipment);
     setVendorReferences(snapshot.vendors);
     setWorkOrders(snapshot.workOrders);
+    setEscalations(snapshot.costs.map(mapOperationalCostDecision));
+    if (snapshot.financialDecisionParameter) {
+      setDecisionThreshold(snapshot.financialDecisionParameter.value);
+      setFinancialDecisionParameter({
+        code:'financial_decision_threshold',
+        label:snapshot.financialDecisionParameter.label,
+        value:snapshot.financialDecisionParameter.value,
+        unit:snapshot.financialDecisionParameter.unit,
+        scope:'Décisions avec montant documenté',
+        effectiveDate:new Date(snapshot.financialDecisionParameter.effectiveFrom).toLocaleDateString('fr-FR'),
+        authority:'Administration de SCI Groupe Behira',
+      });
+    }
     setCanUploadVendorReport(snapshot.canUploadVendorReport);
     setReferenceCounts(snapshot.counts);
     setDataState('live');
@@ -995,6 +1059,45 @@ export default function Home() {
       setMutationBusy(false);
     }
   };
+  const persistCostDecision = async (input:CostSubmissionInput) => {
+    if (session?.mode !== 'supabase' || dataState !== 'live') {
+      const id = `DEC-${String(19 + escalations.length).padStart(3, '0')}`;
+      setEscalations((items) => [{ id, anomaly:input.anomalyReference, asset:anomalies.find((item) => item.id === input.anomalyReference)?.asset ?? 'Équipement', title:input.description, kind:'Coût', amount:input.amount, due:'À l’instant · simulation', risk:`${input.budgetType.toUpperCase()} · simulation`, recommendation:input.description, state:input.amount >= decisionThreshold ? 'À décider' : 'Approuvée', decisionScope:input.amount >= decisionThreshold ? 'administration' : 'facility_manager', thresholdAmount:decisionThreshold }, ...items]);
+      flash(input.amount >= decisionThreshold ? 'Décision simulée transmise à l’Administration.' : 'Décision simulée dans la délégation de Facility Manager.');
+      return;
+    }
+    setMutationBusy(true);
+    try {
+      const result = await submitAnomalyCostDecision(getBrowserSupabaseClient(), input);
+      await syncOperationalData();
+      flash(String(result.decision_scope) === 'administration'
+        ? `${String(result.cost_reference)} soumise à l’Administration.`
+        : `${String(result.cost_reference)} décidée dans la délégation de Facility Manager.`);
+    } catch (error) {
+      flash(`Décision financière non enregistrée : ${mutationError(error)}`);
+      throw error;
+    } finally {
+      setMutationBusy(false);
+    }
+  };
+  const persistCostReview = async (input:CostReviewInput) => {
+    if (session?.mode !== 'supabase' || dataState !== 'live') {
+      setEscalations((items) => items.map((item) => item.id === input.costReference ? { ...item, state:input.decision === 'approved' ? 'Approuvée' : 'Refusée', motive:input.comment, reviewedBy:'Administration Démo' } : item));
+      flash(`Décision ${input.decision === 'approved' ? 'approuvée' : 'refusée'} — simulation locale.`);
+      return;
+    }
+    setMutationBusy(true);
+    try {
+      await reviewAnomalyCostDecision(getBrowserSupabaseClient(), input);
+      await syncOperationalData();
+      flash(`${input.costReference} · décision ${input.decision === 'approved' ? 'approuvée' : 'refusée'} et historisée.`);
+    } catch (error) {
+      flash(`Arbitrage non enregistré : ${mutationError(error)}`);
+      throw error;
+    } finally {
+      setMutationBusy(false);
+    }
+  };
   const changePersona = (next: PersonaId) => {
     if (session?.mode === 'supabase') {
       flash('Le rôle est imposé par l’authentification et les règles d’accès.');
@@ -1102,7 +1205,7 @@ export default function Home() {
     if (isSupabaseIntegrationEnabled) void getBrowserSupabaseClient().auth.signOut();
     window.localStorage.removeItem('behira_supabase_remember');
     window.localStorage.removeItem(SESSION_KEY); window.sessionStorage.removeItem(SESSION_KEY);
-    setSession(null); setPasswordChangeRequirement(null); setPersonaId('facility'); setView('workspace'); setPreviousView('registry'); setAnomalies(seedAnomalies); setEquipmentItems(fallbackEquipment); setVendorReferences(fallbackVendors); setWorkOrders([]); setCanUploadVendorReport(false); setDataState('demo'); setReferenceCounts({ anomalies:seedAnomalies.length, equipment:fallbackEquipment.length, zones:0, profiles:0 }); setEscalations(seedEscalations);
+    setSession(null); setPasswordChangeRequirement(null); setPersonaId('facility'); setView('workspace'); setPreviousView('registry'); setAnomalies(seedAnomalies); setEquipmentItems(fallbackEquipment); setVendorReferences(fallbackVendors); setWorkOrders([]); setCanUploadVendorReport(false); setDataState('demo'); setReferenceCounts({ anomalies:seedAnomalies.length, equipment:fallbackEquipment.length, zones:0, profiles:0 }); setEscalations(seedEscalations); setDecisionThreshold(DECISION_THRESHOLD_FCFA); setFinancialDecisionParameter(FINANCIAL_DECISION_PARAMETER);
     setFieldRequests([
       { id:'REQ-031', from:'Agente Rondes & Assistance Démo', subject:'Infiltration légère · Atrium restaurant', note:'Photo ajoutée, origine à qualifier après la pluie.', status:'À traiter par Facility Manager' },
       { id:'REQ-030', from:'Agent Eau & Incendie Démo', subject:'DEMO-EAU · deuxième réarmement en 7 jours', note:'Service rétabli provisoirement, diagnostic demandé.', status:'À traiter par Facility Manager' },
@@ -1114,7 +1217,12 @@ export default function Home() {
     setFieldRequests((items) => [{ ...request, id, status:'À traiter par Facility Manager' }, ...items]);
     flash(`${id} transmise à Facility Manager — simulation locale.`);
   };
-  const decideEscalation = (id:string, state:DecisionState, motive:string) => {
+  const decideEscalation = async (id:string, state:DecisionState, motive:string) => {
+    const item = escalations.find((candidate) => candidate.id === id);
+    if (item?.costReference && state !== 'Renvoyée à Facility Manager') {
+      await persistCostReview({ costReference:item.costReference, decision:state === 'Approuvée' ? 'approved' : 'rejected', comment:motive, idempotencyKey:crypto.randomUUID() });
+      return;
+    }
     setEscalations((items) => items.map((item) => item.id === id ? { ...item, state, motive } : item));
     flash(`${id} · décision ${state.toLowerCase()} et retour envoyé à Facility Manager.`);
   };
@@ -1202,12 +1310,12 @@ export default function Home() {
           {view === 'dashboard' && <Dashboard anomalies={anomalies} equipment={equipmentItems} escalations={escalations} audience={personaId === 'administration' ? 'administration' : 'facility'} onOpen={openDetail} onNavigate={navigate} />}
           {view === 'registry' && <Registry anomalies={filtered} query={query} setQuery={setQuery} priority={priorityFilter} setPriority={setPriorityFilter} status={statusFilter} setStatus={setStatusFilter} onOpen={(id) => openDetail(id, 'registry')} />}
           {view === 'equipment' && <EquipmentWorkspace equipment={equipmentItems} />}
-          {view === 'costs' && <CostsWorkspace items={escalations.map((item) => ({ id:item.id, anomaly:item.anomaly, asset:item.asset, title:item.title, kind:item.kind, amount:item.amount ?? null, due:item.due, state:item.state }))} audience={personaId === 'administration' ? 'administration' : 'facility'} threshold={DECISION_THRESHOLD_FCFA} onOpenDossier={(id) => openDetail(id, 'costs')} />}
+          {view === 'costs' && <CostsWorkspace items={escalations.map((item) => ({ id:item.id, anomaly:item.anomaly, asset:item.asset, title:item.title, kind:item.kind, amount:item.amount ?? null, due:item.due, state:item.state, budgetType:item.budgetType, decisionScope:item.decisionScope, thresholdAmount:item.thresholdAmount, submittedBy:item.submittedBy, reviewedBy:item.reviewedBy, reviewComment:item.motive }))} anomalies={anomalies.filter((item) => item.status !== 'Clôturée').map((item) => ({ reference:item.id, asset:item.asset, title:item.title }))} audience={personaId === 'administration' ? 'administration' : 'facility'} threshold={decisionThreshold} persistenceMode={session.mode === 'supabase' && dataState === 'live' ? 'server' : 'demo'} busy={mutationBusy} onSubmit={persistCostDecision} onReview={persistCostReview} onOpenDossier={(id) => openDetail(id, 'costs')} />}
           {view === 'access' && <AccessWorkspace users={personas.map((item) => ({ id:item.id, name:item.name, initials:item.initials, role:item.role, scope:item.scope }))} audience={personaId === 'administration' ? 'administration' : 'facility'} />}
-          {view === 'settings' && <ParametersWorkspace parameter={FINANCIAL_DECISION_PARAMETER} onOpenCosts={() => navigate('costs')} />}
+          {view === 'settings' && <ParametersWorkspace parameter={financialDecisionParameter} onOpenCosts={() => navigate('costs')} />}
           {view === 'manager' && <Manager anomalies={anomalies} tab={managerTab} setTab={setManagerTab} onOpen={(id) => openDetail(id, 'manager')} />}
           {view === 'report' && <Report persona={persona} onNavigate={navigate} persistenceEnabled={session.mode === 'supabase'} offlineSync={offlineSync} flash={flash} />}
-          {view === 'detail' && <Detail key={`${selected.id}-${selected.status}-${selected.proof}-${selected.proofPending}-${selected.proofQueued}`} anomaly={selected} decisionAmount={escalations.find((item) => item.anomaly === selected.id)?.amount ?? null} persistenceMode={session.mode === 'supabase' && dataState === 'live' ? 'server' : 'demo'} persistenceEnabled={session.mode === 'supabase'} offlineSync={offlineSync} readOnly={personaId === 'administration'} canVerify={personaId === 'facility' && session.mode === 'supabase'} busy={mutationBusy} onBack={() => navigate(previousView)} onStatus={(status) => void persistWorkflowStatus(status)} onProof={persistProof} onConsultProof={consultProof} onVerify={verifyProof} />}
+          {view === 'detail' && <Detail key={`${selected.id}-${selected.status}-${selected.proof}-${selected.proofPending}-${selected.proofQueued}`} anomaly={selected} decision={escalations.find((item) => item.anomaly === selected.id) ?? null} decisionThreshold={decisionThreshold} persistenceMode={session.mode === 'supabase' && dataState === 'live' ? 'server' : 'demo'} persistenceEnabled={session.mode === 'supabase'} offlineSync={offlineSync} readOnly={personaId === 'administration'} canVerify={personaId === 'facility' && session.mode === 'supabase'} busy={mutationBusy} onBack={() => navigate(previousView)} onStatus={(status) => void persistWorkflowStatus(status)} onProof={persistProof} onConsultProof={consultProof} onVerify={verifyProof} />}
         </div>
       </main>
       {toast && <div className={`toast ${/impossible|non enregistrée/i.test(toast) ? 'toast-error' : ''}`} role="status"><span>{/impossible|non enregistrée/i.test(toast) ? '!' : '✓'}</span>{toast}</div>}
@@ -1258,13 +1366,14 @@ function formatMoney(value:number) {
   return `${new Intl.NumberFormat('fr-FR').format(value)} FCFA`;
 }
 
-function DirectionWorkspace({ anomalies, escalations, onDecision, onOpen, onNavigate }: { anomalies:Anomaly[]; escalations:Escalation[]; onDecision:(id:string,state:DecisionState,motive:string)=>void; onOpen:(id:string)=>void; onNavigate:(view:View)=>void }) {
-  const threshold = DECISION_THRESHOLD_FCFA;
+function DirectionWorkspace({ anomalies, escalations, onDecision, onOpen, onNavigate }: { anomalies:Anomaly[]; escalations:Escalation[]; onDecision:(id:string,state:DecisionState,motive:string)=>void|Promise<void>; onOpen:(id:string)=>void; onNavigate:(view:View)=>void }) {
+  const threshold = escalations.find((item) => item.thresholdAmount)?.thresholdAmount ?? DECISION_THRESHOLD_FCFA;
   const [tab, setTab] = useState<'pending'|'history'>('pending');
   const [filter, setFilter] = useState<'Tous'|Escalation['kind']>('Tous');
   const [selectedCaseId, setSelectedCaseId] = useState('DEC-018');
   const [draft, setDraft] = useState<{id:string; state:DecisionState}|null>(null);
   const [motive, setMotive] = useState('');
+  const [decisionBusy, setDecisionBusy] = useState(false);
   const [adminPanel, setAdminPanel] = useState<'zones'|null>(null);
   const [adminConfirmation, setAdminConfirmation] = useState('');
   const [newZone, setNewZone] = useState('');
@@ -1275,17 +1384,24 @@ function DirectionWorkspace({ anomalies, escalations, onDecision, onOpen, onNavi
   const documentedCostItems = escalations.filter((item) => item.amount !== undefined);
   const documentedCostTotal = documentedCostItems.reduce((total,item) => total + (item.amount ?? 0),0);
   const filters: Array<'Tous'|Escalation['kind']> = ['Tous','Risque','Coût','Arbitrage','Clôture sensible'];
-  const confirm = () => {
+  const confirm = async () => {
     if (!draft || !motive.trim()) return;
-    onDecision(draft.id, draft.state, motive.trim());
-    setDraft(null);
-    setMotive('');
+    setDecisionBusy(true);
+    try {
+      await onDecision(draft.id, draft.state, motive.trim());
+      setDraft(null);
+      setMotive('');
+    } catch {
+      // The parent displays the canonical persistence error and keeps the dialog open.
+    } finally {
+      setDecisionBusy(false);
+    }
   };
   return <>
     <WorkspaceIntro kicker="ADMINISTRATION · SUPER UTILISATEUR MÉTIER" description="Décidez ce qui dépasse la délégation opérationnelle de Facility Manager." badge="Validation métier active" />
     <div className="authority-split" role="note"><div><span>✓</span><p><b>Validation métier Administration</b><small>Risques, coûts à partir de {formatMoney(DECISION_THRESHOLD_FCFA)} et contrôle des clôtures sensibles</small></p></div><div className="technical-admin"><span>⌘</span><p><b>Utilisateurs et paramètres</b><small>Comptes, droits sensibles, zones et seuil financier consultable</small></p><Badge tone="blue">ACCÈS ADMIN</Badge></div></div>
     <AnswerStrip todo={`${escalations.filter((item) => item.state === 'À décider').length} arbitrages`} risk="2 dossiers critiques" due="1 décision avant 10:30" proof="1 clôture sensible" />
-    <section className="direction-summary-grid"><article className="panel executive-metric"><span>RISQUES CRITIQUES</span><strong>2</strong><small>DEMO-SSI et continuité DEMO-GE</small></article><article className="panel executive-metric"><span>MONTANTS DOCUMENTÉS</span><strong>{formatMoney(documentedCostTotal)}</strong><small>{documentedCostItems.length} dossiers chiffrés · ni engagés ni payés</small></article><button type="button" className="panel executive-metric is-link" onClick={() => onNavigate('dashboard')}><span>SANTÉ BÂTIMENT</span><strong className="healthy">82/100</strong><small>Détail des scores dans Pilotage</small></button><article className="panel threshold-card"><span>Seuil d’approbation Administration</span><strong>{formatMoney(threshold)}</strong><small>Valeur confirmée · historique persistant non raccordé.</small><button type="button" className="text-button" onClick={() => onNavigate('settings')}>Voir les paramètres →</button></article></section>
+    <section className="direction-summary-grid"><article className="panel executive-metric"><span>RISQUES CRITIQUES</span><strong>2</strong><small>DEMO-SSI et continuité DEMO-GE</small></article><article className="panel executive-metric"><span>MONTANTS DOCUMENTÉS</span><strong>{formatMoney(documentedCostTotal)}</strong><small>{documentedCostItems.length} dossiers chiffrés · ni engagés ni payés</small></article><button type="button" className="panel executive-metric is-link" onClick={() => onNavigate('dashboard')}><span>SANTÉ BÂTIMENT</span><strong className="healthy">82/100</strong><small>Détail des scores dans Pilotage</small></button><article className="panel threshold-card"><span>Seuil d’approbation Administration</span><strong>{formatMoney(threshold)}</strong><small>{escalations.some((item) => item.costReference) ? 'Valeur canonique photographiée sur chaque décision.' : 'Valeur confirmée · mode démonstration.'}</small><button type="button" className="text-button" onClick={() => onNavigate('settings')}>Voir les paramètres →</button></article></section>
     <section className="decision-workbench">
       <article className="panel direction-inbox">
         <div className="workspace-tabs"><button className={tab === 'pending' ? 'active' : ''} onClick={() => setTab('pending')}>À décider <span>{escalations.filter((item) => item.state === 'À décider').length}</span></button><button className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')}>Historique <span>{escalations.filter((item) => item.state !== 'À décider').length}</span></button></div>
@@ -1298,7 +1414,7 @@ function DirectionWorkspace({ anomalies, escalations, onDecision, onOpen, onNavi
         <div className="case-facts"><span><b>Risque</b>{focusItem.risk}</span><span><b>Échéance</b>{focusItem.due}</span>{focusItem.amount && <span><b>Montant de décision</b>{formatMoney(focusItem.amount)} {focusItem.amount >= threshold && <em>AU-DESSUS DU SEUIL</em>}</span>}</div>
         <div className="recommendation"><span>RECOMMANDATION</span><p>{focusItem.recommendation}</p></div>
         {focusItem.motive && <p className="decision-motive"><b>Motif :</b> {focusItem.motive}</p>}
-        {focusItem.state === 'À décider' && <div className="case-actions">{focusItem.anomaly.startsWith('ANO-') && <button className="secondary-button" onClick={() => onOpen(focusItem.anomaly)}>Voir l’anomalie</button>}<button className="reject-action" onClick={() => {setDraft({id:focusItem.id,state:'Refusée'});setMotive('')}}>Refuser</button><button className="return-action" onClick={() => {setDraft({id:focusItem.id,state:'Renvoyée à Facility Manager'});setMotive('')}}>Renvoyer à Facility Manager</button><button className="primary-button" onClick={() => {setDraft({id:focusItem.id,state:'Approuvée'});setMotive('')}}>Approuver</button></div>}
+        {focusItem.state === 'À décider' && <div className="case-actions">{focusItem.anomaly.startsWith('ANO-') && <button className="secondary-button" onClick={() => onOpen(focusItem.anomaly)}>Voir l’anomalie</button>}<button className="reject-action" onClick={() => {setDraft({id:focusItem.id,state:'Refusée'});setMotive('')}}>Refuser</button>{!focusItem.costReference && <button className="return-action" onClick={() => {setDraft({id:focusItem.id,state:'Renvoyée à Facility Manager'});setMotive('')}}>Renvoyer à Facility Manager</button>}<button className="primary-button" onClick={() => {setDraft({id:focusItem.id,state:'Approuvée'});setMotive('')}}>Approuver</button></div>}
         <div className="direction-detail-kpis"><span><b>92%</b> disponibilité</span><span><b>3,2 j</b> délai moyen</span><span><b>{documentedCostItems.length}</b> dossiers chiffrés</span></div>
       </> : <div className="empty-state compact"><span>⌁</span><h3>Sélectionnez un dossier</h3><p>Le détail de l’arbitrage apparaîtra ici.</p></div>}</aside>
     </section>
@@ -1307,7 +1423,7 @@ function DirectionWorkspace({ anomalies, escalations, onDecision, onOpen, onNavi
       <aside className="admin-parameters"><article className="panel"><p className="design-kicker">RÉFÉRENTIEL</p><div className="parameter-value"><strong>76</strong><span>zones actives</span></div><p>Ajouter, modifier ou désactiver une zone sans intervention technique.</p><button className="secondary-button" onClick={() => {setAdminPanel('zones');setAdminConfirmation('')}}>Gérer les zones</button></article><article className="panel"><p className="design-kicker">SCORES AGENTS</p><div className="agent-score-mini"><span><b>Agent Électricité</b>88</span><span><b>Agent Eau & Incendie</b>84</span><span><b>Agente Rondes & Assistance</b>91</span></div><small>Visibles par tous les agents · détail explicatif disponible</small></article></aside>
     </section>
     <WorkflowAnalytics items={anomalies.map((item) => ({ ...item, owner:canonicalResponsible(item) ?? 'Non affectée' }))} variant="administration" onOpenRegistry={() => onNavigate('registry')} />
-    {draft && selected && <div className="demo-modal-backdrop" role="presentation"><section className="demo-modal" role="dialog" aria-modal="true" aria-labelledby="decision-dialog-title"><button className="modal-close" aria-label="Fermer" onClick={() => setDraft(null)}>×</button><Badge tone={draft.state === 'Approuvée' ? 'success' : draft.state === 'Refusée' ? 'critical' : 'orange'}>{draft.state}</Badge><h3 id="decision-dialog-title">{selected.id} · Confirmer la décision</h3><p>{selected.asset} · {selected.title}</p><label className="field">Motif obligatoire<textarea autoFocus value={motive} onChange={(e) => setMotive(e.target.value)} placeholder="Expliquez la décision et les conditions éventuelles…" /></label><div className="modal-actions"><button className="secondary-button" onClick={() => setDraft(null)}>Annuler</button><button className="primary-button" disabled={!motive.trim()} onClick={confirm}>Confirmer et notifier Facility Manager</button></div><small>Simulation locale · aucune donnée n’est persistée.</small></section></div>}
+    {draft && selected && <div className="demo-modal-backdrop" role="presentation"><section className="demo-modal" role="dialog" aria-modal="true" aria-labelledby="decision-dialog-title"><button className="modal-close" aria-label="Fermer" onClick={() => setDraft(null)}>×</button><Badge tone={draft.state === 'Approuvée' ? 'success' : draft.state === 'Refusée' ? 'critical' : 'orange'}>{draft.state}</Badge><h3 id="decision-dialog-title">{selected.id} · Confirmer la décision</h3><p>{selected.asset} · {selected.title}</p><label className="field">Motif obligatoire<textarea autoFocus value={motive} onChange={(e) => setMotive(e.target.value)} placeholder="Expliquez la décision et les conditions éventuelles…" /></label><div className="modal-actions"><button className="secondary-button" disabled={decisionBusy} onClick={() => setDraft(null)}>Annuler</button><button className="primary-button" disabled={decisionBusy || !motive.trim()} onClick={() => void confirm()}>{decisionBusy ? 'Enregistrement…' : 'Confirmer et notifier Facility Manager'}</button></div><small>{selected.costReference ? 'Décision enregistrée et historisée sur le dossier.' : 'Simulation locale · aucune donnée n’est persistée.'}</small></section></div>}
     {adminPanel && <div className="demo-modal-backdrop" role="presentation" onMouseDown={(event) => {if (event.target === event.currentTarget) setAdminPanel(null)}}><section className="demo-modal admin-dialog" role="dialog" aria-modal="true" aria-labelledby="admin-dialog-title"><button className="modal-close" aria-label="Fermer" onClick={() => setAdminPanel(null)}>×</button><Badge tone="blue">ADMINISTRATION</Badge><form onSubmit={(event) => {event.preventDefault();setAdminPanel(null);setAdminConfirmation(`La zone « ${newZone} » est prête à être ajoutée après validation.`);setNewZone('')}}><h3 id="admin-dialog-title">Gérer les zones</h3><p>Le référentiel contient 24 zones actives. Toute modification reste traçable.</p><div className="zone-preview-list"><span><b>Sous-sol</b>12 zones</span><span><b>Rez-de-chaussée</b>18 zones</span><span><b>Étages R+1 à R+4</b>38 zones</span><span><b>Extérieurs</b>8 zones</span></div><label className="field">Nouvelle zone<input autoFocus required value={newZone} onChange={(e) => setNewZone(e.target.value)} placeholder="Ex. Local technique R+3" /></label><div className="modal-actions"><button type="button" className="secondary-button" onClick={() => setAdminPanel(null)}>Annuler</button><button type="submit" className="primary-button">Préparer l’ajout</button></div><small>Maquette interactive · aucun référentiel n’est modifié.</small></form></section></div>}
   </>;
 }
@@ -1819,7 +1935,7 @@ function Manager({ anomalies, tab, setTab, onOpen }: { anomalies:Anomaly[]; tab:
   </div>;
 }
 
-function Detail({ anomaly, decisionAmount, persistenceMode, persistenceEnabled, offlineSync, onBack, onStatus, onProof, onConsultProof, onVerify, readOnly = false, canVerify = false, busy = false }: { anomaly:Anomaly; decisionAmount:number|null; persistenceMode:'demo'|'server'; persistenceEnabled:boolean; offlineSync:ReturnType<typeof useOfflineSync>; onBack:()=>void; onStatus:(s:Status)=>void; onProof:(file:File)=>Promise<SyncStatusState>; onConsultProof:(proof:OperationalProof)=>Promise<string>; onVerify:(decision:'accepted'|'rejected',comment:string)=>Promise<boolean>; readOnly?:boolean; canVerify?:boolean; busy?:boolean }) {
+function Detail({ anomaly, decision, decisionThreshold, persistenceMode, persistenceEnabled, offlineSync, onBack, onStatus, onProof, onConsultProof, onVerify, readOnly = false, canVerify = false, busy = false }: { anomaly:Anomaly; decision:Escalation|null; decisionThreshold:number; persistenceMode:'demo'|'server'; persistenceEnabled:boolean; offlineSync:ReturnType<typeof useOfflineSync>; onBack:()=>void; onStatus:(s:Status)=>void; onProof:(file:File)=>Promise<SyncStatusState>; onConsultProof:(proof:OperationalProof)=>Promise<string>; onVerify:(decision:'accepted'|'rejected',comment:string)=>Promise<boolean>; readOnly?:boolean; canVerify?:boolean; busy?:boolean }) {
   const nextStep:Partial<Record<Status,Status>> = { 'À qualifier':'Affectée', 'Affectée':'En intervention', 'En intervention':'En validation', 'En validation':'Clôturée' };
   const nextStatusOption = nextStep[anomaly.status];
   const [nextStatus, setNextStatus] = useState<Status>(nextStatusOption ?? anomaly.status);
@@ -1863,7 +1979,8 @@ function Detail({ anomaly, decisionAmount, persistenceMode, persistenceEnabled, 
   const workflow = ['Constat','Qualification','Décision','Intervention','Preuve','Clôture'];
   const statusStep:Record<Status,number> = { 'À qualifier':1, 'Affectée':2, 'En intervention':3, 'En validation':4, 'Clôturée':5 };
   const currentStep = statusStep[anomaly.status];
-  const overThreshold = decisionAmount !== null && decisionAmount >= DECISION_THRESHOLD_FCFA;
+  const decisionAmount = decision?.amount ?? null;
+  const overThreshold = decisionAmount !== null && decisionAmount >= (decision?.thresholdAmount ?? decisionThreshold);
   const expectedProof = expectedProofFor(anomaly);
   const proofs = anomaly.proofs ?? [];
   const historyEvents = anomaly.history ?? [];
@@ -1901,7 +2018,7 @@ function Detail({ anomaly, decisionAmount, persistenceMode, persistenceEnabled, 
       </aside>
     </section>}
 
-    {section === 'finance' && <section id="dossier-finance-panel" role="tabpanel" className="dossier-two-columns"><article className="panel finance-decision-card"><div className="panel-head"><div><p className="design-kicker">BRANCHE DE TRAITEMENT</p><h3>{decisionAmount === null ? 'Montant non renseigné' : 'Intervention avec montant documenté'}</h3></div><Badge tone={decisionAmount === null ? 'neutral' : overThreshold ? 'orange' : 'success'}>{decisionAmount === null ? 'DONNÉES INSUFFISANTES' : overThreshold ? 'ADMINISTRATION' : 'DÉLÉGATION FM'}</Badge></div><div className="finance-amount"><span>Montant de décision</span><strong>{decisionAmount === null ? 'Non renseigné' : formatMoney(decisionAmount)}</strong><small>Seuil d’approbation : {formatMoney(DECISION_THRESHOLD_FCFA)}</small></div>{decisionAmount === null ? <div className="compact-insufficient-state"><b>Qualification financière incomplète</b><p>Aucun montant canonique n’est relié à ce dossier.</p></div> : <><div className={`authority-result ${overThreshold ? 'escalate' : 'delegated'}`}><span>{overThreshold ? '↑' : '✓'}</span><div><b>{overThreshold ? 'Arbitrage de l’Administration' : 'Facility Manager peut décider'}</b><small>{overThreshold ? 'Le montant dépasse la délégation validée.' : 'Le montant reste sous le seuil validé.'}</small></div></div><div className="decision-audit"><span><b>Décision</b>{overThreshold ? 'À soumettre' : 'Autorisée dans la délégation'}</span><span><b>Montant engagé</b>Non renseigné</span><span><b>Montant payé</b>Non renseigné</span></div></>}</article><aside className="panel quote-card"><p className="design-kicker">PIÈCES FINANCIÈRES</p><h3>Devis et engagement</h3><div className="quote-file"><span>▧</span><p><b>Pièce financière non reliée</b><small>Données insuffisantes dans la source actuelle</small></p></div></aside></section>}
+    {section === 'finance' && <section id="dossier-finance-panel" role="tabpanel" className="dossier-two-columns"><article className="panel finance-decision-card"><div className="panel-head"><div><p className="design-kicker">BRANCHE DE TRAITEMENT</p><h3>{decisionAmount === null ? 'Montant non renseigné' : 'Décision financière enregistrée'}</h3></div><Badge tone={decisionAmount === null ? 'neutral' : decision?.state === 'Refusée' ? 'critical' : decision?.state === 'Approuvée' ? 'success' : 'orange'}>{decisionAmount === null ? 'DONNÉES INSUFFISANTES' : decision?.state === 'Approuvée' ? 'APPROUVÉE' : decision?.state === 'Refusée' ? 'REFUSÉE' : 'EN ATTENTE'}</Badge></div><div className="finance-amount"><span>Montant de décision</span><strong>{decisionAmount === null ? 'Non renseigné' : formatMoney(decisionAmount)}</strong><small>Seuil photographié : {formatMoney(decision?.thresholdAmount ?? decisionThreshold)}</small></div>{decisionAmount === null ? <div className="compact-insufficient-state"><b>Qualification financière incomplète</b><p>Aucun montant canonique n’est relié à ce dossier.</p></div> : <><div className={`authority-result ${decision?.state === 'Refusée' ? 'escalate' : overThreshold ? 'escalate' : 'delegated'}`}><span>{decision?.state === 'Refusée' ? '!' : overThreshold ? '↑' : '✓'}</span><div><b>{decision?.state === 'Refusée' ? 'Décision refusée par l’Administration' : overThreshold ? 'Arbitrage de l’Administration' : 'Décision dans la délégation de Facility Manager'}</b><small>{decision?.state === 'À décider' ? 'Une décision motivée est encore attendue.' : decision?.motive ?? 'La décision et son seuil sont conservés dans l’historique du dossier.'}</small></div></div><div className="decision-audit"><span><b>Décision</b>{decision?.state ?? 'Non renseignée'}</span><span><b>Soumis par</b>{decision?.submittedBy ?? 'Non renseigné'}</span><span><b>Décidé par</b>{decision?.reviewedBy ?? (decision?.state === 'À décider' ? 'Administration attendue' : 'Non renseigné')}</span><span><b>Montant engagé</b>Non renseigné</span><span><b>Montant payé</b>Non renseigné</span></div></>}</article><aside className="panel quote-card"><p className="design-kicker">PIÈCES FINANCIÈRES</p><h3>Devis et engagement</h3><div className="quote-file"><span>▧</span><p><b>Pièce financière non reliée</b><small>Données insuffisantes dans la source actuelle</small></p></div></aside></section>}
 
     {section === 'evidence' && <section id="dossier-evidence-panel" role="tabpanel" className="dossier-two-columns">
       <article className="panel evidence-panel">

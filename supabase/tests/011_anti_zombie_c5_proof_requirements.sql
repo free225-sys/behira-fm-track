@@ -350,7 +350,9 @@ begin
         where id = current_setting('behira.c5_generic_requirement')::uuid) <> 'satisfied'
     or (select state from public.anomaly_proof_requirements
         where id = current_setting('behira.c5_specific_requirement')::uuid) <> 'pending'
-    or (select count(*) from public.proof_requirement_evidence) <> 1 then
+    or (select count(*)
+        from public.proof_requirement_evidence
+        where proof_id = current_setting('behira.c5_photo_proof')::uuid) <> 1 then
     raise exception 'Proof review did not preserve validation and requirement separation';
   end if;
 
@@ -415,7 +417,9 @@ begin
   if (v_result ->> 'version_no')::integer <> v_base + 1
     or (select state from public.anomaly_proof_requirements
         where id = current_setting('behira.c5_specific_requirement')::uuid) <> 'satisfied'
-    or (select count(*) from public.proof_requirement_evidence) <> 2 then
+    or (select count(*)
+        from public.proof_requirement_evidence
+        where proof_id = current_setting('behira.c5_photo_proof')::uuid) <> 2 then
     raise exception 'Explicit typed evidence link failed';
   end if;
 
@@ -426,7 +430,9 @@ begin
     'b5000000-0000-0000-0000-000000000202', v_base
   );
   if not (v_replay ->> 'replayed')::boolean
-    or (select count(*) from public.proof_requirement_evidence) <> 2 then
+    or (select count(*)
+        from public.proof_requirement_evidence
+        where proof_id = current_setting('behira.c5_photo_proof')::uuid) <> 2 then
     raise exception 'Evidence link replay duplicated data';
   end if;
 end;

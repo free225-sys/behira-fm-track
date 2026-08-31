@@ -187,6 +187,46 @@ export async function verifyLatestAnomalyProof(
   return asRpcResult(data);
 }
 
+export async function submitAnomalyCostDecision(
+  client: SupabaseClient<Database>,
+  input: {
+    anomalyReference: string;
+    amount: number;
+    budgetType: "opex" | "capex";
+    description: string;
+    idempotencyKey: string;
+  },
+) {
+  const { data, error } = await client.rpc("submit_anomaly_cost_decision", {
+    p_anomaly_reference: input.anomalyReference,
+    p_amount: input.amount,
+    p_budget_type: input.budgetType,
+    p_description: input.description.trim(),
+    p_idempotency_key: input.idempotencyKey,
+  });
+  if (error) throw error;
+  return asRpcResult(data);
+}
+
+export async function reviewAnomalyCostDecision(
+  client: SupabaseClient<Database>,
+  input: {
+    costReference: string;
+    decision: "approved" | "rejected";
+    comment: string;
+    idempotencyKey: string;
+  },
+) {
+  const { data, error } = await client.rpc("review_anomaly_cost_decision", {
+    p_cost_reference: input.costReference,
+    p_decision: input.decision,
+    p_comment: input.comment.trim(),
+    p_idempotency_key: input.idempotencyKey,
+  });
+  if (error) throw error;
+  return asRpcResult(data);
+}
+
 export async function createAnomalyProofConsultationUrl(
   client: SupabaseClient<Database>,
   storagePath: string,

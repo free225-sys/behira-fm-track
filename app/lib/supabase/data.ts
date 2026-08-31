@@ -83,11 +83,39 @@ export type OperationalWorkOrder = {
   detail: string;
 };
 
+export type OperationalCostDecision = {
+  id: string;
+  anomalyReference: string;
+  asset: string;
+  title: string;
+  amount: number;
+  budgetType: "opex" | "capex";
+  approvalStatus: "pending" | "approved" | "rejected";
+  decisionScope: "facility_manager" | "administration";
+  thresholdAmount: number;
+  submittedBy: string | null;
+  reviewedBy: string | null;
+  reviewComment: string | null;
+  createdAt: string;
+  reviewedAt: string | null;
+};
+
+export type OperationalFinancialParameter = {
+  code: "financial_decision_threshold";
+  label: string;
+  value: number;
+  unit: string;
+  effectiveFrom: string;
+  sourceDocument: string;
+};
+
 export type OperationalSnapshot = {
   anomalies: OperationalAnomaly[];
   equipment: OperationalEquipment[];
   vendors: OperationalVendor[];
   workOrders: OperationalWorkOrder[];
+  costs: OperationalCostDecision[];
+  financialDecisionParameter: OperationalFinancialParameter | null;
   canUploadVendorReport: boolean;
   counts: {
     anomalies: number;
@@ -142,6 +170,8 @@ export async function loadOperationalSnapshot(
     permissionResult,
     antiZombieResult,
     workOrderResult,
+    costResult,
+    financialParameterResult,
     eventDefinitionResult,
     workflowStageResult,
   ] = await Promise.all([
@@ -161,6 +191,18 @@ export async function loadOperationalSnapshot(
       .eq("assigned_profile_id", currentProfileId)
       .in("status", ["planned", "accepted", "in_progress", "completed"])
       .order("due_at", { ascending: true, nullsFirst: false }),
+    client
+      .from("costs")
+      .select("id, reference, anomaly_id, amount, budget_type, approval_status, decision_scope, threshold_amount_snapshot, submitted_by_profile_id, reviewed_by_profile_id, review_comment, description, created_at, reviewed_at")
+      .not("decision_scope", "is", null)
+      .order("created_at", { ascending: false }),
+    client
+      .from("business_parameters")
+      .select("code, label, numeric_value, unit, effective_from, source_document")
+      .eq("code", "financial_decision_threshold")
+      .is("effective_to", null)
+      .order("effective_from", { ascending: false })
+      .limit(1),
     client.from("business_event_definitions").select("id, code, label, is_activity"),
     client.from("workflow_stages").select("id, code, label, sequence_no"),
   ]);
@@ -177,6 +219,8 @@ export async function loadOperationalSnapshot(
     permissionResult.error,
     antiZombieResult.error,
     workOrderResult.error,
+    costResult.error,
+    financialParameterResult.error,
     eventDefinitionResult.error,
     workflowStageResult.error,
   ].find(Boolean);
@@ -320,11 +364,52 @@ export async function loadOperationalSnapshot(
     } satisfies OperationalWorkOrder];
   });
 
+  const costs = (costResult.data ?? []).flatMap((item) => {
+    if (!item.anomaly_id || !item.decision_scope || item.threshold_amount_snapshot === null) return [];
+    const anomaly = anomalyByDatabaseId.get(item.anomaly_id);
+    if (!anomaly) return [];
+
+    return [{
+      id: item.reference,
+      anomalyReference: anomaly.id,
+      asset: anomaly.asset,
+      title: item.description,
+      amount: Number(item.amount),
+      budgetType: item.budget_type as OperationalCostDecision["budgetType"],
+      approvalStatus: item.approval_status as OperationalCostDecision["approvalStatus"],
+      decisionScope: item.decision_scope as OperationalCostDecision["decisionScope"],
+      thresholdAmount: Number(item.threshold_amount_snapshot),
+      submittedBy: item.submitted_by_profile_id
+        ? profileById.get(item.submitted_by_profile_id) ?? null
+        : null,
+      reviewedBy: item.reviewed_by_profile_id
+        ? profileById.get(item.reviewed_by_profile_id) ?? null
+        : null,
+      reviewComment: item.review_comment,
+      createdAt: item.created_at,
+      reviewedAt: item.reviewed_at,
+    } satisfies OperationalCostDecision];
+  });
+
+  const financialParameterRow = financialParameterResult.data?.[0];
+  const financialDecisionParameter = financialParameterRow
+    ? {
+      code: "financial_decision_threshold" as const,
+      label: financialParameterRow.label,
+      value: Number(financialParameterRow.numeric_value),
+      unit: financialParameterRow.unit,
+      effectiveFrom: financialParameterRow.effective_from,
+      sourceDocument: financialParameterRow.source_document,
+    }
+    : null;
+
   return {
     anomalies,
     equipment,
     vendors,
     workOrders,
+    costs,
+    financialDecisionParameter,
     canUploadVendorReport: permissionResult.data === true,
     counts: {
       anomalies: anomalies.length,

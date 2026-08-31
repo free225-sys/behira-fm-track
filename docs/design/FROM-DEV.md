@@ -2,6 +2,47 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-048 — C10 : décisions de coûts canoniques
+
+- **Date :** 31 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** C10-A et C10-B implémentés et validés localement — migration distante et publication suspendues
+- **Périmètre :** seuil financier canonique, décision Facility Manager sous délégation, arbitrage Administration à partir du seuil, historique et interface ; aucun rôle, périmètre, statut, étape de workflow ou permission terrain modifié
+
+Le seuil confirmé de **400 000 FCFA** devient un paramètre métier historisable.
+Chaque coût estimatif photographie le seuil applicable au moment de la
+soumission. Sous le seuil, la décision est enregistrée dans la délégation de
+Facility Manager. À partir du seuil inclus, elle reste en attente jusqu’à une
+décision motivée de l’Administration. Une décision finale et le montant soumis
+ne peuvent plus être modifiés silencieusement ; une correction devra créer un
+nouvel enregistrement.
+
+L’interface charge désormais les coûts et le seuil depuis les sources protégées
+en session réelle. Faustin dispose d’un formulaire rattachant le coût à un
+dossier ouvert. L’Administration peut approuver ou refuser avec un motif. Le
+dossier central expose le montant, le seuil photographié, l’état, le déclarant,
+le décideur et le motif. Le mode démonstration reste explicitement séparé et ne
+sert plus de source aux sessions réelles.
+
+### Vérifications réalisées
+
+- reconstruction complète de la base locale avec **22 migrations** ;
+- **14 fichiers pgTAP, 40 tests**, tous réussis ;
+- lint des schémas `public` et `private` sans erreur ;
+- test réel via l’API locale : décision sous seuil, seuil exact, replay
+  idempotent, arbitrage Administration motivé, refus d’un agent et quatre
+  événements d’historique ; fixtures financières supprimées après contrôle ;
+- contrôle C10, Lot 0, Auth, personas, AntiZombieSummary, hors-ligne,
+  résilience, lint et build : réussis ;
+- contrôle navigateur à 1009 px et 375 px : aucun débordement, plancher 12 px,
+  boutons tactiles 44 px, formulaire Facility Manager et panneau Administration
+  lisibles. Le navigateur intégré a ensuite bloqué un rechargement localhost
+  selon sa politique ; aucun contournement n’a été tenté.
+
+- **Suite proposée :** effectuer le dry-run de la migration C10 sur
+  `fm_track`, faire relire le diff distant, demander un GO d’application, puis
+  publier l’interface et exécuter C10-C avec Faustin et l’Administration.
+
 ## DEV-047 — C9-FIX-06 : retour de refus visible pour l’agent
 
 - **Date :** 31 août 2026

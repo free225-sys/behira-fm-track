@@ -1214,6 +1214,56 @@ export type Database = {
         }
         Relationships: []
       }
+      business_parameters: {
+        Row: {
+          code: string
+          created_at: string
+          created_by_profile_id: string | null
+          effective_from: string
+          effective_to: string | null
+          id: string
+          justification: string
+          label: string
+          numeric_value: number
+          source_document: string
+          unit: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by_profile_id?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          justification: string
+          label: string
+          numeric_value: number
+          source_document: string
+          unit: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by_profile_id?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          justification?: string
+          label?: string
+          numeric_value?: number
+          source_document?: string
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_parameters_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           code: string
@@ -1281,11 +1331,19 @@ export type Database = {
           cost_type: string
           created_at: string
           currency: string
+          decision_scope: string | null
           description: string
           id: string
           intervention_id: string | null
           reference: string
+          review_comment: string | null
+          review_idempotency_key: string | null
+          reviewed_at: string | null
+          reviewed_by_profile_id: string | null
+          submission_idempotency_key: string | null
           submitted_by_profile_id: string | null
+          threshold_amount_snapshot: number | null
+          threshold_parameter_id: string | null
           updated_at: string
           vendor_id: string | null
           work_order_id: string | null
@@ -1300,11 +1358,19 @@ export type Database = {
           cost_type: string
           created_at?: string
           currency?: string
+          decision_scope?: string | null
           description: string
           id?: string
           intervention_id?: string | null
           reference: string
+          review_comment?: string | null
+          review_idempotency_key?: string | null
+          reviewed_at?: string | null
+          reviewed_by_profile_id?: string | null
+          submission_idempotency_key?: string | null
           submitted_by_profile_id?: string | null
+          threshold_amount_snapshot?: number | null
+          threshold_parameter_id?: string | null
           updated_at?: string
           vendor_id?: string | null
           work_order_id?: string | null
@@ -1319,11 +1385,19 @@ export type Database = {
           cost_type?: string
           created_at?: string
           currency?: string
+          decision_scope?: string | null
           description?: string
           id?: string
           intervention_id?: string | null
           reference?: string
+          review_comment?: string | null
+          review_idempotency_key?: string | null
+          reviewed_at?: string | null
+          reviewed_by_profile_id?: string | null
+          submission_idempotency_key?: string | null
           submitted_by_profile_id?: string | null
+          threshold_amount_snapshot?: number | null
+          threshold_parameter_id?: string | null
           updated_at?: string
           vendor_id?: string | null
           work_order_id?: string | null
@@ -1358,10 +1432,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "costs_reviewed_by_profile_id_fkey"
+            columns: ["reviewed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "costs_submitted_by_profile_id_fkey"
             columns: ["submitted_by_profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "costs_threshold_parameter_id_fkey"
+            columns: ["threshold_parameter_id"]
+            isOneToOne: false
+            referencedRelation: "business_parameters"
             referencedColumns: ["id"]
           },
           {
@@ -3687,6 +3775,7 @@ export type Database = {
         }
         Returns: Json
       }
+      financial_decision_threshold_fcfa: { Args: never; Returns: number }
       get_my_auth_gate: { Args: never; Returns: Json }
       has_accepted_proof: { Args: { p_anomaly_id: string }; Returns: boolean }
       has_any_role: { Args: { p_role_codes: string[] }; Returns: boolean }
@@ -3783,6 +3872,15 @@ export type Database = {
           qualification_due_at: string
         }[]
       }
+      review_anomaly_cost_decision: {
+        Args: {
+          p_comment: string
+          p_cost_reference: string
+          p_decision: string
+          p_idempotency_key: string
+        }
+        Returns: Json
+      }
       review_anomaly_proof: {
         Args: {
           p_base_version_no: number
@@ -3803,6 +3901,16 @@ export type Database = {
           p_comment: string
           p_idempotency_key: string
           p_reference: string
+        }
+        Returns: Json
+      }
+      submit_anomaly_cost_decision: {
+        Args: {
+          p_amount: number
+          p_anomaly_reference: string
+          p_budget_type: string
+          p_description: string
+          p_idempotency_key: string
         }
         Returns: Json
       }

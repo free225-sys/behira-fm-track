@@ -37,6 +37,7 @@ const expectedMigrations = [
   "20260830204742_anti_zombie_c5_proof_requirements.sql",
   "20260830212342_anti_zombie_c6_canonical_projection.sql",
   "20260830233549_restore_canonical_action_stage_mappings.sql",
+  "20260831143754_c10_financial_decisions.sql",
 ];
 check(JSON.stringify(migrations) === JSON.stringify(expectedMigrations), "Migration order or inventory is unexpected");
 
@@ -58,6 +59,7 @@ const requiredTables = [
   "proof_requirement_rules",
   "anomaly_proof_requirements",
   "proof_requirement_evidence",
+  "business_parameters",
 ];
 for (const table of requiredTables) {
   check(new RegExp(`create table if not exists public\\.${table}\\s*\\(`, "i").test(migrationSql), `Missing table: ${table}`);
@@ -100,6 +102,10 @@ for (const marker of [
   "link_proof_to_requirement",
   "guard_close_pending_proof_requirement",
   "anti_zombie_summary_v",
+  "financial_decision_threshold_fcfa",
+  "submit_anomaly_cost_decision",
+  "review_anomaly_cost_decision",
+  "capture_cost_decision_history",
   "security_invoker = true",
   "revoke execute on all functions in schema public from public, anon, authenticated",
 ]) {
@@ -145,7 +151,7 @@ check(
 );
 
 const sqlTests = readdirSync(join(supabaseDir, "tests")).filter((name) => name.endsWith(".sql"));
-for (const expected of ["001_schema_seed.sql", "002_workflow_audit.sql", "003_rls.sql", "004_internal_vendor_reports.sql", "005_first_password_change.sql", "006_offline_sync.sql", "007_anti_zombie_c1.sql", "008_anti_zombie_c2_deadlines.sql", "009_anti_zombie_c3_actions.sql", "010_anti_zombie_c4_blocks_delays.sql", "011_anti_zombie_c5_proof_requirements.sql", "012_anti_zombie_c6_projection.sql", "013_anti_zombie_c8_end_to_end.sql"]) {
+for (const expected of ["001_schema_seed.sql", "002_workflow_audit.sql", "003_rls.sql", "004_internal_vendor_reports.sql", "005_first_password_change.sql", "006_offline_sync.sql", "007_anti_zombie_c1.sql", "008_anti_zombie_c2_deadlines.sql", "009_anti_zombie_c3_actions.sql", "010_anti_zombie_c4_blocks_delays.sql", "011_anti_zombie_c5_proof_requirements.sql", "012_anti_zombie_c6_projection.sql", "013_anti_zombie_c8_end_to_end.sql", "014_c10_financial_decisions.sql"]) {
   check(sqlTests.includes(expected), `Missing SQL test: ${expected}`);
 }
 

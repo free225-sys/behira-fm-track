@@ -17,6 +17,7 @@
     "verify:anti-zombie": "node scripts/verify-anti-zombie.ts",
     "verify:offline": "node scripts/verify-offline-sync.mjs",
     "verify:agent-work-orders": "node scripts/verify-agent-work-orders.mjs",
+    "verify:financial-decisions": "node scripts/verify-financial-decisions.mjs",
     "test:agent-work-orders:local": "node scripts/verify-agent-work-orders-local.mjs",
     "verify:resilience": "node scripts/verify-resilience.mjs",
     "verify:fonts": "node scripts/verify-font-assets.mjs",
@@ -30,6 +31,8 @@
     "test:workflow:local": "node scripts/verify-operational-workflow.mjs",
     "test:migration-data:local": "node scripts/verify-migration-owned-reference-data.mjs",
     "test:c8:local": "pnpm test:migration-data:local && pnpm test:db && pnpm setup:auth:local && pnpm verify:anti-zombie && pnpm test:workflow:local && pnpm test:auth:local",
+    "test:c10:local": "pnpm test:db && pnpm verify:financial-decisions",
+    "test:c10:api:local": "node scripts/verify-financial-decisions-local.mjs",
     "preflight:preprod": "node scripts/preflight-preproduction.mjs",
     "test:db": "pwsh -NoProfile -File supabase/tests/run.ps1",
     "audit:visual": "node scripts/audit-visual-styles.mjs"

@@ -1982,6 +1982,19 @@ button.manager-health-card:hover{
 .costs-workspace-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--space-6);padding:var(--space-5);border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface-muted)}
 .costs-workspace-hero h2{margin:0 0 var(--space-1);font-size:var(--font-size-title)}
 .costs-workspace-hero>div>p:last-child{max-width:72ch;margin:0;color:var(--foreground-muted);font-size:var(--font-size-body);line-height:1.5}
+.costs-hero-actions{display:flex;align-items:center;justify-content:flex-end;gap:var(--space-2);flex:0 0 auto}
+.cost-submission-card{padding:var(--space-5);box-shadow:none}
+.cost-submission-card .panel-head{align-items:flex-start}
+.cost-submission-form{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(180px,.65fr) minmax(180px,.65fr);gap:var(--space-3);margin-top:var(--space-4)}
+.cost-submission-form .field{min-width:0;margin:0}
+.cost-submission-form .field:nth-child(4){grid-column:1/-1}
+.cost-submission-form input,.cost-submission-form select,.cost-submission-form textarea{width:100%;min-width:0;max-width:100%}
+.cost-submission-form textarea,.cost-review-form textarea{min-height:92px;resize:vertical}
+.cost-decision-preview{grid-column:1/-1;display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3);border:1px solid var(--info-border);border-radius:var(--radius-sm);background:var(--info-surface);color:var(--info-text)}
+.cost-decision-preview>span{width:32px;height:32px;display:grid;place-items:center;flex:0 0 auto;border:1px solid var(--info-border);border-radius:var(--radius-round);font-weight:850}
+.cost-decision-preview p{display:grid;gap:2px;margin:0;font-size:var(--font-size-label)}
+.cost-decision-preview small{font-size:var(--font-size-label);line-height:1.4}
+.cost-form-actions{grid-column:1/-1;display:flex;align-items:center;justify-content:flex-end;gap:var(--space-2)}
 .costs-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--space-3)}
 .costs-summary-card{display:grid;gap:var(--space-1);min-width:0;padding:var(--space-4);box-shadow:none}
 .costs-summary-card>span{color:var(--foreground-muted);font-size:var(--font-size-label);font-weight:800;letter-spacing:.04em}
@@ -2019,13 +2032,23 @@ button.manager-health-card:hover{
 .costs-case-facts dd{margin:var(--space-1) 0 0;color:var(--foreground);font-size:var(--font-size-label);font-weight:750;line-height:1.35}
 .costs-case-action{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:var(--space-3)}
 .costs-case-action p{margin:0;color:var(--foreground-muted);font-size:var(--font-size-label);line-height:1.45}
+.costs-case-action>div{display:flex;align-items:center;justify-content:flex-end;gap:var(--space-2);flex:0 0 auto}
 .costs-case-action .secondary-button{min-height:var(--control-height);flex:0 0 auto}
+.cost-review-comment{grid-column:1/-1;padding:var(--space-3);border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-muted)}
+.cost-review-comment b{font-size:var(--font-size-label)}
+.cost-review-comment p{margin:var(--space-1) 0 0;color:var(--foreground-muted);font-size:var(--font-size-label);line-height:1.45}
+.cost-review-form{grid-column:1/-1;display:grid;gap:var(--space-3);padding:var(--space-4);border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-muted)}
+.cost-review-form .field{margin:0}
+.cost-review-choice{display:flex;align-items:center;gap:var(--space-2)}
+.cost-review-choice button{min-height:44px;padding:0 var(--space-3);border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--foreground);font-size:var(--font-size-label);font-weight:800}
+.cost-review-choice button.active{border-color:var(--success-border);background:var(--success-surface);color:var(--success-text)}
+.cost-review-choice button.active.danger{border-color:var(--danger-border);background:var(--danger-surface);color:var(--danger-text)}
 .costs-empty{min-height:180px;display:flex;align-items:center;justify-content:center;gap:var(--space-3);border:1px dashed var(--border-strong);border-radius:var(--radius-md);background:var(--surface-muted)}
 .costs-empty>span{width:40px;height:40px;display:grid;place-items:center;border-radius:var(--radius-round);background:var(--surface);color:var(--brand);font-size:var(--font-size-title)}
 .costs-empty h3{margin:0 0 var(--space-1);font-size:var(--font-size-subtitle)}
 .costs-empty p{margin:0;color:var(--foreground-muted);font-size:var(--font-size-label)}
-@media (max-width:960px){.costs-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.costs-case-body{grid-template-columns:1fr}.costs-case-action{grid-column:1}}
-@media (max-width:700px){.costs-workspace-hero{display:block;padding:var(--space-4)}.costs-workspace-hero>.badge{margin-top:var(--space-3)}.costs-catalogue{padding:var(--space-4)}.costs-catalogue-head{display:block}.costs-catalogue-head>.panel-count{display:inline-flex;margin-top:var(--space-3)}.costs-filters{grid-template-columns:1fr}.costs-case-heading{grid-template-columns:40px minmax(0,1fr)}.costs-case-badges{grid-column:1/-1;justify-content:flex-start}.costs-case-facts{grid-template-columns:1fr}.costs-case-facts>div+div{border-top:1px solid var(--border)}.costs-case-action{align-items:stretch;flex-direction:column}.costs-case-action .secondary-button{width:100%}}
+@media (max-width:960px){.cost-submission-form{grid-template-columns:1fr 1fr}.cost-submission-form .field:first-child,.cost-submission-form .field:nth-child(4){grid-column:1/-1}.costs-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.costs-case-body{grid-template-columns:1fr}.costs-case-action{grid-column:1}}
+@media (max-width:700px){.costs-workspace-hero{display:block;padding:var(--space-4)}.costs-hero-actions{align-items:stretch;flex-direction:column;margin-top:var(--space-3)}.costs-hero-actions .primary-button,.costs-hero-actions .secondary-button{width:100%}.cost-submission-card{padding:var(--space-4)}.cost-submission-card .panel-head{display:block}.cost-submission-card .panel-head>.badge{width:max-content;max-width:100%;margin-top:var(--space-3)}.cost-submission-form{grid-template-columns:1fr}.cost-submission-form .field{grid-column:1!important}.cost-form-actions{align-items:stretch;flex-direction:column-reverse}.cost-form-actions .primary-button,.cost-form-actions .secondary-button{width:100%}.costs-catalogue{padding:var(--space-4)}.costs-catalogue-head{display:block}.costs-catalogue-head>.panel-count{display:inline-flex;margin-top:var(--space-3)}.costs-filters{grid-template-columns:1fr}.costs-case-heading{grid-template-columns:40px minmax(0,1fr)}.costs-case-badges{grid-column:1/-1;justify-content:flex-start}.costs-case-facts{grid-template-columns:1fr}.costs-case-facts>div+div{border-top:1px solid var(--border)}.costs-case-action{align-items:stretch;flex-direction:column}.costs-case-action>div{align-items:stretch;flex-direction:column}.costs-case-action .primary-button,.costs-case-action .secondary-button{width:100%}.cost-review-choice{align-items:stretch;flex-direction:column}.cost-review-choice button{width:100%}}
 
 /* P4 — Utilisateurs et droits, démonstration sans administration cliente */
 .access-workspace{display:grid;gap:var(--space-4)}
