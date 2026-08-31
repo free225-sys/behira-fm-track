@@ -513,7 +513,7 @@ function AuthExperience({ onAuthenticate, onDemoAuthenticate, onForgot, onReset,
       kicker="PILOTAGE TECHNIQUE & MAINTENANCE"
       title="Une vision claire du bâtiment, jusqu’à la preuve."
       lede="Centralisez les constats, priorisez les risques et suivez chaque intervention jusqu’à sa clôture."
-      note={<>{supabaseMode ? `${environmentLabel} prêt · ${allowDemoFallback ? 'mode démonstration conservé' : 'authentification réelle uniquement'}` : 'Prototype local · authentification et données simulées'} · <a href="/design-system">Système de design</a></>}
+      note={<>{supabaseMode ? `${environmentLabel} · ${allowDemoFallback ? 'mode démonstration conservé' : 'authentification réelle uniquement'}` : 'Prototype local · authentification et données simulées'} · <a href="/design-system">Système de design</a></>}
     >
       <div className="auth-card">
         {screen === 'login' && <>
