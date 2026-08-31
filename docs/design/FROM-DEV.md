@@ -21,8 +21,10 @@ conservait pourtant le reçu serveur pendant 24 heures.
 L'interface restaure maintenant le dernier reçu de ronde directement depuis la
 file locale, affiche `REP-…` et `ANO-…` dans l'état de synchronisation, les
 conserve dans le message final de la ronde et les reprend dans la confirmation
-globale après actualisation du registre. Aucune référence n'est reconstruite ou
-inventée côté client.
+globale après actualisation du registre. Un formulaire dont l'identifiant possède
+déjà un reçu est restauré comme transmis et son ancien brouillon est supprimé ;
+seule l'action explicite « Nouvelle ronde » peut recréer une saisie. Aucune
+référence n'est reconstruite ou inventée côté client.
 
 ### Vérifications réalisées
 

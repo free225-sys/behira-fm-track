@@ -161,8 +161,10 @@ Le contrôle post-publication de Sylvain a ensuite créé une seule paire
 validées, mais la référence n'est pas restée visible : le composant dépendait du
 dernier cycle de synchronisation en mémoire. Le reçu serveur, déjà conservé dans
 la file locale pendant 24 heures, est désormais relu et affiché dans le bandeau
-de synchronisation, la confirmation de ronde et la confirmation globale. Aucun
-nouvel enregistrement n'est nécessaire pour vérifier ce raccordement visuel.
+de synchronisation, la confirmation de ronde et la confirmation globale. Le
+formulaire correspondant est restauré comme déjà transmis et ne peut plus être
+soumis une seconde fois ; « Nouvelle ronde » ouvre seule une nouvelle saisie.
+Aucun nouvel enregistrement n'est nécessaire pour vérifier ce raccordement visuel.
 
 Pour chaque dossier, relever la référence créée, l'heure, l'équipement, la
 priorité proposée et le nom de l'auteur. Vérifier qu'un rejeu réseau ne crée pas
