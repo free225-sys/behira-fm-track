@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { FormEvent, useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import Image from 'next/image';
 
 import { AntiZombieSummary } from './components/AntiZombieSummary';
@@ -9,10 +9,24 @@ import { AccessWorkspace } from './components/AccessWorkspace';
 import { CostsWorkspace, type CostReviewInput, type CostSubmissionInput } from './components/CostsWorkspace';
 import { EquipmentWorkspace } from './components/EquipmentWorkspace';
 import { OfflineSyncStatus } from './components/OfflineSyncStatus';
+import { BuildingHealthCockpit, ScoreRing } from './components/BuildingHealthCockpit';
+import { NotificationBell } from './components/NotificationCenter';
 import { ParametersWorkspace, type ParameterWorkspaceData } from './components/ParametersWorkspace';
 import { SyncStatusNotice, type SyncStatusState } from './components/SyncStatusNotice';
-import { Badge, Button, Card, Field, IconButton } from './components/ui';
+import { Badge, Button, Card, Field, FieldError, IconButton, Select } from './components/ui';
 import { WorkflowAnalytics } from './components/WorkflowAnalytics';
+import {
+  hasFieldErrors,
+  passwordRules as passwordStrength,
+  validateEmailOnly,
+  validateInvite,
+  validateLogin,
+  validatePasswordChange,
+  validateVendorReportFields,
+  validateZoneName,
+  type FieldErrors,
+  type VendorReportField,
+} from './lib/client-validation';
 import { AuthSessionChangedError, SESSION_CHANGED_MESSAGE, assertAuthenticatedUser, getAuthenticatedProfileGate, isAuthSessionChangedError, resolveAuthenticatedPersona } from './lib/supabase/auth';
 import { getBrowserSupabaseClient, setSupabaseRememberPreference } from './lib/supabase/client';
 import { getSupabaseIntegrationState, isSupabaseIntegrationEnabled } from './lib/supabase/config';
@@ -177,7 +191,7 @@ const allowedViewsByPersona: Record<PersonaId, View[]> = {
 };
 
 const landingViewByPersona: Record<PersonaId, View> = {
-  facility:'manager',
+  facility:'workspace',
   administration:'workspace',
   electricite:'workspace',
   eau_incendie:'workspace',
@@ -205,7 +219,7 @@ type NavigationItem = {
    reprennent mot pour mot DEC-002 afin que le futur menu de débordement ne crée
    pas une nomenclature parallèle. */
 const navItems: NavigationItem[] = [
-  { key:'workspace', label:'Accueil', subtitle:'Vos priorités opérationnelles et informations du jour.', group:'Mon travail' },
+  { key:'workspace', label:'Accueil', subtitle:'Santé du bâtiment et scores des équipements.', group:'Mon travail' },
   { key:'manager', label:'À traiter', subtitle:'Dossiers nécessitant votre intervention.', group:'Mon travail' },
   { key:'report', label:'Rondes', subtitle:'Contrôles terrain et rondes planifiées.', group:'Mon travail' },
   { key:'registry', label:'Registre', subtitle:'Consultez et recherchez l’ensemble des dossiers.', group:'Le bâtiment' },
@@ -502,12 +516,13 @@ function AuthExperience({ onAuthenticate, onDemoAuthenticate, onForgot, onReset,
   const [invitePassword, setInvitePassword] = useState('');
   const [inviteConfirm, setInviteConfirm] = useState('');
   const [inviteAccepted, setInviteAccepted] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors<'email'|'password'|'confirm'|'accepted'>>({});
 
   const switchScreen = (next:AuthScreen) => {
-    setScreen(next); setStatus('idle'); setMessage(''); setForgotSent(false);
+    setScreen(next); setStatus('idle'); setMessage(''); setForgotSent(false); setFieldErrors({});
   };
   const chooseAccount = (account:DemoAccount) => {
-    setEmail(account.email); setPassword(account.password); setStatus('idle'); setMessage('');
+    setEmail(account.email); setPassword(account.password); setStatus('idle'); setMessage(''); setFieldErrors({});
   };
   const openDemoAccount = async (account:DemoAccount) => {
     setStatus('loading'); setMessage(`Ouverture de ${account.destination} en mode démonstration…`);
@@ -520,14 +535,15 @@ function AuthExperience({ onAuthenticate, onDemoAuthenticate, onForgot, onReset,
   };
   const resetInterface = () => {
     onReset(); setScreen('login'); setEmail(demoAccounts[1].email); setPassword(DEMO_PASSWORD); setRemember(true);
-    setInvitePassword(''); setInviteConfirm(''); setInviteAccepted(false); setForgotSent(false);
+    setInvitePassword(''); setInviteConfirm(''); setInviteAccepted(false); setForgotSent(false); setFieldErrors({});
     setStatus('success'); setMessage('Démonstration réinitialisée. Vous pouvez repartir avec un compte fictif.');
   };
   const submitLogin = async (event:FormEvent) => {
     event.preventDefault();
+    const next = validateLogin({ email, password });
+    setFieldErrors(next);
+    if (hasFieldErrors(next)) { setStatus('error'); setMessage('Corrigez les champs indiqués.'); return; }
     const account = demoAccounts.find((item) => item.email.toLowerCase() === email.trim().toLowerCase());
-    if (!email.trim() || !/^\S+@\S+\.\S+$/.test(email)) { setStatus('error'); setMessage('Saisissez une adresse email valide.'); return; }
-    if (!password) { setStatus('error'); setMessage('Saisissez votre mot de passe.'); return; }
     if (!supabaseMode && (!account || password !== account.password)) { setStatus('error'); setMessage('Identifiants non reconnus. Utilisez un compte fictif parmi les accès de démonstration.'); return; }
     setStatus('loading'); setMessage(supabaseMode ? `Vérification par ${environmentLabel}…` : 'Vérification locale du compte…');
     try {
@@ -541,7 +557,9 @@ function AuthExperience({ onAuthenticate, onDemoAuthenticate, onForgot, onReset,
   };
   const submitForgot = async (event:FormEvent) => {
     event.preventDefault();
-    if (!email.trim() || !/^\S+@\S+\.\S+$/.test(email)) { setStatus('error'); setMessage('Saisissez une adresse email valide.'); return; }
+    const next = validateEmailOnly(email);
+    setFieldErrors(next);
+    if (hasFieldErrors(next)) { setStatus('error'); setMessage('Corrigez les champs indiqués.'); return; }
     setStatus('loading'); setMessage(supabaseMode ? 'Préparation sécurisée de la réinitialisation…' : 'Préparation de l’envoi simulé…');
     try {
       await onForgot(email.trim());
@@ -551,17 +569,12 @@ function AuthExperience({ onAuthenticate, onDemoAuthenticate, onForgot, onReset,
       setStatus('error'); setMessage(error instanceof Error ? error.message : 'Demande impossible.');
     }
   };
-  const passwordRules = {
-    length: invitePassword.length >= 12,
-    upper: /[A-Z]/.test(invitePassword),
-    lower: /[a-z]/.test(invitePassword),
-    number: /\d/.test(invitePassword),
-    symbol: /[^A-Za-z0-9]/.test(invitePassword),
-  };
-  const inviteValid = Object.values(passwordRules).every(Boolean) && invitePassword === inviteConfirm && inviteAccepted;
+  const passwordRules = passwordStrength(invitePassword, 12);
   const submitInvite = (event:FormEvent) => {
     event.preventDefault();
-    if (!inviteValid) { setStatus('error'); setMessage('Respectez toutes les règles, confirmez le mot de passe et acceptez les conditions de démonstration.'); return; }
+    const next = validateInvite({ password: invitePassword, confirm: inviteConfirm, accepted: inviteAccepted });
+    setFieldErrors(next);
+    if (hasFieldErrors(next)) { setStatus('error'); setMessage('Corrigez les champs indiqués.'); return; }
     setStatus('loading'); setMessage('Activation locale de l’invitation…');
     window.setTimeout(() => {
       setStatus('success'); setMessage('Compte invité activé. Ouverture de l’espace Rondes & constats.');
@@ -581,8 +594,8 @@ function AuthExperience({ onAuthenticate, onDemoAuthenticate, onForgot, onReset,
           <div className="auth-heading"><span className="auth-mode-chip">{supabaseMode ? environmentLabel.toUpperCase() : 'DÉMONSTRATION LOCALE'}</span><h2>Bienvenue</h2><p>Entrez dans l’espace opérationnel BEHIRA.</p></div>
           <form className="auth-form" onSubmit={submitLogin} noValidate>
             {sessionNotice && <div id="auth-session-notice" className="auth-message error" role="alert"><span>!</span>{sessionNotice}</div>}
-            <label className="auth-field">Email professionnel<input type="email" autoComplete="username" value={email} onChange={(event) => {setEmail(event.target.value);setStatus('idle')}} aria-invalid={status === 'error'} aria-describedby="auth-message" placeholder="nom@organisation.com" /></label>
-            <label className="auth-field">Mot de passe<span className="password-control"><input type={showPassword ? 'text' : 'password'} autoComplete="current-password" value={password} onChange={(event) => {setPassword(event.target.value);setStatus('idle')}} aria-invalid={status === 'error'} aria-describedby="auth-message" /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}>{showPassword ? 'Masquer' : 'Afficher'}</button></span></label>
+            <label className={`auth-field ${fieldErrors.email ? 'is-invalid' : ''}`}>Email professionnel<input type="email" autoComplete="username" value={email} onChange={(event) => {setEmail(event.target.value);setStatus('idle');setFieldErrors((current) => ({ ...current, email: undefined }))}} aria-invalid={Boolean(fieldErrors.email)} aria-describedby={fieldErrors.email ? 'login-email-error auth-message' : 'auth-message'} placeholder="nom@organisation.com" /><FieldError id="login-email-error" message={fieldErrors.email} /></label>
+            <label className={`auth-field ${fieldErrors.password ? 'is-invalid' : ''}`}>Mot de passe<span className="password-control"><input type={showPassword ? 'text' : 'password'} autoComplete="current-password" value={password} onChange={(event) => {setPassword(event.target.value);setStatus('idle');setFieldErrors((current) => ({ ...current, password: undefined }))}} aria-invalid={Boolean(fieldErrors.password)} aria-describedby={fieldErrors.password ? 'login-password-error auth-message' : 'auth-message'} /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}>{showPassword ? 'Masquer' : 'Afficher'}</button></span><FieldError id="login-password-error" message={fieldErrors.password} /></label>
             <div className="auth-form-options"><label className="check-control"><input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} /><span>Se souvenir de moi</span></label><button type="button" className="auth-link" onClick={() => switchScreen('forgot')}>Mot de passe oublié ?</button></div>
             {message && <div id="auth-message" className={`auth-message ${status}`} role={status === 'error' ? 'alert' : 'status'}><span>{status === 'error' ? '!' : status === 'success' ? '✓' : '•'}</span>{message}</div>}
             <Button className="auth-submit" type="submit" disabled={status === 'loading' || status === 'success'}>{status === 'loading' ? 'Connexion…' : status === 'success' ? 'Connecté ✓' : 'Se connecter'}</Button>
@@ -593,17 +606,18 @@ function AuthExperience({ onAuthenticate, onDemoAuthenticate, onForgot, onReset,
         {screen === 'forgot' && <>
           <button type="button" className="auth-back" onClick={() => switchScreen('login')}>← Retour à la connexion</button>
           <div className="auth-heading"><span className="auth-mode-chip">ASSISTANCE</span><h2>Mot de passe oublié</h2><p>{supabaseMode ? 'Recevez un lien sécurisé de réinitialisation si votre compte est actif.' : 'Recevez les instructions de réinitialisation — envoi simulé uniquement.'}</p></div>
-          {!forgotSent ? <form className="auth-form" onSubmit={submitForgot} noValidate><label className="auth-field">Email professionnel<input type="email" value={email} onChange={(event) => {setEmail(event.target.value);setStatus('idle')}} aria-invalid={status === 'error'} aria-describedby="auth-message" /></label>{message && <div id="auth-message" className={`auth-message ${status}`} role={status === 'error' ? 'alert' : 'status'}><span>{status === 'error' ? '!' : '•'}</span>{message}</div>}<Button className="auth-submit" type="submit" disabled={status === 'loading'}>{status === 'loading' ? 'Envoi…' : 'Envoyer les instructions'}</Button></form> : <div className="auth-confirmation" role="status"><span>✓</span><h3>Demande prise en compte</h3><p>{message}</p><small>Adresse indiquée : {email}</small><Button className="auth-submit" onClick={() => switchScreen('login')}>Retour à la connexion</Button></div>}
+          {!forgotSent ? <form className="auth-form" onSubmit={submitForgot} noValidate><label className={`auth-field ${fieldErrors.email ? 'is-invalid' : ''}`}>Email professionnel<input type="email" value={email} onChange={(event) => {setEmail(event.target.value);setStatus('idle');setFieldErrors((current) => ({ ...current, email: undefined }))}} aria-invalid={Boolean(fieldErrors.email)} aria-describedby={fieldErrors.email ? 'forgot-email-error auth-message' : 'auth-message'} /><FieldError id="forgot-email-error" message={fieldErrors.email} /></label>{message && <div id="auth-message" className={`auth-message ${status}`} role={status === 'error' ? 'alert' : 'status'}><span>{status === 'error' ? '!' : '•'}</span>{message}</div>}<Button className="auth-submit" type="submit" disabled={status === 'loading'}>{status === 'loading' ? 'Envoi…' : 'Envoyer les instructions'}</Button></form> : <div className="auth-confirmation" role="status"><span>✓</span><h3>Demande prise en compte</h3><p>{message}</p><small>Adresse indiquée : {email}</small><Button className="auth-submit" onClick={() => switchScreen('login')}>Retour à la connexion</Button></div>}
         </>}
 
         {screen === 'invite' && <>
           <button type="button" className="auth-back" onClick={() => switchScreen('login')}>← Retour à la connexion</button>
           <div className="auth-heading"><span className="auth-mode-chip">INVITATION DE DÉMONSTRATION</span><h2>Activez votre compte</h2><p>Compte invité : <b>Agente Rondes & Assistance Démo</b><br />Rôle : Rondes & constats · périmètre DEMO-RND</p></div>
           <form className="auth-form" onSubmit={submitInvite} noValidate>
-            <label className="auth-field">Créer un mot de passe<input type="password" autoComplete="new-password" value={invitePassword} onChange={(event) => {setInvitePassword(event.target.value);setStatus('idle')}} aria-describedby="password-rules auth-message" /></label>
-            <label className="auth-field">Confirmer le mot de passe<input type="password" autoComplete="new-password" value={inviteConfirm} onChange={(event) => {setInviteConfirm(event.target.value);setStatus('idle')}} aria-invalid={Boolean(inviteConfirm && inviteConfirm !== invitePassword)} /></label>
+            <label className={`auth-field ${fieldErrors.password ? 'is-invalid' : ''}`}>Créer un mot de passe<input type="password" autoComplete="new-password" value={invitePassword} onChange={(event) => {setInvitePassword(event.target.value);setStatus('idle');setFieldErrors((current) => ({ ...current, password: undefined }))}} aria-invalid={Boolean(fieldErrors.password)} aria-describedby="password-rules invite-password-error auth-message" /><FieldError id="invite-password-error" message={fieldErrors.password} /></label>
+            <label className={`auth-field ${fieldErrors.confirm ? 'is-invalid' : ''}`}>Confirmer le mot de passe<input type="password" autoComplete="new-password" value={inviteConfirm} onChange={(event) => {setInviteConfirm(event.target.value);setStatus('idle');setFieldErrors((current) => ({ ...current, confirm: undefined }))}} aria-invalid={Boolean(fieldErrors.confirm)} /><FieldError id="invite-confirm-error" message={fieldErrors.confirm} /></label>
             <ul className="password-rules" id="password-rules" aria-label="Règles de robustesse"><li className={passwordRules.length ? 'valid' : ''}>12 caractères minimum</li><li className={passwordRules.upper && passwordRules.lower ? 'valid' : ''}>Majuscule et minuscule</li><li className={passwordRules.number ? 'valid' : ''}>Au moins un chiffre</li><li className={passwordRules.symbol ? 'valid' : ''}>Au moins un symbole</li><li className={invitePassword && invitePassword === inviteConfirm ? 'valid' : ''}>Confirmation identique</li></ul>
-            <label className="check-control invite-accept"><input type="checkbox" checked={inviteAccepted} onChange={(event) => setInviteAccepted(event.target.checked)} /><span>J’accepte l’activation simulée de ce compte fictif.</span></label>
+            <label className={`check-control invite-accept ${fieldErrors.accepted ? 'is-invalid' : ''}`}><input type="checkbox" checked={inviteAccepted} onChange={(event) => {setInviteAccepted(event.target.checked);setFieldErrors((current) => ({ ...current, accepted: undefined }))}} /><span>J’accepte l’activation simulée de ce compte fictif.</span></label>
+            <FieldError message={fieldErrors.accepted} />
             {message && <div id="auth-message" className={`auth-message ${status}`} role={status === 'error' ? 'alert' : 'status'}><span>{status === 'error' ? '!' : status === 'success' ? '✓' : '•'}</span>{message}</div>}
             <Button className="auth-submit" type="submit" disabled={status === 'loading' || status === 'success'}>{status === 'loading' ? 'Activation…' : status === 'success' ? 'Compte activé ✓' : 'Activer et accéder à mon espace'}</Button>
           </form>
@@ -631,20 +645,17 @@ function RequiredPasswordChange({ requirement, onComplete, onSignOut }: {
   const [showPasswords, setShowPasswords] = useState(false);
   const [status, setStatus] = useState<'idle'|'loading'|'error'>('idle');
   const [message, setMessage] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors<'current'|'next'|'confirm'>>({});
   const rules = {
-    length:newPassword.length >= 16,
-    upper:/[A-Z]/.test(newPassword),
-    lower:/[a-z]/.test(newPassword),
-    number:/\d/.test(newPassword),
-    symbol:/[^A-Za-z0-9]/.test(newPassword),
+    ...passwordStrength(newPassword, 16),
     different:Boolean(currentPassword) && newPassword !== currentPassword,
     match:Boolean(newPassword) && newPassword === confirmation,
   };
-  const valid = Object.values(rules).every(Boolean);
   const submit = async (event:FormEvent) => {
     event.preventDefault();
-    if (!currentPassword) { setStatus('error'); setMessage('Saisissez le mot de passe temporaire reçu.'); return; }
-    if (!valid) { setStatus('error'); setMessage('Le nouveau mot de passe doit respecter toutes les règles affichées.'); return; }
+    const next = validatePasswordChange({ current: currentPassword, next: newPassword, confirm: confirmation });
+    setFieldErrors(next);
+    if (hasFieldErrors(next)) { setStatus('error'); setMessage('Corrigez les champs indiqués.'); return; }
     setStatus('loading'); setMessage('Mise à jour sécurisée du mot de passe…');
     try {
       await onComplete(currentPassword, newPassword);
@@ -664,9 +675,9 @@ function RequiredPasswordChange({ requirement, onComplete, onSignOut }: {
       <div className="auth-card">
         <div className="auth-heading"><span className="auth-mode-chip">CHANGEMENT OBLIGATOIRE</span><h2>Créez votre mot de passe</h2><p>Compte : <b>{requirement.displayName}</b><br />{requirement.email}</p></div>
         <form className="auth-form" onSubmit={submit} noValidate>
-          <label className="auth-field">Mot de passe temporaire<input type={showPasswords ? 'text' : 'password'} autoComplete="current-password" value={currentPassword} onChange={(event) => {setCurrentPassword(event.target.value);setStatus('idle')}} aria-describedby="required-password-message" /></label>
-          <label className="auth-field">Nouveau mot de passe<input type={showPasswords ? 'text' : 'password'} autoComplete="new-password" value={newPassword} onChange={(event) => {setNewPassword(event.target.value);setStatus('idle')}} aria-describedby="required-password-rules required-password-message" /></label>
-          <label className="auth-field">Confirmer le nouveau mot de passe<input type={showPasswords ? 'text' : 'password'} autoComplete="new-password" value={confirmation} onChange={(event) => {setConfirmation(event.target.value);setStatus('idle')}} aria-invalid={Boolean(confirmation && confirmation !== newPassword)} /></label>
+          <label className={`auth-field ${fieldErrors.current ? 'is-invalid' : ''}`}>Mot de passe temporaire<input type={showPasswords ? 'text' : 'password'} autoComplete="current-password" value={currentPassword} onChange={(event) => {setCurrentPassword(event.target.value);setStatus('idle');setFieldErrors((current) => ({ ...current, current: undefined }))}} aria-invalid={Boolean(fieldErrors.current)} aria-describedby="required-password-message" /><FieldError message={fieldErrors.current} /></label>
+          <label className={`auth-field ${fieldErrors.next ? 'is-invalid' : ''}`}>Nouveau mot de passe<input type={showPasswords ? 'text' : 'password'} autoComplete="new-password" value={newPassword} onChange={(event) => {setNewPassword(event.target.value);setStatus('idle');setFieldErrors((current) => ({ ...current, next: undefined }))}} aria-invalid={Boolean(fieldErrors.next)} aria-describedby="required-password-rules required-password-message" /><FieldError message={fieldErrors.next} /></label>
+          <label className={`auth-field ${fieldErrors.confirm ? 'is-invalid' : ''}`}>Confirmer le nouveau mot de passe<input type={showPasswords ? 'text' : 'password'} autoComplete="new-password" value={confirmation} onChange={(event) => {setConfirmation(event.target.value);setStatus('idle');setFieldErrors((current) => ({ ...current, confirm: undefined }))}} aria-invalid={Boolean(fieldErrors.confirm)} /><FieldError message={fieldErrors.confirm} /></label>
           <label className="check-control"><input type="checkbox" checked={showPasswords} onChange={(event) => setShowPasswords(event.target.checked)} /><span>Afficher les mots de passe pendant la saisie</span></label>
           <ul className="password-rules" id="required-password-rules" aria-label="Règles de robustesse">
             <li className={rules.length ? 'valid' : ''}>16 caractères minimum</li><li className={rules.upper && rules.lower ? 'valid' : ''}>Majuscule et minuscule</li><li className={rules.number ? 'valid' : ''}>Au moins un chiffre</li><li className={rules.symbol ? 'valid' : ''}>Au moins un symbole</li><li className={rules.different ? 'valid' : ''}>Différent du temporaire</li><li className={rules.match ? 'valid' : ''}>Confirmation identique</li>
@@ -1388,7 +1399,7 @@ export default function Home() {
       <main className="main-column">
         <header className="topbar">
           <div className="topbar-title"><h1>{pageTitle}</h1><p>{pageSubtitle}</p></div>
-          <div className="top-actions">{session.mode === 'demo' ? <PersonaSwitcher value={personaId} onChange={changePersona} /> : <div className={`authenticated-persona data-${dataState}`} title={`${session.email} · ${dataState === 'live' ? `données ${supabaseIntegration.environmentLabel}` : 'données de repli'}`}><span>{persona.initials}</span><p><b>{persona.name}</b><small>{dataState === 'live' ? `${supabaseIntegration.environmentLabel} · ${referenceCounts.anomalies} anomalies visibles` : dataState === 'loading' ? `Connexion à ${supabaseIntegration.environmentLabel}…` : `Mode de repli · ${persona.role}`}</small></p></div>}<IconButton aria-label="Notifications"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3.2a3.4 3.4 0 0 0-3.4 3.4v1.1c0 .9-.3 1.8-.9 2.5l-.5.6c-.4.4-.2 1.2.4 1.2h9.8c.6 0 .8-.8.4-1.2l-.5-.6a4 4 0 0 1-.9-2.5V6.6A3.4 3.4 0 0 0 10 3.2Z"/><path d="M8.2 15.2a1.8 1.8 0 0 0 3.6 0"/></svg><span className="notification-dot" /></IconButton><button className="auth-signout-top" onClick={() => setSignOutConfirm(true)} aria-label="Se déconnecter"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 4.5H5.5A1.5 1.5 0 0 0 4 6v8a1.5 1.5 0 0 0 1.5 1.5H8"/><path d="M8.5 10H16m0 0-2.4-2.4M16 10l-2.4 2.4"/></svg></button>{showRoundCta && <Button className="top-create" onClick={() => navigate('report')}>＋ Nouvelle ronde</Button>}</div>
+          <div className="top-actions">{session.mode === 'demo' ? <PersonaSwitcher value={personaId} onChange={changePersona} /> : <div className={`authenticated-persona data-${dataState}`} title={`${session.email} · ${dataState === 'live' ? `données ${supabaseIntegration.environmentLabel}` : 'données de repli'}`}><span>{persona.initials}</span><p><b>{persona.name}</b><small>{dataState === 'live' ? `${supabaseIntegration.environmentLabel} · ${referenceCounts.anomalies} anomalies visibles` : dataState === 'loading' ? `Connexion à ${supabaseIntegration.environmentLabel}…` : `Mode de repli · ${persona.role}`}</small></p></div>}<NotificationBell personaId={personaId} anomalies={anomalies} equipment={equipmentItems} dataState={dataState} canConfigure={personaId === 'facility' || personaId === 'administration'} canOpenEquipment={allowedViewsByPersona[personaId].includes('equipment')} onOpenAnomaly={(id) => openDetail(id, view === 'detail' ? previousView : view)} onOpenEquipment={() => navigate('equipment')} onOpenHome={() => navigate('workspace')} /><button className="auth-signout-top" onClick={() => setSignOutConfirm(true)} aria-label="Se déconnecter"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 4.5H5.5A1.5 1.5 0 0 0 4 6v8a1.5 1.5 0 0 0 1.5 1.5H8"/><path d="M8.5 10H16m0 0-2.4-2.4M16 10l-2.4 2.4"/></svg></button>{showRoundCta && <Button className="top-create" onClick={() => navigate('report')}>＋ Nouvelle ronde</Button>}</div>
         </header>
 
         <div className="content">
@@ -1433,15 +1444,11 @@ function PersonaWorkspace({ persona, anomalies, equipment, vendors, workOrders, 
   onNavigate:(view:View)=>void;
   flash:(message:string)=>void;
 }) {
-  if (persona.id === 'administration') return <DirectionWorkspace anomalies={anomalies} escalations={escalations} onDecision={onEscalationDecision} onOpen={onOpen} onNavigate={onNavigate} />;
-  if (persona.id === 'facility') return <FacilityManagerWorkspace anomalies={anomalies} equipment={equipment} escalations={escalations} fieldRequests={fieldRequests} onEscalate={onEscalateToDirection} onOpen={onOpen} onNavigate={onNavigate} />;
-  if (persona.id === 'electricite' || persona.id === 'eau_incendie') return <AgentWorkspace key={persona.id} persona={persona} anomalies={anomalies} vendors={vendors} workOrders={workOrders} dataState={dataState} canUploadVendorReport={canUploadVendorReport} vendorReportBusy={vendorReportBusy} onVendorReport={onVendorReport} onWorkOrderTransition={onWorkOrderTransition} onWorkOrderProof={onWorkOrderProof} onConsultProof={onConsultProof} workOrderBusy={workOrderBusy} onFieldRequest={onFieldRequest} flash={flash} />;
-  if (persona.id === 'rondes_assistance') return <RoundsAssistanceWorkspace fieldRequests={fieldRequests} onNavigate={onNavigate} flash={flash} />;
+  if (persona.id === 'administration') return <DirectionWorkspace anomalies={anomalies} equipment={equipment} dataState={dataState} escalations={escalations} onDecision={onEscalationDecision} onOpen={onOpen} onNavigate={onNavigate} />;
+  if (persona.id === 'facility') return <FacilityManagerWorkspace anomalies={anomalies} equipment={equipment} dataState={dataState} escalations={escalations} fieldRequests={fieldRequests} onEscalate={onEscalateToDirection} onOpen={onOpen} onNavigate={onNavigate} />;
+  if (persona.id === 'electricite' || persona.id === 'eau_incendie') return <AgentWorkspace key={persona.id} persona={persona} anomalies={anomalies} equipment={equipment} vendors={vendors} workOrders={workOrders} dataState={dataState} canUploadVendorReport={canUploadVendorReport} vendorReportBusy={vendorReportBusy} onVendorReport={onVendorReport} onWorkOrderTransition={onWorkOrderTransition} onWorkOrderProof={onWorkOrderProof} onConsultProof={onConsultProof} workOrderBusy={workOrderBusy} onFieldRequest={onFieldRequest} onNavigate={onNavigate} flash={flash} />;
+  if (persona.id === 'rondes_assistance') return <RoundsAssistanceWorkspace fieldRequests={fieldRequests} equipment={equipment} anomalies={anomalies} dataState={dataState} onNavigate={onNavigate} flash={flash} />;
   return null;
-}
-
-function WorkspaceIntro({ kicker, description, badge }: { kicker:string; description:string; badge:string }) {
-  return <section className="workspace-intro"><div><p className="direction-kicker">{kicker}</p><p>{description}</p></div><span className="workspace-mode"><i /> {badge}</span></section>;
 }
 
 function AnswerStrip({ todo, risk, due, proof }: { todo:string; risk:string; due:string; proof:string }) {
@@ -1452,7 +1459,7 @@ function formatMoney(value:number) {
   return `${new Intl.NumberFormat('fr-FR').format(value)} FCFA`;
 }
 
-function DirectionWorkspace({ anomalies, escalations, onDecision, onOpen, onNavigate }: { anomalies:Anomaly[]; escalations:Escalation[]; onDecision:(id:string,state:DecisionState,motive:string)=>void|Promise<void>; onOpen:(id:string)=>void; onNavigate:(view:View)=>void }) {
+function DirectionWorkspace({ anomalies, equipment, dataState, escalations, onDecision, onOpen, onNavigate }: { anomalies:Anomaly[]; equipment:EquipmentItem[]; dataState:'demo'|'loading'|'live'|'fallback'; escalations:Escalation[]; onDecision:(id:string,state:DecisionState,motive:string)=>void|Promise<void>; onOpen:(id:string)=>void; onNavigate:(view:View)=>void }) {
   const threshold = escalations.find((item) => item.thresholdAmount)?.thresholdAmount ?? DECISION_THRESHOLD_FCFA;
   const [tab, setTab] = useState<'pending'|'history'>('pending');
   const [filter, setFilter] = useState<'Tous'|Escalation['kind']>('Tous');
@@ -1463,6 +1470,8 @@ function DirectionWorkspace({ anomalies, escalations, onDecision, onOpen, onNavi
   const [adminPanel, setAdminPanel] = useState<'zones'|null>(null);
   const [adminConfirmation, setAdminConfirmation] = useState('');
   const [newZone, setNewZone] = useState('');
+  const [zoneError, setZoneError] = useState('');
+  const [motiveError, setMotiveError] = useState('');
   const stateItems = tab === 'pending' ? escalations.filter((item) => item.state === 'À décider') : escalations.filter((item) => item.state !== 'À décider');
   const activeItems = filter === 'Tous' ? stateItems : stateItems.filter((item) => item.kind === filter);
   const focusItem = activeItems.find((item) => item.id === selectedCaseId) ?? activeItems[0];
@@ -1471,12 +1480,16 @@ function DirectionWorkspace({ anomalies, escalations, onDecision, onOpen, onNavi
   const documentedCostTotal = documentedCostItems.reduce((total,item) => total + (item.amount ?? 0),0);
   const filters: Array<'Tous'|Escalation['kind']> = ['Tous','Risque','Coût','Arbitrage','Clôture sensible'];
   const confirm = async () => {
-    if (!draft || !motive.trim()) return;
+    if (!draft) return;
+    const motiveText = motive.trim();
+    if (!motiveText) { setMotiveError('Le motif de la décision est obligatoire.'); return; }
+    if (motiveText.length < 12) { setMotiveError('Le motif doit contenir au moins 12 caractères.'); return; }
     setDecisionBusy(true);
     try {
-      await onDecision(draft.id, draft.state, motive.trim());
+      await onDecision(draft.id, draft.state, motiveText);
       setDraft(null);
       setMotive('');
+      setMotiveError('');
     } catch {
       // The parent displays the canonical persistence error and keeps the dialog open.
     } finally {
@@ -1484,10 +1497,10 @@ function DirectionWorkspace({ anomalies, escalations, onDecision, onOpen, onNavi
     }
   };
   return <>
-    <WorkspaceIntro kicker="ADMINISTRATION · SUPER UTILISATEUR MÉTIER" description="Décidez ce qui dépasse la délégation opérationnelle de Facility Manager." badge="Validation métier active" />
+    <BuildingHealthCockpit audience="administration" anomalies={anomalies} equipment={equipment} dataState={dataState} onNavigate={onNavigate} />
     <div className="authority-split" role="note"><div><span>✓</span><p><b>Validation métier Administration</b><small>Risques, coûts à partir de {formatMoney(DECISION_THRESHOLD_FCFA)} et contrôle des clôtures sensibles</small></p></div><div className="technical-admin"><span>⌘</span><p><b>Utilisateurs et paramètres</b><small>Comptes, droits sensibles, zones et seuil financier consultable</small></p><Badge tone="blue">ACCÈS ADMIN</Badge></div></div>
     <AnswerStrip todo={`${escalations.filter((item) => item.state === 'À décider').length} arbitrages`} risk="2 dossiers critiques" due="1 décision avant 10:30" proof="1 clôture sensible" />
-    <section className="direction-summary-grid"><article className="panel executive-metric"><span>RISQUES CRITIQUES</span><strong>2</strong><small>DEMO-SSI et continuité DEMO-GE</small></article><article className="panel executive-metric"><span>MONTANTS DOCUMENTÉS</span><strong>{formatMoney(documentedCostTotal)}</strong><small>{documentedCostItems.length} dossiers chiffrés · ni engagés ni payés</small></article><button type="button" className="panel executive-metric is-link" onClick={() => onNavigate('dashboard')}><span>SANTÉ BÂTIMENT</span><strong className="healthy">82/100</strong><small>Détail des scores dans Pilotage</small></button><article className="panel threshold-card"><span>Seuil d’approbation Administration</span><strong>{formatMoney(threshold)}</strong><small>{escalations.some((item) => item.costReference) ? 'Valeur canonique photographiée sur chaque décision.' : 'Valeur confirmée · mode démonstration.'}</small><button type="button" className="text-button" onClick={() => onNavigate('settings')}>Voir les paramètres →</button></article></section>
+    <section className="direction-summary-grid"><article className="panel executive-metric"><span>RISQUES CRITIQUES</span><strong>2</strong><small>DEMO-SSI et continuité DEMO-GE</small></article><article className="panel executive-metric"><span>MONTANTS DOCUMENTÉS</span><strong>{formatMoney(documentedCostTotal)}</strong><small>{documentedCostItems.length} dossiers chiffrés · ni engagés ni payés</small></article><article className="panel executive-metric"><span>SANTÉ BÂTIMENT</span><strong>Données insuffisantes</strong><small>Score non calculable dans cet environnement</small></article><article className="panel threshold-card"><span>Seuil d’approbation Administration</span><strong>{formatMoney(threshold)}</strong><small>{escalations.some((item) => item.costReference) ? 'Valeur canonique photographiée sur chaque décision.' : 'Valeur confirmée · mode démonstration.'}</small><button type="button" className="text-button" onClick={() => onNavigate('settings')}>Voir les paramètres →</button></article></section>
     <section className="decision-workbench">
       <article className="panel direction-inbox">
         <div className="workspace-tabs"><button className={tab === 'pending' ? 'active' : ''} onClick={() => setTab('pending')}>À décider <span>{escalations.filter((item) => item.state === 'À décider').length}</span></button><button className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')}>Historique <span>{escalations.filter((item) => item.state !== 'À décider').length}</span></button></div>
@@ -1506,20 +1519,19 @@ function DirectionWorkspace({ anomalies, escalations, onDecision, onOpen, onNavi
     </section>
     <section className="admin-preview-grid">
       <article className="panel admin-users-preview"><div className="panel-head"><div><p className="design-kicker">UTILISATEURS & ACCÈS</p><h3>5 profils de démonstration</h3><p>Facility Manager propose ; l’Administration prépare la création ou la désactivation.</p></div><button className="primary-button" onClick={() => onNavigate('access')}>Ouvrir utilisateurs et droits</button></div>{adminConfirmation && <div className="admin-inline-confirmation" role="status"><span>✓</span>{adminConfirmation}</div>}<div className="admin-user-list">{[['FM','Facility Manager Démo','Facility Manager','Tous périmètres'],['AE','Agent Électricité Démo','Agent électricité','DEMO-GE'],['AI','Agent Eau & Incendie Démo','Agent eau / incendie','DEMO-EAU · DEMO-SSI · DEMO-ESP'],['RA','Agente Rondes & Assistance Démo','Agente & assistante','DEMO-RND']].map((user) => <button key={user[1]} onClick={() => onNavigate('access')}><span>{user[0]}</span><p><b>{user[1]}</b><small>{user[2]} · {user[3]}</small></p><Badge tone="neutral">PROFIL DÉMO</Badge><em>Consulter →</em></button>)}</div></article>
-      <aside className="admin-parameters"><article className="panel"><p className="design-kicker">RÉFÉRENTIEL</p><div className="parameter-value"><strong>76</strong><span>zones actives</span></div><p>Ajouter, modifier ou désactiver une zone sans intervention technique.</p><button className="secondary-button" onClick={() => {setAdminPanel('zones');setAdminConfirmation('')}}>Gérer les zones</button></article><article className="panel"><p className="design-kicker">SCORES AGENTS</p><div className="agent-score-mini"><span><b>Agent Électricité</b>88</span><span><b>Agent Eau & Incendie</b>84</span><span><b>Agente Rondes & Assistance</b>91</span></div><small>Visibles par tous les agents · détail explicatif disponible</small></article></aside>
+      <aside className="admin-parameters"><article className="panel"><p className="design-kicker">RÉFÉRENTIEL</p><div className="parameter-value"><strong>76</strong><span>zones actives</span></div><p>Ajouter, modifier ou désactiver une zone sans intervention technique.</p><button className="secondary-button" onClick={() => {setAdminPanel('zones');setAdminConfirmation('')}}>Gérer les zones</button></article><article className="panel"><p className="design-kicker">SCORES AGENTS</p><div className="compact-insufficient-state"><b>Scores non calculables</b><p>Période, échantillon, méthode et données de traitement restent à valider.</p></div><small>Aucune performance individuelle n’est inventée ni interprétée.</small></article></aside>
     </section>
     <WorkflowAnalytics items={anomalies.map((item) => ({ ...item, owner:canonicalResponsible(item) ?? 'Non affectée' }))} variant="administration" onOpenRegistry={() => onNavigate('registry')} />
-    {draft && selected && <div className="demo-modal-backdrop" role="presentation"><section className="demo-modal" role="dialog" aria-modal="true" aria-labelledby="decision-dialog-title"><button className="modal-close" aria-label="Fermer" onClick={() => setDraft(null)}>×</button><Badge tone={draft.state === 'Approuvée' ? 'success' : draft.state === 'Refusée' ? 'critical' : 'orange'}>{draft.state}</Badge><h3 id="decision-dialog-title">{selected.id} · Confirmer la décision</h3><p>{selected.asset} · {selected.title}</p><label className="field">Motif obligatoire<textarea autoFocus value={motive} onChange={(e) => setMotive(e.target.value)} placeholder="Expliquez la décision et les conditions éventuelles…" /></label><div className="modal-actions"><button className="secondary-button" disabled={decisionBusy} onClick={() => setDraft(null)}>Annuler</button><button className="primary-button" disabled={decisionBusy || !motive.trim()} onClick={() => void confirm()}>{decisionBusy ? 'Enregistrement…' : 'Confirmer et notifier Facility Manager'}</button></div><small>{selected.costReference ? 'Décision enregistrée et historisée sur le dossier.' : 'Simulation locale · aucune donnée n’est persistée.'}</small></section></div>}
-    {adminPanel && <div className="demo-modal-backdrop" role="presentation" onMouseDown={(event) => {if (event.target === event.currentTarget) setAdminPanel(null)}}><section className="demo-modal admin-dialog" role="dialog" aria-modal="true" aria-labelledby="admin-dialog-title"><button className="modal-close" aria-label="Fermer" onClick={() => setAdminPanel(null)}>×</button><Badge tone="blue">ADMINISTRATION</Badge><form onSubmit={(event) => {event.preventDefault();setAdminPanel(null);setAdminConfirmation(`La zone « ${newZone} » est prête à être ajoutée après validation.`);setNewZone('')}}><h3 id="admin-dialog-title">Gérer les zones</h3><p>Le référentiel contient 24 zones actives. Toute modification reste traçable.</p><div className="zone-preview-list"><span><b>Sous-sol</b>12 zones</span><span><b>Rez-de-chaussée</b>18 zones</span><span><b>Étages R+1 à R+4</b>38 zones</span><span><b>Extérieurs</b>8 zones</span></div><label className="field">Nouvelle zone<input autoFocus required value={newZone} onChange={(e) => setNewZone(e.target.value)} placeholder="Ex. Local technique R+3" /></label><div className="modal-actions"><button type="button" className="secondary-button" onClick={() => setAdminPanel(null)}>Annuler</button><button type="submit" className="primary-button">Préparer l’ajout</button></div><small>Maquette interactive · aucun référentiel n’est modifié.</small></form></section></div>}
+    {draft && selected && <div className="demo-modal-backdrop" role="presentation"><section className="demo-modal" role="dialog" aria-modal="true" aria-labelledby="decision-dialog-title"><button className="modal-close" aria-label="Fermer" onClick={() => {setDraft(null);setMotiveError('')}}>×</button><Badge tone={draft.state === 'Approuvée' ? 'success' : draft.state === 'Refusée' ? 'critical' : 'orange'}>{draft.state}</Badge><h3 id="decision-dialog-title">{selected.id} · Confirmer la décision</h3><p>{selected.asset} · {selected.title}</p><label className={`field ${motiveError ? 'is-invalid' : ''}`}>Motif obligatoire<textarea autoFocus value={motive} aria-invalid={Boolean(motiveError)} onChange={(e) => {setMotive(e.target.value);setMotiveError('')}} placeholder="Expliquez la décision et les conditions éventuelles…" /><FieldError message={motiveError} /></label><div className="modal-actions"><button className="secondary-button" disabled={decisionBusy} onClick={() => {setDraft(null);setMotiveError('')}}>Annuler</button><button className="primary-button" disabled={decisionBusy} onClick={() => void confirm()}>{decisionBusy ? 'Enregistrement…' : 'Confirmer et notifier Facility Manager'}</button></div><small>{selected.costReference ? 'Décision enregistrée et historisée sur le dossier.' : 'Simulation locale · aucune donnée n’est persistée.'}</small></section></div>}
+    {adminPanel && <div className="demo-modal-backdrop" role="presentation" onMouseDown={(event) => {if (event.target === event.currentTarget) setAdminPanel(null)}}><section className="demo-modal admin-dialog" role="dialog" aria-modal="true" aria-labelledby="admin-dialog-title"><button className="modal-close" aria-label="Fermer" onClick={() => setAdminPanel(null)}>×</button><Badge tone="blue">ADMINISTRATION</Badge><form noValidate onSubmit={(event) => {event.preventDefault(); const next = validateZoneName(newZone); setZoneError(next.name ?? ''); if (next.name) return; setAdminPanel(null); setAdminConfirmation(`La zone « ${newZone.trim()} » est prête à être ajoutée après validation.`); setNewZone(''); setZoneError('')}}><h3 id="admin-dialog-title">Gérer les zones</h3><p>Le référentiel contient 24 zones actives. Toute modification reste traçable.</p><div className="zone-preview-list"><span><b>Sous-sol</b>12 zones</span><span><b>Rez-de-chaussée</b>18 zones</span><span><b>Étages R+1 à R+4</b>38 zones</span><span><b>Extérieurs</b>8 zones</span></div><label className={`field ${zoneError ? 'is-invalid' : ''}`}>Nouvelle zone<input autoFocus value={newZone} aria-invalid={Boolean(zoneError)} onChange={(e) => {setNewZone(e.target.value);setZoneError('')}} placeholder="Ex. Local technique R+3" /><FieldError message={zoneError} /></label><div className="modal-actions"><button type="button" className="secondary-button" onClick={() => setAdminPanel(null)}>Annuler</button><button type="submit" className="primary-button">Préparer l’ajout</button></div><small>Maquette interactive · aucun référentiel n’est modifié.</small></form></section></div>}
   </>;
 }
 
-function FacilityManagerWorkspace({ anomalies, equipment, escalations, fieldRequests, onEscalate, onOpen, onNavigate }: { anomalies:Anomaly[]; equipment:EquipmentItem[]; escalations:Escalation[]; fieldRequests:FieldRequest[]; onEscalate:(request:FieldRequest)=>void; onOpen:(id:string)=>void; onNavigate:(view:View)=>void }) {
+function FacilityManagerWorkspace({ anomalies, equipment, dataState, escalations, fieldRequests, onEscalate, onOpen, onNavigate }: { anomalies:Anomaly[]; equipment:EquipmentItem[]; dataState:'demo'|'loading'|'live'|'fallback'; escalations:Escalation[]; fieldRequests:FieldRequest[]; onEscalate:(request:FieldRequest)=>void; onOpen:(id:string)=>void; onNavigate:(view:View)=>void }) {
   const responses = escalations.filter((item) => item.state !== 'À décider');
   const pendingRequests = fieldRequests.filter((item) => item.status === 'À traiter par Facility Manager').length;
   return <>
-    <WorkspaceIntro kicker="FACILITY MANAGER" description="L’état du bâtiment d’abord. Qualifiez, affectez et relancez depuis À traiter." badge="Pilotage opérationnel" />
-    <ManagerHealthOverview anomalies={anomalies} equipment={equipment} onNavigate={onNavigate} />
+    <BuildingHealthCockpit audience="facility" anomalies={anomalies} equipment={equipment} dataState={dataState} onNavigate={onNavigate} />
     <section className="facility-personal-grid"><article className="panel"><div className="panel-head"><div><h3>Remontées terrain</h3><p>Demandes reçues des agents et de Agente Rondes & Assistance</p></div><span className="panel-count">{pendingRequests} à traiter</span></div><div className="field-request-list">{fieldRequests.map((request) => {
       const exceedsDelegation = /deuxième|critique|coût|sécurité/i.test(`${request.subject} ${request.note}`);
       return <article key={request.id}><div><Badge tone={request.status === 'Transmise à Direction' ? 'blue' : 'orange'}>{request.status}</Badge><span>{request.id} · {request.from}</span>{exceedsDelegation && request.status === 'À traiter par Facility Manager' && <Badge tone="critical">Hors délégation</Badge>}</div><h4>{request.subject}</h4><p>{request.note}</p>{request.status === 'À traiter par Facility Manager' ? <div><button className="primary-button qualify-action" onClick={() => onNavigate('manager')}>Qualifier maintenant</button><button className={`escalate-action ${exceedsDelegation ? 'is-recommended' : ''}`} onClick={() => onEscalate(request)}>Soumettre à l’Administration</button></div> : <small>En attente de décision de l’Administration.</small>}</article>;
@@ -1558,7 +1570,7 @@ const agentTaskSets: Record<'electricite'|'eau_incendie', AgentTask[]> = {
   ],
 };
 
-function AgentWorkspace({ persona, anomalies, vendors, workOrders, dataState, canUploadVendorReport, vendorReportBusy, onVendorReport, onWorkOrderTransition, onWorkOrderProof, onConsultProof, workOrderBusy, onFieldRequest, flash }: { persona:Persona; anomalies:Anomaly[]; vendors:OperationalVendor[]; workOrders:OperationalWorkOrder[]; dataState:'demo'|'loading'|'live'|'fallback'; canUploadVendorReport:boolean; vendorReportBusy:boolean; onVendorReport:(input:VendorReportInput)=>Promise<void>; onWorkOrderTransition:(order:OperationalWorkOrder,target:'En intervention'|'En validation',comment:string)=>Promise<boolean>; onWorkOrderProof:(order:OperationalWorkOrder,file:File)=>Promise<boolean>; onConsultProof:(proof:OperationalProof)=>Promise<string>; workOrderBusy:boolean; onFieldRequest:(request:Omit<FieldRequest,'id'|'status'>)=>void; flash:(message:string)=>void }) {
+function AgentWorkspace({ persona, anomalies, equipment, vendors, workOrders, dataState, canUploadVendorReport, vendorReportBusy, onVendorReport, onWorkOrderTransition, onWorkOrderProof, onConsultProof, workOrderBusy, onFieldRequest, onNavigate, flash }: { persona:Persona; anomalies:Anomaly[]; equipment:EquipmentItem[]; vendors:OperationalVendor[]; workOrders:OperationalWorkOrder[]; dataState:'demo'|'loading'|'live'|'fallback'; canUploadVendorReport:boolean; vendorReportBusy:boolean; onVendorReport:(input:VendorReportInput)=>Promise<void>; onWorkOrderTransition:(order:OperationalWorkOrder,target:'En intervention'|'En validation',comment:string)=>Promise<boolean>; onWorkOrderProof:(order:OperationalWorkOrder,file:File)=>Promise<boolean>; onConsultProof:(proof:OperationalProof)=>Promise<string>; workOrderBusy:boolean; onFieldRequest:(request:Omit<FieldRequest,'id'|'status'>)=>void; onNavigate:(view:View)=>void; flash:(message:string)=>void }) {
   const agentKey = persona.id as 'electricite'|'eau_incendie';
   const [demoTasks, setDemoTasks] = useState(agentTaskSets[agentKey]);
   const [tab, setTab] = useState<'active'|'done'>('active');
@@ -1621,9 +1633,8 @@ function AgentWorkspace({ persona, anomalies, vendors, workOrders, dataState, ca
     closeAction();
   };
   return <>
-    <WorkspaceIntro kicker={persona.role.toUpperCase()} description={`Votre périmètre aujourd’hui : ${persona.scope}.`} badge={liveMode ? 'Affectations réelles' : loading ? 'Chargement des affectations' : 'Vue terrain de démonstration'} />
+    <BuildingHealthCockpit audience={agentKey} anomalies={anomalies} equipment={equipment} dataState={dataState} onNavigate={onNavigate} />
     <AnswerStrip todo={answerTodo} risk={answerRisk} due={answerDue} proof={answerProof} />
-    {!liveMode && !loading && <section className="agent-equipment-grid">{(agentKey === 'electricite' ? [{code:'DEMO-GE',label:'Mode AUTO',value:'À confirmer',tone:'orange'},{code:'DEMO-ASC-1',label:'Disponibilité',value:'Opérationnel',tone:'success'},{code:'DEMO-ASC-2',label:'Disponibilité',value:'Dégradée',tone:'critical'}] : [{code:'DEMO-EAU',label:'Redondance P1/P2',value:'P1 en défaut',tone:'orange'},{code:'DEMO-SSI',label:'Pression réseau',value:'Instable',tone:'critical'},{code:'DEMO-EAU',label:'Fuite active',value:'Non',tone:'success'}]).map((item,index) => <article className="panel equipment-glance" key={`${item.code}-${index}`}><span>{item.code}</span><b>{item.value}</b><Badge tone={item.tone}>{item.label}</Badge></article>)}</section>}
     {agentKey === 'eau_incendie' && <section className="provisional-rule"><span>↻</span><div><b>Réarmement = rétablissement provisoire</b><p>L’anomalie reste ouverte jusqu’au diagnostic, à l’intervention corrective et à la preuve validée par Facility Manager.</p></div></section>}
     <section className="panel task-board">
       <div className="workspace-tabs">
@@ -1678,6 +1689,8 @@ function AgentWorkspace({ persona, anomalies, vendors, workOrders, dataState, ca
 }
 
 function InternalVendorReportPanel({ anomalies, vendors, canUpload, busy, onSubmit }: { anomalies:Anomaly[]; vendors:OperationalVendor[]; canUpload:boolean; busy:boolean; onSubmit:(input:VendorReportInput)=>Promise<void> }) {
+  const formId = useId();
+  const [open, setOpen] = useState(false);
   const [anomalyReference, setAnomalyReference] = useState(anomalies[0]?.id ?? '');
   const [vendorCode, setVendorCode] = useState(vendors[0]?.code ?? '');
   const [reportType, setReportType] = useState<VendorReportInput['reportType']>('intervention_report');
@@ -1687,35 +1700,119 @@ function InternalVendorReportPanel({ anomalies, vendors, canUpload, busy, onSubm
   const [cost, setCost] = useState('');
   const [file, setFile] = useState<File|null>(null);
   const [localBusy, setLocalBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<VendorReportField,string>>>({});
+  const [receipt, setReceipt] = useState<{ anomaly:string; vendor:string; file:string; nature:string }|null>(null);
+
+  const natureLabel: Record<VendorReportInput['reportType'], string> = {
+    intervention_report: 'Rapport d’intervention',
+    pv: 'Procès-verbal',
+    quote: 'Devis',
+    photo_bundle: 'Dossier photos',
+  };
+
+  const currentValues = {
+    anomalyIds: anomalies.map((item) => item.id),
+    vendorCodes: vendors.map((item) => item.code),
+    anomalyReference,
+    vendorCode,
+    reportDate,
+    summary,
+    reserveNotes,
+    cost,
+    file,
+  };
+
+  const applyFieldErrors = (nextFile:File|null = file) => {
+    const next = validateVendorReportFields({ ...currentValues, file: nextFile });
+    setFieldErrors(next);
+    return next;
+  };
+
+  const resetForm = () => {
+    setSummary(''); setReserveNotes(''); setCost(''); setFile(null); setError(''); setFieldErrors({});
+    setReportType('intervention_report');
+    setReportDate(new Date().toISOString().slice(0,10));
+  };
+
+  const cancel = () => {
+    resetForm();
+    setOpen(false);
+  };
 
   const submit = async (event:FormEvent) => {
     event.preventDefault();
-    if (!canUpload || !file || !anomalyReference || !vendorCode || !summary.trim()) return;
+    if (!canUpload) return;
+    const next = applyFieldErrors();
+    if (Object.keys(next).length || !file) {
+      setError('Corrigez les champs indiqués avant de déposer.');
+      return;
+    }
     setLocalBusy(true);
+    setError('');
     try {
-      await onSubmit({ anomalyReference, vendorCode, file, reportType, reportDate, summary, reserveNotes, costAmount:cost ? Number(cost) : undefined });
-      setSummary(''); setReserveNotes(''); setCost(''); setFile(null);
+      await onSubmit({ anomalyReference, vendorCode, file, reportType, reportDate, summary: summary.trim(), reserveNotes: reserveNotes.trim() || undefined, costAmount: cost.trim() ? Number(cost) : undefined });
+      setReceipt({ anomaly:anomalyReference, vendor:vendorCode, file:file.name, nature:natureLabel[reportType] });
+      resetForm();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Le rapport n’a pas pu être déposé.');
     } finally {
       setLocalBusy(false);
     }
   };
 
-  return <section className={`panel internal-vendor-report ${canUpload ? 'is-authorized' : ''}`}>
-    <div className="panel-head"><div><h3>Rapport d’intervention d’une entreprise</h3><p>Dépôt interne au nom d’un prestataire référencé</p></div><Badge tone={canUpload ? 'success' : 'neutral'}>{canUpload ? 'Droit nominatif actif' : 'Droit non attribué'}</Badge></div>
+  if (!open && !receipt) {
+    return <div className="vendor-report-launcher">
+      <button type="button" className="secondary-button" aria-expanded={false} aria-controls={formId} onClick={() => setOpen(true)}>＋ Déposer un rapport prestataire</button>
+    </div>;
+  }
+
+  if (receipt) {
+    return <section id={formId} className="panel internal-vendor-report is-authorized" role="status">
+      <div className="vendor-report-receipt">
+        <span aria-hidden="true">✓</span>
+        <div>
+          <b>Rapport déposé · en attente de Facility Manager</b>
+          <p>{receipt.anomaly} · {receipt.vendor} · {receipt.nature}</p>
+          <small>{receipt.file} — simulation locale, aucune pièce n’a été transmise hors de cet appareil.</small>
+        </div>
+        <div className="vendor-report-receipt-actions">
+          <button type="button" className="secondary-button" onClick={() => { setReceipt(null); setOpen(true); }}>Déposer un autre</button>
+          <button type="button" className="primary-button" onClick={() => { setReceipt(null); setOpen(false); }}>Fermer</button>
+        </div>
+      </div>
+    </section>;
+  }
+
+  return <section id={formId} className={`panel internal-vendor-report ${canUpload ? 'is-authorized' : ''}`}>
+    <div className="panel-head"><div><h3>Rapport d’intervention d’une entreprise</h3><p>Dépôt interne au nom d’un prestataire référencé</p></div><div className="vendor-report-head-actions"><Badge tone={canUpload ? 'success' : 'neutral'}>{canUpload ? 'Droit nominatif actif' : 'Droit non attribué'}</Badge><button type="button" className="health-link" aria-expanded={true} onClick={() => setOpen(false)}>Réduire</button></div></div>
     <div className="internal-access-rule"><span>⌁</span><div><b>Aucun accès direct pour les prestataires</b><p>Un agent interne autorisé rattache le rapport, le fichier et les métadonnées au dossier. Facility Manager contrôle ensuite la preuve.</p></div></div>
     {!canUpload ? <div className="permission-empty"><p>Ce profil ne dispose pas du droit nominatif de dépôt. Agent Électricité et Agent Eau & Incendie sont les seuls agents internes habilités.</p><button className="secondary-button" type="button" disabled>Déposer un rapport prestataire</button></div> :
-    <form className="internal-vendor-form" onSubmit={submit}>
-      <div className="two-fields"><label className="field">Anomalie<select required value={anomalyReference} onChange={(event) => setAnomalyReference(event.target.value)}>{anomalies.map((item) => <option key={item.id} value={item.id}>{item.id} · {item.asset} · {item.title}</option>)}</select></label><label className="field">Entreprise concernée<select required value={vendorCode} onChange={(event) => setVendorCode(event.target.value)}>{vendors.map((vendor) => <option key={vendor.code} value={vendor.code}>{vendor.code} · {vendor.label}</option>)}</select></label></div>
-      <div className="two-fields"><label className="field">Nature du document<select value={reportType} onChange={(event) => setReportType(event.target.value as VendorReportInput['reportType'])}><option value="intervention_report">Rapport d’intervention</option><option value="pv">Procès-verbal</option><option value="quote">Devis</option><option value="photo_bundle">Dossier photos</option></select></label><label className="field">Date du rapport<input type="date" max={new Date().toISOString().slice(0,10)} required value={reportDate} onChange={(event) => setReportDate(event.target.value)} /></label></div>
-      <label className="field">Résumé de l’intervention<textarea required value={summary} onChange={(event) => setSummary(event.target.value)} placeholder="Diagnostic, action réalisée, essais et résultat…" /></label>
-      <div className="two-fields"><label className="field">Réserves éventuelles<input value={reserveNotes} onChange={(event) => setReserveNotes(event.target.value)} placeholder="Aucune ou détail à lever" /></label><label className="field">Coût indiqué (FCFA)<input type="number" min="0" value={cost} onChange={(event) => setCost(event.target.value)} placeholder="0" /></label></div>
-      <label className="field report-file">Rapport, PV ou photo<input type="file" required accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={(event) => setFile(event.target.files?.[0] ?? null)} /><small>{file ? `${file.name} · ${Math.max(1, Math.round(file.size / 1024))} Ko` : 'PDF, JPG, PNG ou WebP · 10 Mo maximum'}</small></label>
-      <button className="primary-button" disabled={busy || localBusy || !file || !anomalyReference || !vendorCode || !summary.trim()}>{busy || localBusy ? 'Dépôt en cours…' : 'Déposer pour validation de Facility Manager'}</button>
+    <form className="internal-vendor-form" onSubmit={submit} noValidate>
+      <div className="two-fields">
+        <label className={`field ${fieldErrors.anomalyReference ? 'is-invalid' : ''}`}>Anomalie<Select value={anomalyReference} aria-invalid={Boolean(fieldErrors.anomalyReference)} aria-describedby={fieldErrors.anomalyReference ? `${formId}-anomaly` : undefined} onChange={(event) => { setAnomalyReference(event.target.value); if (fieldErrors.anomalyReference) setFieldErrors((current) => ({ ...current, anomalyReference: undefined })); }}>{anomalies.length ? anomalies.map((item) => <option key={item.id} value={item.id}>{item.id} · {item.asset} · {item.title}</option>) : <option value="">Aucune anomalie ouverte</option>}</Select><FieldError id={`${formId}-anomaly`} message={fieldErrors.anomalyReference} /></label>
+        <label className={`field ${fieldErrors.vendorCode ? 'is-invalid' : ''}`}>Entreprise concernée<Select value={vendorCode} aria-invalid={Boolean(fieldErrors.vendorCode)} aria-describedby={fieldErrors.vendorCode ? `${formId}-vendor` : undefined} onChange={(event) => { setVendorCode(event.target.value); if (fieldErrors.vendorCode) setFieldErrors((current) => ({ ...current, vendorCode: undefined })); }}>{vendors.length ? vendors.map((vendor) => <option key={vendor.code} value={vendor.code}>{vendor.code} · {vendor.label}</option>) : <option value="">Aucun prestataire</option>}</Select><FieldError id={`${formId}-vendor`} message={fieldErrors.vendorCode} /></label>
+      </div>
+      <div className="two-fields">
+        <label className="field">Nature du document<Select value={reportType} onChange={(event) => setReportType(event.target.value as VendorReportInput['reportType'])}><option value="intervention_report">Rapport d’intervention</option><option value="pv">Procès-verbal</option><option value="quote">Devis</option><option value="photo_bundle">Dossier photos</option></Select></label>
+        <label className={`field ${fieldErrors.reportDate ? 'is-invalid' : ''}`}>Date du rapport<input type="date" max={new Date().toISOString().slice(0,10)} value={reportDate} aria-invalid={Boolean(fieldErrors.reportDate)} aria-describedby={fieldErrors.reportDate ? `${formId}-date` : undefined} onChange={(event) => { setReportDate(event.target.value); if (fieldErrors.reportDate) setFieldErrors((current) => ({ ...current, reportDate: undefined })); }} /><FieldError id={`${formId}-date`} message={fieldErrors.reportDate} /></label>
+      </div>
+      <label className={`field ${fieldErrors.summary ? 'is-invalid' : ''}`}>Résumé de l’intervention<textarea value={summary} maxLength={2000} aria-invalid={Boolean(fieldErrors.summary)} aria-describedby={fieldErrors.summary ? `${formId}-summary` : undefined} onChange={(event) => { setSummary(event.target.value); if (fieldErrors.summary) setFieldErrors((current) => ({ ...current, summary: undefined })); }} placeholder="Diagnostic, action réalisée, essais et résultat…" /><FieldError id={`${formId}-summary`} message={fieldErrors.summary} /></label>
+      <div className="two-fields">
+        <label className={`field ${fieldErrors.reserveNotes ? 'is-invalid' : ''}`}>Réserves éventuelles<input value={reserveNotes} maxLength={500} aria-invalid={Boolean(fieldErrors.reserveNotes)} aria-describedby={fieldErrors.reserveNotes ? `${formId}-reserves` : undefined} onChange={(event) => { setReserveNotes(event.target.value); if (fieldErrors.reserveNotes) setFieldErrors((current) => ({ ...current, reserveNotes: undefined })); }} placeholder="Aucune ou détail à lever" /><FieldError id={`${formId}-reserves`} message={fieldErrors.reserveNotes} /></label>
+        <label className={`field ${fieldErrors.cost ? 'is-invalid' : ''}`}>Coût indiqué (FCFA)<input type="number" min="0" step="1" inputMode="numeric" value={cost} aria-invalid={Boolean(fieldErrors.cost)} aria-describedby={fieldErrors.cost ? `${formId}-cost` : undefined} onChange={(event) => { setCost(event.target.value); if (fieldErrors.cost) setFieldErrors((current) => ({ ...current, cost: undefined })); }} placeholder="0" /><FieldError id={`${formId}-cost`} message={fieldErrors.cost} /></label>
+      </div>
+      <label className={`field report-file ${fieldErrors.file ? 'is-invalid' : ''}`}>Rapport, PV ou photo<input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" aria-invalid={Boolean(fieldErrors.file)} aria-describedby={fieldErrors.file ? `${formId}-file` : `${formId}-file-hint`} onChange={(event) => { const nextFile = event.target.files?.[0] ?? null; setFile(nextFile); setFieldErrors((current) => ({ ...current, file: validateVendorReportFields({ ...currentValues, file: nextFile }).file })); }} /><small id={`${formId}-file-hint`}>{file ? `${file.name} · ${Math.max(1, Math.round(file.size / 1024))} Ko` : 'PDF, JPG, PNG ou WebP · 10 Mo maximum'}</small><FieldError id={`${formId}-file`} message={fieldErrors.file} /></label>
+      {error ? <p className="vendor-report-error" role="alert">{error}</p> : null}
+      <div className="vendor-report-form-actions">
+        <button type="button" className="secondary-button" disabled={busy || localBusy} onClick={cancel}>Annuler</button>
+        <button className="primary-button" disabled={busy || localBusy}>{busy || localBusy ? 'Dépôt en cours…' : 'Déposer pour validation de Facility Manager'}</button>
+      </div>
     </form>}
   </section>;
 }
 
-function RoundsAssistanceWorkspace({ fieldRequests, onNavigate, flash }: { fieldRequests:FieldRequest[]; onNavigate:(view:View)=>void; flash:(message:string)=>void }) {
+function RoundsAssistanceWorkspace({ fieldRequests, equipment, anomalies, dataState, onNavigate, flash }: { fieldRequests:FieldRequest[]; equipment:EquipmentItem[]; anomalies:Anomaly[]; dataState:'demo'|'loading'|'live'|'fallback'; onNavigate:(view:View)=>void; flash:(message:string)=>void }) {
   const [missionTab, setMissionTab] = useState<'terrain'|'administration'>('terrain');
   const [submitted] = useState<{zone:string;category:string;title:string;status:string}[]>([
     { zone:'R+4 · Circulation Est', category:'Sécurité / accès', title:'Porte coupe-feu maintenue ouverte', status:'À qualifier' },
@@ -1723,38 +1820,19 @@ function RoundsAssistanceWorkspace({ fieldRequests, onNavigate, flash }: { field
   ]);
   const [complementDone, setComplementDone] = useState(false);
   return <>
-    <WorkspaceIntro kicker="AGENTE & ASSISTANTE DE DIRECTION" description="Séparez clairement vos rondes terrain et votre suivi administratif." badge="Double mission" />
+    <BuildingHealthCockpit audience="rondes_assistance" anomalies={anomalies} equipment={equipment} dataState={dataState} onNavigate={onNavigate} />
     <div className="mission-switch" role="tablist" aria-label="Fonction de Agente Rondes & Assistance"><button type="button" role="tab" aria-selected={missionTab === 'terrain'} className={missionTab === 'terrain' ? 'active' : ''} onClick={() => setMissionTab('terrain')}><span>✓</span><b>Terrain</b><small>Rondes, constats et brouillons de démonstration</small></button><button type="button" role="tab" aria-selected={missionTab === 'administration'} className={missionTab === 'administration' ? 'active' : ''} onClick={() => setMissionTab('administration')}><span>▧</span><b>Administratif</b><small>Devis, paiements et autorisations</small></button></div>
     {missionTab === 'terrain' && <><section className="rondes_assistance-grid"><article className="panel zone-rounds"><div className="panel-head"><div><h3>Zones du jour</h3><p>Ronde DEMO-RND · 24 août</p></div><span className="panel-count">4 / 6 contrôlées</span></div>{['Hall & accueil|Terminé','Atrium restaurant|À vérifier','Jardinières RDC|En cours','Sanitaires R+2|Terminé','Terrasse R+4|À faire','Parking sous-sol|À faire'].map((item) => {const [label,status] = item.split('|'); return <button key={label}><span className={status === 'Terminé' ? 'done' : status === 'En cours' ? 'current' : ''}>{status === 'Terminé' ? '✓' : '○'}</span><div><b>{label}</b><small>Propreté · plantes · fuite · dégradation</small></div><Badge tone={status === 'Terminé' ? 'success' : status === 'À vérifier' ? 'critical' : status === 'En cours' ? 'blue' : 'neutral'}>{status}</Badge></button>})}</article><article className="panel quick-finding"><div className="panel-head"><div><h3>Saisie dans Rondes</h3><p>Un seul formulaire de constat, pour éviter une double saisie.</p></div><Badge tone="blue">RONDES</Badge></div><p className="finding-pointer-copy">Les zones du jour restent ici. La création et la photo se font dans la destination Rondes.</p><button type="button" className="primary-button" onClick={() => onNavigate('report')}>Ouvrir la ronde →</button></article></section><section className="panel signal-tracker"><div className="panel-head"><div><h3>Mes signalements</h3><p>Statuts visibles sans accès aux décisions techniques</p></div><Badge>{submitted.length} dossiers</Badge></div><div className="signal-list">{submitted.map((item,index) => <article key={`${item.title}-${index}`}><div><b>{item.title}</b><p>{item.zone} · {item.category}</p></div><Badge tone={item.status === 'Complément demandé' && !complementDone ? 'orange' : item.status === 'À qualifier' ? 'blue' : 'success'}>{item.status === 'Complément demandé' && complementDone ? 'Complément transmis' : item.status}</Badge>{item.status === 'Complément demandé' && !complementDone && <button onClick={() => {setComplementDone(true);flash('Complément photo transmis à Facility Manager — simulation locale.')}}>Ajouter la photo demandée</button>}</article>)}</div><div className="field-feed-note">{fieldRequests.filter((request) => request.from === 'Agente Rondes & Assistance Démo').length} remontée(s) visible(s) dans la file de Facility Manager.</div></section></>}
     {missionTab === 'administration' && <><section className="mission-permission-note"><span>i</span><div><b>Fonction administrative, sans décision technique</b><p>Agente Rondes & Assistance prépare et suit les pièces. Facility Manager et l’Administration conservent leurs validations respectives.</p></div></section><section className="rondes_assistance-admin-grid"><article className="panel"><div className="panel-head"><div><p className="design-kicker">SUIVI ADMINISTRATIF</p><h3>Devis et autorisations</h3></div><span className="panel-count is-alert">3 à suivre</span></div>{[['DEV-031','PREST-EAU','280 000 FCFA','Validation Facility Manager'],['DEV-029','PREST-ASC','950 000 FCFA','Arbitrage Administration'],['DEV-026','PREST-ESP','190 000 FCFA','Bon à payer']].map((item) => <button className="admin-follow-row" key={item[0]}><span>{item[0]}</span><p><b>{item[1]}</b><small>{item[2]} · {item[3]}</small></p><em>Voir →</em></button>)}</article><article className="panel"><div className="panel-head"><div><p className="design-kicker">COÛTS & PAIEMENTS</p><h3>Échéances de la semaine</h3></div></div><div className="payment-summary"><strong>2,12 M</strong><span>FCFA à contrôler</span></div><div className="payment-lines"><span><i className="done" /> 3 pièces complètes</span><span><i /> 1 autorisation attendue</span><span><i className="late" /> 1 paiement en retard</span></div><button className="secondary-button">Ouvrir le suivi financier</button></article></section></>}
   </>;
 }
 
-const agentPerformance = [
-  { name:'Agent Électricité', score:88 },
-  { name:'Agent Eau & Incendie', score:84 },
-  { name:'Agente Rondes & Assistance', score:91 },
-];
-
-function ScoreRing({ value }: { value:number }) {
-  const radius = 52;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference * (1 - value / 100);
-  return <div className="building-score-ring" aria-label={`Score de santé du bâtiment ${value} sur 100`}>
-    <svg viewBox="0 0 128 128" role="img" aria-labelledby="building-score-title building-score-desc">
-      <title id="building-score-title">Score de santé du bâtiment</title>
-      <desc id="building-score-desc">Le score actuel est de {value} sur 100.</desc>
-      <circle className="score-ring-track" cx="64" cy="64" r={radius} />
-      <circle className="score-ring-value" cx="64" cy="64" r={radius} strokeDasharray={circumference} strokeDashoffset={offset} />
-    </svg>
-    <div><strong>{value}</strong><span>/100</span><small>État global</small></div>
-  </div>;
-}
+const agentPerformance = ['Agent Électricité', 'Agent Eau & Incendie', 'Agente Rondes & Assistance'];
 
 function OperationalAnalytics({ equipment, variant = 'direction' }: { equipment:EquipmentItem[]; variant?:'direction'|'manager' }) {
   const [period, setPeriod] = useState<'7j'|'30j'|'90j'>('30j');
   const [equipmentFilter, setEquipmentFilter] = useState<'all'|'watch'>('all');
-  const visibleEquipment = (equipmentFilter === 'watch' ? equipment.filter((item) => item.health < 90) : equipment).slice(0,6);
+  const visibleEquipment = equipment.slice(0,6);
   const periodLabel = period === '7j' ? '7 jours' : period === '30j' ? '30 jours' : '90 jours';
   return <section className={`operational-analytics analytics-${variant}`} aria-labelledby={`${variant}-analytics-title`}>
     <div className="analytics-heading">
@@ -1765,16 +1843,16 @@ function OperationalAnalytics({ equipment, variant = 'direction' }: { equipment:
       <article className="panel analytics-card building-health-card">
         <div className="analytics-card-head"><div><span>SANTÉ BÂTIMENT</span><h4>Score global actuel</h4></div><span className="mockup-label">Fraîcheur à confirmer</span></div>
         <div className="building-health-content">
-          <ScoreRing value={82} />
+          <ScoreRing value={null} />
           <div className="score-components" aria-label="Composition du score bâtiment">
-            <span><i className="series-1" /><b>70%</b> Équipements</span>
-            <span><i className="series-2" /><b>15%</b> Sécurité</span>
-            <span><i className="series-3" /><b>10%</b> Zones</span>
-            <span><i className="series-4" /><b>5%</b> Continuité</span>
+            <span><i className="series-1" /><b>À valider</b> Criticité équipements</span>
+            <span><i className="series-2" /><b>À valider</b> Pondérations</span>
+            <span><i className="series-3" /><b>Manquant</b> Couverture des données</span>
+            <span><i className="series-4" /><b>Manquant</b> Historique daté</span>
           </div>
         </div>
-        <div className="score-causes"><span><b>Facteur négatif</b> DEMO-SSI à 61/100</span><span><b>Facteur positif</b> DEMO-ESP à 98/100</span></div>
-        <p className="analytics-note">Le score est plafonné si un équipement vital devient indisponible. La variation sera affichée après constitution de l’historique.</p>
+        <div className="score-causes"><span><b>État</b> Données partielles</span><span><b>Résultat</b> Score non calculable</span></div>
+        <p className="analytics-note">Aucune criticité, cause, variation ou tendance n’est affichée sans règles métier validées et historique suffisant.</p>
       </article>
 
       <article className="panel analytics-card trend-card">
@@ -1784,16 +1862,16 @@ function OperationalAnalytics({ equipment, variant = 'direction' }: { equipment:
       </article>
 
       <article className="panel analytics-card equipment-chart-card">
-        <div className="analytics-card-head"><div><span>PARC TECHNIQUE</span><h4>Scores par équipement</h4></div><div className="chart-switch" aria-label="Filtre des équipements"><button type="button" aria-pressed={equipmentFilter === 'all'} onClick={() => setEquipmentFilter('all')}>Tous</button><button type="button" aria-pressed={equipmentFilter === 'watch'} onClick={() => setEquipmentFilter('watch')}>À surveiller</button></div></div>
-        <div className="horizontal-score-chart" aria-live="polite">{visibleEquipment.map((item) => <div className="score-bar-row" key={item.code}><span><b>{item.code}</b><small>{item.label}</small></span><div className="score-bar-track" role="progressbar" aria-label={`${item.label}, ${item.health} sur 100`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={item.health}><i className={item.health < 70 ? 'danger' : item.health < 90 ? 'warning' : 'success'} style={{width:`${item.health}%`}} /></div><strong>{item.health}</strong></div>)}</div>
-        <div className="chart-legend"><span><i className="success" /> Sain ≥ 90</span><span><i className="warning" /> Surveillance 70–89</span><span><i className="danger" /> Critique &lt; 70</span></div>
+        <div className="analytics-card-head"><div><span>PARC TECHNIQUE</span><h4>Scores par équipement</h4></div><div className="chart-switch" aria-label="Filtre des équipements"><button type="button" aria-pressed={equipmentFilter === 'all'} onClick={() => setEquipmentFilter('all')}>Tous</button><button type="button" aria-pressed={false} disabled title="Disponible après validation des règles de score">À surveiller</button></div></div>
+        <div className="horizontal-score-chart" aria-live="polite">{visibleEquipment.map((item) => <div className="score-bar-row" key={item.code}><span><b>{item.code}</b><small>{item.label}</small></span><div className="score-bar-track is-unavailable" role="img" aria-label={`${item.label}, score non calculable`}><i /></div><strong>—</strong></div>)}</div>
+        <div className="chart-legend"><span><i className="neutral" /> Scores suspendus jusqu’à validation métier</span></div>
       </article>
 
       <article className="panel analytics-card agent-chart-card">
         <div className="analytics-card-head"><div><span>ÉQUIPE TERRAIN</span><h4>Performance des agents</h4></div><span className="mockup-label">Méthode à valider</span></div>
-        <div className="agent-score-chart" aria-label="Scores globaux de démonstration des agents">{agentPerformance.map((agent) => <div className="agent-score-row" key={agent.name}><span><b>{agent.name}</b><small>Score global</small></span><div className="agent-score-track" role="progressbar" aria-label={`${agent.name}, score global de démonstration, ${agent.score} sur 100`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={agent.score}><i style={{width:`${agent.score}%`}} /></div><strong>{agent.score}</strong></div>)}</div>
+        <div className="agent-score-chart" aria-label="Scores des agents non calculables">{agentPerformance.map((agent) => <div className="agent-score-row" key={agent}><span><b>{agent}</b><small>Score non calculable</small></span><div className="agent-score-track is-unavailable" role="img" aria-label={`${agent}, score non calculable`}><i /></div><strong>—</strong></div>)}</div>
         <div className="agent-score-method"><span><b>Période observée</b>Non disponible</span><span><b>Échantillon</b>Non raccordé</span><span><b>Méthode proposée</b>Délais · réactivité · qualité des preuves</span><span><b>Variation / fraîcheur</b>Indisponibles</span></div>
-        <p className="analytics-note">Valeurs de démonstration uniquement. Le détail explicatif devra présenter facteurs positifs et négatifs avant validation ; aucune sanction automatique n’est autorisée.</p>
+        <p className="analytics-note">Aucune valeur de démonstration n’est affichée. Le détail explicatif devra présenter facteurs positifs et négatifs avant validation ; aucune sanction automatique n’est autorisée.</p>
       </article>
     </div>
   </section>;
@@ -1813,44 +1891,6 @@ function ManagerOperationalContext() {
   </section>;
 }
 
-function ManagerHealthOverview({ anomalies, equipment, onNavigate }: { anomalies:Anomaly[]; equipment:EquipmentItem[]; onNavigate?:(view:View)=>void }) {
-  const criticalCount = anomalies.filter((item) => item.priority === 'Critique' && item.status !== 'Clôturée').length;
-  const watchedEquipment = equipment.filter((item) => item.health < 90).length;
-  const averageEquipmentHealth = equipment.length ? Math.round(equipment.reduce((total,item) => total + item.health,0) / equipment.length) : 0;
-  const averageAgentScore = Math.round(agentPerformance.reduce((total,item) => total + item.score,0) / agentPerformance.length);
-
-  return <section className="manager-health-overview workspace-health" aria-labelledby="manager-health-title">
-    <header className="manager-health-heading">
-      <div><p className="design-kicker">SANTÉ & PERFORMANCE</p><h3 id="manager-health-title">Vue d’ensemble du bâtiment</h3><p>État du bâtiment, du parc technique et de l’équipe. Les dossiers à traiter restent dans À traiter.</p></div>
-      {onNavigate ? <button type="button" className="health-link" onClick={() => onNavigate('manager')}>Ouvrir À traiter →</button> : null}
-    </header>
-    <div className="manager-health-kpis">
-      <article className="panel manager-health-card manager-building-score">
-        <div><span>SANTÉ BÂTIMENT</span><h3>Score global</h3><p className="kpi-status is-watch">Surveillance</p></div>
-        <ScoreRing value={82} />
-      </article>
-      <button type="button" className="panel manager-health-card manager-critical-health is-action" onClick={() => onNavigate?.('manager')} aria-label={`${criticalCount} alerte${criticalCount > 1 ? 's' : ''} critique${criticalCount > 1 ? 's' : ''} active${criticalCount > 1 ? 's' : ''}. Ouvrir À traiter.`}>
-        <span>ALERTES CRITIQUES</span>
-        <strong className="is-danger">{criticalCount}</strong>
-        <p>dossier{criticalCount > 1 ? 's' : ''} critique{criticalCount > 1 ? 's' : ''} actif{criticalCount > 1 ? 's' : ''}</p>
-        <div className="manager-health-progress danger" role="progressbar" aria-label={`${criticalCount} alertes critiques actives`} aria-valuemin={0} aria-valuemax={Math.max(anomalies.length,1)} aria-valuenow={criticalCount}><i style={{width:`${Math.min(100,(criticalCount / Math.max(anomalies.length,1)) * 100)}%`}} /></div>
-      </button>
-      <article className="panel manager-health-card">
-        <span>PARC TECHNIQUE</span>
-        <strong>{averageEquipmentHealth}<small>/100</small></strong>
-        <p>{equipment.length} modules suivis · <b className="kpi-status is-watch">{watchedEquipment} à surveiller</b></p>
-        <div className="manager-health-progress" role="progressbar" aria-label={`Santé moyenne du parc technique ${averageEquipmentHealth} sur 100`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={averageEquipmentHealth}><i style={{width:`${averageEquipmentHealth}%`}} /></div>
-      </article>
-      <article className="panel manager-health-card">
-        <span>ÉQUIPE TERRAIN</span>
-        <strong>{averageAgentScore}<small>/100</small></strong>
-        <p>3 agents · score moyen de démonstration</p>
-        <div className="manager-health-progress" role="progressbar" aria-label={`Score moyen de démonstration des agents ${averageAgentScore} sur 100`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={averageAgentScore}><i style={{width:`${averageAgentScore}%`}} /></div>
-      </article>
-    </div>
-  </section>;
-}
-
 function Dashboard({ anomalies, equipment, escalations, audience = 'facility', onOpen, onNavigate, readOnly = false }: { anomalies: Anomaly[]; equipment:EquipmentItem[]; escalations:Escalation[]; audience?:'administration'|'facility'; onOpen:(id:string, from?:View)=>void; onNavigate:(view:View)=>void; readOnly?:boolean }) {
   const [dashboardTab, setDashboardTab] = useState<'overview'|'actions'|'health'|'equipment'>('overview');
   const urgent = anomalies.filter((a) => a.priority === 'Critique' || a.priority === 'Haute').filter((a) => a.status !== 'Clôturée').slice(0,3);
@@ -1862,7 +1902,7 @@ function Dashboard({ anomalies, equipment, escalations, audience = 'facility', o
   const dashboardTabs = [
     { id:'overview' as const, icon:'01', label:'Vue d’ensemble', detail:'5 angles du jour', count:'Synthèse' },
     { id:'actions' as const, icon:'02', label:'Actions & risques', detail:`${openCount} ouverts · ${lateCount} retards`, count:'À traiter' },
-    { id:'health' as const, icon:'03', label:'Santé & scores', detail:'Bâtiment · équipements · agents', count:'82/100' },
+    { id:'health' as const, icon:'03', label:'Santé & scores', detail:'Bâtiment · équipements · agents', count:'Non calculable' },
     { id:'equipment' as const, icon:'04', label:'Parc technique', detail:`${equipment.length} modules suivis`, count:'Équipements' },
   ];
   return <>
@@ -1964,10 +2004,10 @@ function Manager({ anomalies, tab, setTab, onOpen }: { anomalies:Anomaly[]; tab:
       <button type="button" role="tab" aria-selected={tab === 'proof'} aria-controls="manager-queue-panel" className={tab === 'proof' ? 'active' : ''} onClick={() => {setTab('proof');setDecisionDone(false)}}>
         <span className="kpi-icon blue">PV</span><div><strong>{groups.proof.length}</strong><small>Preuves à vérifier</small></div>
       </button>
-      <div className="completion" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={86} aria-label="Score de traitement 86 sur 100">
-        <div className="completion-head"><span>Score traitement</span><b>86<small>/100</small></b></div>
-        <div className="completion-bar" aria-hidden="true"><i style={{width:'86%'}} /></div>
-        <p>Délais 88 · réactivité 91 · preuves 79</p>
+      <div className="completion is-unavailable" role="status" aria-label="Score de traitement non calculable, données insuffisantes">
+        <div className="completion-head"><span>Score traitement</span><b>—<small>/100</small></b></div>
+        <div className="completion-bar" aria-hidden="true"><i /></div>
+        <p>Période, échantillon et méthode à valider</p>
       </div>
     </section>
 

@@ -2,7 +2,44 @@
 
 Ne jamais supprimer ni réécrire une décision actée. Toute évolution doit prendre la forme d'une nouvelle entrée qui complète ou remplace explicitement une décision antérieure.
 
+## DEC-016 — C11-A : cockpit santé conservé, scores suspendus jusqu’à validation métier
+
+- **Date :** 31 août 2026
+- **Auteur :** Wilkam, consigné par le Dev Lead
+- **Statut :** **Adopté — local uniquement**
+- **Périmètre :** intégration de `design/lot-1-tokens@85b0665`, Accueil multi-personas, score bâtiment, scores équipements et scores agents
+- **Contexte :** DEC-015 reste la décision de structure pour l’Accueil. La fondation C11-B existe localement, mais les huit décisions métier nécessaires au calcul pilote de WILO-01 ne sont pas encore validées. Les valeurs numériques du miroir ne constituent donc pas une source canonique.
+- **Décision :**
+  - le layout du cockpit issu de DESIGN-041 à DESIGN-046 est conservé : échelle 0–100, lollipops, tuiles et destinations d’action ;
+  - le score bâtiment, les scores équipements, les ventilations et les scores agents affichent **« Score non calculable — données insuffisantes »** ou une forme courte équivalente ;
+  - l’état de source reste visible : démonstration, données partielles, chargement ou repli ;
+  - les données manquantes sont explicitées : criticité validée, règles et pondérations approuvées, couverture des mesures/maintenances/anomalies et historique d’instantanés ;
+  - aucune alerte de santé n’est produite depuis les anciennes valeurs de démonstration ;
+  - aucune criticité, tendance ou performance agent n’est inventée ;
+  - WILO-01 n’est pas calculé avant validation des huit décisions métier.
+- **Compatibilité :** le seuil C10 reste **400 000 FCFA**. Aucun rôle, droit, RLS, workflow, migration ou donnée Supabase n’est modifié par cette décision.
+- **Déploiement :** aucun dry-run C10-C, aucune migration de préproduction, aucune publication.
+- **Suite :** validation des huit décisions métier, puis calcul WILO-01 en local ; le dry-run préproduction fera l’objet d’une autorisation séparée après C10-C.
+
+## DEC-015 — Accueil = Santé du bâtiment pour tous les personas
+
+- **Date :** 31 août 2026
+- **Auteur :** Revue produit, à valider par Wilkam
+- **Statut :** **Proposé — implémenté dans le miroir**
+- **Périmètre :** landing, Accueil, scores, parcours multi-profils
+- **Contexte :** DEC-009 et DEC-011 faisaient atterrir le Facility Manager sur À traiter. L’outil était lu comme un registre d’anomalies. La vocation réelle est la santé du bâtiment.
+- **Décision :**
+  - **tous les personas** atterrissent sur **Accueil** (`workspace`) ;
+  - Accueil ouvre sur un **cockpit Santé du bâtiment** (score global, KPIs, scores équipements, ventilation par domaine, gravité) **avant** qualification, ronde ou arbitrage ;
+  - À traiter, Rondes et Pilotage restent les destinations d’action ;
+  - les agents voient le score du **site** plus leur **périmètre** ; Direction et Facility Manager voient le parc complet ;
+  - aucune tendance n’est inventée tant que l’historique quotidien n’existe pas.
+- **Remplace :** le landing Facility Manager de DEC-009 / DEC-011 (`facility: manager`). DEC-007 reste : À traiter ne porte pas le bloc santé.
+- **Fichiers concernés :** `app/page.tsx`, `app/components/BuildingHealthCockpit.tsx`, `app/globals.css`, `scripts/audit-visual-styles.mjs`, `scripts/verify-auth.mjs`
+- **Contrôles attendus :** `pnpm audit:visual`, `pnpm verify:personas`, recette Accueil 1440 / 768 / 390 pour les cinq personas.
+
 ## DEC-014 — Validation du contrat produit DEC-002 et ouverture du lot Équipements
+
 
 - **Date :** 30 août 2026
 - **Auteur :** Wilkam, consigné par le Dev Lead
