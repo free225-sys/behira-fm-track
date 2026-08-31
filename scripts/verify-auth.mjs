@@ -11,7 +11,7 @@ const checks = [
   ['Session locale', page.includes('localStorage') && page.includes('sessionStorage') && page.includes('behira_demo_session_v1')],
   ['Cinq comptes fictifs internes', (page.match(/@demo\.behira\.invalid/g) ?? []).length === 5 && !page.includes('prestataire@demo.behira.invalid') && !page.includes('lecture.seule@demo.behira.invalid')],
   ['Domaine non réel', page.includes('.invalid') && !/@gmail\.|@outlook\.|@yahoo\./i.test(page)],
-  ['Redirections par rôle', page.includes("facility:'manager'") && page.includes("administration:'workspace'") && page.includes("rondes_assistance:'workspace'")],
+  ['Redirections par rôle', page.includes("facility:'workspace'") && page.includes("administration:'workspace'") && page.includes("rondes_assistance:'workspace'")],
   ['Protection des vues', page.includes('allowedViewsByPersona') && page.includes('Accès masqué pour ce rôle')],
   ['Aucun compte Lecture seule', !page.includes("personaId:'readonly'") && !page.includes('lecture.seule@demo.behira.invalid')],
   ['Mode démonstration explicite', page.includes('MODE DÉMONSTRATION') && page.includes('DÉMONSTRATION LOCALE')],

@@ -2,7 +2,25 @@
 
 Ne jamais supprimer ni réécrire une décision actée. Toute évolution doit prendre la forme d'une nouvelle entrée qui complète ou remplace explicitement une décision antérieure.
 
+## DEC-015 — Accueil = Santé du bâtiment pour tous les personas
+
+- **Date :** 31 août 2026
+- **Auteur :** Revue produit, à valider par Wilkam
+- **Statut :** **Proposé — implémenté dans le miroir**
+- **Périmètre :** landing, Accueil, scores, parcours multi-profils
+- **Contexte :** DEC-009 et DEC-011 faisaient atterrir le Facility Manager sur À traiter. L’outil était lu comme un registre d’anomalies. La vocation réelle est la santé du bâtiment.
+- **Décision :**
+  - **tous les personas** atterrissent sur **Accueil** (`workspace`) ;
+  - Accueil ouvre sur un **cockpit Santé du bâtiment** (score global, KPIs, scores équipements, ventilation par domaine, gravité) **avant** qualification, ronde ou arbitrage ;
+  - À traiter, Rondes et Pilotage restent les destinations d’action ;
+  - les agents voient le score du **site** plus leur **périmètre** ; Direction et Facility Manager voient le parc complet ;
+  - aucune tendance n’est inventée tant que l’historique quotidien n’existe pas.
+- **Remplace :** le landing Facility Manager de DEC-009 / DEC-011 (`facility: manager`). DEC-007 reste : À traiter ne porte pas le bloc santé.
+- **Fichiers concernés :** `app/page.tsx`, `app/components/BuildingHealthCockpit.tsx`, `app/globals.css`, `scripts/audit-visual-styles.mjs`, `scripts/verify-auth.mjs`
+- **Contrôles attendus :** `pnpm audit:visual`, `pnpm verify:personas`, recette Accueil 1440 / 768 / 390 pour les cinq personas.
+
 ## DEC-014 — Validation du contrat produit DEC-002 et ouverture du lot Équipements
+
 
 - **Date :** 30 août 2026
 - **Auteur :** Wilkam, consigné par le Dev Lead

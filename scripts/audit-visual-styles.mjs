@@ -5,6 +5,7 @@ import path from 'node:path'
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const css = await readFile(path.join(root, 'app', 'globals.css'), 'utf8')
 const page = await readFile(path.join(root, 'app', 'page.tsx'), 'utf8')
+const cockpit = await readFile(path.join(root, 'app', 'components', 'BuildingHealthCockpit.tsx'), 'utf8')
 const workflow = await readFile(path.join(root, 'app', 'components', 'WorkflowAnalytics.tsx'), 'utf8')
 const specimen = await readFile(path.join(root, 'app', 'design-system', 'page.tsx'), 'utf8')
 const badge = await readFile(path.join(root, 'app', 'components', 'ui', 'badge.tsx'), 'utf8')
@@ -12,6 +13,7 @@ const equipmentWorkspace = await readFile(path.join(root, 'app', 'components', '
 const costsWorkspace = await readFile(path.join(root, 'app', 'components', 'CostsWorkspace.tsx'), 'utf8')
 const accessWorkspace = await readFile(path.join(root, 'app', 'components', 'AccessWorkspace.tsx'), 'utf8')
 const parametersWorkspace = await readFile(path.join(root, 'app', 'components', 'ParametersWorkspace.tsx'), 'utf8')
+const notificationCenter = await readFile(path.join(root, 'app', 'components', 'NotificationCenter.tsx'), 'utf8')
 
 const cssWithoutComments = css.replace(/\/\*[\s\S]*?\*\//g, '')
 const rules = [...cssWithoutComments.matchAll(/([^{}]+)\{([^{}]+)\}/g)].map((match, order) => ({
@@ -47,9 +49,9 @@ const checks = [
   ['Logo renvoyant vers Accueil', page.includes("className=\"brand\" onClick={() => navigate('workspace')}")],
   ['CTA de ronde limité à l’Accueil autorisé', page.includes("const showRoundCta = view === 'workspace' && canStartRound") && !page.includes("personaId !== 'administration' && <button className=\"primary-button top-create\"")],
   ['En-tête de page sur surface claire', css.includes('.topbar { min-height:56px; padding:10px clamp(24px,4vw,54px); background:var(--surface);') && !css.includes('background:#16345a')],
-  ['Accueil sans titre jumeau', page.includes('function WorkspaceIntro({ kicker, description, badge }') && !page.includes('<h2>{title}</h2>') && !page.includes('Bonjour Facility Manager')],
+  ['Accueil sans titre jumeau', !page.includes('<WorkspaceIntro') && !page.includes('<h2>{title}</h2>') && !page.includes('Bonjour Facility Manager') && cockpit.includes('className="visually-hidden">Santé du bâtiment')],
   ['Hero À traiter sans second titre', page.includes('aria-label="Contexte opérationnel"') && !page.includes('id="manager-operational-title"') && !page.includes('Dossiers à traiter')],
-  ['Landing Facility Manager sur À traiter', page.includes("facility:'manager'")],
+  ['Landing Santé du bâtiment pour tous les personas', page.includes("facility:'workspace'") && page.includes("administration:'workspace'") && page.includes("electricite:'workspace'")],
   ['Hero Facility Manager sans bande navy collée', !css.includes('border-top:1px solid #21456f;border-radius:0;background:#16345a;color:white')],
   ['Menu Plus prêt pour le catalogue groupé', page.includes("const navigationGroups: NavigationGroup[] = ['Mon travail','Le bâtiment','Pilotage','Administration']") && page.includes('overflowIsActive ? \'active\'') && page.includes("aria-current={overflowIsActive ? 'page' : undefined}") && page.includes('groupItems = overflowNav.filter') && page.includes("event.key === 'ArrowDown' || event.key === 'ArrowUp'") && page.includes('moreNavTriggerRef.current?.focus()')],
   ['Environnement de démonstration visible', page.includes('className="persona-mode-label"') && page.includes('Mode démonstration') && !css.includes('.persona-mode-label{display:none}')],
@@ -65,8 +67,8 @@ const checks = [
   ['Champs métier longs compressibles', css.includes('.field,.two-fields>*{min-width:0}') && css.includes('.field select,.field input,.field textarea{width:100%;max-width:100%}')],
   ['DEC-003 maintenue à 12 px', css.includes('--font-size-label:12px') && css.includes('.manager-pilot{display:grid;gap:var(--space-4);color:var(--foreground);font-variant-numeric:tabular-nums}')],
   ['Libellés des sept files au plancher 12 px', finalDeclaration('.manager-pilot .queue-tabs button small', 'font-size') === 'var(--font-size-label)'],
-  ['DEC-007 À traiter sans bloc santé', page.includes('fm-decision-layout') && page.includes('function Manager({ anomalies, tab, setTab, onOpen }') && !/function Manager\([\s\S]*?<ManagerHealthOverview/.test(page)],
-  ['Santé & performance sur Accueil FM', page.includes('<ManagerHealthOverview anomalies={anomalies} equipment={equipment} onNavigate={onNavigate} />') && page.indexOf('function FacilityManagerWorkspace') < page.indexOf('<ManagerHealthOverview anomalies={anomalies} equipment={equipment} onNavigate={onNavigate} />')],
+  ['DEC-007 À traiter sans bloc santé', page.includes('fm-decision-layout') && page.includes('function Manager({ anomalies, tab, setTab, onOpen }') && !/function Manager\([\s\S]*?<BuildingHealthCockpit/.test(page) && !/function Manager\([\s\S]*?<ManagerHealthOverview/.test(page)],
+  ['Santé du bâtiment sur Accueil FM', page.includes('<BuildingHealthCockpit audience="facility"') && page.indexOf('function FacilityManagerWorkspace') < page.indexOf('<BuildingHealthCockpit audience="facility"')],
   ['File Facility Manager élargie', css.includes('grid-template-columns:minmax(400px,.88fr) minmax(0,1.12fr)')],
   ['Ticket actif identifié par deux canaux', css.includes('.fm-inbox-list>button.active{border-left-color:var(--brand);background:var(--surface-emphasis)')],
   ['Pipeline renforcé et connecté', css.includes('.workflow-pipeline b{display:block;color:var(--foreground);font-size:28px') && css.includes('.workflow-pipeline>div:not(:last-child)::after')],
@@ -88,7 +90,7 @@ const checks = [
   ['Glyphe B distinct du teal courant (DEC-013)', css.includes('--mark:#20b2aa') && css.includes('--teal:#0e6a66') && css.includes('background:var(--mark)') && css.includes('--accent:var(--teal)')],
   ['Durées d’animation tokenisées', css.includes('transition:width var(--motion-bar) var(--ease-standard)') && css.includes('transition:stroke-dashoffset var(--motion-ring) var(--ease-standard)')],
   ['Spécimen hors navigation produit', specimen.includes('Système de design · hors navigation produit') && page.includes('href="/design-system"') && !page.includes("label:'Système de design'")],
-  ['Primitives UI partagées', page.includes("from './components/ui'") && specimen.includes("from '../components/ui'") && page.includes('<IconButton') && page.includes('<Card className="fm-decision-card">')],
+  ['Primitives UI partagées', page.includes("from './components/ui'") && specimen.includes("from '../components/ui'") && notificationCenter.includes('<IconButton') && page.includes('<Card className="fm-decision-card">')],
   ['Destination Équipements sur primitives et tokens', equipmentWorkspace.includes("from './ui'") && equipmentWorkspace.includes('<Card') && css.includes('.equipment-workspace-hero') && css.includes('background:var(--surface-muted)') && css.includes('.equipment-destination-card{min-width:0;padding:var(--space-4);box-shadow:none}')],
   ['Équipements dans Plus sans étendre les profils terrain', page.includes("key:'equipment'") && page.includes('secondary:true') && page.includes("facility:['workspace','dashboard','registry','equipment','costs','access','manager','report']") && page.includes("administration:['workspace','dashboard','registry','equipment','costs','access','settings']") && !page.includes("electricite:['workspace','report','equipment']")],
   ['Destination Coûts sur primitives et tokens', costsWorkspace.includes("from './ui'") && costsWorkspace.includes('<Card') && costsWorkspace.includes('<Field') && costsWorkspace.includes('<Button') && css.includes('.costs-workspace-hero') && css.includes('.costs-case-card{min-width:0;padding:var(--space-4);box-shadow:none}')],
@@ -112,7 +114,11 @@ const checks = [
   ['Actions principales tactiles sur mobile', css.includes('.manager-pilot .primary-button,\n  .manager-pilot .secondary-button,\n  .score-explain-card button{min-height:44px}') && css.includes('.auth-signout-top{width:44px;height:44px;min-width:44px;min-height:44px}')],
   ['Porte d’authentification sans panneau navy', page.includes('className="auth-chrome"') && page.includes('function AuthFrame') && finalDeclaration('.auth-brand-panel', 'background') === 'transparent' && finalDeclaration('.auth-shell', 'grid-template-rows') === 'auto 1fr' && css.includes('.demo-account-grid>button.is-selected>span{\n  background:var(--brand);\n  color:var(--brand-foreground);\n}')],
   ['Menu compact sans double bordure', css.includes('.app-navigation .nav-item.active{\n    border:0;\n    box-shadow:none;\n    background:var(--teal);\n    color:var(--brand-foreground);\n  }')],
-  ['Accueil FM sans bandeau opérationnel doublon', page.includes('<ManagerHealthOverview anomalies={anomalies} equipment={equipment} onNavigate={onNavigate} />') && page.includes('Ouvrir À traiter') && !page.includes('Ouvrir le poste de pilotage complet') && !page.includes('todo="2 qualifications"')],
+  ['Accueil FM sans bandeau opérationnel doublon', page.includes('<BuildingHealthCockpit audience="facility"') && page.includes('Ouvrir À traiter') && !page.includes('Ouvrir le poste de pilotage complet') && !page.includes('todo="2 qualifications"')],
+  ['Cockpit santé partagé tous personas', page.includes('<BuildingHealthCockpit audience="administration"') && page.includes('<BuildingHealthCockpit audience={agentKey}') && page.includes('<BuildingHealthCockpit audience="rondes_assistance"') && css.includes('.building-health-cockpit{')],
+  ['Scan du parc en tuiles de score', css.includes('.health-equip-board{') && css.includes('.health-equip-tile{') && cockpit.includes('Scan du parc')],
+  ['Échelle commune 0–100 du parc', cockpit.includes('ÉCHELLE COMMUNE 0–100') && css.includes('.health-lollipop{') && css.includes('.health-scale-axis{')],
+  ['Notifications d’erreur configurables', page.includes('<NotificationBell') && parametersWorkspace.includes('<ErrorNotificationRules') && css.includes('.notif-panel{') && css.includes('.notif-switch.is-on{background:var(--teal)}')],
   ['Analytique santé unique sur Pilotage', page.includes("{dashboardTab === 'health' &&") && page.includes('<OperationalAnalytics equipment={equipment} />') && !page.includes('<OperationalAnalytics equipment={equipment} variant="direction" />')],
   ['Parc Pilotage pointe vers Équipements', page.includes('dashboard-equipment-pointer') && page.includes("onNavigate('equipment')") && !page.includes('dashboard-equipment-panel')],
   ['Dossier sans seconde bande navy', finalDeclaration('.next-step-card', 'background') === 'var(--surface)' && finalDeclaration('.next-step-card .primary-button', 'background') === 'var(--brand)' && !page.includes('className="compact-workflow"') && css.includes('.dossier-tabs button.active{\n  background:var(--teal);\n')],

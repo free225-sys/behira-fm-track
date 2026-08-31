@@ -1,6 +1,7 @@
 'use client';
 
 import { Badge, Button, Card } from './ui';
+import { ErrorNotificationRules } from './NotificationCenter';
 
 export type ParameterWorkspaceData = {
   code:'financial_decision_threshold';
@@ -44,6 +45,7 @@ export function ParametersWorkspace({ parameter, onOpenCosts }: {
     </section>
 
     <div className="parameters-layout">
+      <div className="parameters-stack">
       <Card as="section" className="parameter-detail-card">
         <div className="parameter-detail-head">
           <div><p className="design-kicker">RÈGLE FINANCIÈRE</p><h3>{parameter.label}</h3><p>Valeur métier confirmée pour répartir la décision entre Facility Manager et Administration.</p></div>
@@ -81,6 +83,11 @@ export function ParametersWorkspace({ parameter, onOpenCosts }: {
           <div><b>Historique persistant indisponible</b><p>L’ancienne valeur, l’auteur technique du changement, l’horodatage détaillé et le motif enregistré ne sont pas raccordés. Toute future modification devra conserver ces éléments avant de devenir active.</p></div>
         </div>
       </Card>
+
+      <Card as="section" className="parameter-detail-card">
+        <ErrorNotificationRules canEdit />
+      </Card>
+      </div>
 
       <aside className="parameters-aside">
         <Card as="section" className="parameter-governance">

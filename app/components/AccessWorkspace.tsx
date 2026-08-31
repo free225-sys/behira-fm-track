@@ -3,6 +3,7 @@
 import { FormEvent, useState } from 'react';
 
 import { Badge, Button, Card, Field, Select } from './ui';
+import { hasFieldErrors, validateAccessAction, validateAccessCreate, type FieldErrors } from '../lib/client-validation';
 
 export type AccessWorkspaceUser = {
   id:string;
@@ -26,11 +27,17 @@ export function AccessWorkspace({ users, audience }: {
   const [scope, setScope] = useState('Périmètre à confirmer');
   const [reason, setReason] = useState('');
   const [confirmation, setConfirmation] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors<'name'|'email'|'reason'|'selectedUserId'>>({});
   const uniqueRoles = new Set(users.map((user) => user.role)).size;
   const selectedUser = users.find((user) => user.id === selectedUserId);
 
   const submit = (event:FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const next = audience === 'administration' && adminAction === 'create'
+      ? validateAccessCreate({ name, email, reason })
+      : validateAccessAction({ selectedUserId, reason });
+    setFieldErrors(next);
+    if (hasFieldErrors(next)) return;
     if (audience === 'facility') {
       setConfirmation(`Proposition préparée pour ${selectedUser?.name ?? 'le profil sélectionné'}. Elle attend la validation de l’Administration.`);
       setReason('');
@@ -77,22 +84,22 @@ export function AccessWorkspace({ users, audience }: {
       </Card>
 
       <Card as="section" className="access-action-panel">
-        {audience === 'administration' ? <div className="access-action-tabs" role="tablist" aria-label="Actions de gestion des accès"><button type="button" role="tab" aria-selected={adminAction === 'create'} className={adminAction === 'create' ? 'active' : ''} onClick={() => {setAdminAction('create');setConfirmation('')}}>Préparer un compte</button><button type="button" role="tab" aria-selected={adminAction === 'disable'} className={adminAction === 'disable' ? 'active' : ''} onClick={() => {setAdminAction('disable');setConfirmation('')}}>Préparer une désactivation</button></div> : null}
+        {audience === 'administration' ? <div className="access-action-tabs" role="tablist" aria-label="Actions de gestion des accès"><button type="button" role="tab" aria-selected={adminAction === 'create'} className={adminAction === 'create' ? 'active' : ''} onClick={() => {setAdminAction('create');setConfirmation('');setFieldErrors({})}}>Préparer un compte</button><button type="button" role="tab" aria-selected={adminAction === 'disable'} className={adminAction === 'disable' ? 'active' : ''} onClick={() => {setAdminAction('disable');setConfirmation('');setFieldErrors({})}}>Préparer une désactivation</button></div> : null}
 
-        <form className="access-form" onSubmit={submit}>
+        <form className="access-form" onSubmit={submit} noValidate>
           <div className="access-form-heading"><p className="design-kicker">{audience === 'administration' ? adminAction === 'create' ? 'CRÉATION' : 'DÉSACTIVATION' : 'PROPOSITION FACILITY MANAGER'}</p><h3>{audience === 'administration' ? adminAction === 'create' ? 'Préparer un nouvel accès' : 'Préparer une désactivation' : 'Proposer un rôle ou un périmètre'}</h3><p>Aucune action de ce formulaire ne modifie Supabase Auth, les RLS ou les utilisateurs réels.</p></div>
 
           {audience === 'administration' && adminAction === 'create' ? <>
-            <Field label="Nom complet"><input required value={name} onChange={(event) => setName(event.target.value)} placeholder="Prénom et nom" /></Field>
-            <Field label="Email professionnel"><input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="nom@entreprise.com" /></Field>
-          </> : <Field label="Profil concerné"><Select required value={selectedUserId} onChange={(event) => setSelectedUserId(event.target.value)}>{users.filter((user) => user.id !== 'administration').map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}</Select></Field>}
+            <Field label="Nom complet" error={fieldErrors.name}><input value={name} aria-invalid={Boolean(fieldErrors.name)} onChange={(event) => {setName(event.target.value);setFieldErrors((current) => ({ ...current, name: undefined }))}} placeholder="Prénom et nom" /></Field>
+            <Field label="Email professionnel" error={fieldErrors.email}><input type="email" value={email} aria-invalid={Boolean(fieldErrors.email)} onChange={(event) => {setEmail(event.target.value);setFieldErrors((current) => ({ ...current, email: undefined }))}} placeholder="nom@entreprise.com" /></Field>
+          </> : <Field label="Profil concerné" error={fieldErrors.selectedUserId}><Select value={selectedUserId} onChange={(event) => {setSelectedUserId(event.target.value);setFieldErrors((current) => ({ ...current, selectedUserId: undefined }))}}>{users.filter((user) => user.id !== 'administration').map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}</Select></Field>}
 
           {(audience === 'facility' || adminAction === 'create') && <div className="access-form-grid">
             <Field label={audience === 'facility' ? 'Rôle proposé' : 'Rôle'}><Select value={role} onChange={(event) => setRole(event.target.value)}><option>Agent terrain</option><option>Facility Manager</option><option>Agente & assistante</option>{audience === 'administration' && <option>Administration</option>}</Select></Field>
             <Field label={audience === 'facility' ? 'Périmètre proposé' : 'Périmètre'}><Select value={scope} onChange={(event) => setScope(event.target.value)}><option>Périmètre à confirmer</option><option>DEMO-GE</option><option>DEMO-EAU · DEMO-SSI · DEMO-ESP</option><option>DEMO-RND</option><option>Tous périmètres</option></Select></Field>
           </div>}
 
-          <Field label="Justification"><textarea required value={reason} onChange={(event) => setReason(event.target.value)} placeholder={audience === 'facility' ? 'Expliquez le besoin métier et le périmètre demandé.' : adminAction === 'create' ? 'Expliquez pourquoi cet accès doit être créé.' : 'Expliquez pourquoi cet accès doit être désactivé.'} /></Field>
+          <Field label="Justification" error={fieldErrors.reason}><textarea value={reason} maxLength={1000} aria-invalid={Boolean(fieldErrors.reason)} onChange={(event) => {setReason(event.target.value);setFieldErrors((current) => ({ ...current, reason: undefined }))}} placeholder={audience === 'facility' ? 'Expliquez le besoin métier et le périmètre demandé.' : adminAction === 'create' ? 'Expliquez pourquoi cet accès doit être créé.' : 'Expliquez pourquoi cet accès doit être désactivé.'} /></Field>
 
           <div className="access-security-note" role="note"><span aria-hidden="true">⌘</span><p><b>Exécution sécurisée hors du navigateur</b><small>La cible réelle devra contrôler l’auteur, le rôle, le périmètre et la justification côté serveur, puis historiser le résultat.</small></p></div>
           {confirmation && <div className="access-confirmation" role="status"><span aria-hidden="true">✓</span>{confirmation}</div>}

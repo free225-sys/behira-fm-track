@@ -8,6 +8,12 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 | id | date | sujet | attendu de | bloque |
 | --- | --- | --- | --- | --- |
+| DESIGN-046 | 2026-08-31 | Accueil : plus de kicker ni titre jumeau au-dessus du score | Wilkam | DEC-009 |
+| DESIGN-045 | 2026-08-31 | Notifications d’erreur : file + règles (in-app / e-mail simulé) | Wilkam | — |
+| DESIGN-044 | 2026-08-31 | Accueil : chiffre + échelle 0–100 + lollipops | Wilkam | DEC-015 |
+| DESIGN-043 | 2026-08-31 | Score global jauge + courbe du parc ; KPI à mini-repères | Wilkam | DEC-015 |
+| DESIGN-042 | 2026-08-31 | Accueil : scan du parc en tuiles de score, tous personas | Wilkam | DEC-015 |
+| DESIGN-041 | 2026-08-31 | Accueil = cockpit Santé du bâtiment, tous personas | Wilkam | DEC-015 |
 | DESIGN-040 | 2026-08-30 | Listes déroulantes Behira, plus de bleu système | Wilkam | — |
 | DESIGN-039 | 2026-08-30 | Rondes approfondies : un rail, un score, pas de bandeau doublon | Wilkam | — |
 | DESIGN-038 | 2026-08-30 | Rondes / Surpresseur : plus de bande navy, étape pétrole | Wilkam | — |
@@ -49,7 +55,67 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 ---
 
+## DESIGN-045 — Notifications d’erreur
+
+- **Date :** 31 août 2026
+- **Auteur :** Revue produit
+- **Statut :** Livré dans le miroir
+- **Périmètre :** cloche du bandeau, Seuils et paramètres (Administration)
+
+La cloche n’est plus décorative. Elle ouvre une file d’alertes d’erreur (critique, retard SLA, score < 70, échec de synchro) filtrée par profil. L’onglet Règles active ou coupe chaque déclencheur et le canal e-mail (simulé). Le Facility Manager et l’Administration peuvent modifier ; les agents consultent. Réglage local à l’appareil, pas d’envoi réel.
+
+---
+
+## DESIGN-044 — Échelle commune et lollipops
+
+
+- **Date :** 31 août 2026
+- **Auteur :** Revue produit
+- **Statut :** Livré dans le miroir
+- **Périmètre :** Accueil — alternative à la jauge + courbe
+
+Le score global passe en **grand chiffre**. Les équipements se lisent sur **la même échelle 0–100** (lollipops), avec un trait vertical au score bâtiment. Les KPI redeviennent un bandeau compact. Toujours aucune tendance temporelle inventée.
+
+---
+
+## DESIGN-043 — Jauge, courbe du parc, KPI mesurés
+
+
+- **Date :** 31 août 2026
+- **Auteur :** Revue produit
+- **Statut :** Livré dans le miroir
+- **Périmètre :** Accueil — score global et KPI
+
+Le score global devient une **jauge à seuils** (70 / 90). À droite, une **courbe en aire** compare les scores actuels du parc — ce n’est pas une série temporelle. Les quatre KPI portent un mini-repère (barre, points, arc). Aucune tendance 30 jours n’est inventée.
+
+---
+
+## DESIGN-042 — Scan du parc sur Accueil
+
+
+- **Date :** 31 août 2026
+- **Auteur :** Revue produit
+- **Statut :** Livré dans le miroir
+- **Périmètre :** Accueil de tous les personas — DEC-015
+
+Les scores par équipement passent d’une liste de barres à un **scan en tuiles**, du plus faible au plus sain. Tous les profils voient le parc complet ; le périmètre agent est encadré. Les cartes d’équipement dupliquées sous le cockpit agent sont retirées. Qualification et rondes restent des destinations d’action.
+
+---
+
+## DESIGN-041 — Accueil Santé du bâtiment
+
+
+- **Date :** 31 août 2026
+- **Auteur :** Revue produit
+- **Statut :** Livré dans le miroir
+- **Périmètre :** Accueil de tous les personas — DEC-015
+
+L’outil s’ouvrait sur des files d’anomalies. L’Accueil affiche désormais le **score global**, les **KPIs**, les **scores par équipement**, la **ventilation par domaine** et la **gravité** des dossiers, avant toute action. Les agents voient le site plus leur périmètre. La tendance 30 jours reste honnêtement indisponible.
+
+---
+
 ## DESIGN-040 — Listes déroulantes Behira
+
 
 - **Date :** 30 août 2026
 - **Auteur :** Revue design
