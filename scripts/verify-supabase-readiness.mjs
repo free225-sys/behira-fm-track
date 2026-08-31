@@ -12,6 +12,8 @@ const check = (condition, message) => {
 const packageJson = JSON.parse(read("package.json"));
 const envExample = read(".env.example");
 const config = read("app/lib/supabase/config.ts");
+const layout = read("app/layout.tsx");
+const viteConfig = read("vite.config.ts");
 const client = read("app/lib/supabase/client.ts");
 const auth = read("app/lib/supabase/auth.ts");
 const page = read("app/page.tsx");
@@ -36,6 +38,16 @@ check(
 check(
   config.includes('process.env.NEXT_PUBLIC_USE_SUPABASE === "true"'),
   "Le garde-fou d'activation explicite manque.",
+);
+check(
+  config.includes("window.__BEHIRA_PUBLIC_CONFIG__") &&
+    layout.includes("window.__BEHIRA_PUBLIC_CONFIG__") &&
+    viteConfig.includes("nodejs_compat_populate_process_env"),
+  "Le pont de configuration publique côté serveur manque.",
+);
+check(
+  !layout.includes("SUPABASE_SERVICE_ROLE_KEY"),
+  "Une clé serveur ne doit jamais être injectée dans le navigateur.",
 );
 check(
   !client.includes("SUPABASE_SERVICE_ROLE_KEY"),

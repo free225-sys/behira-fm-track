@@ -149,6 +149,13 @@ publication de ce correctif et contrôle d'une nouvelle ronde Sylvain en
 préproduction. Les deux paires en doublon restent intactes en attente d'une
 autorisation de nettoyage séparée.
 
+La première archive hébergée contenait le correctif, mais ses variables publiques
+n'étaient pas disponibles dans le navigateur et l'application s'ouvrait en mode
+démonstration. Le raccordement a été déplacé vers une injection serveur à
+l'exécution, avec uniquement la configuration publique et sans clé
+d'administration. La republication doit être considérée comme valide seulement
+après confirmation de la porte de connexion réelle.
+
 Pour chaque dossier, relever la référence créée, l'heure, l'équipement, la
 priorité proposée et le nom de l'auteur. Vérifier qu'un rejeu réseau ne crée pas
 de doublon.

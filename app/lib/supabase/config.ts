@@ -3,17 +3,44 @@ export type SupabasePublicConfig = {
   publishableKey: string;
 };
 
-export const isSupabaseIntegrationEnabled =
-  process.env.NEXT_PUBLIC_USE_SUPABASE === "true";
+type SupabaseRuntimePublicConfig = SupabasePublicConfig & {
+  useSupabase: boolean;
+  allowDemoFallback: boolean;
+};
 
-export const isSupabaseDemoFallbackEnabled =
-  process.env.NEXT_PUBLIC_ALLOW_DEMO_FALLBACK !== "false";
+declare global {
+  interface Window {
+    __BEHIRA_PUBLIC_CONFIG__?: SupabaseRuntimePublicConfig;
+  }
+}
 
-function readPublicConfig() {
+function readRuntimePublicConfig(): SupabaseRuntimePublicConfig {
+  if (typeof window !== "undefined" && window.__BEHIRA_PUBLIC_CONFIG__) {
+    return window.__BEHIRA_PUBLIC_CONFIG__;
+  }
+
   return {
+    useSupabase: process.env.NEXT_PUBLIC_USE_SUPABASE === "true",
+    allowDemoFallback:
+      process.env.NEXT_PUBLIC_ALLOW_DEMO_FALLBACK !== "false",
     url: process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "",
     publishableKey:
       process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ?? "",
+  };
+}
+
+const runtimePublicConfig = readRuntimePublicConfig();
+
+export const isSupabaseIntegrationEnabled =
+  runtimePublicConfig.useSupabase;
+
+export const isSupabaseDemoFallbackEnabled =
+  runtimePublicConfig.allowDemoFallback;
+
+function readPublicConfig() {
+  return {
+    url: runtimePublicConfig.url,
+    publishableKey: runtimePublicConfig.publishableKey,
   };
 }
 

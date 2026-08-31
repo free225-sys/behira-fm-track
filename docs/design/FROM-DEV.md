@@ -2,6 +2,39 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-041 — C9-FIX-01 : configuration publique disponible à l'exécution
+
+- **Date :** 31 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté et vérifié localement — prêt pour republication en préproduction
+- **Périmètre :** configuration publique de l'application hébergée et contrôle de non-régression ; aucun schéma, droit, rôle, compte ou donnée distante modifié
+
+La première publication de C9-FIX-01 contenait bien le correctif d'idempotence,
+mais le code navigateur recevait des variables de construction vides et ouvrait
+donc le mode démonstration. Le défaut ne concernait ni la base ni les comptes.
+
+La configuration publique est maintenant lue par le serveur au moment de la
+requête, puis injectée avant l'hydratation du navigateur. Seules les quatre
+valeurs destinées au client sont transmises : activation du service métier,
+autorisation du repli de démonstration, URL publique et clé publiable. La clé
+serveur d'administration n'est ni lue ni injectée. Le Worker active
+explicitement la compatibilité qui peuple `process.env` à partir des variables
+d'hébergement.
+
+### Vérifications réalisées
+
+- construction réussie sans valeur Supabase intégrée dans le bundle client ;
+- le bundle client lit la configuration injectée avant de choisir le mode ;
+- le bundle serveur conserve la lecture des variables à l'exécution ;
+- garde-fou automatisé sur le pont public et l'absence de clé serveur ;
+- lint, build, readiness, Auth, personas, hors ligne, résilience et audit visuel
+  réussis ;
+- polices Geist servies en HTTP 200 depuis le serveur de production local.
+
+- **Suite proposée :** republier C9-FIX-01, confirmer visuellement la porte de
+  connexion réelle, puis reprendre une seule ronde Sylvain et vérifier qu'une
+  seule paire `REP-…` / `ANO-…` est créée.
+
 ## DEV-040 — C9-FIX-01 : soumission de ronde verrouillée et traçable
 
 - **Date :** 31 août 2026
