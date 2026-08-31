@@ -468,4 +468,21 @@ insert into public.equipment_vendors (equipment_id, vendor_id, relation_type, is
 on conflict (equipment_id, vendor_id, relation_type) do update set
   is_primary = excluded.is_primary;
 
+-- C11-B pilot registration. This row intentionally carries no criticality or
+-- score: those values remain pending until Administration and Facility Manager
+-- validate the business decisions documented for C11.
+insert into public.equipment_score_assignments(
+  equipment_id, formula_version_id, validation_status, source_notes
+)
+select e.id, f.id, 'pending',
+       'Pilote C11-B WILO-01 ; criticité et activation en attente de validation métier.'
+from public.equipment e
+join public.equipment_score_formula_versions f
+  on f.code = 'equipment_health' and f.version_no = 1
+where e.code = 'WILO-01'
+  and not exists (
+    select 1 from public.equipment_score_assignments esa
+    where esa.equipment_id = e.id and esa.effective_to is null
+  );
+
 commit;

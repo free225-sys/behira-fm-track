@@ -10,6 +10,7 @@ Cette fondation fournit une base Supabase/PostgreSQL locale et un raccordement f
 - Exécution : `work_orders`, `interventions`, `proofs`, `costs`, `notifications`, `vendor_intervention_reports`.
 - Autorisations nominatives : `profile_permissions` (Évariste et Sylvain uniquement pour le dépôt interne des rapports prestataires).
 - Relations de périmètre : `equipment_zones`, `equipment_vendors` et les portées optionnelles de `user_roles`.
+- Scores équipements C11 : formules et composantes versionnées, affectations par équipement, observations de disponibilité, maintenance préventive et instantanés explicables immuables.
 
 Toutes les clés techniques sont des UUID. Les références visibles sont générées côté base (`ANO-AAAA-000001`, `REP-…`, `OT-…`). Les codes métier du référentiel V3 restent uniques.
 
@@ -46,7 +47,18 @@ Supabase applique automatiquement les migrations dans l’ordre du nom :
 10. `20260826165211_grant_internal_vendor_report_permissions.sql`
 11. `20260826170559_normalize_internal_agent_scopes.sql`
 12. `20260826183000_require_first_password_change.sql`
-13. `seed.sql`
+13. `20260829234552_offline_field_sync_idempotency.sql`
+14. `20260830040839_anti_zombie_c1_references_history_guardrails.sql`
+15. `20260830121913_confirm_qualification_action_sequence.sql`
+16. `20260830123210_anti_zombie_c2_canonical_deadlines.sql`
+17. `20260830195601_anti_zombie_c3_canonical_actions.sql`
+18. `20260830202034_anti_zombie_c4_blocks_delays.sql`
+19. `20260830204742_anti_zombie_c5_proof_requirements.sql`
+20. `20260830212342_anti_zombie_c6_canonical_projection.sql`
+21. `20260830233549_restore_canonical_action_stage_mappings.sql`
+22. `20260831143754_c10_financial_decisions.sql`
+23. `20260831202317_c11_equipment_score_pilot.sql`
+24. `seed.sql`
 
 La CLI Supabase est installée comme dépendance de développement du projet. Pour
 démarrer ou reconstruire la pile locale :
@@ -57,9 +69,9 @@ npx supabase db reset
 npm run test:db
 ```
 
-`npm run test:db` reconstruit la base, réapplique volontairement le seed une
-seconde fois pour prouver son idempotence, puis exécute les cinq suites pgTAP,
-dont le verrou et le déverrouillage de première connexion.
+`pnpm test:db` reconstruit la base, réapplique volontairement le seed une
+seconde fois pour prouver son idempotence, puis exécute les quinze suites pgTAP,
+dont le verrou de première connexion, le cycle métier, C10 et le pilote C11.
 Le script `supabase/tests/run.ps1` propose aussi un mode `psql` si
 `BEHIRA_TEST_DATABASE_URL` pointe vers une base de test jetable. Ne jamais
 utiliser une base de production pour ces tests, qui créent puis annulent des
@@ -145,6 +157,25 @@ npm run test:workflow:local
 
 L’import de rapports en lot, les notifications et les arbitrages Direction restent
 simulés dans ce lot accéléré. Ils seront traités après validation du parcours cœur.
+
+## C11 — pilote canonique du score équipement
+
+La migration `20260831202317_c11_equipment_score_pilot.sql` enregistre les cinq
+pondérations validées, mais conserve la formule en `draft`. Elle ne publie aucun
+score et n’invente ni seuil, ni criticité, ni règle de calcul manquante. WILO-01
+est seulement déclaré comme équipement pilote avec `validation_status = 'pending'`.
+
+La fonction en lecture seule `get_equipment_score_readiness` expose les décisions
+et données manquantes. Tant qu’elles ne sont pas complètes, l’état officiel reste
+« Score non calculable — données insuffisantes ». Les instantanés futurs sont
+immuables et protégés par RLS : Facility Manager et Administration voient le
+périmètre global ; un agent ne voit que ses équipements. Seul `service_role`
+pourra alimenter les sources et instantanés lors d’un lot explicitement autorisé.
+
+Le lot reste local. Aucune migration C11 ne doit être appliquée en préproduction
+avant validation des décisions consignées dans
+`docs/C11_CADRAGE_SCORES_CANONIQUES_2026-08-31.md` et autorisation séparée de
+dry-run puis d’application.
 
 ## Vérifications
 

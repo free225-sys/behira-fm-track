@@ -104,6 +104,14 @@ que leur gouvernance n’est pas validée.
 - produire un instantané explicable ou un état « non calculable » ;
 - tester historique, RLS, idempotence et retour arrière.
 
+État technique au 31 août 2026 : la fondation locale est créée. La formule v1
+et ses cinq poids sont versionnés en `draft`, WILO-01 est enregistré comme
+pilote sans criticité inventée, les sources de disponibilité et de maintenance
+préventive sont structurées, et les instantanés futurs sont immuables. Le garde
+de préparation renvoie actuellement « Score non calculable — données
+insuffisantes » avec les décisions et données absentes. Aucune formule n’est
+active et aucune migration C11 n’est appliquée à la préproduction.
+
 ### C11-C — extension équipements et score bâtiment
 
 - étendre après couverture suffisante des sept équipements ;
@@ -117,7 +125,7 @@ que leur gouvernance n’est pas validée.
 - calibrer les pondérations sur un échantillon pilote suffisant ;
 - tester biais, comparabilité, confidentialité et absence de décision automatique.
 
-## Décisions requises avant C11-B
+## Décisions requises avant activation du pilote C11-B
 
 1. classification des sept équipements en vital, important ou confort ;
 2. seuils vert/orange/rouge ;
@@ -126,9 +134,13 @@ que leur gouvernance n’est pas validée.
 5. définition métier d’une indisponibilité et d’une récidive ;
 6. responsables des contrôles sécurité, zones et continuité ;
 7. confirmation que le score agent reste suspendu jusqu’à la gouvernance dédiée.
+8. règle exacte de calcul de chaque composante : pénalités par priorité,
+   notation des contrôles, traitement d’une absence de plan préventif et
+   normalisation des récidives. Les poids seuls ne suffisent pas à produire un
+   résultat reproductible.
 
 ## Prochaine porte
 
-Faire valider ces sept décisions par l’Administration de SCI Groupe Behira et
-Facility Manager. Ensuite seulement, préparer C11-B en local, avec migration
-additive, tests pgTAP/RLS, dry-run et autorisations distantes séparées.
+Faire valider ces huit décisions par l’Administration de SCI Groupe Behira et
+Facility Manager. Ensuite seulement, compléter puis activer le pilote C11-B en
+local, avec tests pgTAP/RLS, dry-run et autorisations distantes séparées.

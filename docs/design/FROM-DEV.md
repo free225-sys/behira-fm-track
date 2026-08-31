@@ -2,6 +2,42 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-053 — C11-B : fondation locale du pilote WILO-01
+
+- **Date :** 31 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** fondation locale validée — activation et préproduction suspendues
+- **Périmètre :** modèle canonique du score équipement, sources minimales,
+  garde de préparation, RLS et tests ; aucun score actif, aucune interface,
+  migration distante ou publication
+
+La formule équipement v1 conserve les poids validés 30/25/20/15/10, mais reste
+en `draft`. Ses règles de calcul, seuils, période, fraîcheur et complétude sont
+explicitement en attente. WILO-01 est déclaré comme pilote sans criticité ni
+coefficient inventé. Les sources de disponibilité, les plans et occurrences de
+maintenance préventive et les instantanés explicables immuables sont maintenant
+structurés. La fonction de préparation renvoie les décisions et sources absentes
+et impose l’état « Score non calculable — données insuffisantes ».
+
+L’implémentation a révélé une huitième décision indispensable : les poids des
+composantes ne définissent pas à eux seuls le calcul interne. Les pénalités par
+priorité, la notation des contrôles et la normalisation des récidives doivent
+être confirmées avant activation.
+
+### Vérifications réalisées
+
+- reconstruction complète depuis zéro et seed idempotent ;
+- 15 suites pgTAP, 75 tests, tous réussis ;
+- RLS active sur les huit nouvelles tables ; Sylvain voit WILO-01, Évariste est
+  refusé hors périmètre, `anon` ne lit ni configuration ni instantané ;
+- formule prématurément activée refusée, instantanés immuables et aucun score
+  numérique présent ;
+- lint du schéma `public` sans erreur et aucune clé étrangère C11 non indexée.
+
+- **Suite proposée :** faire valider les huit décisions C11, compléter le
+  pilote local, puis demander séparément le dry-run de préproduction. La
+  migration C11 n’est pas autorisée à distance à ce stade.
+
 ## DEV-052 — C11-A : porte de calcul des scores canoniques
 
 - **Date :** 31 août 2026
