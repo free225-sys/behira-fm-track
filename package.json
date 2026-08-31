@@ -16,6 +16,8 @@
     "verify:auth": "node scripts/verify-auth.mjs",
     "verify:anti-zombie": "node scripts/verify-anti-zombie.ts",
     "verify:offline": "node scripts/verify-offline-sync.mjs",
+    "verify:agent-work-orders": "node scripts/verify-agent-work-orders.mjs",
+    "test:agent-work-orders:local": "node scripts/verify-agent-work-orders-local.mjs",
     "verify:resilience": "node scripts/verify-resilience.mjs",
     "verify:fonts": "node scripts/verify-font-assets.mjs",
     "verify:release": "pnpm audit:visual && pnpm verify:personas && pnpm verify:resilience && pnpm verify:fonts",

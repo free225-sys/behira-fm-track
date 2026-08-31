@@ -2,6 +2,47 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-043 — C9-FIX-02 : file personnelle raccordée aux ordres de travail
+
+- **Date :** 31 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté et vérifié localement — prêt pour publication
+- **Périmètre :** lecture des affectations réelles dans l’espace agent ; aucun schéma, droit, rôle, statut ou enregistrement distant modifié
+
+Après la qualification de `ANO-2026-000005`, la base contenait bien
+`OT-2026-000001`, affecté à Sylvain, mais l’espace agent affichait encore une
+file locale de démonstration. Le composant n’était pas raccordé à la table
+`work_orders`.
+
+La projection opérationnelle charge maintenant le profil métier canonique de la
+session, puis lit uniquement les ordres dont `assigned_profile_id` correspond à
+ce profil. Ce filtre explicite complète les politiques RLS existantes sans les
+modifier. La carte expose la référence de l’ordre, la référence du dossier,
+l’équipement, les instructions, l’échéance, l’état et la présence d’une preuve
+acceptée à partir des sources existantes.
+
+L’espace agent distingue désormais trois états : chargement, file réelle vide et
+file réelle alimentée. Les cartes et actions historiques de démonstration restent
+disponibles uniquement dans le mode de démonstration ou de repli. Les actions de
+saisie, preuve, réarmement et escalade ne sont pas affichées sur une affectation
+réelle tant que leur persistance n’est pas raccordée dans un lot ultérieur.
+
+### Vérifications réalisées
+
+- projection et garde-fous C9-FIX-02 : **10/10** ;
+- test local sous RLS : Sylvain lit l’ordre affecté à son profil canonique,
+  Évariste ne le lit pas, puis la fixture est supprimée ;
+- vérification distante en lecture seule : `OT-2026-000001` est toujours en cours,
+  affecté à Sylvain sur `ANO-2026-000005` / `WILO-01` ;
+- audit visuel **92/92**, personas **38/38**, Auth **22/22**, hors ligne
+  **27/27**, résilience **12/12**, lint ciblé et build de production réussis ;
+- aucune écriture distante, migration ou modification de droits.
+
+- **Suite proposée :** vérifier avec la session Sylvain que
+  `OT-2026-000001 · ANO-2026-000005` apparaît dans « Mes actions », publier le
+  checkpoint, puis ouvrir un lot séparé pour les actions d’intervention et de
+  preuve persistantes.
+
 ## DEV-042 — C9-FIX-01 : reçu de synchronisation persistant et visible
 
 - **Date :** 31 août 2026

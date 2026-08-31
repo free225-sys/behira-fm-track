@@ -42,10 +42,24 @@ export type OperationalVendor = {
   label: string;
 };
 
+export type OperationalWorkOrder = {
+  id: string;
+  anomalyReference: string;
+  asset: string;
+  title: string;
+  due: string;
+  risk: string;
+  status: "À faire" | "En cours" | "Terminé";
+  proof: boolean;
+  delayed: boolean;
+  detail: string;
+};
+
 export type OperationalSnapshot = {
   anomalies: OperationalAnomaly[];
   equipment: OperationalEquipment[];
   vendors: OperationalVendor[];
+  workOrders: OperationalWorkOrder[];
   canUploadVendorReport: boolean;
   counts: {
     anomalies: number;
@@ -84,6 +98,10 @@ function formatMoment(value: string | null) {
 export async function loadOperationalSnapshot(
   client: SupabaseClient<Database>,
 ): Promise<OperationalSnapshot> {
+  const { data: currentProfileId, error: currentProfileError } = await client.rpc("current_profile_id");
+  if (currentProfileError) throw currentProfileError;
+  if (!currentProfileId) throw new Error("Aucun profil métier actif n'est rattaché à cette session.");
+
   const [
     anomalyResult,
     equipmentResult,
@@ -95,6 +113,7 @@ export async function loadOperationalSnapshot(
     proofResult,
     permissionResult,
     antiZombieResult,
+    workOrderResult,
   ] = await Promise.all([
     client.from("anomalies").select("id, reference, title, description, equipment_id, zone_id, priority_id, current_status_id, assigned_profile_id, assigned_vendor_id, detected_at, qualification_due_at, intervention_due_at, closed_at").order("detected_at", { ascending: false }),
     client.from("equipment").select("id, code, name, location_label, health_score, health_status, lifecycle_scope").eq("lifecycle_scope", "mvp").order("code"),
@@ -106,6 +125,12 @@ export async function loadOperationalSnapshot(
     client.from("proofs").select("anomaly_id, verification_status"),
     client.rpc("has_permission", { p_permission_code: "upload_vendor_intervention_report" }),
     client.from("anti_zombie_summary_v").select("*"),
+    client
+      .from("work_orders")
+      .select("id, reference, anomaly_id, assigned_profile_id, status, instructions, scheduled_start_at, due_at, completed_at")
+      .eq("assigned_profile_id", currentProfileId)
+      .in("status", ["planned", "accepted", "in_progress", "completed"])
+      .order("due_at", { ascending: true, nullsFirst: false }),
   ]);
 
   const firstError = [
@@ -119,6 +144,7 @@ export async function loadOperationalSnapshot(
     proofResult.error,
     permissionResult.error,
     antiZombieResult.error,
+    workOrderResult.error,
   ].find(Boolean);
   if (firstError) throw firstError;
 
@@ -177,10 +203,38 @@ export async function loadOperationalSnapshot(
     label: item.operational_alias ?? item.legal_name ?? item.code,
   } satisfies OperationalVendor));
 
+  const anomalyByDatabaseId = new Map(anomalies.map((item) => [item.databaseId, item]));
+  const workOrders = (workOrderResult.data ?? []).flatMap((item) => {
+    const anomaly = anomalyByDatabaseId.get(item.anomaly_id);
+    if (!anomaly) return [];
+
+    const completed = item.status === "completed";
+    const dueAt = completed ? item.completed_at : item.due_at;
+    const status: OperationalWorkOrder["status"] = completed
+      ? "Terminé"
+      : item.status === "planned"
+        ? "À faire"
+        : "En cours";
+
+    return [{
+      id: item.reference,
+      anomalyReference: anomaly.id,
+      asset: anomaly.asset,
+      title: anomaly.title,
+      due: formatMoment(dueAt),
+      risk: `${anomaly.priority} · ${anomaly.status}`,
+      status,
+      proof: anomaly.proof,
+      delayed: !completed && Boolean(item.due_at && new Date(item.due_at).getTime() < Date.now()),
+      detail: item.instructions,
+    } satisfies OperationalWorkOrder];
+  });
+
   return {
     anomalies,
     equipment,
     vendors,
+    workOrders,
     canUploadVendorReport: permissionResult.data === true,
     counts: {
       anomalies: anomalies.length,
