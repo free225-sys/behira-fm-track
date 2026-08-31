@@ -48,6 +48,8 @@ check(mutations.includes('client.rpc("submit_anomaly_cost_decision"'), "La soumi
 check(mutations.includes('client.rpc("review_anomaly_cost_decision"'), "L'arbitrage Administration n'utilise pas la RPC canonique");
 check(page.includes("snapshot.costs.map(mapOperationalCostDecision)"), "L'interface réelle reste alimentée par la maquette financière");
 check(page.includes("snapshot.financialDecisionParameter"), "Le seuil réel n'est pas propagé dans l'interface");
+check(/const persistCostDecision[\s\S]*?await requireCurrentSupabaseUser\(\);[\s\S]*?submitAnomalyCostDecision/.test(page), "La soumission financière ne revérifie pas l'utilisateur Auth courant");
+check(/const persistCostReview[\s\S]*?await requireCurrentSupabaseUser\(\);[\s\S]*?reviewAnomalyCostDecision/.test(page), "L'arbitrage financier ne revérifie pas l'utilisateur Auth courant");
 check(workspace.includes("Rattacher un coût estimatif à un dossier"), "Le formulaire Facility Manager est absent");
 check(workspace.includes("Motif obligatoire"), "La décision Administration n'exige pas de motif visible");
 check(workspace.includes("idempotencyKey"), "Le formulaire ne conserve pas la clé d'idempotence");

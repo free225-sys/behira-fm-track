@@ -2,6 +2,44 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-050 — C10-FIX-02 : cohérence Auth entre onglets
+
+- **Date :** 31 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** correctif implémenté et validé localement — publication suspendue
+- **Périmètre :** synchronisation de session, invalidation de l’interface périmée et garde préalable des actions réelles ; aucune migration, règle métier, permission, donnée ou écriture distante
+
+La recette C10 a révélé qu’un second onglet pouvait remplacer la session Auth
+partagée tout en laissant le premier onglet afficher momentanément l’ancien rôle.
+La base refusait correctement l’action incohérente, mais le retour générique ne
+permettait pas à l’utilisateur de comprendre que son identité avait changé.
+
+L’application écoute maintenant les événements Auth et invalide immédiatement
+les données et actions de l’ancien espace lorsqu’un changement de compte ou une
+déconnexion est détecté. La connexion affiche alors : « Votre session a changé,
+veuillez reprendre l’action. » Chaque mutation réelle revérifie également que
+l’utilisateur Auth courant correspond à celui qui a ouvert l’espace. Pour les
+preuves destinées à la file hors ligne, la cohérence locale de session est
+contrôlée sans supprimer la capacité de travail terrain ; les règles serveur
+restent l’autorité au moment de la synchronisation.
+
+### Vérifications réalisées
+
+- 26 contrôles Auth, dont écoute inter-onglets, invalidation et message de reprise ;
+- test exécutable de cohérence : même utilisateur accepté, changement de compte
+  et déconnexion refusés, file hors ligne maintenue sans appel réseau ;
+- contrôles C10, personas (38), styles/accessibilité (93), hors-ligne (27),
+  résilience (12) et ordres de travail/preuves (28) réussis ;
+- lint complet et build de production réussis ; serveur de production local en
+  HTTP 200.
+
+La recette réelle à deux comptes doit être rejouée sur la préproduction après
+publication, car la version distante ne contient pas encore ce correctif.
+
+- **Suite proposée :** demander un GO distinct de publication, publier le
+  correctif seul, puis vérifier le changement Faustin → Frédéric entre deux
+  onglets avant de reprendre la suite de la roadmap.
+
 ## DEV-049 — C10 : migration appliquée en préproduction
 
 - **Date :** 31 août 2026

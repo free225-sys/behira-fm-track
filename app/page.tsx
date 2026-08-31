@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Image from 'next/image';
 
 import { AntiZombieSummary } from './components/AntiZombieSummary';
@@ -13,7 +13,7 @@ import { ParametersWorkspace, type ParameterWorkspaceData } from './components/P
 import { SyncStatusNotice, type SyncStatusState } from './components/SyncStatusNotice';
 import { Badge, Button, Card, Field, IconButton } from './components/ui';
 import { WorkflowAnalytics } from './components/WorkflowAnalytics';
-import { getAuthenticatedProfileGate, resolveAuthenticatedPersona } from './lib/supabase/auth';
+import { AuthSessionChangedError, SESSION_CHANGED_MESSAGE, assertAuthenticatedUser, getAuthenticatedProfileGate, isAuthSessionChangedError, resolveAuthenticatedPersona } from './lib/supabase/auth';
 import { getBrowserSupabaseClient, setSupabaseRememberPreference } from './lib/supabase/client';
 import { getSupabaseIntegrationState, isSupabaseIntegrationEnabled } from './lib/supabase/config';
 import { loadOperationalSnapshot, type OperationalCostDecision, type OperationalHistoryEvent, type OperationalProof, type OperationalVendor, type OperationalWorkOrder } from './lib/supabase/data';
@@ -480,7 +480,7 @@ function AuthFrame({
   );
 }
 
-function AuthExperience({ onAuthenticate, onDemoAuthenticate, onForgot, onReset, supabaseMode, allowDemoFallback, environmentLabel }: {
+function AuthExperience({ onAuthenticate, onDemoAuthenticate, onForgot, onReset, supabaseMode, allowDemoFallback, environmentLabel, sessionNotice }: {
   onAuthenticate:(personaId:PersonaId, remember:boolean, email:string, password:string)=>Promise<void>;
   onDemoAuthenticate:(personaId:PersonaId, remember:boolean)=>Promise<void>;
   onForgot:(email:string)=>Promise<void>;
@@ -488,6 +488,7 @@ function AuthExperience({ onAuthenticate, onDemoAuthenticate, onForgot, onReset,
   supabaseMode:boolean;
   allowDemoFallback:boolean;
   environmentLabel:string;
+  sessionNotice:string;
 }) {
   const [screen, setScreen] = useState<AuthScreen>('login');
   const demoFallbackVisible = !supabaseMode || allowDemoFallback;
@@ -579,6 +580,7 @@ function AuthExperience({ onAuthenticate, onDemoAuthenticate, onForgot, onReset,
         {screen === 'login' && <>
           <div className="auth-heading"><span className="auth-mode-chip">{supabaseMode ? environmentLabel.toUpperCase() : 'DÉMONSTRATION LOCALE'}</span><h2>Bienvenue</h2><p>Entrez dans l’espace opérationnel BEHIRA.</p></div>
           <form className="auth-form" onSubmit={submitLogin} noValidate>
+            {sessionNotice && <div id="auth-session-notice" className="auth-message error" role="alert"><span>!</span>{sessionNotice}</div>}
             <label className="auth-field">Email professionnel<input type="email" autoComplete="username" value={email} onChange={(event) => {setEmail(event.target.value);setStatus('idle')}} aria-invalid={status === 'error'} aria-describedby="auth-message" placeholder="nom@organisation.com" /></label>
             <label className="auth-field">Mot de passe<span className="password-control"><input type={showPassword ? 'text' : 'password'} autoComplete="current-password" value={password} onChange={(event) => {setPassword(event.target.value);setStatus('idle')}} aria-invalid={status === 'error'} aria-describedby="auth-message" /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}>{showPassword ? 'Masquer' : 'Afficher'}</button></span></label>
             <div className="auth-form-options"><label className="check-control"><input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} /><span>Se souvenir de moi</span></label><button type="button" className="auth-link" onClick={() => switchScreen('forgot')}>Mot de passe oublié ?</button></div>
@@ -681,6 +683,7 @@ function RequiredPasswordChange({ requirement, onComplete, onSignOut }: {
 export default function Home() {
   const supabaseIntegration = getSupabaseIntegrationState();
   const [session, setSession] = useState<DemoSession|null>(null);
+  const [sessionNotice, setSessionNotice] = useState('');
   const [passwordChangeRequirement, setPasswordChangeRequirement] = useState<PasswordChangeRequirement|null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [signOutConfirm, setSignOutConfirm] = useState(false);
@@ -713,6 +716,56 @@ export default function Home() {
   const moreNavRef = useRef<HTMLDivElement>(null);
   const moreNavTriggerRef = useRef<HTMLButtonElement>(null);
   const moreNavItemRefs = useRef<Array<HTMLButtonElement|null>>([]);
+  const sessionUserIdRef = useRef<string|null>(null);
+
+  const resetSensitiveWorkspace = useCallback(() => {
+    setAnomalies(seedAnomalies);
+    setEquipmentItems(fallbackEquipment);
+    setVendorReferences(fallbackVendors);
+    setWorkOrders([]);
+    setCanUploadVendorReport(false);
+    setReferenceCounts({ anomalies:seedAnomalies.length, equipment:fallbackEquipment.length, zones:0, profiles:0 });
+    setEscalations(seedEscalations);
+    setDecisionThreshold(DECISION_THRESHOLD_FCFA);
+    setFinancialDecisionParameter(FINANCIAL_DECISION_PARAMETER);
+  }, []);
+
+  const invalidateChangedSession = useCallback(() => {
+    sessionUserIdRef.current = null;
+    setSession(null);
+    setPasswordChangeRequirement(null);
+    setMutationBusy(false);
+    setSignOutConfirm(false);
+    setMoreNavOpen(false);
+    setDataState('loading');
+    setToast('');
+    setSessionNotice(SESSION_CHANGED_MESSAGE);
+    resetSensitiveWorkspace();
+  }, [resetSensitiveWorkspace]);
+
+  useEffect(() => {
+    sessionUserIdRef.current = session?.mode === 'supabase' ? session.userId ?? null : null;
+  }, [session?.mode, session?.userId]);
+
+  useEffect(() => {
+    if (!isSupabaseIntegrationEnabled) return;
+
+    const client = getBrowserSupabaseClient();
+    const { data: { subscription } } = client.auth.onAuthStateChange((event, nextSession) => {
+      const expectedUserId = sessionUserIdRef.current;
+      const nextUserId = nextSession?.user.id ?? null;
+
+      if (event === 'SIGNED_OUT') {
+        if (expectedUserId) invalidateChangedSession();
+        return;
+      }
+      if (!expectedUserId || !nextUserId || expectedUserId === nextUserId) return;
+
+      invalidateChangedSession();
+    });
+
+    return () => subscription.unsubscribe();
+  }, [invalidateChangedSession]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -803,6 +856,7 @@ export default function Home() {
             const gate = await getAuthenticatedProfileGate(client);
             if (gate.mustChangePassword) {
               if (!cancelled) {
+                sessionUserIdRef.current = data.session.user.id;
                 setSession(null);
                 setPasswordChangeRequirement({
                   userId:data.session.user.id,
@@ -814,6 +868,7 @@ export default function Home() {
             }
             const resolvedPersona = await resolveAuthenticatedPersona(client, data.session.user.id) as PersonaId;
             if (!cancelled) {
+              sessionUserIdRef.current = data.session.user.id;
               setDataState('loading');
               setSession({
                 personaId: resolvedPersona,
@@ -922,6 +977,20 @@ export default function Home() {
     return () => window.clearTimeout(timer);
   }, [offlineSync.lastRun]);
   const mutationError = (error:unknown) => error instanceof Error ? error.message : 'Une erreur locale est survenue.';
+  const requireCurrentSupabaseUser = async (options: { allowOffline?: boolean } = {}) => {
+    const expectedUserId = session?.mode === 'supabase' ? session.userId : undefined;
+    if (!expectedUserId) {
+      invalidateChangedSession();
+      throw new AuthSessionChangedError();
+    }
+
+    try {
+      return await assertAuthenticatedUser(getBrowserSupabaseClient(), expectedUserId, options);
+    } catch (error) {
+      if (isAuthSessionChangedError(error)) invalidateChangedSession();
+      throw error;
+    }
+  };
   const persistWorkflowStatus = async (status:Status) => {
     if (status === selected.status) return;
     if (status === 'Clôturée' && selected.priority === 'Critique' && !selected.proof) {
@@ -935,6 +1004,7 @@ export default function Home() {
     }
     setMutationBusy(true);
     try {
+      await requireCurrentSupabaseUser();
       await advanceAnomalyWorkflow(getBrowserSupabaseClient(), selected.id, status);
       await syncOperationalData();
       flash(`Étape enregistrée sur le serveur métier : ${status}.`);
@@ -956,6 +1026,7 @@ export default function Home() {
     }
     setMutationBusy(true);
     try {
+      await requireCurrentSupabaseUser({ allowOffline:true });
       await offlineSync.enqueueProof({
         anomalyReference:selected.id,
         anomalyId:selected.databaseId,
@@ -980,6 +1051,7 @@ export default function Home() {
     }
     setMutationBusy(true);
     try {
+      await requireCurrentSupabaseUser();
       await advanceAnomalyWorkflow(getBrowserSupabaseClient(), order.anomalyReference, target, comment);
       await syncOperationalData();
       flash(target === 'En intervention'
@@ -1000,6 +1072,7 @@ export default function Home() {
     }
     setMutationBusy(true);
     try {
+      await requireCurrentSupabaseUser({ allowOffline:true });
       await offlineSync.enqueueProof({
         anomalyReference:order.anomalyReference,
         anomalyId:order.anomalyDatabaseId,
@@ -1023,11 +1096,13 @@ export default function Home() {
       throw new Error('Consultation réelle indisponible hors de la session métier connectée.');
     }
     if (!proof.storagePath) throw new Error('Le fichier de preuve n’est pas relié au dossier.');
+    await requireCurrentSupabaseUser();
     return createAnomalyProofConsultationUrl(getBrowserSupabaseClient(), proof.storagePath);
   };
   const verifyProof = async (decision:'accepted'|'rejected', comment:string) => {
     setMutationBusy(true);
     try {
+      await requireCurrentSupabaseUser();
       await verifyLatestAnomalyProof(getBrowserSupabaseClient(), selected.id, decision, comment);
       await syncOperationalData();
       flash(decision === 'accepted' ? 'Preuve acceptée par Facility Manager.' : 'Preuve refusée ; le motif est conservé dans le dossier.');
@@ -1050,6 +1125,7 @@ export default function Home() {
     }
     setMutationBusy(true);
     try {
+      await requireCurrentSupabaseUser();
       const result = await uploadVendorInterventionReport(getBrowserSupabaseClient(), input);
       flash(`${String(result.reference)} déposé au nom de ${input.vendorCode} ; validation de Facility Manager requise.`);
     } catch (error) {
@@ -1068,6 +1144,7 @@ export default function Home() {
     }
     setMutationBusy(true);
     try {
+      await requireCurrentSupabaseUser();
       const result = await submitAnomalyCostDecision(getBrowserSupabaseClient(), input);
       await syncOperationalData();
       flash(String(result.decision_scope) === 'administration'
@@ -1088,6 +1165,7 @@ export default function Home() {
     }
     setMutationBusy(true);
     try {
+      await requireCurrentSupabaseUser();
       await reviewAnomalyCostDecision(getBrowserSupabaseClient(), input);
       await syncOperationalData();
       flash(`${input.costReference} · décision ${input.decision === 'approved' ? 'approuvée' : 'refusée'} et historisée.`);
@@ -1125,6 +1203,7 @@ export default function Home() {
       if (error || !data.user) throw new Error('Identifiants non reconnus.');
 
       try {
+        sessionUserIdRef.current = data.user.id;
         const gate = await getAuthenticatedProfileGate(client);
         if (gate.mustChangePassword) {
           setSession(null);
@@ -1144,9 +1223,10 @@ export default function Home() {
           userId:data.user.id,
           email:data.user.email,
         };
-        setSession(nextSession); setPersonaId(resolvedPersona); setView(landingViewByPersona[resolvedPersona]); setPreviousView(landingViewByPersona[resolvedPersona]);
+        setSessionNotice(''); setSession(nextSession); setPersonaId(resolvedPersona); setView(landingViewByPersona[resolvedPersona]); setPreviousView(landingViewByPersona[resolvedPersona]);
         return;
       } catch (profileError) {
+        sessionUserIdRef.current = null;
         await client.auth.signOut();
         throw profileError;
       }
@@ -1155,13 +1235,13 @@ export default function Home() {
     const nextSession:DemoSession = { personaId:next, remember, issuedAt:new Date().toISOString(), mode:'demo' };
     window.localStorage.removeItem(SESSION_KEY); window.sessionStorage.removeItem(SESSION_KEY);
     (remember ? window.localStorage : window.sessionStorage).setItem(SESSION_KEY, JSON.stringify(nextSession));
-    setSession(nextSession); setPersonaId(next); setView(landingViewByPersona[next]); setPreviousView(landingViewByPersona[next]);
+    sessionUserIdRef.current = null; setSessionNotice(''); setSession(nextSession); setPersonaId(next); setView(landingViewByPersona[next]); setPreviousView(landingViewByPersona[next]);
   };
   const authenticateDemo = async (next:PersonaId, remember:boolean) => {
     const nextSession:DemoSession = { personaId:next, remember, issuedAt:new Date().toISOString(), mode:'demo' };
     window.localStorage.removeItem(SESSION_KEY); window.sessionStorage.removeItem(SESSION_KEY);
     (remember ? window.localStorage : window.sessionStorage).setItem(SESSION_KEY, JSON.stringify(nextSession));
-    setDataState('demo'); setCanUploadVendorReport(false); setSession(nextSession); setPersonaId(next); setView(landingViewByPersona[next]); setPreviousView(landingViewByPersona[next]);
+    sessionUserIdRef.current = null; setSessionNotice(''); setDataState('demo'); setCanUploadVendorReport(false); setSession(nextSession); setPersonaId(next); setView(landingViewByPersona[next]); setPreviousView(landingViewByPersona[next]);
   };
   const requestPasswordReset = async (email:string) => {
     if (!isSupabaseIntegrationEnabled) return;
@@ -1172,6 +1252,7 @@ export default function Home() {
   const completeRequiredPasswordChange = async (currentPassword:string, newPassword:string) => {
     if (!passwordChangeRequirement) throw new Error('La session de première connexion a expiré.');
     const client = getBrowserSupabaseClient();
+    await assertAuthenticatedUser(client, passwordChangeRequirement.userId);
     const { data, error } = await client.auth.updateUser({ password:newPassword, currentPassword });
     if (error || !data.user) throw new Error('Le mot de passe temporaire est incorrect ou la mise à jour a été refusée.');
     const gate = await getAuthenticatedProfileGate(client);
@@ -1185,27 +1266,32 @@ export default function Home() {
       userId:data.user.id,
       email:data.user.email,
     };
+    sessionUserIdRef.current = data.user.id;
     setPasswordChangeRequirement(null);
-    setSession(nextSession); setPersonaId(resolvedPersona); setView(landingViewByPersona[resolvedPersona]); setPreviousView(landingViewByPersona[resolvedPersona]); setDataState('loading');
+    setSessionNotice(''); setSession(nextSession); setPersonaId(resolvedPersona); setView(landingViewByPersona[resolvedPersona]); setPreviousView(landingViewByPersona[resolvedPersona]); setDataState('loading');
   };
   const signOutLockedSession = async () => {
+    sessionUserIdRef.current = null;
     await getBrowserSupabaseClient().auth.signOut();
     setPasswordChangeRequirement(null);
+    setSessionNotice('');
     setSession(null);
   };
   const signOut = async () => {
     if (session?.mode === 'supabase') {
+      sessionUserIdRef.current = null;
       const { error } = await getBrowserSupabaseClient().auth.signOut();
-      if (error) { flash('Déconnexion impossible. Réessayez.'); return; }
+      if (error) { sessionUserIdRef.current = session.userId ?? null; flash('Déconnexion impossible. Réessayez.'); return; }
     }
     window.localStorage.removeItem(SESSION_KEY); window.sessionStorage.removeItem(SESSION_KEY);
-    setSignOutConfirm(false); setSession(null); setPasswordChangeRequirement(null); setPersonaId('facility'); setView('workspace'); setToast(''); setDataState('demo'); setCanUploadVendorReport(false); setWorkOrders([]);
+    setSignOutConfirm(false); setSessionNotice(''); setSession(null); setPasswordChangeRequirement(null); setPersonaId('facility'); setView('workspace'); setToast(''); setDataState('demo'); setCanUploadVendorReport(false); setWorkOrders([]);
   };
   const resetDemo = () => {
+    sessionUserIdRef.current = null;
     if (isSupabaseIntegrationEnabled) void getBrowserSupabaseClient().auth.signOut();
     window.localStorage.removeItem('behira_supabase_remember');
     window.localStorage.removeItem(SESSION_KEY); window.sessionStorage.removeItem(SESSION_KEY);
-    setSession(null); setPasswordChangeRequirement(null); setPersonaId('facility'); setView('workspace'); setPreviousView('registry'); setAnomalies(seedAnomalies); setEquipmentItems(fallbackEquipment); setVendorReferences(fallbackVendors); setWorkOrders([]); setCanUploadVendorReport(false); setDataState('demo'); setReferenceCounts({ anomalies:seedAnomalies.length, equipment:fallbackEquipment.length, zones:0, profiles:0 }); setEscalations(seedEscalations); setDecisionThreshold(DECISION_THRESHOLD_FCFA); setFinancialDecisionParameter(FINANCIAL_DECISION_PARAMETER);
+    setSessionNotice(''); setSession(null); setPasswordChangeRequirement(null); setPersonaId('facility'); setView('workspace'); setPreviousView('registry'); setAnomalies(seedAnomalies); setEquipmentItems(fallbackEquipment); setVendorReferences(fallbackVendors); setWorkOrders([]); setCanUploadVendorReport(false); setDataState('demo'); setReferenceCounts({ anomalies:seedAnomalies.length, equipment:fallbackEquipment.length, zones:0, profiles:0 }); setEscalations(seedEscalations); setDecisionThreshold(DECISION_THRESHOLD_FCFA); setFinancialDecisionParameter(FINANCIAL_DECISION_PARAMETER);
     setFieldRequests([
       { id:'REQ-031', from:'Agente Rondes & Assistance Démo', subject:'Infiltration légère · Atrium restaurant', note:'Photo ajoutée, origine à qualifier après la pluie.', status:'À traiter par Facility Manager' },
       { id:'REQ-030', from:'Agent Eau & Incendie Démo', subject:'DEMO-EAU · deuxième réarmement en 7 jours', note:'Service rétabli provisoirement, diagnostic demandé.', status:'À traiter par Facility Manager' },
@@ -1269,7 +1355,7 @@ export default function Home() {
 
   if (!authReady) return <main className="auth-loading" aria-label="Chargement de la session"><span className="brand-mark">B</span><p>Préparation de votre espace…</p></main>;
   if (passwordChangeRequirement) return <RequiredPasswordChange requirement={passwordChangeRequirement} onComplete={completeRequiredPasswordChange} onSignOut={signOutLockedSession} />;
-  if (!session) return <AuthExperience onAuthenticate={authenticate} onDemoAuthenticate={authenticateDemo} onForgot={requestPasswordReset} onReset={resetDemo} supabaseMode={isSupabaseIntegrationEnabled} allowDemoFallback={supabaseIntegration.demoFallback} environmentLabel={supabaseIntegration.environmentLabel} />;
+  if (!session) return <AuthExperience onAuthenticate={authenticate} onDemoAuthenticate={authenticateDemo} onForgot={requestPasswordReset} onReset={resetDemo} supabaseMode={isSupabaseIntegrationEnabled} allowDemoFallback={supabaseIntegration.demoFallback} environmentLabel={supabaseIntegration.environmentLabel} sessionNotice={sessionNotice} />;
 
   return (
     <div className="app-shell">

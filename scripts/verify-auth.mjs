@@ -6,6 +6,7 @@ const config = readFileSync(new URL('../app/lib/supabase/config.ts', import.meta
 const accessWorkspace = readFileSync(new URL('../app/components/AccessWorkspace.tsx', import.meta.url), 'utf8');
 const offlineStatus = readFileSync(new URL('../app/components/OfflineSyncStatus.tsx', import.meta.url), 'utf8');
 const offlineSync = readFileSync(new URL('../app/lib/offline/useOfflineSync.ts', import.meta.url), 'utf8');
+const auth = readFileSync(new URL('../app/lib/supabase/auth.ts', import.meta.url), 'utf8');
 const checks = [
   ['Connexion et états', ['Bienvenue', 'Connexion…', 'Identifiants non reconnus', 'Connecté ✓'].every((value) => page.includes(value))],
   ['Afficher / masquer', page.includes('Masquer le mot de passe') && page.includes('Afficher le mot de passe')],
@@ -26,6 +27,10 @@ const checks = [
   ['Mot de passe robuste obligatoire', page.includes('16 caractères minimum') && page.includes('Différent du temporaire') && page.includes('Confirmation identique')],
   ['Déverrouillage Auth confirmé', page.includes('updateUser({ password:newPassword, currentPassword })') && page.includes('gate.mustChangePassword')],
   ['Persona imposé par RLS', page.includes('resolveAuthenticatedPersona') && page.includes("session.mode === 'demo'")],
+  ['Session synchronisée entre onglets', page.includes('.auth.onAuthStateChange(') && page.includes("event === 'SIGNED_OUT'") && page.includes('subscription.unsubscribe()')],
+  ['Interface périmée invalidée', page.includes('invalidateChangedSession') && page.includes('resetSensitiveWorkspace') && page.includes('setSessionNotice(SESSION_CHANGED_MESSAGE)')],
+  ['Message de reprise explicite', auth.includes('Votre session a changé, veuillez reprendre l’action.') && page.includes('id="auth-session-notice"') && page.includes('role="alert"')],
+  ['Utilisateur revérifié avant mutation', auth.includes('client.auth.getUser()') && auth.includes('client.auth.getSession()') && (page.match(/await requireCurrentSupabaseUser/g) ?? []).length >= 9],
   ['Responsive 390 / 768 / 1440', ['max-width:430px','max-width:900px','.auth-shell'].every((value) => css.includes(value))],
   ['Focus clavier unique', css.includes('.keyboard-nav .password-control:focus-within') && css.includes('outline:2px solid var(--focus-ring)') && css.includes('border-color:#d5dee7;box-shadow:none')],
   ['Aucun secret Supabase', !/(SUPABASE_(URL|KEY)|anon[_-]?key|service[_-]?role)/i.test(page)],

@@ -14,6 +14,7 @@
     "verify:lot0": "node scripts/verify-lot0.mjs",
     "verify:personas": "node scripts/verify-personas.mjs",
     "verify:auth": "node scripts/verify-auth.mjs",
+    "verify:auth-session": "node --experimental-strip-types scripts/verify-auth-session-sync.mjs",
     "verify:anti-zombie": "node scripts/verify-anti-zombie.ts",
     "verify:offline": "node scripts/verify-offline-sync.mjs",
     "verify:agent-work-orders": "node scripts/verify-agent-work-orders.mjs",
