@@ -105,7 +105,7 @@ requireAll('Destination Seuils et paramètres réservée à Administration', app
 ])
 requireAll('Dossier central P6 sans seconde source métier', appSource, [
   'dossier-continuity', 'resolveAntiZombieSummary(anomaly)', 'variant="detailed"',
-  '0 événement canonique', 'Historique métier indisponible', 'Preuve attendue non définie',
+  'Événements métier du dossier', 'historyEvents.length > 0', 'Historique métier indisponible', 'Preuve attendue non définie',
   'Consultation uniquement · aucune action métier accordée', 'criticalClosureLocked',
   'role="tablist"', 'role="tabpanel"',
 ])

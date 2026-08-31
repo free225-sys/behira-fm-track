@@ -2,6 +2,46 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-046 — C9-FIX-05 : historique métier réel dans le dossier central
+
+- **Date :** 31 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté et vérifié localement — prêt pour publication en préproduction
+- **Périmètre :** lecture de l’historique canonique existant et affichage dans le dossier ; aucune migration, table, politique RLS, permission, règle métier ou donnée de référence ajoutée
+
+La recette humaine a confirmé que Faustin peut consulter la preuve privée
+`PRV-2026-000001` de `ANO-2026-000005`. La clôture du dossier a ensuite réussi et
+la synthèse canonique a correctement identifié Faustin, l’étape Clôture et
+l’heure de l’action. L’onglet Historique affichait néanmoins zéro événement :
+son contenu était encore un état vide statique, alors que `anomaly_history`
+contenait déjà le journal métier complet.
+
+Le chargeur opérationnel lit maintenant, sous les RLS existantes, les événements
+des seuls dossiers visibles. Les libellés proviennent de
+`business_event_definitions`, les étapes de `workflow_stages`, l’acteur du
+snapshot historique avec repli vers le profil, et l’heure de `occurred_at`.
+Le dossier affiche ces événements du plus récent au plus ancien avec action,
+acteur, étape, date, heure, code et commentaire éventuel. L’état
+« Historique métier indisponible » reste réservé aux dossiers qui ne possèdent
+réellement aucun événement ; aucune date `updated_at` et aucun événement inventé
+ne servent de repli.
+
+### Vérifications réalisées
+
+- contrôle statique C9-FIX-05 : **25/25** ;
+- test transactionnel local : verrou critique, preuve privée, acceptation puis
+  clôture, et dernier événement avec définition, acteur, étape et horodatage ;
+- reconstruction complète locale et suites SQL : **13/13** ;
+- AntiZombieSummary **13/13**, audit visuel **92/92**, personas **38/38**,
+  Auth **22/22**, hors ligne **27/27**, résilience **12/12**, lint et build :
+  réussis ;
+- fixture transactionnelle et fichiers de test supprimés.
+
+- **Suite proposée :** publier C9-FIX-05 sur la préproduction distincte, rouvrir
+  `ANO-2026-000005` avec Faustin, vérifier l’historique de clôture à l’écran,
+  puis exécuter la séquence 5 sur un dossier critique pour confirmer le refus de
+  clôture avant preuve acceptée et la réussite après acceptation.
+
 ## DEV-045 — C9-FIX-04 : consultation sécurisée des preuves privées
 
 - **Date :** 31 août 2026

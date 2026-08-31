@@ -245,11 +245,16 @@ try {
   });
   if (closureError) throw closureError;
 
-  const { count: historyCount, error: historyError } = await facility
+  const { data: historyRows, error: historyError } = await facility
     .from("anomaly_history")
-    .select("id", { count: "exact", head: true })
-    .eq("anomaly_id", anomalyId);
-  if (historyError || (historyCount ?? 0) < 8) throw historyError ?? new Error("The audit history is incomplete.");
+    .select("id, event_type, event_definition_id, workflow_stage_id, actor_profile_id, actor_label_snapshot, occurred_at, comment")
+    .eq("anomaly_id", anomalyId)
+    .order("occurred_at", { ascending: false });
+  if (historyError || (historyRows?.length ?? 0) < 8) throw historyError ?? new Error("The audit history is incomplete.");
+  const latestHistory = historyRows?.[0];
+  if (!latestHistory?.event_definition_id || !latestHistory.workflow_stage_id || !latestHistory.actor_profile_id || !latestHistory.actor_label_snapshot || !latestHistory.occurred_at) {
+    throw new Error("The latest canonical history event is missing its action, actor, stage or timestamp provenance.");
+  }
 
   console.log("✓ Assigned agent alone starts and finishes the intervention");
   console.log("✓ Work order and intervention preserve their canonical states and summary");
@@ -257,6 +262,7 @@ try {
   console.log("✓ A replacement proof can be accepted and satisfies the critical requirement");
   console.log("✓ Facility Manager and assigned agent consult a signed private proof; out-of-scope agent is refused");
   console.log("✓ Critical closure stays locked before acceptance and succeeds afterwards");
+  console.log("✓ Canonical history exposes action, actor, stage and timestamp after closure");
 } finally {
   const failures = [];
   for (const path of proofPaths) {
@@ -276,7 +282,7 @@ try {
     catch (error) { failures.push(`database: ${error instanceof Error ? error.message : String(error)}`); }
   }
   await Promise.all([facility.auth.signOut(), sylvain.auth.signOut(), evariste.auth.signOut()]);
-  if (failures.length) throw new Error(`C9-FIX-04 cleanup failed: ${failures.join("; ")}`);
+  if (failures.length) throw new Error(`C9-FIX-05 cleanup failed: ${failures.join("; ")}`);
 }
 
-console.log("C9-FIX-04 local transaction, private proof consultation and RLS verification passed; fixture removed.");
+console.log("C9-FIX-05 local transaction, private proof consultation, canonical history and RLS verification passed; fixture removed.");

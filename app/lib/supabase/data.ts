@@ -24,6 +24,17 @@ export type OperationalProof = {
   reviewComment: string | null;
 };
 
+export type OperationalHistoryEvent = {
+  id: string;
+  code: string;
+  label: string;
+  occurredAt: string;
+  actor: string | null;
+  stage: string | null;
+  comment: string | null;
+  isActivity: boolean;
+};
+
 export type OperationalAnomaly = {
   id: string;
   databaseId: string;
@@ -39,6 +50,7 @@ export type OperationalAnomaly = {
   proof: boolean;
   proofPending: boolean;
   proofs: OperationalProof[];
+  history: OperationalHistoryEvent[];
   description: string;
   antiZombieSummary?: AntiZombieSummaryData;
 };
@@ -130,6 +142,8 @@ export async function loadOperationalSnapshot(
     permissionResult,
     antiZombieResult,
     workOrderResult,
+    eventDefinitionResult,
+    workflowStageResult,
   ] = await Promise.all([
     client.from("anomalies").select("id, reference, title, description, equipment_id, zone_id, priority_id, current_status_id, assigned_profile_id, assigned_vendor_id, detected_at, qualification_due_at, intervention_due_at, closed_at").order("detected_at", { ascending: false }),
     client.from("equipment").select("id, code, name, location_label, health_score, health_status, lifecycle_scope").eq("lifecycle_scope", "mvp").order("code"),
@@ -147,6 +161,8 @@ export async function loadOperationalSnapshot(
       .eq("assigned_profile_id", currentProfileId)
       .in("status", ["planned", "accepted", "in_progress", "completed"])
       .order("due_at", { ascending: true, nullsFirst: false }),
+    client.from("business_event_definitions").select("id, code, label, is_activity"),
+    client.from("workflow_stages").select("id, code, label, sequence_no"),
   ]);
 
   const firstError = [
@@ -161,14 +177,30 @@ export async function loadOperationalSnapshot(
     permissionResult.error,
     antiZombieResult.error,
     workOrderResult.error,
+    eventDefinitionResult.error,
+    workflowStageResult.error,
   ].find(Boolean);
   if (firstError) throw firstError;
+
+  const visibleAnomalyIds = (anomalyResult.data ?? []).map((item) => item.id);
+  const historyResult = visibleAnomalyIds.length
+    ? await client
+      .from("anomaly_history")
+      .select("id, anomaly_id, event_type, event_definition_id, workflow_stage_id, actor_profile_id, actor_label_snapshot, occurred_at, comment")
+      .in("anomaly_id", visibleAnomalyIds)
+      .order("occurred_at", { ascending: false })
+      .order("server_received_at", { ascending: false })
+      .order("id", { ascending: false })
+    : { data: [], error: null };
+  if (historyResult.error) throw historyResult.error;
 
   const equipmentById = new Map((equipmentResult.data ?? []).map((item) => [item.id, item]));
   const profileById = new Map((profileResult.data ?? []).map((item) => [item.id, item.display_name]));
   const priorityById = new Map((priorityResult.data ?? []).map((item) => [item.id, item.code]));
   const statusById = new Map((statusResult.data ?? []).map((item) => [item.id, item]));
   const vendorById = new Map((vendorResult.data ?? []).map((item) => [item.id, item]));
+  const eventDefinitionById = new Map((eventDefinitionResult.data ?? []).map((item) => [item.id, item]));
+  const workflowStageById = new Map((workflowStageResult.data ?? []).map((item) => [item.id, item]));
   const provenAnomalies = new Set((proofResult.data ?? []).filter((item) => item.verification_status === "accepted").map((item) => item.anomaly_id).filter(Boolean));
   const pendingProofAnomalies = new Set((proofResult.data ?? []).filter((item) => item.verification_status === "pending").map((item) => item.anomaly_id).filter(Boolean));
   const proofsByAnomalyId = new Map<string, OperationalProof[]>();
@@ -186,6 +218,27 @@ export async function loadOperationalSnapshot(
       reviewComment: proof.review_comment,
     } satisfies OperationalProof;
     proofsByAnomalyId.set(proof.anomaly_id, [...(proofsByAnomalyId.get(proof.anomaly_id) ?? []), item]);
+  }
+  const historyByAnomalyId = new Map<string, OperationalHistoryEvent[]>();
+  for (const history of historyResult.data ?? []) {
+    const definition = history.event_definition_id
+      ? eventDefinitionById.get(history.event_definition_id)
+      : undefined;
+    const stage = history.workflow_stage_id
+      ? workflowStageById.get(history.workflow_stage_id)
+      : undefined;
+    const event = {
+      id: history.id,
+      code: definition?.code ?? history.event_type,
+      label: definition?.label ?? history.event_type,
+      occurredAt: history.occurred_at,
+      actor: history.actor_label_snapshot
+        ?? (history.actor_profile_id ? profileById.get(history.actor_profile_id) ?? null : null),
+      stage: stage?.label ?? null,
+      comment: history.comment,
+      isActivity: definition?.is_activity ?? true,
+    } satisfies OperationalHistoryEvent;
+    historyByAnomalyId.set(history.anomaly_id, [...(historyByAnomalyId.get(history.anomaly_id) ?? []), event]);
   }
   const antiZombieByAnomalyId = indexCanonicalAntiZombieSummaries(
     antiZombieResult.data ?? [],
@@ -219,6 +272,7 @@ export async function loadOperationalSnapshot(
       proof: provenAnomalies.has(item.id),
       proofPending: pendingProofAnomalies.has(item.id),
       proofs: proofsByAnomalyId.get(item.id) ?? [],
+      history: historyByAnomalyId.get(item.id) ?? [],
       description: item.description,
       antiZombieSummary: antiZombieByAnomalyId.get(item.id),
     } satisfies OperationalAnomaly;

@@ -16,7 +16,7 @@ import { WorkflowAnalytics } from './components/WorkflowAnalytics';
 import { getAuthenticatedProfileGate, resolveAuthenticatedPersona } from './lib/supabase/auth';
 import { getBrowserSupabaseClient, setSupabaseRememberPreference } from './lib/supabase/client';
 import { getSupabaseIntegrationState, isSupabaseIntegrationEnabled } from './lib/supabase/config';
-import { loadOperationalSnapshot, type OperationalProof, type OperationalVendor, type OperationalWorkOrder } from './lib/supabase/data';
+import { loadOperationalSnapshot, type OperationalHistoryEvent, type OperationalProof, type OperationalVendor, type OperationalWorkOrder } from './lib/supabase/data';
 import { advanceAnomalyWorkflow, createAnomalyProofConsultationUrl, uploadVendorInterventionReport, verifyLatestAnomalyProof } from './lib/supabase/mutations';
 import { useOfflineSync } from './lib/offline/useOfflineSync';
 
@@ -108,6 +108,7 @@ type Anomaly = {
   proofPending?: boolean;
   proofQueued?: boolean;
   proofs?: OperationalProof[];
+  history?: OperationalHistoryEvent[];
   description: string;
   antiZombieSummary?: AntiZombieSummaryData;
 };
@@ -395,6 +396,16 @@ function adaptDemoDossierToAntiZombieSummary(anomaly:Anomaly):AntiZombieSummaryD
 
 function resolveAntiZombieSummary(anomaly:Anomaly):AntiZombieSummaryData {
   return anomaly.antiZombieSummary ?? adaptDemoDossierToAntiZombieSummary(anomaly);
+}
+
+function formatHistoryMoment(value:string) {
+  return new Intl.DateTimeFormat('fr-FR', {
+    day:'2-digit',
+    month:'short',
+    year:'numeric',
+    hour:'2-digit',
+    minute:'2-digit',
+  }).format(new Date(value)).replace(',', ' ·');
 }
 
 function AuthFrame({
@@ -1851,6 +1862,7 @@ function Detail({ anomaly, decisionAmount, persistenceMode, persistenceEnabled, 
   const overThreshold = decisionAmount !== null && decisionAmount >= DECISION_THRESHOLD_FCFA;
   const expectedProof = expectedProofFor(anomaly);
   const proofs = anomaly.proofs ?? [];
+  const historyEvents = anomaly.history ?? [];
   const criticalClosureLocked = nextStatusOption === 'Clôturée' && anomaly.priority === 'Critique' && !anomaly.proof;
   const proofRequiresAttention = anomaly.proofPending || criticalClosureLocked;
   const primaryActionLabel = proofRequiresAttention ? 'Ouvrir les preuves' : overThreshold ? 'Examiner la décision financière' : nextStatusOption ? `Valider : ${nextStatus}` : 'Consulter les repères du dossier';
@@ -1914,7 +1926,7 @@ function Detail({ anomaly, decisionAmount, persistenceMode, persistenceEnabled, 
       <aside className="panel proof-matrix-card"><p className="design-kicker">EXIGENCE APPLIQUÉE</p><h3>{anomaly.asset}</h3>{expectedProof ? <ul><li><span>✓</span>{expectedProof}</li></ul> : <div className="compact-insufficient-state"><b>Preuve attendue non définie</b><p>La règle contextuelle doit être confirmée avant d’afficher une matrice.</p></div>}</aside>
     </section>}
 
-    {section === 'history' && <section id="dossier-history-panel" role="tabpanel" className="panel dossier-history"><div className="panel-head"><div><h3>Historique du dossier</h3><p>Seuls les événements métier datés et attribués peuvent constituer l’historique</p></div><span className="panel-count">0 événement canonique</span></div><div className="dossier-history-missing" role="note"><span>⌁</span><div><b>Historique métier indisponible</b><p>Aucune source chargée ne fournit actuellement l’action, l’acteur, l’étape et l’horodatage complets. Les repères ci-dessous ne remplacent pas un journal métier.</p></div></div><div className="dossier-current-markers" aria-label="Repères disponibles hors historique"><article><span>R</span><div><b>Constat d’origine</b><small>{anomaly.reported} · auteur non renseigné</small></div><em>REPÈRE DOSSIER</em></article><article className="current"><span>{currentStep+1}</span><div><b>Étape actuelle : {anomaly.status}</b><small>Date et auteur de transition non disponibles</small></div><em>ÉTAT ACTUEL</em></article></div></section>}
+    {section === 'history' && <section id="dossier-history-panel" role="tabpanel" className="panel dossier-history"><div className="panel-head"><div><h3>Historique du dossier</h3><p>Événements métier canoniques, datés et attribués</p></div><span className="panel-count">{historyEvents.length} événement{historyEvents.length > 1 ? 's' : ''} canonique{historyEvents.length > 1 ? 's' : ''}</span></div>{historyEvents.length > 0 ? <div className="history-grid dossier-history-grid" aria-label="Événements métier du dossier">{historyEvents.map((event,index) => <article key={event.id} className={index === 0 ? 'current' : 'done'}><span aria-hidden="true">{index === 0 ? '•' : '✓'}</span><div className="history-event-copy"><b>{event.label}</b><small>{formatHistoryMoment(event.occurredAt)} · {event.actor ?? 'Auteur non renseigné'} · {event.stage ?? 'Étape non renseignée'}</small>{event.comment && <p>{event.comment}</p>}</div><em>{event.code}</em></article>)}</div> : <><div className="dossier-history-missing" role="note"><span>⌁</span><div><b>Historique métier indisponible</b><p>Aucune source chargée ne fournit actuellement l’action, l’acteur, l’étape et l’horodatage complets. Les repères ci-dessous ne remplacent pas un journal métier.</p></div></div><div className="dossier-current-markers" aria-label="Repères disponibles hors historique"><article><span>R</span><div><b>Constat d’origine</b><small>{anomaly.reported} · auteur non renseigné</small></div><em>REPÈRE DOSSIER</em></article><article className="current"><span>{currentStep+1}</span><div><b>Étape actuelle : {anomaly.status}</b><small>Date et auteur de transition non disponibles</small></div><em>ÉTAT ACTUEL</em></article></div></>}</section>}
   </>;
 }
 
