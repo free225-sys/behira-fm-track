@@ -93,13 +93,13 @@ export function useOfflineSync({ enabled, userId, onSynced }: OfflineSyncOptions
   }, [enabled, refresh, synchronize, userId]);
 
   const enqueueRound = useCallback(async (payload: FieldRoundPayload) => {
-    if (!userId) throw new Error("Session Supabase requise.");
+    if (!userId) throw new Error("Session authentifiée requise.");
     const now = new Date().toISOString();
     return enqueue({ id: crypto.randomUUID(), ownerUserId: userId, kind: "field-round", payload, status: "pending", attempts: 0, createdAt: now, updatedAt: now });
   }, [enqueue, userId]);
 
   const enqueueProof = useCallback(async (payload: AnomalyProofPayload) => {
-    if (!userId) throw new Error("Session Supabase requise.");
+    if (!userId) throw new Error("Session authentifiée requise.");
     const now = new Date().toISOString();
     return enqueue({ id: crypto.randomUUID(), ownerUserId: userId, kind: "anomaly-proof", payload, status: "pending", attempts: 0, createdAt: now, updatedAt: now });
   }, [enqueue, userId]);
@@ -113,7 +113,7 @@ export function useOfflineSync({ enabled, userId, onSynced }: OfflineSyncOptions
   }, [refresh, synchronize, userId]);
 
   const saveOfflineDraft = useCallback(<T,>(draftId: string, value: T) => {
-    if (!userId) return Promise.reject(new Error("Session Supabase requise."));
+    if (!userId) return Promise.reject(new Error("Session authentifiée requise."));
     return saveDraft(userId, draftId, value);
   }, [userId]);
 

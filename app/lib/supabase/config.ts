@@ -19,15 +19,15 @@ function readPublicConfig() {
 
 export function getSupabaseEnvironmentLabel() {
   const { url } = readPublicConfig();
-  if (!url) return "Supabase non configuré";
+  if (!url) return "Service métier non configuré";
 
   try {
     const hostname = new URL(url).hostname;
     return hostname === "127.0.0.1" || hostname === "localhost"
-      ? "Supabase local"
-      : "Supabase fm_track";
+      ? "Environnement local"
+      : "Préproduction sécurisée";
   } catch {
-    return "Supabase non configuré";
+    return "Service métier non configuré";
   }
 }
 
@@ -46,13 +46,13 @@ export function requireSupabasePublicConfig(): SupabasePublicConfig {
 
   if (!isSupabaseIntegrationEnabled) {
     throw new Error(
-      "Supabase est désactivé. Le prototype utilise encore ses données de démonstration.",
+      "Le service métier est désactivé. Le prototype utilise encore ses données de démonstration.",
     );
   }
 
   if (!url || !publishableKey) {
     throw new Error(
-      "Configuration Supabase incomplète : URL et clé publique attendues.",
+      "Configuration du service métier incomplète : URL et clé publique attendues.",
     );
   }
 
@@ -60,12 +60,12 @@ export function requireSupabasePublicConfig(): SupabasePublicConfig {
   try {
     parsedUrl = new URL(url);
   } catch {
-    throw new Error("Configuration Supabase invalide : URL incorrecte.");
+    throw new Error("Configuration du service métier invalide : URL incorrecte.");
   }
 
   const isLocal = ["127.0.0.1", "localhost"].includes(parsedUrl.hostname);
   if (!isLocal && parsedUrl.protocol !== "https:") {
-    throw new Error("La connexion Supabase distante doit utiliser HTTPS.");
+    throw new Error("La connexion distante doit utiliser HTTPS.");
   }
 
   return { url, publishableKey };

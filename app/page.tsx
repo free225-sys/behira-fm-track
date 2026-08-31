@@ -137,7 +137,7 @@ const personas: Persona[] = [
 ];
 
 // The persona switcher and browser storage below are limited to explicit demo mode.
-// When enabled, Supabase Auth resolves the persona from the RLS-protected business profile.
+// When enabled, the authentication service resolves the persona from the RLS-protected business profile.
 const DEMO_PASSWORD = 'Behira-Design-Demo-2026!';
 const SESSION_KEY = 'behira_demo_session_v1';
 const demoAccounts: DemoAccount[] = [
@@ -549,10 +549,10 @@ function AuthExperience({ onAuthenticate, onDemoAuthenticate, onForgot, onReset,
       </div>
 
       {screen === 'login' && demoFallbackVisible && <aside className="demo-accounts" aria-label="Comptes de démonstration">
-        <div><span>{supabaseMode ? 'MODE DÉMONSTRATION DE SECOURS' : 'COMPTES DE DÉMONSTRATION'}</span><p>Profils fictifs en <code>.invalid</code> · {supabaseMode ? 'séparés de Supabase Auth et sans écriture distante' : 'session simulée'}.</p></div>
+        <div><span>{supabaseMode ? 'MODE DÉMONSTRATION DE SECOURS' : 'COMPTES DE DÉMONSTRATION'}</span><p>Profils fictifs en <code>.invalid</code> · {supabaseMode ? 'séparés de l’authentification réelle et sans écriture distante' : 'session simulée'}.</p></div>
         {!supabaseMode && <p className="demo-password"><span>Mot de passe commun</span><b>{DEMO_PASSWORD}</b></p>}
         {(!supabaseMode || allowDemoFallback) && <div className="demo-account-grid">{demoAccounts.map((account) => {const person = personas.find((item) => item.id === account.personaId)!; const selected = email.trim().toLowerCase() === account.email.toLowerCase(); return <button type="button" key={account.email} className={selected ? 'is-selected' : ''} aria-pressed={selected} aria-label={`${person.shortName} · ${account.destination}`} onClick={() => {if (supabaseMode) void openDemoAccount(account); else {chooseAccount(account);switchScreen('login')}}}><span>{person.initials}</span><div><b>{person.shortName}</b><small>{account.email}</small><em>{account.destination}</em></div><i>{selected ? 'Sélectionné' : supabaseMode ? 'Ouvrir la démo' : 'Utiliser'}</i></button>})}</div>}
-        <div className="demo-reset"><p><b>{supabaseMode ? environmentLabel : 'Session locale uniquement'}</b><br />{supabaseMode ? 'Une connexion réelle impose le rôle du profil métier protégé par RLS. Le mode démo reste local.' : 'La sécurité réelle sera assurée par Supabase Auth et les politiques RLS.'}</p><button type="button" onClick={resetInterface}>Réinitialiser la démonstration</button></div>
+        <div className="demo-reset"><p><b>{supabaseMode ? environmentLabel : 'Session locale uniquement'}</b><br />{supabaseMode ? 'Une connexion réelle impose le rôle du profil métier protégé par les règles d’accès. Le mode démo reste local.' : 'La sécurité réelle sera assurée par l’authentification et les règles d’accès.'}</p><button type="button" onClick={resetInterface}>Réinitialiser la démonstration</button></div>
       </aside>}
     </AuthFrame>
   );
@@ -596,7 +596,7 @@ function RequiredPasswordChange({ requirement, onComplete, onSignOut }: {
       kicker="PREMIÈRE CONNEXION"
       title="Protégez votre accès avant de continuer."
       lede="Votre espace métier restera verrouillé jusqu’au remplacement du mot de passe temporaire."
-      note="Contrôle assuré par Supabase Auth et les politiques RLS"
+      note="Contrôle assuré par l’authentification et les règles d’accès"
       single
     >
       <div className="auth-card">
@@ -839,7 +839,7 @@ export default function Home() {
     try {
       await advanceAnomalyWorkflow(getBrowserSupabaseClient(), selected.id, status);
       await syncOperationalData();
-      flash(`Étape enregistrée dans Supabase : ${status}.`);
+      flash(`Étape enregistrée sur le serveur métier : ${status}.`);
     } catch (error) {
       flash(`Action non enregistrée : ${mutationError(error)}`);
     } finally {
@@ -853,7 +853,7 @@ export default function Home() {
       return 'demo-volatile';
     }
     if (dataState !== 'live' || !selected.databaseId) {
-      flash('Preuve non enregistrée : ce dossier de repli n’a pas d’identifiant Supabase canonique.');
+      flash('Preuve non enregistrée : ce dossier de repli n’a pas d’identifiant serveur canonique.');
       return 'error';
     }
     setMutationBusy(true);
@@ -909,7 +909,7 @@ export default function Home() {
   };
   const changePersona = (next: PersonaId) => {
     if (session?.mode === 'supabase') {
-      flash('Le rôle est imposé par Supabase Auth et les politiques RLS.');
+      flash('Le rôle est imposé par l’authentification et les règles d’accès.');
       return;
     }
     setPersonaId(next);
@@ -931,7 +931,7 @@ export default function Home() {
       setDataState('loading');
       setSupabaseRememberPreference(remember);
       const { data, error } = await client.auth.signInWithPassword({ email, password });
-      if (error || !data.user) throw new Error('Identifiants Supabase non reconnus.');
+      if (error || !data.user) throw new Error('Identifiants non reconnus.');
 
       try {
         const gate = await getAuthenticatedProfileGate(client);
@@ -1005,7 +1005,7 @@ export default function Home() {
   const signOut = async () => {
     if (session?.mode === 'supabase') {
       const { error } = await getBrowserSupabaseClient().auth.signOut();
-      if (error) { flash('Déconnexion Supabase impossible. Réessayez.'); return; }
+      if (error) { flash('Déconnexion impossible. Réessayez.'); return; }
     }
     window.localStorage.removeItem(SESSION_KEY); window.sessionStorage.removeItem(SESSION_KEY);
     setSignOutConfirm(false); setSession(null); setPasswordChangeRequirement(null); setPersonaId('facility'); setView('workspace'); setToast(''); setDataState('demo'); setCanUploadVendorReport(false);
@@ -1678,7 +1678,7 @@ function Detail({ anomaly, decisionAmount, persistenceMode, persistenceEnabled, 
 
     {section === 'finance' && <section id="dossier-finance-panel" role="tabpanel" className="dossier-two-columns"><article className="panel finance-decision-card"><div className="panel-head"><div><p className="design-kicker">BRANCHE DE TRAITEMENT</p><h3>{decisionAmount === null ? 'Montant non renseigné' : 'Intervention avec montant documenté'}</h3></div><Badge tone={decisionAmount === null ? 'neutral' : overThreshold ? 'orange' : 'success'}>{decisionAmount === null ? 'DONNÉES INSUFFISANTES' : overThreshold ? 'ADMINISTRATION' : 'DÉLÉGATION FM'}</Badge></div><div className="finance-amount"><span>Montant de décision</span><strong>{decisionAmount === null ? 'Non renseigné' : formatMoney(decisionAmount)}</strong><small>Seuil d’approbation : {formatMoney(DECISION_THRESHOLD_FCFA)}</small></div>{decisionAmount === null ? <div className="compact-insufficient-state"><b>Qualification financière incomplète</b><p>Aucun montant canonique n’est relié à ce dossier.</p></div> : <><div className={`authority-result ${overThreshold ? 'escalate' : 'delegated'}`}><span>{overThreshold ? '↑' : '✓'}</span><div><b>{overThreshold ? 'Arbitrage de l’Administration' : 'Facility Manager peut décider'}</b><small>{overThreshold ? 'Le montant dépasse la délégation validée.' : 'Le montant reste sous le seuil validé.'}</small></div></div><div className="decision-audit"><span><b>Décision</b>{overThreshold ? 'À soumettre' : 'Autorisée dans la délégation'}</span><span><b>Montant engagé</b>Non renseigné</span><span><b>Montant payé</b>Non renseigné</span></div></>}</article><aside className="panel quote-card"><p className="design-kicker">PIÈCES FINANCIÈRES</p><h3>Devis et engagement</h3><div className="quote-file"><span>▧</span><p><b>Pièce financière non reliée</b><small>Données insuffisantes dans la source actuelle</small></p></div></aside></section>}
 
-    {section === 'evidence' && <section id="dossier-evidence-panel" role="tabpanel" className="dossier-two-columns"><article className="panel evidence-panel"><div className="panel-head"><div><h3>Preuves du dossier</h3><p>Exigence appliquée au dossier lorsqu’elle est disponible</p></div>{!readOnly && !anomaly.proofPending && !anomaly.proofQueued && <button disabled={busy} onClick={chooseProof}>＋ Ajouter</button>}</div>{!readOnly && !anomaly.proof && !anomaly.proofPending && <SyncStatusNotice state={anomaly.proofQueued ? 'queued-local' : proofTransferState} compact label="État du dépôt de preuve" onRetry={proofTransferState === 'error' && pendingProof ? () => void submitProof(pendingProof) : undefined} />}{anomaly.proof ? <div className="evidence-file"><span>▧</span><div><b>Preuve d’intervention acceptée</b><small>Fichier privé · contrôle Facility Manager terminé</small></div><Badge tone="success">ACCEPTÉE</Badge></div> : anomaly.proofPending ? <div className="evidence-file"><span>▧</span><div><b>Preuve reçue</b><small>Contrôle Facility Manager requis</small></div><Badge tone="orange">À VALIDER</Badge>{canVerify && <button className="primary-button" disabled={busy} onClick={onVerify}>Valider</button>}</div> : anomaly.proofQueued ? <div className="evidence-file"><span>↓</span><div><b>Preuve protégée localement</b><small>En attente de synchronisation vers le stockage privé Supabase</small></div><Badge tone="blue">EN FILE</Badge></div> : <div className="proof-requirement"><span>⌁</span><div><b>{expectedProof ?? 'Preuve attendue non définie'}</b><p>{expectedProof ? 'La clôture reste impossible tant que la pièce obligatoire n’est pas acceptée.' : 'Aucune règle de preuve canonique n’est raccordée à ce dossier.'}</p></div>{!readOnly && <button className="primary-button" onClick={chooseProof}>Déposer</button>}</div>}</article><aside className="panel proof-matrix-card"><p className="design-kicker">EXIGENCE APPLIQUÉE</p><h3>{anomaly.asset}</h3>{expectedProof ? <ul><li><span>✓</span>{expectedProof}</li></ul> : <div className="compact-insufficient-state"><b>Preuve attendue non définie</b><p>La règle contextuelle doit être confirmée avant d’afficher une matrice.</p></div>}</aside></section>}
+    {section === 'evidence' && <section id="dossier-evidence-panel" role="tabpanel" className="dossier-two-columns"><article className="panel evidence-panel"><div className="panel-head"><div><h3>Preuves du dossier</h3><p>Exigence appliquée au dossier lorsqu’elle est disponible</p></div>{!readOnly && !anomaly.proofPending && !anomaly.proofQueued && <button disabled={busy} onClick={chooseProof}>＋ Ajouter</button>}</div>{!readOnly && !anomaly.proof && !anomaly.proofPending && <SyncStatusNotice state={anomaly.proofQueued ? 'queued-local' : proofTransferState} compact label="État du dépôt de preuve" onRetry={proofTransferState === 'error' && pendingProof ? () => void submitProof(pendingProof) : undefined} />}{anomaly.proof ? <div className="evidence-file"><span>▧</span><div><b>Preuve d’intervention acceptée</b><small>Fichier privé · contrôle Facility Manager terminé</small></div><Badge tone="success">ACCEPTÉE</Badge></div> : anomaly.proofPending ? <div className="evidence-file"><span>▧</span><div><b>Preuve reçue</b><small>Contrôle Facility Manager requis</small></div><Badge tone="orange">À VALIDER</Badge>{canVerify && <button className="primary-button" disabled={busy} onClick={onVerify}>Valider</button>}</div> : anomaly.proofQueued ? <div className="evidence-file"><span>↓</span><div><b>Preuve protégée localement</b><small>En attente de synchronisation vers le stockage privé sécurisé</small></div><Badge tone="blue">EN FILE</Badge></div> : <div className="proof-requirement"><span>⌁</span><div><b>{expectedProof ?? 'Preuve attendue non définie'}</b><p>{expectedProof ? 'La clôture reste impossible tant que la pièce obligatoire n’est pas acceptée.' : 'Aucune règle de preuve canonique n’est raccordée à ce dossier.'}</p></div>{!readOnly && <button className="primary-button" onClick={chooseProof}>Déposer</button>}</div>}</article><aside className="panel proof-matrix-card"><p className="design-kicker">EXIGENCE APPLIQUÉE</p><h3>{anomaly.asset}</h3>{expectedProof ? <ul><li><span>✓</span>{expectedProof}</li></ul> : <div className="compact-insufficient-state"><b>Preuve attendue non définie</b><p>La règle contextuelle doit être confirmée avant d’afficher une matrice.</p></div>}</aside></section>}
 
     {section === 'history' && <section id="dossier-history-panel" role="tabpanel" className="panel dossier-history"><div className="panel-head"><div><h3>Historique du dossier</h3><p>Seuls les événements métier datés et attribués peuvent constituer l’historique</p></div><span className="panel-count">0 événement canonique</span></div><div className="dossier-history-missing" role="note"><span>⌁</span><div><b>Historique métier indisponible</b><p>Aucune source chargée ne fournit actuellement l’action, l’acteur, l’étape et l’horodatage complets. Les repères ci-dessous ne remplacent pas un journal métier.</p></div></div><div className="dossier-current-markers" aria-label="Repères disponibles hors historique"><article><span>R</span><div><b>Constat d’origine</b><small>{anomaly.reported} · auteur non renseigné</small></div><em>REPÈRE DOSSIER</em></article><article className="current"><span>{currentStep+1}</span><div><b>Étape actuelle : {anomaly.status}</b><small>Date et auteur de transition non disponibles</small></div><em>ÉTAT ACTUEL</em></article></div></section>}
   </>;
@@ -1818,7 +1818,7 @@ function Report({ persona, onNavigate, persistenceEnabled, offlineSync, flash }:
   };
 
   if (!surpresseurAccess) return <>
-    <section className="section-heading round-heading"><div><p className="design-kicker">SAISIE DIRECTE · {persistenceEnabled ? 'SUPABASE' : 'DÉMONSTRATION'}</p><h2 className="visually-hidden">Rondes</h2><p>{isRoundsAssistance ? 'Ronde cleaning & jardinage' : 'Ronde technique'} : un constat terrain est enregistré dans l’application puis transmis à Facility Manager pour qualification.</p></div><Badge tone="blue">AUCUN IMPORT</Badge></section>
+    <section className="section-heading round-heading"><div><p className="design-kicker">SAISIE DIRECTE · {persistenceEnabled ? 'EN LIGNE' : 'DÉMONSTRATION'}</p><h2 className="visually-hidden">Rondes</h2><p>{isRoundsAssistance ? 'Ronde cleaning & jardinage' : 'Ronde technique'} : un constat terrain est enregistré dans l’application puis transmis à Facility Manager pour qualification.</p></div><Badge tone="blue">AUCUN IMPORT</Badge></section>
     <OfflineSyncStatus enabled={persistenceEnabled} online={offlineSync.online} running={offlineSync.running} counts={offlineSync.counts} latestIssue={offlineSync.latestIssue} onRetry={() => void offlineSync.retryFailed().then(() => offlineSync.synchronize())} />
     <section className="quick-round-layout">
       <form className="panel quick-round-card" onSubmit={(event) => void submitQuickRound(event)}>
@@ -1827,7 +1827,7 @@ function Report({ persona, onNavigate, persistenceEnabled, offlineSync, flash }:
         <div className="two-fields"><label className="field">Intitulé court<input required value={quickTitle} onChange={(event) => setQuickTitle(event.target.value)} placeholder="Décrivez le problème en quelques mots" /></label><label className="field">Priorité proposée<select value={quickPriority} onChange={(event) => setQuickPriority(event.target.value as Priority)}><option>Critique</option><option>Haute</option><option>Moyenne</option><option>Faible</option></select></label></div>
         <label className="field">Constat<textarea required value={observation} onChange={(event) => setObservation(event.target.value)} placeholder="Décrivez uniquement ce qui a été observé sur le terrain." /></label>
         <div className="evidence-drop is-informational"><span>i</span><div><b>Preuve photo</b><small>Le dépôt hors ligne d’une preuve se fait depuis un dossier existant, après sa création canonique.</small></div></div>
-        <div className="round-submit"><p><span className={`status-dot ${persistenceEnabled && offlineSync.online ? 'online' : 'local'}`} /> {persistenceEnabled ? draftReady ? 'Brouillon enregistré automatiquement sur cet appareil' : 'Chargement du brouillon local…' : 'Simulation sans écriture Supabase'}</p><button className="primary-button" type="submit" disabled={!draftReady}>Transmettre à Facility Manager</button></div>
+        <div className="round-submit"><p><span className={`status-dot ${persistenceEnabled && offlineSync.online ? 'online' : 'local'}`} /> {persistenceEnabled ? draftReady ? 'Brouillon enregistré automatiquement sur cet appareil' : 'Chargement du brouillon local…' : 'Simulation sans écriture serveur'}</p><button className="primary-button" type="submit" disabled={!draftReady}>Transmettre à Facility Manager</button></div>
       </form>
       <aside className="panel direct-flow-card"><p className="design-kicker">APRÈS L’ENVOI</p><h3>Un circuit court et lisible</h3>{['Constat enregistré','Qualification par Facility Manager','Affectation et échéance','Traitement avec preuve'].map((item,index) => <div key={item}><span>{index+1}</span><p><b>{item}</b><small>{index === 0 ? 'Vous gardez une trace immédiate' : 'Le dossier avance dans le même outil'}</small></p></div>)}</aside>
     </section>
@@ -1855,6 +1855,6 @@ function Report({ persona, onNavigate, persistenceEnabled, offlineSync, flash }:
         <article className="panel score-explain-card"><div><span>SCORE WILO</span><b>78/100</b></div><div className="score-freshness"><span><b>État</b>Surveillance</span><span><b>Variation</b>Indisponible</span><span><b>Fraîcheur</b>Non synchronisée</span></div><ul><li><i className="down" /> Pression sous le seuil <b>-8</b></li><li><i className="down" /> Défaut P1 récurrent <b>-10</b></li><li><i className="up" /> Maintenance à jour <b>+6</b></li></ul><p className="analytics-note">Score de maquette : la date de calcul et l’historique réel ne sont pas encore disponibles.</p><button type="button">Voir le détail du calcul</button></article>
       </aside>
     </section>
-    {submitted && <div className="prototype-success" role="status"><span>✓</span><div><b>{persistenceEnabled ? 'Ronde placée dans la file de synchronisation' : 'Simulation de ronde terminée'}</b><small>{persistenceEnabled ? 'Une reprise réseau ne créera pas de doublon.' : 'Aucune donnée n’a été enregistrée dans Supabase.'}</small></div><button onClick={() => setSubmitted(false)}>Continuer</button></div>}
+    {submitted && <div className="prototype-success" role="status"><span>✓</span><div><b>{persistenceEnabled ? 'Ronde placée dans la file de synchronisation' : 'Simulation de ronde terminée'}</b><small>{persistenceEnabled ? 'Une reprise réseau ne créera pas de doublon.' : 'Aucune donnée n’a été enregistrée sur le serveur.'}</small></div><button onClick={() => setSubmitted(false)}>Continuer</button></div>}
   </>;
 }

@@ -31,7 +31,7 @@ function createSessionStorageAdapter() {
 
 export function getBrowserSupabaseClient(): SupabaseClient<Database> {
   if (typeof window === "undefined") {
-    throw new Error("Le client Supabase navigateur ne peut être créé que côté client.");
+    throw new Error("Le client distant ne peut être créé que côté navigateur.");
   }
 
   if (!browserClient) {

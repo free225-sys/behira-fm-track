@@ -11,7 +11,7 @@ type OfflineSyncStatusProps = {
 
 export function OfflineSyncStatus({ enabled, online, running, counts, latestIssue, onRetry }: OfflineSyncStatusProps) {
   if (!enabled) {
-    return <section className="sync-banner is-demo" role="status"><span className="status-dot local" /><div><b>Mode démonstration</b><small>Les interactions de cette vue ne sont pas enregistrées dans Supabase.</small></div></section>;
+    return <section className="sync-banner is-demo" role="status"><span className="status-dot local" /><div><b>Mode démonstration</b><small>Les interactions de cette vue ne sont pas enregistrées sur le serveur métier.</small></div></section>;
   }
 
   const blocked = counts.failed + counts.conflict;

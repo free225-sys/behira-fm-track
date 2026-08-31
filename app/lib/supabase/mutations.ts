@@ -17,7 +17,7 @@ type RpcResult = Record<string, Json | undefined>;
 
 function asRpcResult(value: Json): RpcResult {
   if (!value || Array.isArray(value) || typeof value !== "object") {
-    throw new Error("Réponse Supabase locale invalide.");
+    throw new Error("Réponse du service métier invalide.");
   }
   return value;
 }

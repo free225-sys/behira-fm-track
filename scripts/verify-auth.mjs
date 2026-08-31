@@ -2,6 +2,10 @@ import { readFileSync } from 'node:fs';
 
 const page = readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+const config = readFileSync(new URL('../app/lib/supabase/config.ts', import.meta.url), 'utf8');
+const accessWorkspace = readFileSync(new URL('../app/components/AccessWorkspace.tsx', import.meta.url), 'utf8');
+const offlineStatus = readFileSync(new URL('../app/components/OfflineSyncStatus.tsx', import.meta.url), 'utf8');
+const offlineSync = readFileSync(new URL('../app/lib/offline/useOfflineSync.ts', import.meta.url), 'utf8');
 const checks = [
   ['Connexion et états', ['Bienvenue', 'Connexion…', 'Identifiants non reconnus', 'Connecté ✓'].every((value) => page.includes(value))],
   ['Afficher / masquer', page.includes('Masquer le mot de passe') && page.includes('Afficher le mot de passe')],
@@ -16,6 +20,7 @@ const checks = [
   ['Aucun compte Lecture seule', !page.includes("personaId:'readonly'") && !page.includes('lecture.seule@demo.behira.invalid')],
   ['Mode démonstration explicite', page.includes('MODE DÉMONSTRATION') && page.includes('DÉMONSTRATION LOCALE')],
   ['Préproduction sans démo visible si le repli est désactivé', page.includes('const demoFallbackVisible = !supabaseMode || allowDemoFallback') && page.includes("useState(demoFallbackVisible ? demoAccounts[1].email : '')") && page.includes("screen === 'login' && demoFallbackVisible && <aside") && page.includes("'authentification réelle uniquement'")],
+  ['Marque technique absente des textes visibles', !['Supabase Auth', 'Identifiants Supabase', 'Déconnexion Supabase', "'SUPABASE'", 'stockage privé Supabase', 'écriture Supabase'].some((value) => page.includes(value)) && !config.includes('"Supabase local"') && !config.includes('"Supabase fm_track"') && !accessWorkspace.includes('Supabase Auth') && !offlineStatus.includes('dans Supabase') && !offlineSync.includes('Session Supabase')],
   ['Supabase local branché', page.includes('signInWithPassword') && page.includes('resetPasswordForEmail') && page.includes("mode:'supabase'")],
   ['Première connexion verrouillée', page.includes('RequiredPasswordChange') && page.includes('getAuthenticatedProfileGate') && page.includes('currentPassword')],
   ['Mot de passe robuste obligatoire', page.includes('16 caractères minimum') && page.includes('Différent du temporaire') && page.includes('Confirmation identique')],
