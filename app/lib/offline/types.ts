@@ -63,6 +63,7 @@ export type QueueCounts = Record<QueueStatus, number> & { actionable: number };
 
 export type SyncedFieldRoundReceipt = {
   queueId: string;
+  equipmentCode: string;
   reportReference: string;
   anomalyReference?: string;
   syncedAt?: string;

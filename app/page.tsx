@@ -1716,6 +1716,7 @@ function MeasureRange({ label, value, min, max, unit }: { label:string; value:nu
 type RoundDraft = {
   submissionId?:string;
   performedAt?:string;
+  startedAfterReceiptId?:string;
   step:number;
   pressure:string;
   tankLevel:string;
@@ -1745,6 +1746,7 @@ function Report({ persona, onNavigate, persistenceEnabled, offlineSync, flash }:
   const submissionLockRef = useRef(false);
   const [submissionId, setSubmissionId] = useState('');
   const [performedAt, setPerformedAt] = useState('');
+  const [startedAfterReceiptId, setStartedAfterReceiptId] = useState<string>();
   const [draftReady, setDraftReady] = useState(!persistenceEnabled);
   const [pressure, setPressure] = useState(persistenceEnabled ? '' : '2.8');
   const [tankLevel, setTankLevel] = useState(persistenceEnabled ? '' : '72');
@@ -1757,7 +1759,14 @@ function Report({ persona, onNavigate, persistenceEnabled, offlineSync, flash }:
   const [checks, setChecks] = useState<Record<string,boolean|null>>(persistenceEnabled
     ? { auto:null, p1:null, p2:null, leak:null, valves:null, alarm:null }
     : { auto:true, p1:false, p2:true, leak:true, valves:true, alarm:true });
-  const restoredRoundReceipt = offlineSync.latestRoundReceipt?.queueId === submissionId ? offlineSync.latestRoundReceipt : null;
+  const currentEquipmentCode = surpresseurAccess ? 'WILO-01' : isRoundsAssistance ? 'RND-LET' : 'GE-01';
+  const latestReceiptMatchesEquipment = offlineSync.latestRoundReceipt?.equipmentCode === currentEquipmentCode;
+  const explicitNewRoundAfterLatestReceipt = Boolean(
+    offlineSync.latestRoundReceipt
+      && startedAfterReceiptId === offlineSync.latestRoundReceipt.queueId
+      && submissionId !== offlineSync.latestRoundReceipt.queueId,
+  );
+  const restoredRoundReceipt = latestReceiptMatchesEquipment && !explicitNewRoundAfterLatestReceipt ? offlineSync.latestRoundReceipt : null;
   const roundSubmitted = submitted || Boolean(restoredRoundReceipt);
   const setCheck = (key:string) => setChecks((items) => ({ ...items, [key]:items[key] === null ? true : !items[key] }));
 
@@ -1769,6 +1778,7 @@ function Report({ persona, onNavigate, persistenceEnabled, offlineSync, flash }:
       const value = draft?.value;
       setSubmissionId(value?.submissionId || crypto.randomUUID());
       setPerformedAt(value?.performedAt || new Date().toISOString());
+      setStartedAfterReceiptId(value?.startedAfterReceiptId);
       if (!value) return;
       setStep(value.step); setPressure(value.pressure); setTankLevel(value.tankLevel); setObservation(value.observation);
       setChecks(value.checks); setQuickTitle(value.quickTitle); setQuickPriority(value.quickPriority); setQuickZone(value.quickZone);
@@ -1785,10 +1795,10 @@ function Report({ persona, onNavigate, persistenceEnabled, offlineSync, flash }:
     if (!persistenceEnabled || !draftReady || roundSubmitted || !submissionId || !performedAt) return;
     const timer = window.setTimeout(() => {
       if (submissionLockRef.current) return;
-      void saveDraft<RoundDraft>(draftId, { submissionId, performedAt, step, pressure, tankLevel, observation, checks, quickTitle, quickPriority, quickZone, quickControlType, confirmed });
+      void saveDraft<RoundDraft>(draftId, { submissionId, performedAt, startedAfterReceiptId, step, pressure, tankLevel, observation, checks, quickTitle, quickPriority, quickZone, quickControlType, confirmed });
     }, 450);
     return () => window.clearTimeout(timer);
-  }, [checks, confirmed, draftId, draftReady, observation, performedAt, persistenceEnabled, pressure, quickControlType, quickPriority, quickTitle, quickZone, roundSubmitted, saveDraft, step, submissionId, tankLevel]);
+  }, [checks, confirmed, draftId, draftReady, observation, performedAt, persistenceEnabled, pressure, quickControlType, quickPriority, quickTitle, quickZone, roundSubmitted, saveDraft, startedAfterReceiptId, step, submissionId, tankLevel]);
 
   const syncedReferences = useMemo(() => {
     if (!submissionId || !offlineSync.lastRun) return null;
@@ -1895,14 +1905,33 @@ function Report({ persona, onNavigate, persistenceEnabled, offlineSync, flash }:
     setSubmitting(false);
     setSubmitted(false);
     if (!persistenceEnabled) return;
-    setSubmissionId(crypto.randomUUID());
-    setPerformedAt(new Date().toISOString());
+    const nextSubmissionId = crypto.randomUUID();
+    const nextPerformedAt = new Date().toISOString();
+    const nextStartedAfterReceiptId = offlineSync.latestRoundReceipt?.queueId;
+    setSubmissionId(nextSubmissionId);
+    setPerformedAt(nextPerformedAt);
+    setStartedAfterReceiptId(nextStartedAfterReceiptId);
     setStep(0);
     setPressure('');
     setTankLevel('');
     setObservation('');
     setChecks({ auto:null, p1:null, p2:null, leak:null, valves:null, alarm:null });
     setConfirmed(false);
+    void saveDraft<RoundDraft>(draftId, {
+      submissionId:nextSubmissionId,
+      performedAt:nextPerformedAt,
+      startedAfterReceiptId:nextStartedAfterReceiptId,
+      step:0,
+      pressure:'',
+      tankLevel:'',
+      observation:'',
+      checks:{ auto:null, p1:null, p2:null, leak:null, valves:null, alarm:null },
+      quickTitle:'',
+      quickPriority,
+      quickZone,
+      quickControlType,
+      confirmed:false,
+    });
   };
 
   if (!surpresseurAccess) return <>

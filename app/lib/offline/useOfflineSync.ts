@@ -30,6 +30,7 @@ function fieldRoundReceipt(item: OfflineQueueItem): SyncedFieldRoundReceipt | nu
   if (!reportReference) return null;
   return {
     queueId: item.id,
+    equipmentCode: item.payload.equipmentCode,
     reportReference,
     anomalyReference: typeof item.serverResult.anomaly_reference === "string" ? item.serverResult.anomaly_reference : undefined,
     syncedAt: item.syncedAt,
