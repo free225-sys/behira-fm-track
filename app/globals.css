@@ -2575,12 +2575,12 @@ button.manager-health-card:hover{
     justify-items:stretch;
   }
   .health-score-panel .building-score-ring{margin:0 auto}
-  .health-kpi-grid{grid-template-columns:1fr 1fr}
+  .health-score-panel .health-kpi-grid{grid-template-columns:1fr 1fr}
   .health-kpi>strong{font-size:28px}
   .health-gravity-legend{grid-template-columns:1fr 1fr}
 }
 @media (max-width:430px){
-  .health-kpi-grid{grid-template-columns:1fr}
+  .health-score-panel .health-kpi-grid{grid-template-columns:1fr}
 }
 
 @media (max-width:900px){

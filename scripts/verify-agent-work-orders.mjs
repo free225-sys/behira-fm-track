@@ -36,7 +36,7 @@ const checks = [
   ["libellé, acteur, étape et heure proviennent des référentiels métier", data.includes('from("business_event_definitions")') && data.includes('from("workflow_stages")') && data.includes("actor_label_snapshot") && data.includes("occurredAt: history.occurred_at")],
   ["historique réel injecté dans le dossier", page.includes("const historyEvents = anomaly.history ?? []") && page.includes("Événements métier du dossier") && page.includes("formatHistoryMoment(event.occurredAt)")],
   ["état indisponible conservé uniquement en absence d’événement", page.includes("historyEvents.length > 0 ?") && page.includes("Historique métier indisponible")],
-  ["données de démonstration séparées", page.includes("const [demoTasks, setDemoTasks]") && page.includes("Vue terrain de démonstration")],
+  ["données de démonstration séparées", page.includes("const [demoTasks, setDemoTasks]") && page.includes("liveMode ? workOrders : demoTasks") && page.includes("Appliquer dans la démonstration")],
 ];
 
 const failures = checks.filter(([, passed]) => !passed);

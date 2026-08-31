@@ -13,7 +13,7 @@ import { BuildingHealthCockpit, ScoreRing } from './components/BuildingHealthCoc
 import { NotificationBell } from './components/NotificationCenter';
 import { ParametersWorkspace, type ParameterWorkspaceData } from './components/ParametersWorkspace';
 import { SyncStatusNotice, type SyncStatusState } from './components/SyncStatusNotice';
-import { Badge, Button, Card, Field, FieldError, IconButton, Select } from './components/ui';
+import { Badge, Button, Card, Field, FieldError, Select } from './components/ui';
 import { WorkflowAnalytics } from './components/WorkflowAnalytics';
 import {
   hasFieldErrors,
@@ -2444,7 +2444,7 @@ function Report({ persona, onNavigate, persistenceEnabled, offlineSync, flash }:
       </article>
       <aside className="surpresseur-aside">
         <article className="panel next-action-card"><p className="design-kicker">À SURVEILLER</p><span className="next-action-icon">!</span><h3>Pompe P1 indisponible</h3><p>Deuxième défaut en sept jours. Le réarmement provisoire ne permet pas la clôture.</p><div><span>Responsable pressenti</span><b>Agent Eau & Incendie</b></div></article>
-        <article className="panel score-explain-card"><div><span>SCORE WILO</span><b>78/100</b></div><div className="score-freshness"><span><b>État</b>Surveillance</span><span><b>Variation</b>Indisponible</span><span><b>Fraîcheur</b>Non synchronisée</span></div><ul><li><i className="down" /> Pression sous le seuil <b>-8</b></li><li><i className="down" /> Défaut P1 récurrent <b>-10</b></li><li><i className="up" /> Maintenance à jour <b>+6</b></li></ul><p className="analytics-note">Score de maquette : la date de calcul et l’historique réel ne sont pas encore disponibles.</p><button type="button">Voir le détail du calcul</button></article>
+        <article className="panel score-explain-card"><div><span>SCORE WILO</span><b>—/100</b></div><div className="score-freshness"><span><b>État</b>Non calculable</span><span><b>Variation</b>Indisponible</span><span><b>Fraîcheur</b>Non synchronisée</span></div><div className="compact-insufficient-state" role="status"><span>⌁</span><div><b>Score non calculable — données insuffisantes</b><p>Le calcul WILO-01 reste suspendu jusqu’à la validation des huit décisions métier. Aucune criticité, tendance ou pondération n’est déduite.</p></div></div></article>
       </aside>
     </section>
     {roundSubmitted && <div className="prototype-success" role="status"><span>✓</span><div><b>{persistenceEnabled ? displayedReferences?.reportReference ? `Ronde ${displayedReferences.reportReference} synchronisée` : 'Ronde placée dans la file de synchronisation' : 'Simulation de ronde terminée'}</b><small>{persistenceEnabled ? displayedReferences?.anomalyReference ? `Constat ${displayedReferences.anomalyReference} transmis à Facility Manager.` : displayedReferences?.reportReference ? 'Ronde enregistrée sans constat séparé.' : 'Un seul envoi est autorisé ; la référence apparaîtra après synchronisation.' : 'Aucune donnée n’a été enregistrée sur le serveur.'}</small></div><button onClick={startNextRound}>Nouvelle ronde</button></div>}

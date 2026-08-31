@@ -84,7 +84,6 @@ function inPerimeter(asset: string, personaId: ErrorPersonaId) {
 
 export function deriveErrorNotifications({
   anomalies,
-  equipment: _equipment,
   dataState,
   personaId,
   rules,
@@ -255,7 +254,8 @@ export function NotificationBell({
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setReadIds(readJson<string[]>(STORAGE_READ, []));
+    const frame = window.requestAnimationFrame(() => setReadIds(readJson<string[]>(STORAGE_READ, [])));
+    return () => window.cancelAnimationFrame(frame);
   }, []);
 
   const items = useMemo(

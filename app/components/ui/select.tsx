@@ -99,7 +99,6 @@ export function Select({
         aria-expanded={open}
         aria-controls={listId}
         aria-label={ariaLabel}
-        aria-required={required}
         onClick={() => setOpen((current) => !current)}
         onKeyDown={(event) => {
           if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
@@ -117,6 +116,7 @@ export function Select({
           role="listbox"
           className="app-select-list"
           aria-label={ariaLabel}
+          aria-required={required}
           style={openUp
             ? { left: rect.left, width: Math.max(rect.width, 160), bottom: window.innerHeight - rect.top + 4 }
             : { left: rect.left, width: Math.max(rect.width, 160), top: rect.bottom + 4 }}
