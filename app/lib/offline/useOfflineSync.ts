@@ -92,10 +92,10 @@ export function useOfflineSync({ enabled, userId, onSynced }: OfflineSyncOptions
     return item.id;
   }, [enabled, refresh, synchronize, userId]);
 
-  const enqueueRound = useCallback(async (payload: FieldRoundPayload) => {
+  const enqueueRound = useCallback(async (payload: FieldRoundPayload, clientMutationId: string) => {
     if (!userId) throw new Error("Session authentifiée requise.");
     const now = new Date().toISOString();
-    return enqueue({ id: crypto.randomUUID(), ownerUserId: userId, kind: "field-round", payload, status: "pending", attempts: 0, createdAt: now, updatedAt: now });
+    return enqueue({ id: clientMutationId, ownerUserId: userId, kind: "field-round", payload, status: "pending", attempts: 0, createdAt: now, updatedAt: now });
   }, [enqueue, userId]);
 
   const enqueueProof = useCallback(async (payload: AnomalyProofPayload) => {

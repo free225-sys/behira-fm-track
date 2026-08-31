@@ -1696,6 +1696,8 @@ function MeasureRange({ label, value, min, max, unit }: { label:string; value:nu
 }
 
 type RoundDraft = {
+  submissionId?:string;
+  performedAt?:string;
   step:number;
   pressure:string;
   tankLevel:string;
@@ -1721,6 +1723,11 @@ function Report({ persona, onNavigate, persistenceEnabled, offlineSync, flash }:
   const draftId = `round:${persona.id}:${surpresseurAccess ? 'WILO-01' : isRoundsAssistance ? 'RND-LET' : 'GE-01'}`;
   const [step, setStep] = useState(0);
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const submissionLockRef = useRef(false);
+  const [submissionId, setSubmissionId] = useState('');
+  const [performedAt, setPerformedAt] = useState('');
+  const [syncedReferences, setSyncedReferences] = useState<{ reportReference:string; anomalyReference?:string } | null>(null);
   const [draftReady, setDraftReady] = useState(!persistenceEnabled);
   const [pressure, setPressure] = useState(persistenceEnabled ? '' : '2.8');
   const [tankLevel, setTankLevel] = useState(persistenceEnabled ? '' : '72');
@@ -1739,46 +1746,74 @@ function Report({ persona, onNavigate, persistenceEnabled, offlineSync, flash }:
     let cancelled = false;
     if (!persistenceEnabled) return;
     loadDraft<RoundDraft>(draftId).then((draft) => {
-      if (cancelled || !draft) return;
-      const value = draft.value;
+      if (cancelled) return;
+      const value = draft?.value;
+      setSubmissionId(value?.submissionId || crypto.randomUUID());
+      setPerformedAt(value?.performedAt || new Date().toISOString());
+      if (!value) return;
       setStep(value.step); setPressure(value.pressure); setTankLevel(value.tankLevel); setObservation(value.observation);
       setChecks(value.checks); setQuickTitle(value.quickTitle); setQuickPriority(value.quickPriority); setQuickZone(value.quickZone);
       setQuickControlType(value.quickControlType); setConfirmed(value.confirmed);
+    }).catch(() => {
+      if (cancelled) return;
+      setSubmissionId(crypto.randomUUID());
+      setPerformedAt(new Date().toISOString());
     }).finally(() => { if (!cancelled) setDraftReady(true); });
     return () => { cancelled = true; };
   }, [draftId, loadDraft, persistenceEnabled]);
 
   useEffect(() => {
-    if (!persistenceEnabled || !draftReady || submitted) return;
+    if (!persistenceEnabled || !draftReady || submitted || !submissionId || !performedAt) return;
     const timer = window.setTimeout(() => {
-      void saveDraft<RoundDraft>(draftId, { step, pressure, tankLevel, observation, checks, quickTitle, quickPriority, quickZone, quickControlType, confirmed });
+      void saveDraft<RoundDraft>(draftId, { submissionId, performedAt, step, pressure, tankLevel, observation, checks, quickTitle, quickPriority, quickZone, quickControlType, confirmed });
     }, 450);
     return () => window.clearTimeout(timer);
-  }, [checks, confirmed, draftId, draftReady, observation, persistenceEnabled, pressure, quickControlType, quickPriority, quickTitle, quickZone, saveDraft, step, submitted, tankLevel]);
+  }, [checks, confirmed, draftId, draftReady, observation, performedAt, persistenceEnabled, pressure, quickControlType, quickPriority, quickTitle, quickZone, saveDraft, step, submissionId, submitted, tankLevel]);
+
+  useEffect(() => {
+    if (!submissionId || !offlineSync.lastRun) return;
+    const item = offlineSync.lastRun.syncedItems.find((entry) => entry.queueId === submissionId && entry.kind === 'field-round');
+    if (!item || !item.serverResult || typeof item.serverResult !== 'object' || Array.isArray(item.serverResult)) return;
+    const reportReference = typeof item.serverResult.report_reference === 'string' ? item.serverResult.report_reference : '';
+    const anomalyReference = typeof item.serverResult.anomaly_reference === 'string' ? item.serverResult.anomaly_reference : undefined;
+    if (reportReference) setSyncedReferences({ reportReference, anomalyReference });
+  }, [offlineSync.lastRun, submissionId]);
 
   const finalizeQueuedRound = async () => {
     await deleteDraft(draftId);
     setSubmitted(true);
+    setSubmitting(false);
     flash(offlineSync.online ? 'Ronde mise en file ; synchronisation lancée.' : 'Ronde protégée sur cet appareil ; synchronisation automatique au retour du réseau.');
   };
 
   const submitQuickRound = async (event:FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!persistenceEnabled) { setSubmitted(true); return; }
+    if (submissionLockRef.current || submitted) return;
+    submissionLockRef.current = true;
+    setSubmitting(true);
+    if (!persistenceEnabled) { setSubmitted(true); setSubmitting(false); return; }
+    if (!submissionId || !performedAt) {
+      submissionLockRef.current = false;
+      setSubmitting(false);
+      flash('La ronde n’est pas encore prête. Patientez un instant puis réessayez.');
+      return;
+    }
     try {
       await enqueueRound({
         equipmentCode:isRoundsAssistance ? 'RND-LET' : 'GE-01',
         reportType:isRoundsAssistance ? 'cleaning_gardening_round' : 'technical_round',
-        performedAt:new Date().toISOString(),
+        performedAt,
         summary:observation.trim(),
         checks:[
           { code:'TYPE_CONTROLE', label:'Type de contrôle', status:'ok', valueText:quickControlType, notes:`Zone déclarée : ${quickZone}` },
           { code:'CONSTAT_TERRAIN', label:'Constat terrain', status:'alert', valueText:observation.trim() },
         ],
         anomaly:{ title:quickTitle.trim(), description:observation.trim(), priority:quickPriority },
-      });
+      }, submissionId);
       await finalizeQueuedRound();
     } catch (error) {
+      submissionLockRef.current = false;
+      setSubmitting(false);
       flash(`Ronde non mise en file : ${error instanceof Error ? error.message : 'stockage local indisponible'}.`);
     }
   };
@@ -1792,9 +1827,18 @@ function Report({ persona, onNavigate, persistenceEnabled, offlineSync, flash }:
   const hasCheckAlert = Object.values(checks).some((value) => value === false);
 
   const submitSurpresseurRound = async () => {
-    if (!persistenceEnabled) { setSubmitted(true); return; }
+    if (submissionLockRef.current || submitted) return;
     if (!Number.isFinite(pressureValue) || !Number.isFinite(tankValue) || reviewedChecks < 6 || !confirmed) {
       flash('Complétez les deux mesures, les six contrôles et la confirmation avant l’envoi.');
+      return;
+    }
+    submissionLockRef.current = true;
+    setSubmitting(true);
+    if (!persistenceEnabled) { setSubmitted(true); setSubmitting(false); return; }
+    if (!submissionId || !performedAt) {
+      submissionLockRef.current = false;
+      setSubmitting(false);
+      flash('La ronde n’est pas encore prête. Patientez un instant puis réessayez.');
       return;
     }
     const anomalyTitle = hasPressureAlert ? 'Pression Wilo sous le seuil attendu' : hasCheckAlert ? 'Écart constaté pendant la ronde WILO-01' : undefined;
@@ -1802,7 +1846,7 @@ function Report({ persona, onNavigate, persistenceEnabled, offlineSync, flash }:
       await enqueueRound({
         equipmentCode:'WILO-01',
         reportType:'wilo_round',
-        performedAt:new Date().toISOString(),
+        performedAt,
         summary:observation.trim(),
         checks:[
           { code:'PRESSION_RESEAU', label:'Pression réseau', status:hasPressureAlert ? 'alert' : 'ok', valueNumeric:pressureValue, unit:'bar' },
@@ -1810,11 +1854,29 @@ function Report({ persona, onNavigate, persistenceEnabled, offlineSync, flash }:
           ...[['auto','Mode automatique actif'],['p1','Pompe P1 disponible'],['p2','Pompe P2 disponible'],['leak','Absence de fuite active'],['valves','Vannes en position normale'],['alarm','Aucune alarme active']].map(([code,label]) => ({ code:code.toUpperCase(), label, status:checks[code] ? 'ok' as const : 'alert' as const, valueBoolean:Boolean(checks[code]) })),
         ],
         ...(anomalyTitle ? { anomaly:{ title:anomalyTitle, description:observation.trim() || 'Écart relevé pendant la ronde WILO-01.', priority:hasPressureAlert || checks.p1 === false ? 'Haute' as const : 'Moyenne' as const } } : {}),
-      });
+      }, submissionId);
       await finalizeQueuedRound();
     } catch (error) {
+      submissionLockRef.current = false;
+      setSubmitting(false);
       flash(`Ronde non mise en file : ${error instanceof Error ? error.message : 'stockage local indisponible'}.`);
     }
+  };
+
+  const startNextRound = () => {
+    submissionLockRef.current = false;
+    setSubmitting(false);
+    setSubmitted(false);
+    setSyncedReferences(null);
+    if (!persistenceEnabled) return;
+    setSubmissionId(crypto.randomUUID());
+    setPerformedAt(new Date().toISOString());
+    setStep(0);
+    setPressure('');
+    setTankLevel('');
+    setObservation('');
+    setChecks({ auto:null, p1:null, p2:null, leak:null, valves:null, alarm:null });
+    setConfirmed(false);
   };
 
   if (!surpresseurAccess) return <>
@@ -1827,11 +1889,11 @@ function Report({ persona, onNavigate, persistenceEnabled, offlineSync, flash }:
         <div className="two-fields"><label className="field">Intitulé court<input required value={quickTitle} onChange={(event) => setQuickTitle(event.target.value)} placeholder="Décrivez le problème en quelques mots" /></label><label className="field">Priorité proposée<select value={quickPriority} onChange={(event) => setQuickPriority(event.target.value as Priority)}><option>Critique</option><option>Haute</option><option>Moyenne</option><option>Faible</option></select></label></div>
         <label className="field">Constat<textarea required value={observation} onChange={(event) => setObservation(event.target.value)} placeholder="Décrivez uniquement ce qui a été observé sur le terrain." /></label>
         <div className="evidence-drop is-informational"><span>i</span><div><b>Preuve photo</b><small>Le dépôt hors ligne d’une preuve se fait depuis un dossier existant, après sa création canonique.</small></div></div>
-        <div className="round-submit"><p><span className={`status-dot ${persistenceEnabled && offlineSync.online ? 'online' : 'local'}`} /> {persistenceEnabled ? draftReady ? 'Brouillon enregistré automatiquement sur cet appareil' : 'Chargement du brouillon local…' : 'Simulation sans écriture serveur'}</p><button className="primary-button" type="submit" disabled={!draftReady}>Transmettre à Facility Manager</button></div>
+        <div className="round-submit"><p><span className={`status-dot ${persistenceEnabled && offlineSync.online ? 'online' : 'local'}`} /> {persistenceEnabled ? draftReady ? 'Brouillon enregistré automatiquement sur cet appareil' : 'Chargement du brouillon local…' : 'Simulation sans écriture serveur'}</p><button className="primary-button" type="submit" disabled={!draftReady || submitting || submitted} aria-busy={submitting}>{submitting ? 'Transmission…' : submitted ? 'Déjà transmis' : 'Transmettre à Facility Manager'}</button></div>
       </form>
       <aside className="panel direct-flow-card"><p className="design-kicker">APRÈS L’ENVOI</p><h3>Un circuit court et lisible</h3>{['Constat enregistré','Qualification par Facility Manager','Affectation et échéance','Traitement avec preuve'].map((item,index) => <div key={item}><span>{index+1}</span><p><b>{item}</b><small>{index === 0 ? 'Vous gardez une trace immédiate' : 'Le dossier avance dans le même outil'}</small></p></div>)}</aside>
     </section>
-    {submitted && <div className="prototype-success" role="status"><span>✓</span><div><b>{persistenceEnabled ? 'Constat placé dans la file de synchronisation' : 'Simulation de constat terminée'}</b><small>{persistenceEnabled ? 'L’identifiant unique empêche toute création en double lors d’une reprise.' : 'Aucune donnée n’a été enregistrée ou transmise.'}</small></div><button onClick={() => onNavigate('workspace')}>Retour à mon espace</button></div>}
+    {submitted && <div className="prototype-success" role="status"><span>✓</span><div><b>{persistenceEnabled ? syncedReferences?.anomalyReference ? `Constat ${syncedReferences.anomalyReference} transmis` : 'Constat placé dans la file de synchronisation' : 'Simulation de constat terminée'}</b><small>{persistenceEnabled ? syncedReferences?.reportReference ? `Ronde ${syncedReferences.reportReference} enregistrée · un nouvel envoi réutilise le même identifiant.` : 'Un seul envoi est autorisé ; la référence apparaîtra après synchronisation.' : 'Aucune donnée n’a été enregistrée ou transmise.'}</small></div><button onClick={() => onNavigate('workspace')}>Retour à mon espace</button></div>}
   </>;
 
   return <>
@@ -1848,13 +1910,13 @@ function Report({ persona, onNavigate, persistenceEnabled, offlineSync, flash }:
         {step === 2 && <div className="surpresseur-fields"><div className="check-grid">{[['auto','Mode automatique actif','Commande générale'],['p1','Pompe P1 disponible','Pompe prioritaire'],['p2','Pompe P2 disponible','Pompe de secours'],['leak','Absence de fuite active','Collecteur et raccords']].map(([key,title,detail]) => <button type="button" key={key} className={checks[key] === null ? 'unreviewed' : checks[key] ? 'checked' : 'unchecked'} onClick={() => setCheck(key)}><span>{checks[key] === null ? '○' : checks[key] ? '✓' : '!'}</span><p><b>{title}</b><small>{detail}</small></p><em>{checks[key] === null ? 'À contrôler' : checks[key] ? 'Conforme' : 'À signaler'}</em></button>)}</div></div>}
         {step === 3 && <div className="surpresseur-fields"><div className="check-grid compact">{[['valves','Vannes en position normale','Aspiration et refoulement'],['alarm','Aucune alarme active','Coffret et supervision']].map(([key,title,detail]) => <button type="button" key={key} className={checks[key] === null ? 'unreviewed' : checks[key] ? 'checked' : 'unchecked'} onClick={() => setCheck(key)}><span>{checks[key] === null ? '○' : checks[key] ? '✓' : '!'}</span><p><b>{title}</b><small>{detail}</small></p><em>{checks[key] === null ? 'À contrôler' : checks[key] ? 'Conforme' : 'À signaler'}</em></button>)}</div><label className="field">Observation terrain<textarea value={observation} onChange={(event) => setObservation(event.target.value)} placeholder="Observation factuelle ou précision sur un écart." /></label><div className="evidence-drop is-informational"><span>i</span><div><b>Photo du manomètre ou du coffret</b><small>La preuve sera déposée depuis le dossier canonique créé après synchronisation.</small></div></div></div>}
         {step === 4 && <div className="surpresseur-fields"><div className="round-summary"><div><span>MESURES</span><b className={hasPressureAlert ? 'warning' : ''}>{pressure || '—'} bar</b><small>Pression réseau</small></div><div><span>NIVEAU</span><b>{tankLevel || '—'} %</b><small>Bâche de stockage</small></div><div><span>CONTRÔLES</span><b>{completedChecks}/6</b><small>{reviewedChecks}/6 vérifiés</small></div></div>{(hasPressureAlert || hasCheckAlert) ? <div className="proposed-finding"><span>!</span><div><p>CONSTAT PROPOSÉ</p><h4>{hasPressureAlert ? 'Pression Wilo sous le seuil attendu' : 'Écart constaté pendant la ronde'}</h4><small>Priorité proposée : {hasPressureAlert || checks.p1 === false ? 'Haute' : 'Moyenne'} · Transmission à Facility Manager.</small></div><Badge tone="orange">À QUALIFIER</Badge></div> : <div className="surpresseur-callout"><span>✓</span><p><b>Aucun écart déclaré</b><small>La ronde sera conservée sans créer d’anomalie.</small></p></div>}<label className="confirmation-line"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} /><span>Je confirme que les valeurs correspondent à la ronde réalisée sur WILO-01.</span></label></div>}
-        <div className="surpresseur-actions"><button className="secondary-button" disabled={step === 0} onClick={() => setStep((value) => Math.max(0,value-1))}>← Précédent</button><p><span className={`status-dot ${persistenceEnabled && offlineSync.online ? 'online' : 'local'}`} /> {persistenceEnabled ? draftReady ? 'Brouillon local automatique' : 'Chargement du brouillon…' : 'Simulation locale'}</p>{step < 4 ? <button className="primary-button" onClick={() => setStep((value) => Math.min(4,value+1))}>Continuer →</button> : <button className="primary-button" disabled={!draftReady} onClick={() => void submitSurpresseurRound()}>Terminer la ronde</button>}</div>
+        <div className="surpresseur-actions"><button className="secondary-button" disabled={step === 0 || submitting || submitted} onClick={() => setStep((value) => Math.max(0,value-1))}>← Précédent</button><p><span className={`status-dot ${persistenceEnabled && offlineSync.online ? 'online' : 'local'}`} /> {persistenceEnabled ? draftReady ? 'Brouillon local automatique' : 'Chargement du brouillon…' : 'Simulation locale'}</p>{step < 4 ? <button className="primary-button" disabled={submitting || submitted} onClick={() => setStep((value) => Math.min(4,value+1))}>Continuer →</button> : <button className="primary-button" disabled={!draftReady || submitting || submitted} aria-busy={submitting} onClick={() => void submitSurpresseurRound()}>{submitting ? 'Transmission…' : submitted ? 'Ronde transmise' : 'Terminer la ronde'}</button>}</div>
       </article>
       <aside className="surpresseur-aside">
         <article className="panel next-action-card"><p className="design-kicker">À SURVEILLER</p><span className="next-action-icon">!</span><h3>Pompe P1 indisponible</h3><p>Deuxième défaut en sept jours. Le réarmement provisoire ne permet pas la clôture.</p><div><span>Responsable pressenti</span><b>Agent Eau & Incendie</b></div></article>
         <article className="panel score-explain-card"><div><span>SCORE WILO</span><b>78/100</b></div><div className="score-freshness"><span><b>État</b>Surveillance</span><span><b>Variation</b>Indisponible</span><span><b>Fraîcheur</b>Non synchronisée</span></div><ul><li><i className="down" /> Pression sous le seuil <b>-8</b></li><li><i className="down" /> Défaut P1 récurrent <b>-10</b></li><li><i className="up" /> Maintenance à jour <b>+6</b></li></ul><p className="analytics-note">Score de maquette : la date de calcul et l’historique réel ne sont pas encore disponibles.</p><button type="button">Voir le détail du calcul</button></article>
       </aside>
     </section>
-    {submitted && <div className="prototype-success" role="status"><span>✓</span><div><b>{persistenceEnabled ? 'Ronde placée dans la file de synchronisation' : 'Simulation de ronde terminée'}</b><small>{persistenceEnabled ? 'Une reprise réseau ne créera pas de doublon.' : 'Aucune donnée n’a été enregistrée sur le serveur.'}</small></div><button onClick={() => setSubmitted(false)}>Continuer</button></div>}
+    {submitted && <div className="prototype-success" role="status"><span>✓</span><div><b>{persistenceEnabled ? syncedReferences?.reportReference ? `Ronde ${syncedReferences.reportReference} synchronisée` : 'Ronde placée dans la file de synchronisation' : 'Simulation de ronde terminée'}</b><small>{persistenceEnabled ? syncedReferences?.anomalyReference ? `Constat ${syncedReferences.anomalyReference} transmis à Facility Manager.` : syncedReferences?.reportReference ? 'Ronde enregistrée sans constat séparé.' : 'Un seul envoi est autorisé ; la référence apparaîtra après synchronisation.' : 'Aucune donnée n’a été enregistrée sur le serveur.'}</small></div><button onClick={startNextRound}>Nouvelle ronde</button></div>}
   </>;
 }

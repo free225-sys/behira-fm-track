@@ -17,6 +17,11 @@ export type SyncRunResult = {
   failed: number;
   conflicts: number;
   deferred: number;
+  syncedItems: Array<{
+    queueId: string;
+    kind: OfflineQueueItem["kind"];
+    serverResult: Json;
+  }>;
 };
 
 function errorShape(error: unknown): SyncErrorShape {
@@ -56,7 +61,7 @@ export async function runOfflineSync(
   ownerUserId: string,
   onSynced?: (item: OfflineQueueItem, result: Json) => void | Promise<void>,
 ): Promise<SyncRunResult> {
-  const result: SyncRunResult = { synced: 0, failed: 0, conflicts: 0, deferred: 0 };
+  const result: SyncRunResult = { synced: 0, failed: 0, conflicts: 0, deferred: 0, syncedItems: [] };
   if (typeof navigator !== "undefined" && !navigator.onLine) return { ...result, deferred: 1 };
 
   const { data, error } = await client.auth.getUser();
@@ -78,6 +83,7 @@ export async function runOfflineSync(
       const syncedAt = new Date().toISOString();
       await patchQueueItem(item.id, { status: "synced", syncedAt, serverResult, lastError: undefined });
       result.synced += 1;
+      result.syncedItems.push({ queueId:item.id, kind:item.kind, serverResult });
       await onSynced?.(item, serverResult);
     } catch (syncError) {
       const lastError = errorMessage(syncError);

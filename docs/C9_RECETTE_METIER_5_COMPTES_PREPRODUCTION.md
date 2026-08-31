@@ -104,6 +104,51 @@ Créer trois dossiers pilotes identifiables comme données de recette :
 | Sylvain | `WILO-01` | Réaliser la ronde Surpresseur et transmettre un écart |
 | Laetitia | `RND-LET` | Saisir un constat de ronde cleaning/jardinage |
 
+#### Avancement de la séquence 2
+
+| Titulaire | Référence anomalie | Rapport source | Équipement | Priorité enregistrée | Statut | Doublon | Résultat |
+|---|---|---|---|---|---|---:|---|
+| Évariste | `ANO-2026-000001` | `REP-2026-000001` | `GE-01` | Prioritaire | À qualifier | Non | OK |
+| Sylvain | `ANO-2026-000002` à `000004` | `REP-2026-000002` à `000004` | `WILO-01` | Urgent | À qualifier | Oui, 3 occurrences | ÉCART — recette arrêtée |
+| Laetitia | En attente | En attente | `RND-LET` | En attente | En attente | — | À faire |
+
+Le premier constat a été enregistré le 31 août 2026 par Évariste avec une seule
+occurrence et une mutation cliente idempotente. L'auteur, l'équipement, le rapport
+source et le statut sont conformes. Écart UX observé : la confirmation d'envoi
+indique la synchronisation, mais n'affiche pas la référence canonique générée ;
+celle-ci reste visible dans le registre et vérifiable dans la base. Cet écart ne
+remet pas en cause la persistance, mais doit être corrigé avant la clôture produit.
+
+Le contrôle Sylvain a déclenché un arrêt de recette : trois clics sur « Terminer
+la ronde » ont créé trois rapports et trois anomalies distincts. Les références
+sont `REP-2026-000002` / `ANO-2026-000002`, `REP-2026-000003` /
+`ANO-2026-000003` et `REP-2026-000004` / `ANO-2026-000004`. Les trois écritures
+ont des identifiants de mutation différents ; elles ne sont donc pas reconnues
+comme le rejeu d'une même soumission.
+
+Cause confirmée dans le frontend : chaque appel à `enqueueRound` génère un nouvel
+UUID, tandis que le bouton reste actif pendant l'attente et que l'état
+`submitted` n'est posé qu'après la mise en file. La protection actuelle est
+idempotente par élément de file, pas par action utilisateur. Aucun doublon n'est
+supprimé tant que le responsable de recette n'a pas validé la stratégie de
+nettoyage. La séquence 2 reste en pause.
+
+#### Correctif C9-FIX-01
+
+Le correctif validé conserve désormais avec chaque brouillon un identifiant de
+soumission et un horodatage stables, neutralise le bouton dès sa première
+activation et affiche les références canoniques `REP-…` / `ANO-…` après réponse
+du serveur. Un rejeu réseau de la même ronde réutilise le même identifiant ; une
+nouvelle ronde explicite crée seule un nouvel identifiant.
+
+La validation locale est complète : triple activation simulée sans second envoi,
+contrôles hors ligne **23/23**, résilience **12/12**, Auth **20/20**, personas
+**38/38**, audit visuel **92/92**, lint et build réussis, puis reconstruction de
+la base et **13/13** suites SQL réussies. La séquence 2 reste suspendue jusqu'à
+publication de ce correctif et contrôle d'une nouvelle ronde Sylvain en
+préproduction. Les deux paires en doublon restent intactes en attente d'une
+autorisation de nettoyage séparée.
+
 Pour chaque dossier, relever la référence créée, l'heure, l'équipement, la
 priorité proposée et le nom de l'auteur. Vérifier qu'un rejeu réseau ne crée pas
 de doublon.

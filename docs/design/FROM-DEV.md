@@ -2,6 +2,297 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-040 — C9-FIX-01 : soumission de ronde verrouillée et traçable
+
+- **Date :** 31 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté et vérifié localement — prêt pour publication en préproduction
+- **Périmètre :** file hors ligne, formulaire de ronde, retour de synchronisation et garde-fous automatisés ; aucun schéma, droit, rôle ou donnée distante modifié
+
+Le correctif raccorde l'action utilisateur à l'idempotence déjà présente côté
+serveur. Chaque brouillon de ronde conserve désormais un identifiant de
+soumission et un horodatage métier stables. Un rejeu réseau réutilise ces deux
+valeurs ; il ne peut donc plus devenir une nouvelle ronde à cause d'un UUID ou
+d'une date régénérés par l'interface.
+
+Le bouton est verrouillé synchroniquement dès la première activation, affiche
+son état de transmission et reste neutralisé après la mise en file. Une nouvelle
+ronde explicite crée seule un nouvel identifiant. Après confirmation serveur,
+l'interface restitue la référence `REP-…` et, lorsqu'un constat est créé, la
+référence `ANO-…`. La preuve d'idempotence serveur demeure la fonction et les
+contraintes existantes ; aucune seconde règle métier n'a été introduite.
+
+### Vérifications réalisées
+
+- trois activations quasi simultanées dans le navigateur : un seul état transmis,
+  un seul message de succès, bouton immédiatement neutralisé ;
+- console navigateur : aucune erreur ni avertissement ;
+- contrôle hors ligne : **23/23**, dont identifiant et horodatage stables,
+  verrou de clic et restitution des références ;
+- résilience terrain : **12/12** ; Auth : **20/20** ; personas : **38/38** ;
+  audit visuel : **92/92** ;
+- lint et build de production réussis ;
+- reconstruction complète de la base locale et **13/13** suites pgTAP réussies,
+  notamment le rejeu de la ronde avec la même mutation et le refus d'un contenu
+  différent sous le même identifiant.
+
+Les doublons `REP/ANO-2026-000003` et `000004` ne sont pas supprimés par ce lot :
+leur nettoyage reste une action distincte qui exige une autorisation explicite.
+
+- **Suite proposée :** publier le correctif sur la préproduction distincte,
+  reprendre une seule ronde Sylvain et contrôler sa référence, puis décider du
+  nettoyage des deux paires en doublon avant de poursuivre avec Laetitia.
+
+## DEV-039 — C9 arrêtée sur des doublons de ronde WILO
+
+- **Date :** 31 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Écart bloquant de recette — séquence 2 en pause
+- **Périmètre :** diagnostic et traçabilité en lecture seule ; aucune donnée supprimée, aucun code ou schéma modifié
+
+Le message affiché après « Terminer la ronde » est une confirmation de mise en
+file, pas une erreur. Cependant, trois activations ont produit trois rapports
+`REP-2026-000002` à `REP-2026-000004` et trois anomalies
+`ANO-2026-000002` à `ANO-2026-000004` pour le même constat WILO-01 de Sylvain.
+Chaque écriture possède un `client_mutation_id` différent.
+
+La cause est confirmée dans le code : `enqueueRound` génère un nouvel UUID à
+chaque appel, le bouton n'est pas neutralisé pendant la soumission et l'état
+`submitted` n'est appliqué qu'après la mise en file. L'idempotence serveur protège
+le rejeu d'un même élément de file, mais pas plusieurs soumissions du même
+formulaire. L'absence de référence dans le message de succès favorise en outre
+les nouveaux clics lorsque l'utilisateur croit que rien n'a été créé.
+
+Aucune suppression ou correction n'est effectuée dans ce constat. Le correctif
+minimal proposé pour validation combine : identifiant stable stocké avec le
+brouillon, verrou immédiat du bouton avec état d'envoi, retour clair de la
+référence après synchronisation, et tests de triple clic / rejeu réseau / reprise
+après erreur. Après correction, conserver le premier dossier et supprimer les
+deux doublons uniquement avec autorisation explicite.
+
+- **Suite proposée :** autoriser le lot correctif C9-FIX-01, le tester localement
+  puis en préproduction, décider du nettoyage des quatre objets en doublon, et
+  reprendre la recette Sylvain avant de passer à Laetitia.
+
+## DEV-038 — C9 : constat pilote Évariste persistant et unique
+
+- **Date :** 31 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Réussi — 1 constat pilote sur 3 validé dans la séquence 2
+- **Périmètre :** contrôle en lecture seule du constat et de son rapport source ; aucune donnée métier modifiée par le Dev Lead
+
+Le constat `[RECETTE C9] Contrôle GE-01` est enregistré sous la référence
+`ANO-2026-000001`, rattaché à la ronde `REP-2026-000001`, à l'équipement `GE-01`
+et à Évariste DJE. Sa priorité enregistrée est `Prioritaire`, son statut est
+`À qualifier` et une seule occurrence existe. L'identifiant de mutation client
+est présent, ce qui permet le contrôle d'idempotence du parcours.
+
+La recette a également révélé un écart d'interface : la confirmation de
+synchronisation ne montre pas la référence canonique créée. La donnée est bien
+persistée et visible dans le registre, mais la référence doit être remontée dans
+le retour utilisateur avant la clôture produit.
+
+- **Suite proposée :** créer la ronde pilote de Sylvain sur `WILO-01`, avec un
+  écart contrôlé produisant un dossier, puis vérifier référence, mesures, auteur,
+  périmètre et absence de doublon.
+
+## DEV-037 — C9 : séquence 1 close avec Laetitia
+
+- **Date :** 31 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Réussi — 5 comptes sur 5 validés
+- **Périmètre :** contrôle Auth, rôle, périmètre et absence de permission de Laetitia en lecture seule ; aucune donnée métier, règle ou mot de passe manipulé par le Dev Lead
+
+Laetitia a personnalisé elle-même son mot de passe, s'est déconnectée puis s'est
+reconnectée. La dernière connexion est postérieure au changement et le verrou est
+levé. Son profil demeure `field_agent`, strictement limité à `RND-LET`, sans le
+droit `upload_vendor_intervention_report` et sans accès attribué aux équipements
+techniques des autres agents.
+
+Les cinq comptes réels sont maintenant personnalisés, déverrouillés et validés
+avec leurs rôles et périmètres exacts. Aucun compte prestataire n'existe, aucun
+profil ne reste verrouillé et aucun dossier métier n'a encore été créé. La
+séquence 1 de C9 est close.
+
+- **Suite proposée :** ouvrir la séquence 2 avec trois constats pilotes créés par
+  Évariste sur `GE-01`, Sylvain sur `WILO-01` et Laetitia sur `RND-LET`, puis
+  vérifier leur persistance, leurs auteurs et l'absence de doublons.
+
+## DEV-036 — C9 : première connexion de Sylvain validée
+
+- **Date :** 31 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Réussi — 4 comptes sur 5 validés dans la séquence 1
+- **Périmètre :** contrôle Auth, rôle, périmètre et permission de Sylvain en lecture seule ; aucune donnée métier, règle ou mot de passe manipulé par le Dev Lead
+
+Sylvain a personnalisé lui-même son mot de passe, s'est déconnecté puis s'est
+reconnecté. La dernière connexion est postérieure au changement et le verrou est
+levé. Son profil demeure `field_agent`, strictement limité à `WILO-01`, `RIA-01`
+et `IRR-01`, avec le seul droit nominatif attendu
+`upload_vendor_intervention_report`. Aucun accès à `GE-01` ou `RND-LET` ne lui
+est attribué.
+
+Quatre profils sont maintenant personnalisés et validés dans la séquence 1 :
+Faustin, Frédéric, Évariste et Sylvain. Seule Laetitia reste verrouillée. Aucun
+dossier métier n'a encore été créé.
+
+- **Suite proposée :** faire la première connexion de Laetitia, vérifier son rôle
+  Agent terrain, son périmètre `RND-LET` et l'absence du droit de dépôt de rapport.
+
+## DEV-035 — C9 : première connexion d'Évariste validée
+
+- **Date :** 31 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Réussi — 3 comptes sur 5 validés dans la séquence 1
+- **Périmètre :** contrôle Auth, rôle, périmètre et permission d'Évariste en lecture seule ; aucune donnée métier, règle ou mot de passe manipulé par le Dev Lead
+
+Évariste a personnalisé lui-même son mot de passe, s'est déconnecté puis s'est
+reconnecté. La dernière connexion est postérieure au changement et le verrou est
+levé. Son profil demeure `field_agent`, strictement limité à `GE-01`, avec le
+seul droit nominatif attendu `upload_vendor_intervention_report`. Aucun autre
+équipement ni droit supplémentaire ne lui est attribué.
+
+Trois profils sont maintenant personnalisés et validés dans la séquence 1 :
+Faustin, Frédéric et Évariste. Sylvain et Laetitia restent verrouillés. Aucun
+dossier métier n'a encore été créé.
+
+- **Suite proposée :** faire la première connexion de Sylvain, vérifier son rôle
+  Agent terrain, son périmètre `WILO-01` / `RIA-01` / `IRR-01` et son droit de
+  dépôt de rapport.
+
+## DEV-034 — C9 : première connexion de Frédéric validée
+
+- **Date :** 31 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Réussi — 2 comptes sur 5 validés dans la séquence 1
+- **Périmètre :** contrôle Auth et profil de Frédéric en lecture seule ; aucune donnée métier, permission, règle ou mot de passe manipulé par le Dev Lead
+
+Frédéric a personnalisé lui-même son mot de passe, s'est déconnecté puis s'est
+reconnecté. Le contrôle distant confirme que la dernière connexion est bien
+postérieure au changement, que le verrou est levé et que son profil demeure
+exactement `direction`, avec périmètre global sans restriction d'équipement et
+sans permission nominative supplémentaire.
+
+Deux profils sont maintenant personnalisés et validés dans la séquence 1 :
+Faustin et Frédéric. Évariste, Sylvain et Laetitia restent verrouillés. Aucun
+dossier métier n'a encore été créé.
+
+- **Suite proposée :** faire la première connexion d'Évariste, vérifier son rôle
+  Agent terrain, son périmètre `GE-01` et son droit nominatif de dépôt de rapport.
+
+## DEV-033 — C9 : première connexion de Faustin validée
+
+- **Date :** 31 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Réussi — 1 compte sur 5 validé dans la séquence 1
+- **Périmètre :** contrôle Auth et profil de Faustin en lecture seule ; aucune donnée métier, permission, règle ou mot de passe manipulé par le Dev Lead
+
+Faustin a personnalisé lui-même son mot de passe puis s'est reconnecté. Le
+contrôle distant confirme que son verrou `must_change_password` est levé, que la
+reconnexion est postérieure au changement et que son profil demeure exactement
+`facility_manager`, actif, relié et global sans restriction d'équipement. Aucune
+permission nominative supplémentaire ne lui a été attribuée.
+
+L'état général après cette opération est cohérent : cinq profils restent reliés,
+un profil est personnalisé, quatre profils demeurent verrouillés et aucun dossier
+métier n'a été créé. Aucun secret ni mot de passe n'a été lu ou consigné.
+
+- **Suite proposée :** faire la première connexion de Frédéric, contrôler son
+  rôle Administration global, puis poursuivre avec les trois agents terrain.
+
+## DEV-032 — C9 ouverte après précontrôle de préproduction
+
+- **Date :** 31 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Précontrôle réussi — attente des premières connexions individuelles
+- **Périmètre :** contrôles en lecture seule et cadrage de la recette humaine ; aucune donnée métier, migration, permission, règle, compte ou mot de passe modifié
+
+La préproduction distincte répond en ligne et l'état distant reste conforme au
+point de départ de C9 : cinq comptes Auth confirmés, cinq profils métier reliés,
+cinq changements de mot de passe obligatoires, aucun profil personnalisé, aucun
+compte prestataire et aucun dossier pilote déjà présent. Les périmètres restent
+strictement ceux validés : Administration et Facility Manager globaux, Évariste
+sur `GE-01`, Sylvain sur `WILO-01` / `RIA-01` / `IRR-01`, Laetitia sur `RND-LET`.
+Seuls Évariste et Sylvain disposent du droit de dépôt de rapport d'intervention.
+
+La configuration Auth refuse les inscriptions publiques et pointe vers l'URL de
+préproduction. Les 46 tables publiques sur 46 ont RLS active et le bucket de
+preuves reste privé. Les contrôles locaux sont verts : Auth **22/22**, personas
+**38/38**, audit visuel **92/92** ; l'URL publiée répond en HTTP 200.
+
+La suite de C9 exige maintenant la présence des titulaires. Chacun doit saisir
+son identifiant temporaire, choisir lui-même son mot de passe personnel, se
+déconnecter puis se reconnecter. Le Dev Lead ne choisit, ne lit et ne soumet
+aucun nouveau mot de passe à leur place.
+
+- **Suite proposée :** démarrer la séquence 1 avec Faustin, puis Frédéric,
+  Évariste, Sylvain et Laetitia ; arrêter immédiatement le compte concerné en cas
+  de rôle, périmètre ou verrou incorrect.
+
+## DEV-031 — Marque technique retirée de l’interface de préproduction
+
+- **Date :** 31 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Publié et vérifié
+- **Périmètre :** libellés visibles uniquement ; aucune configuration Auth, donnée, permission, RLS, migration ou règle métier modifiée
+
+La préproduction ne présente plus le nom du fournisseur technique aux utilisateurs.
+Les libellés d’environnement, d’authentification, de synchronisation, de stockage,
+de saisie terrain et les messages d’erreur parlent désormais de « préproduction
+sécurisée », de « service métier » ou de « règles d’accès ». Les noms techniques
+restent uniquement dans les imports, types, variables d’environnement et modules
+internes nécessaires au fonctionnement.
+
+### Contrôles réalisés
+
+- audit visuel **92/92**, personas **38/38**, Auth **22/22**, lint et build réussis ;
+- garde-fou ajouté contre la réapparition du nom technique dans les textes visibles ;
+- porte Auth réelle et mode démonstration désactivé inchangés ;
+- aucune modification de `fm_track`, de ses cinq comptes ou de leurs verrous.
+
+- **Suite proposée :** reprendre la recette humaine C9 avec les cinq titulaires.
+
+## DEV-030 — Auth durcie et préproduction distincte publiée
+
+- **Date :** 31 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Publié et vérifié — prêt pour la recette humaine C9
+- **Périmètre :** configuration Auth distante et publication frontend distincte ; aucune migration, donnée métier, permission, rôle ou règle de workflow modifié
+
+Les inscriptions publiques Supabase ont été désactivées par une mise à jour
+ciblée de `disable_signup`, sans pousser la configuration locale complète. L’URL
+Auth principale pointe maintenant vers la préproduction et la liste de
+redirection conserve uniquement cette URL et `localhost` pour le développement.
+Un essai d’inscription avec une adresse fictive a été refusé en HTTP 422. Le
+contrôle final confirme toujours exactement cinq utilisateurs Auth, cinq profils
+reliés et cinq verrous `must_change_password`.
+
+La préproduction a été isolée du site public de validation des maquettes dans un
+nouveau projet Sites et une branche dédiée `release/preproduction-c9`. La version
+2, issue du commit `58789b0`, est publiée sur
+`https://behira-fm-track-preproduction.espace-de-tr-9732.chatgpt.site`. Elle ne
+contient que les variables publiques Supabase, n’embarque aucune clé serveur et
+désactive explicitement le repli démonstration. Le premier contrôle en ligne a
+détecté puis corrigé l’encart de démonstration encore visible malgré le drapeau
+désactivé ; la porte finale ne préremplit plus d’adresse fictive et affiche
+« authentification réelle uniquement ».
+
+### Contrôles réalisés
+
+- build Vinext réussi depuis la source exacte publiée ;
+- audit visuel **92/92**, personas **38/38**, Auth **21/21** et lint réussis ;
+- publication Sites version **2** réussie, environnement public et URL distincte ;
+- écran en ligne : formulaire réel présent, aucun compte de démonstration visible,
+  aucune adresse `.invalid` et aucune erreur console ;
+- Supabase : inscriptions publiques refusées, redirections Auth bornées, **5**
+  utilisateurs, **5** profils reliés et **5** changements de mot de passe requis ;
+- le site de validation des maquettes et sa configuration restent inchangés.
+
+- **Suite proposée :** accompagner individuellement les cinq titulaires dans le
+  changement de mot de passe, puis dérouler la recette métier C9 documentée. La
+  production reste un environnement ultérieur distinct et n’est pas autorisée
+  par ce checkpoint.
+
 ## DEV-029 — C9 : accès réels vérifiés et recette métier des cinq comptes cadrée
 
 - **Date :** 31 août 2026
