@@ -28,6 +28,8 @@ const checks = [
   ["verrou synchrone contre les clics répétés", page.includes("submissionLockRef.current || submitted") && page.includes("submissionLockRef.current = true")],
   ["boutons verrouillés pendant la transmission", page.includes("disabled={!draftReady || submitting || submitted}") && page.includes("aria-busy={submitting}")],
   ["références serveur restituées à l’écran", sync.includes("syncedItems.push") && page.includes("report_reference") && page.includes("anomaly_reference")],
+  ["dernier reçu de ronde restauré depuis la file", hook.includes("fieldRoundReceipt") && hook.includes("latestRoundReceipt") && status.includes("Dernière ronde :")],
+  ["confirmation globale porte les références", page.includes("Ronde ${roundReceipt.reportReference} synchronisée") && page.includes("constat ${roundReceipt.anomalyReference} créé")],
   ["preuves raccordées à la file réelle", page.includes("offlineSync.enqueueProof") && mutations.includes('"register_anomaly_proof_offline"')],
   ["chemin de preuve déterministe", mutations.includes("clientMutationId") && mutations.includes("upsert: false")],
   ["identifiants uniques côté base", migration.includes("reports_actor_client_mutation_uidx") && migration.includes("proofs_actor_client_mutation_uidx")],

@@ -2,6 +2,41 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-042 — C9-FIX-01 : reçu de synchronisation persistant et visible
+
+- **Date :** 31 août 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté et vérifié localement — prêt pour republication
+- **Périmètre :** retour utilisateur de la ronde synchronisée ; aucun schéma, droit, rôle ou enregistrement distant modifié
+
+La ronde de contrôle post-correctif a créé exactement une paire canonique :
+`REP-2026-000005` et `ANO-2026-000005`. L'idempotence est donc conforme, mais
+la référence n'est pas restée visible dans l'interface.
+
+La cause était une source d'affichage trop volatile : le composant lisait la
+réponse uniquement dans le dernier cycle de synchronisation en mémoire. Un cycle
+vide ou un changement d'écran pouvait remplacer ce résultat. La file locale
+conservait pourtant le reçu serveur pendant 24 heures.
+
+L'interface restaure maintenant le dernier reçu de ronde directement depuis la
+file locale, affiche `REP-…` et `ANO-…` dans l'état de synchronisation, les
+conserve dans le message final de la ronde et les reprend dans la confirmation
+globale après actualisation du registre. Aucune référence n'est reconstruite ou
+inventée côté client.
+
+### Vérifications réalisées
+
+- lecture distante : une seule nouvelle ronde WILO-01 et un seul constat pour la
+  mutation du contrôle post-correctif ;
+- reçu local relu après synchronisation et après changement d'écran ;
+- contrôle hors ligne **25/25**, résilience **12/12**, Auth **22/22**,
+  personas **38/38** et audit visuel **92/92** ;
+- lint et build de production réussis.
+
+- **Suite proposée :** republier le reçu persistant, ouvrir Rondes avec Sylvain
+  et confirmer l'affichage de `REP-2026-000005` / `ANO-2026-000005`, puis
+  reprendre la recette Laetitia. Les doublons historiques restent inchangés.
+
 ## DEV-041 — C9-FIX-01 : configuration publique disponible à l'exécution
 
 - **Date :** 31 août 2026

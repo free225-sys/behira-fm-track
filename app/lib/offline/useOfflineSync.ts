@@ -15,7 +15,7 @@ import {
   retryFailedQueueItems,
   saveDraft,
 } from "./store";
-import type { AnomalyProofPayload, FieldRoundPayload, OfflineQueueItem, QueueCounts } from "./types";
+import type { AnomalyProofPayload, FieldRoundPayload, OfflineQueueItem, QueueCounts, SyncedFieldRoundReceipt } from "./types";
 import { emptyQueueCounts } from "./types";
 
 type OfflineSyncOptions = {
@@ -24,11 +24,24 @@ type OfflineSyncOptions = {
   onSynced?: (item: OfflineQueueItem) => void | Promise<void>;
 };
 
+function fieldRoundReceipt(item: OfflineQueueItem): SyncedFieldRoundReceipt | null {
+  if (item.kind !== "field-round" || item.status !== "synced" || !item.serverResult || Array.isArray(item.serverResult) || typeof item.serverResult !== "object") return null;
+  const reportReference = typeof item.serverResult.report_reference === "string" ? item.serverResult.report_reference : "";
+  if (!reportReference) return null;
+  return {
+    queueId: item.id,
+    reportReference,
+    anomalyReference: typeof item.serverResult.anomaly_reference === "string" ? item.serverResult.anomaly_reference : undefined,
+    syncedAt: item.syncedAt,
+  };
+}
+
 export function useOfflineSync({ enabled, userId, onSynced }: OfflineSyncOptions) {
   const [online, setOnline] = useState(() => typeof navigator === "undefined" ? true : navigator.onLine);
   const [counts, setCounts] = useState<QueueCounts>(emptyQueueCounts);
   const [running, setRunning] = useState(false);
   const [lastRun, setLastRun] = useState<SyncRunResult | null>(null);
+  const [latestRoundReceipt, setLatestRoundReceipt] = useState<SyncedFieldRoundReceipt | null>(null);
   const [latestIssue, setLatestIssue] = useState<{ status:"failed"|"conflict"; message:string } | null>(null);
   const runningRef = useRef(false);
   const onSyncedRef = useRef(onSynced);
@@ -38,12 +51,14 @@ export function useOfflineSync({ enabled, userId, onSynced }: OfflineSyncOptions
     if (!enabled || !userId) {
       setCounts(emptyQueueCounts);
       setLatestIssue(null);
+      setLatestRoundReceipt(null);
       return;
     }
     const [nextCounts, items] = await Promise.all([getQueueCounts(userId), listQueueItems(userId)]);
     setCounts(nextCounts);
     const issue = [...items].reverse().find((item) => (item.status === "failed" || item.status === "conflict") && item.lastError);
     setLatestIssue(issue ? { status:issue.status as "failed"|"conflict", message:issue.lastError ?? "Synchronisation à vérifier." } : null);
+    setLatestRoundReceipt([...items].reverse().map(fieldRoundReceipt).find((receipt): receipt is SyncedFieldRoundReceipt => Boolean(receipt)) ?? null);
   }, [enabled, userId]);
 
   const synchronize = useCallback(async () => {
@@ -132,6 +147,7 @@ export function useOfflineSync({ enabled, userId, onSynced }: OfflineSyncOptions
     counts,
     running,
     lastRun,
+    latestRoundReceipt,
     latestIssue,
     synchronize,
     enqueueRound,

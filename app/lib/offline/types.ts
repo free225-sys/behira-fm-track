@@ -61,6 +61,13 @@ export type OfflineQueueItem = FieldRoundQueueItem | AnomalyProofQueueItem;
 
 export type QueueCounts = Record<QueueStatus, number> & { actionable: number };
 
+export type SyncedFieldRoundReceipt = {
+  queueId: string;
+  reportReference: string;
+  anomalyReference?: string;
+  syncedAt?: string;
+};
+
 export type OfflineDraft<T = unknown> = {
   key: string;
   ownerUserId: string;

@@ -1,4 +1,4 @@
-import type { QueueCounts } from "../lib/offline/types";
+import type { QueueCounts, SyncedFieldRoundReceipt } from "../lib/offline/types";
 
 type OfflineSyncStatusProps = {
   enabled: boolean;
@@ -6,10 +6,11 @@ type OfflineSyncStatusProps = {
   running: boolean;
   counts: QueueCounts;
   latestIssue?: { status:"failed"|"conflict"; message:string } | null;
+  latestRoundReceipt?: SyncedFieldRoundReceipt | null;
   onRetry: () => void;
 };
 
-export function OfflineSyncStatus({ enabled, online, running, counts, latestIssue, onRetry }: OfflineSyncStatusProps) {
+export function OfflineSyncStatus({ enabled, online, running, counts, latestIssue, latestRoundReceipt, onRetry }: OfflineSyncStatusProps) {
   if (!enabled) {
     return <section className="sync-banner is-demo" role="status"><span className="status-dot local" /><div><b>Mode démonstration</b><small>Les interactions de cette vue ne sont pas enregistrées sur le serveur métier.</small></div></section>;
   }
@@ -29,7 +30,9 @@ export function OfflineSyncStatus({ enabled, online, running, counts, latestIssu
     ? `${counts.failed} échec${counts.failed > 1 ? "s" : ""} · ${counts.conflict} conflit${counts.conflict > 1 ? "s" : ""}. Aucun écrasement automatique.`
     : waiting
       ? `${waiting} élément${waiting > 1 ? "s" : ""} conservé${waiting > 1 ? "s" : ""} dans la file locale.`
-      : "Aucune donnée terrain en attente sur cette session.";
+      : latestRoundReceipt
+        ? `Dernière ronde : ${latestRoundReceipt.reportReference}${latestRoundReceipt.anomalyReference ? ` · constat ${latestRoundReceipt.anomalyReference}` : " · aucun constat séparé"}.`
+        : "Aucune donnée terrain en attente sur cette session.";
 
   return <section className={`sync-banner ${online ? "is-online" : "is-offline"} ${blocked ? "has-error" : ""}`} role="status" aria-live="polite">
     <span className={`status-dot ${online ? "online" : "local"}`} />

@@ -27,6 +27,17 @@ type PersonaId = 'facility' | 'administration' | 'electricite' | 'eau_incendie' 
 type DecisionState = 'À décider' | 'Approuvée' | 'Refusée' | 'Renvoyée à Facility Manager';
 type AuthScreen = 'login' | 'forgot' | 'invite';
 
+function readRoundReferences(value: unknown) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const result = value as Record<string, unknown>;
+  const reportReference = typeof result.report_reference === 'string' ? result.report_reference : '';
+  if (!reportReference) return null;
+  return {
+    reportReference,
+    anomalyReference: typeof result.anomaly_reference === 'string' ? result.anomaly_reference : undefined,
+  };
+}
+
 type DemoAccount = {
   personaId: PersonaId;
   email: string;
@@ -816,9 +827,16 @@ export default function Home() {
   });
   useEffect(() => {
     if (!offlineSync.lastRun?.synced) return;
+    const roundReceipt = offlineSync.lastRun.syncedItems
+      .filter((entry) => entry.kind === 'field-round')
+      .map((entry) => readRoundReferences(entry.serverResult))
+      .find((receipt) => Boolean(receipt));
+    const confirmation = roundReceipt
+      ? `Ronde ${roundReceipt.reportReference} synchronisée${roundReceipt.anomalyReference ? ` · constat ${roundReceipt.anomalyReference} créé` : ''}.`
+      : `${offlineSync.lastRun.synced} saisie${offlineSync.lastRun.synced === 1 ? '' : 's'} terrain synchronisée${offlineSync.lastRun.synced === 1 ? '' : 's'}.`;
     const timer = window.setTimeout(() => {
       void syncOperationalData()
-        .then(() => flash(`${offlineSync.lastRun?.synced} saisie${offlineSync.lastRun?.synced === 1 ? '' : 's'} terrain synchronisée${offlineSync.lastRun?.synced === 1 ? '' : 's'}.`))
+        .then(() => flash(confirmation))
         .catch(() => flash('Synchronisation terminée ; actualisation du registre à reprendre.'));
     }, 0);
     return () => window.clearTimeout(timer);
@@ -1656,7 +1674,7 @@ function Detail({ anomaly, decisionAmount, persistenceMode, persistenceEnabled, 
     <button className="back-button dossier-back" onClick={onBack}>← Retour à la file</button>
     <section className="dossier-hero"><div><div className="detail-labels"><Badge tone={priorityTone(anomaly.priority)}>{anomaly.priority}</Badge>{anomaly.delayed && anomaly.status !== 'Clôturée' && <Badge tone="critical">EN RETARD</Badge>}{readOnly && <Badge tone="neutral">CONSULTATION</Badge>}<span>{anomaly.id}</span></div><h2>{anomaly.title}</h2><p>{anomaly.asset} · {anomaly.location}</p></div>{!readOnly && nextStatusOption && <div className="detail-actions"><select value={nextStatus} onChange={(event) => setNextStatus(event.target.value as Status)} aria-label="Étape suivante"><option value={nextStatusOption}>{nextStatusOption}</option></select><button className="primary-button" disabled={busy || criticalClosureLocked} onClick={() => onStatus(nextStatus)}>{busy ? 'Enregistrement…' : criticalClosureLocked ? 'Preuve requise avant clôture' : 'Valider l’étape'}</button></div>}</section>
     <section className="dossier-workflow" aria-label="Cycle du dossier">{workflow.map((item,index) => <div key={item} className={index < currentStep ? 'done' : index === currentStep ? 'current' : ''}><span>{index < currentStep ? '✓' : index+1}</span><b>{item}</b></div>)}</section>
-    <OfflineSyncStatus enabled={persistenceEnabled} online={offlineSync.online} running={offlineSync.running} counts={offlineSync.counts} latestIssue={offlineSync.latestIssue} onRetry={() => void offlineSync.retryFailed().then(() => offlineSync.synchronize())} />
+    <OfflineSyncStatus enabled={persistenceEnabled} online={offlineSync.online} running={offlineSync.running} counts={offlineSync.counts} latestIssue={offlineSync.latestIssue} latestRoundReceipt={offlineSync.latestRoundReceipt} onRetry={() => void offlineSync.retryFailed().then(() => offlineSync.synchronize())} />
     {anomaly.priority === 'Critique' && !anomaly.proof && <section className="critical-banner dossier-critical"><span>!</span><div><b>Clôture verrouillée jusqu’à l’acceptation de la preuve</b><p>{anomaly.proofPending ? 'Une preuve a été déposée et attend le contrôle de Facility Manager.' : anomaly.proofQueued ? 'Une preuve est protégée sur cet appareil et attend sa synchronisation.' : 'La matrice des preuves exige une pièce conforme avant clôture.'}</p></div>{!readOnly && !anomaly.proofPending && !anomaly.proofQueued && <button disabled={busy} onClick={chooseProof}>＋ Ajouter une preuve</button>}</section>}
     <div className="dossier-continuity"><AntiZombieSummary data={resolveAntiZombieSummary(anomaly)} variant="detailed" /></div>
     <nav className="dossier-tabs" aria-label="Sections du dossier" role="tablist"><button type="button" role="tab" aria-selected={section === 'overview'} aria-controls="dossier-overview-panel" className={section === 'overview' ? 'active' : ''} onClick={() => setSection('overview')}>Vue d’ensemble</button><button type="button" role="tab" aria-selected={section === 'finance'} aria-controls="dossier-finance-panel" className={section === 'finance' ? 'active' : ''} onClick={() => setSection('finance')}>Coûts & décision</button><button type="button" role="tab" aria-selected={section === 'evidence'} aria-controls="dossier-evidence-panel" className={section === 'evidence' ? 'active' : ''} onClick={() => setSection('evidence')}>Preuves <span>{anomaly.proof || anomaly.proofPending || anomaly.proofQueued ? '1' : '0'}</span></button><button type="button" role="tab" aria-selected={section === 'history'} aria-controls="dossier-history-panel" className={section === 'history' ? 'active' : ''} onClick={() => setSection('history')}>Historique</button></nav>
@@ -1773,10 +1791,12 @@ function Report({ persona, onNavigate, persistenceEnabled, offlineSync, flash }:
     if (!submissionId || !offlineSync.lastRun) return null;
     const item = offlineSync.lastRun.syncedItems.find((entry) => entry.queueId === submissionId && entry.kind === 'field-round');
     if (!item || !item.serverResult || typeof item.serverResult !== 'object' || Array.isArray(item.serverResult)) return null;
-    const reportReference = typeof item.serverResult.report_reference === 'string' ? item.serverResult.report_reference : '';
-    const anomalyReference = typeof item.serverResult.anomaly_reference === 'string' ? item.serverResult.anomaly_reference : undefined;
-    return reportReference ? { reportReference, anomalyReference } : null;
+    return readRoundReferences(item.serverResult);
   }, [offlineSync.lastRun, submissionId]);
+  const displayedReferences = syncedReferences ?? (offlineSync.latestRoundReceipt?.queueId === submissionId ? {
+    reportReference:offlineSync.latestRoundReceipt.reportReference,
+    anomalyReference:offlineSync.latestRoundReceipt.anomalyReference,
+  } : null);
 
   const finalizeQueuedRound = async () => {
     await deleteDraft(draftId);
@@ -1879,7 +1899,7 @@ function Report({ persona, onNavigate, persistenceEnabled, offlineSync, flash }:
 
   if (!surpresseurAccess) return <>
     <section className="section-heading round-heading"><div><p className="design-kicker">SAISIE DIRECTE · {persistenceEnabled ? 'EN LIGNE' : 'DÉMONSTRATION'}</p><h2 className="visually-hidden">Rondes</h2><p>{isRoundsAssistance ? 'Ronde cleaning & jardinage' : 'Ronde technique'} : un constat terrain est enregistré dans l’application puis transmis à Facility Manager pour qualification.</p></div><Badge tone="blue">AUCUN IMPORT</Badge></section>
-    <OfflineSyncStatus enabled={persistenceEnabled} online={offlineSync.online} running={offlineSync.running} counts={offlineSync.counts} latestIssue={offlineSync.latestIssue} onRetry={() => void offlineSync.retryFailed().then(() => offlineSync.synchronize())} />
+    <OfflineSyncStatus enabled={persistenceEnabled} online={offlineSync.online} running={offlineSync.running} counts={offlineSync.counts} latestIssue={offlineSync.latestIssue} latestRoundReceipt={offlineSync.latestRoundReceipt} onRetry={() => void offlineSync.retryFailed().then(() => offlineSync.synchronize())} />
     <section className="quick-round-layout">
       <form className="panel quick-round-card" onSubmit={(event) => void submitQuickRound(event)}>
         <div className="round-card-head"><span className="round-icon">{isRoundsAssistance ? 'R' : 'GE'}</span><div><b>{isRoundsAssistance ? 'RND-LET' : 'GE-01'}</b><small>{isRoundsAssistance ? 'Périmètre cleaning et jardinage' : 'Périmètre électrique autorisé'}</small></div><span className="mockup-label">{persistenceEnabled ? 'SAISIE RÉELLE' : 'DÉMO'}</span></div>
@@ -1891,14 +1911,14 @@ function Report({ persona, onNavigate, persistenceEnabled, offlineSync, flash }:
       </form>
       <aside className="panel direct-flow-card"><p className="design-kicker">APRÈS L’ENVOI</p><h3>Un circuit court et lisible</h3>{['Constat enregistré','Qualification par Facility Manager','Affectation et échéance','Traitement avec preuve'].map((item,index) => <div key={item}><span>{index+1}</span><p><b>{item}</b><small>{index === 0 ? 'Vous gardez une trace immédiate' : 'Le dossier avance dans le même outil'}</small></p></div>)}</aside>
     </section>
-    {submitted && <div className="prototype-success" role="status"><span>✓</span><div><b>{persistenceEnabled ? syncedReferences?.anomalyReference ? `Constat ${syncedReferences.anomalyReference} transmis` : 'Constat placé dans la file de synchronisation' : 'Simulation de constat terminée'}</b><small>{persistenceEnabled ? syncedReferences?.reportReference ? `Ronde ${syncedReferences.reportReference} enregistrée · un nouvel envoi réutilise le même identifiant.` : 'Un seul envoi est autorisé ; la référence apparaîtra après synchronisation.' : 'Aucune donnée n’a été enregistrée ou transmise.'}</small></div><button onClick={() => onNavigate('workspace')}>Retour à mon espace</button></div>}
+    {submitted && <div className="prototype-success" role="status"><span>✓</span><div><b>{persistenceEnabled ? displayedReferences?.anomalyReference ? `Constat ${displayedReferences.anomalyReference} transmis` : 'Constat placé dans la file de synchronisation' : 'Simulation de constat terminée'}</b><small>{persistenceEnabled ? displayedReferences?.reportReference ? `Ronde ${displayedReferences.reportReference} enregistrée · un nouvel envoi réutilise le même identifiant.` : 'Un seul envoi est autorisé ; la référence apparaîtra après synchronisation.' : 'Aucune donnée n’a été enregistrée ou transmise.'}</small></div><button onClick={() => onNavigate('workspace')}>Retour à mon espace</button></div>}
   </>;
 
   return <>
     <section className="surpresseur-hero">
       <div className="surpresseur-identity"><span className="surpresseur-monogram">WI</span><div><p className="design-kicker">MODULE PILOTE · SURPRESSEUR</p><h2 className="visually-hidden">Rondes</h2><p>Ronde Surpresseur · WILO-01 · Sous-sol · Local surpresseur · Fréquence quotidienne</p></div></div>
     </section>
-    <OfflineSyncStatus enabled={persistenceEnabled} online={offlineSync.online} running={offlineSync.running} counts={offlineSync.counts} latestIssue={offlineSync.latestIssue} onRetry={() => void offlineSync.retryFailed().then(() => offlineSync.synchronize())} />
+    <OfflineSyncStatus enabled={persistenceEnabled} online={offlineSync.online} running={offlineSync.running} counts={offlineSync.counts} latestIssue={offlineSync.latestIssue} latestRoundReceipt={offlineSync.latestRoundReceipt} onRetry={() => void offlineSync.retryFailed().then(() => offlineSync.synchronize())} />
     <section className="surpresseur-progress" aria-label="Progression de la ronde">{steps.map((item,index) => <button key={item} className={index === step ? 'active' : index < step ? 'done' : ''} onClick={() => setStep(index)}><span>{index < step ? '✓' : index+1}</span><b>{item}</b></button>)}</section>
     <section className="surpresseur-layout">
       <article className="panel surpresseur-form-card">
@@ -1915,6 +1935,6 @@ function Report({ persona, onNavigate, persistenceEnabled, offlineSync, flash }:
         <article className="panel score-explain-card"><div><span>SCORE WILO</span><b>78/100</b></div><div className="score-freshness"><span><b>État</b>Surveillance</span><span><b>Variation</b>Indisponible</span><span><b>Fraîcheur</b>Non synchronisée</span></div><ul><li><i className="down" /> Pression sous le seuil <b>-8</b></li><li><i className="down" /> Défaut P1 récurrent <b>-10</b></li><li><i className="up" /> Maintenance à jour <b>+6</b></li></ul><p className="analytics-note">Score de maquette : la date de calcul et l’historique réel ne sont pas encore disponibles.</p><button type="button">Voir le détail du calcul</button></article>
       </aside>
     </section>
-    {submitted && <div className="prototype-success" role="status"><span>✓</span><div><b>{persistenceEnabled ? syncedReferences?.reportReference ? `Ronde ${syncedReferences.reportReference} synchronisée` : 'Ronde placée dans la file de synchronisation' : 'Simulation de ronde terminée'}</b><small>{persistenceEnabled ? syncedReferences?.anomalyReference ? `Constat ${syncedReferences.anomalyReference} transmis à Facility Manager.` : syncedReferences?.reportReference ? 'Ronde enregistrée sans constat séparé.' : 'Un seul envoi est autorisé ; la référence apparaîtra après synchronisation.' : 'Aucune donnée n’a été enregistrée sur le serveur.'}</small></div><button onClick={startNextRound}>Nouvelle ronde</button></div>}
+    {submitted && <div className="prototype-success" role="status"><span>✓</span><div><b>{persistenceEnabled ? displayedReferences?.reportReference ? `Ronde ${displayedReferences.reportReference} synchronisée` : 'Ronde placée dans la file de synchronisation' : 'Simulation de ronde terminée'}</b><small>{persistenceEnabled ? displayedReferences?.anomalyReference ? `Constat ${displayedReferences.anomalyReference} transmis à Facility Manager.` : displayedReferences?.reportReference ? 'Ronde enregistrée sans constat séparé.' : 'Un seul envoi est autorisé ; la référence apparaîtra après synchronisation.' : 'Aucune donnée n’a été enregistrée sur le serveur.'}</small></div><button onClick={startNextRound}>Nouvelle ronde</button></div>}
   </>;
 }
