@@ -30,7 +30,9 @@ Internet.
 
 Restent à confirmer avant la préproduction ouverte : l’organisation
 propriétaire définitive, la région validée par la Direction et l’URL du
-frontend utilisée pour les redirections Auth.
+frontend utilisée pour les redirections Auth. La lecture de la configuration
+Auth distante montre également que les inscriptions publiques sont encore
+autorisées ; elles doivent être désactivées avant d'exposer l'écran de connexion.
 
 Ne transmettre aucune clé dans un message, un document ou le dépôt. Les
 variables sont saisies directement dans les secrets de l’environnement de

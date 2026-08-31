@@ -26,6 +26,10 @@ Contrôlé le 31 août 2026 :
   0 profil déjà personnalisé et 0 fixture C9 résiduelle ;
 - les journaux Auth confirment les connexions, la modification du compte de test
   et sa suppression sans erreur sur ce parcours.
+- le fournisseur email est actif et l'auto-confirmation publique est désactivée,
+  mais la création publique de nouveaux comptes est encore autorisée dans la
+  configuration Auth distante. Elle doit être désactivée avant toute publication
+  de l'URL de préproduction.
 
 Aucun mot de passe réel n'a été changé par le Dev Lead. Chaque titulaire doit
 choisir lui-même son nouveau mot de passe et ne jamais le communiquer.
@@ -44,6 +48,12 @@ La recette collective exige une URL de préproduction distincte, raccordée à
 - URL HTTPS de `fm_track` ;
 - clé publique/publishable de `fm_track` ;
 - aucune clé `service_role` dans le navigateur, le dépôt ou un message.
+
+Avant la publication, la configuration Supabase Auth doit aussi refuser les
+inscriptions publiques et autoriser uniquement les cinq comptes déjà créés. Le
+fait qu'un compte sans profil n'obtienne aucun droit RLS ne remplace pas ce
+durcissement : il évite l'accès aux données, mais pas la création inutile de
+comptes Auth.
 
 Jusqu'à cette publication distincte, les vérifications techniques peuvent être
 rejouées depuis `http://localhost:3000/` sur le poste autorisé, mais cette adresse
@@ -167,6 +177,7 @@ C9 est accepté lorsque :
 - Évariste et Sylvain peuvent déposer dans leur périmètre, Laetitia ne le peut pas ;
 - le verrou critique sans preuve acceptée fonctionne ;
 - aucun prestataire ne peut se connecter ;
+- les inscriptions publiques Supabase Auth sont désactivées ;
 - aucun écran démonstratif n'est présenté comme une fonction persistante validée ;
 - les dossiers pilotes sont identifiés pour suppression ou conservation décidée
   à la fin de la séance.

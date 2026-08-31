@@ -30,6 +30,12 @@ démo, avant la séance collective et distingue les fonctions persistantes des
 écrans encore simulés : décisions financières, administration des utilisateurs,
 seuil distant, scores et notifications.
 
+La configuration Auth distante autorise encore la création publique de comptes,
+bien que l'auto-confirmation soit désactivée et qu'un compte sans profil reste
+sans droit métier grâce aux RLS. Cette ouverture doit être fermée avant la
+publication de la préproduction ; elle constitue une porte de passage C9 et non
+une raison de modifier les rôles ou le schéma.
+
 ### Contrôles réalisés
 
 - cinq connexions réelles réussies sans changement de mot de passe utilisateur ;
@@ -38,6 +44,8 @@ seuil distant, scores et notifications.
 - nettoyage distant : **5** Auth, **5** profils reliés, **5** verrouillés,
   **0** personnalisé, **0** fixture Auth et **0** profil fixture ;
 - site de maquettes observé public et sans variable d'environnement Supabase ;
+- fournisseur email actif, auto-confirmation publique désactivée, mais inscription
+  publique encore active et consignée comme garde-fou avant publication ;
 - aucun secret affiché, ajouté au dépôt ou conservé dans un rapport.
 
 - **Suite proposée :** créer une publication de préproduction distincte raccordée
