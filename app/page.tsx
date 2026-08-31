@@ -1727,7 +1727,6 @@ function Report({ persona, onNavigate, persistenceEnabled, offlineSync, flash }:
   const submissionLockRef = useRef(false);
   const [submissionId, setSubmissionId] = useState('');
   const [performedAt, setPerformedAt] = useState('');
-  const [syncedReferences, setSyncedReferences] = useState<{ reportReference:string; anomalyReference?:string } | null>(null);
   const [draftReady, setDraftReady] = useState(!persistenceEnabled);
   const [pressure, setPressure] = useState(persistenceEnabled ? '' : '2.8');
   const [tankLevel, setTankLevel] = useState(persistenceEnabled ? '' : '72');
@@ -1770,13 +1769,13 @@ function Report({ persona, onNavigate, persistenceEnabled, offlineSync, flash }:
     return () => window.clearTimeout(timer);
   }, [checks, confirmed, draftId, draftReady, observation, performedAt, persistenceEnabled, pressure, quickControlType, quickPriority, quickTitle, quickZone, saveDraft, step, submissionId, submitted, tankLevel]);
 
-  useEffect(() => {
-    if (!submissionId || !offlineSync.lastRun) return;
+  const syncedReferences = useMemo(() => {
+    if (!submissionId || !offlineSync.lastRun) return null;
     const item = offlineSync.lastRun.syncedItems.find((entry) => entry.queueId === submissionId && entry.kind === 'field-round');
-    if (!item || !item.serverResult || typeof item.serverResult !== 'object' || Array.isArray(item.serverResult)) return;
+    if (!item || !item.serverResult || typeof item.serverResult !== 'object' || Array.isArray(item.serverResult)) return null;
     const reportReference = typeof item.serverResult.report_reference === 'string' ? item.serverResult.report_reference : '';
     const anomalyReference = typeof item.serverResult.anomaly_reference === 'string' ? item.serverResult.anomaly_reference : undefined;
-    if (reportReference) setSyncedReferences({ reportReference, anomalyReference });
+    return reportReference ? { reportReference, anomalyReference } : null;
   }, [offlineSync.lastRun, submissionId]);
 
   const finalizeQueuedRound = async () => {
@@ -1867,7 +1866,6 @@ function Report({ persona, onNavigate, persistenceEnabled, offlineSync, flash }:
     submissionLockRef.current = false;
     setSubmitting(false);
     setSubmitted(false);
-    setSyncedReferences(null);
     if (!persistenceEnabled) return;
     setSubmissionId(crypto.randomUUID());
     setPerformedAt(new Date().toISOString());
