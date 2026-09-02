@@ -2,6 +2,33 @@
 
 Ne jamais supprimer ni réécrire une décision actée. Toute évolution doit prendre la forme d'une nouvelle entrée qui complète ou remplace explicitement une décision antérieure.
 
+## DEC-017 — C11-Cœur : arbitrage provisoire de calculabilité locale
+
+- **Date :** 3 septembre 2026
+- **Auteur :** Dev Lead, chantier autorisé par Wilkam
+- **Statut :** **Provisoire — local uniquement, non activable**
+- **Périmètre :** orchestration des scores équipement en attente des données
+  techniques et validations métier ; complète DEC-016 sans modifier DEC-015
+- **Décision :**
+  - la couverture minimale de travail est fixée à 80 %, avec présence obligatoire
+    de toutes les données critiques applicables ;
+  - une donnée périmée réduit la couverture mais ne constitue pas une panne ;
+  - une source provisoire ou absente ne contribue pas à un résultat canonique ;
+  - aucun poids manquant n’est redistribué ;
+  - un résultat incomplet peut être testé comme `partial`, mais reste non publiable ;
+  - les bornes locales sont rouge 0–69, orange 70–89 et vert 90–100 ;
+  - la provenance est priorisée ainsi : mise en service, constructeur, rapport
+    signé du mainteneur, observation terrain datée, brouillon interne ;
+  - WILO-01 reste non calculable tant que la consigne contrôleur et ses seuils
+    réels ne sont pas confirmés.
+- **Exclusions :** aucune règle interne de composante, criticité, score bâtiment,
+  score agent, migration, écriture Supabase, préproduction ou publication.
+- **Réversibilité :** la politique est injectée dans le moteur local et marquée
+  `provisional`. Les paramètres peuvent être remplacés après validation sans
+  modifier les données métier ni publier rétroactivement un score.
+- **Suite :** validation des données WILO-01 et des règles internes, puis adaptateurs
+  locaux et comparaison avec la porte Supabase ; dry-run distant séparé.
+
 ## DEC-016 — C11-A : cockpit santé conservé, scores suspendus jusqu’à validation métier
 
 - **Date :** 31 août 2026

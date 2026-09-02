@@ -19,6 +19,7 @@
     "verify:offline": "node scripts/verify-offline-sync.mjs",
     "verify:agent-work-orders": "node scripts/verify-agent-work-orders.mjs",
     "verify:financial-decisions": "node scripts/verify-financial-decisions.mjs",
+    "verify:c11-core": "node --experimental-strip-types scripts/verify-c11-score-core.ts",
     "test:agent-work-orders:local": "node scripts/verify-agent-work-orders-local.mjs",
     "verify:resilience": "node scripts/verify-resilience.mjs",
     "verify:fonts": "node scripts/verify-font-assets.mjs",

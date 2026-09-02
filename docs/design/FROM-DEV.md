@@ -2,6 +2,40 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-054 — C11-Cœur : orchestrateur local et calculabilité stricte
+
+- **Date :** 3 septembre 2026
+- **Auteur :** Dev Lead
+- **Statut :** implémenté localement — non raccordé, non publié
+- **Périmètre :** agrégation déterministe de composantes normalisées, couverture,
+  fraîcheur, provenance et garde WILO-01 ; aucune migration, écriture Supabase,
+  interface, préproduction ou publication
+
+L’orchestrateur local conserve les cinq poids 30/25/20/15/10 et applique le
+plancher provisoire de couverture à 80 %. Une source provisoire, absente ou
+périmée ne contribue pas ; une donnée périmée réduit la couverture sans devenir
+une panne. Une donnée critique manquante bloque toujours le résultat. Les poids
+non couverts ne sont jamais redistribués et un score partiel reste non publiable.
+
+Les bornes 0–69 / 70–89 / 90–100 et la hiérarchie des sources sont encapsulées
+dans une politique explicitement provisoire. Même avec un jeu de test complet,
+cette politique ne peut pas marquer un résultat comme publiable. Une source
+confirmée sans référence et un brouillon interne marqué confirmé par erreur sont
+également exclus.
+
+WILO-01 reste forcé à « Score non calculable — données insuffisantes ». Son
+adaptateur expose la consigne contrôleur, les seuils, la criticité et les sources
+opérationnelles encore manquantes ; il ne reprend pas la valeur préremplie des
+anciens formulaires.
+
+- **Vérification dédiée :** `pnpm verify:c11-core` couvre calcul complet de
+  référence, résultat partiel, couverture insuffisante, donnée critique absente,
+  fraîcheur, source provisoire, bornes de couleur, WILO bloqué, entrées invalides
+  et impossibilité de publication avec la politique locale.
+- **Suite proposée :** obtenir la consigne et les seuils WILO-01 confirmés, puis
+  construire les adaptateurs de composantes localement. Aucun score bâtiment ou
+  agent et aucune activation distante avant cette validation.
+
 ## DEV-053 — C11-B : fondation locale du pilote WILO-01
 
 - **Date :** 31 août 2026
