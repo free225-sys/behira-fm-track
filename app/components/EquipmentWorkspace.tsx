@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 
-import { Badge, Card, Field, Select } from './ui';
+import { Badge, BrandIcon, Card, Field, Select } from './ui';
 
 export type EquipmentWorkspaceItem = {
   code:string;
@@ -91,7 +91,7 @@ export function EquipmentWorkspace({ equipment }: { equipment:EquipmentWorkspace
       </div>
 
       {filteredEquipment.length === 0 ? <div className="equipment-empty" role="status">
-        <span aria-hidden="true">⌕</span><div><h3>Aucun équipement trouvé</h3><p>Élargissez la recherche ou choisissez un autre état.</p></div>
+        <BrandIcon name="search" size={18} /><div><h3>Aucun équipement trouvé</h3><p>Élargissez la recherche ou choisissez un autre état.</p></div>
       </div> : <div className="equipment-destination-grid" aria-live="polite">
         {filteredEquipment.map((item) => <Card key={item.code} className="equipment-destination-card">
           <header>

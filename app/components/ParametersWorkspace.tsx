@@ -1,6 +1,6 @@
 'use client';
 
-import { Badge, Button, Card } from './ui';
+import { Badge, BrandIcon, Button, Card } from './ui';
 import { ErrorNotificationRules } from './NotificationCenter';
 
 export type ParameterWorkspaceData = {
@@ -79,7 +79,7 @@ export function ParametersWorkspace({ parameter, onOpenCosts }: {
         </section>
 
         <div className="parameter-history-missing" role="note">
-          <span aria-hidden="true">⌁</span>
+          <BrandIcon name="info" size={18} />
           <div><b>Historique persistant indisponible</b><p>L’ancienne valeur, l’auteur technique du changement, l’horodatage détaillé et le motif enregistré ne sont pas raccordés. Toute future modification devra conserver ces éléments avant de devenir active.</p></div>
         </div>
       </Card>

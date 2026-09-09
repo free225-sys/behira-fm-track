@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from 'react';
 
-import { Badge, Button, Card, Field, Select } from './ui';
+import { Badge, BrandIcon, Button, Card, Field, Select } from './ui';
 import { hasFieldErrors, validateAccessAction, validateAccessCreate, type FieldErrors } from '../lib/client-validation';
 
 export type AccessWorkspaceUser = {
@@ -101,7 +101,7 @@ export function AccessWorkspace({ users, audience }: {
 
           <Field label="Justification" error={fieldErrors.reason}><textarea value={reason} maxLength={1000} aria-invalid={Boolean(fieldErrors.reason)} onChange={(event) => {setReason(event.target.value);setFieldErrors((current) => ({ ...current, reason: undefined }))}} placeholder={audience === 'facility' ? 'Expliquez le besoin métier et le périmètre demandé.' : adminAction === 'create' ? 'Expliquez pourquoi cet accès doit être créé.' : 'Expliquez pourquoi cet accès doit être désactivé.'} /></Field>
 
-          <div className="access-security-note" role="note"><span aria-hidden="true">⌘</span><p><b>Exécution sécurisée hors du navigateur</b><small>La cible réelle devra contrôler l’auteur, le rôle, le périmètre et la justification côté serveur, puis historiser le résultat.</small></p></div>
+          <div className="access-security-note" role="note"><BrandIcon name="lock" size={18} /><p><b>Exécution sécurisée hors du navigateur</b><small>La cible réelle devra contrôler l’auteur, le rôle, le périmètre et la justification côté serveur, puis historiser le résultat.</small></p></div>
           {confirmation && <div className="access-confirmation" role="status"><span aria-hidden="true">✓</span>{confirmation}</div>}
           <Button type="submit">{audience === 'facility' ? 'Envoyer la proposition' : adminAction === 'create' ? 'Préparer la création' : 'Préparer la désactivation'}</Button>
           <small className="access-simulation-note">Simulation locale · aucun compte, rôle ou périmètre réel n’est modifié.</small>

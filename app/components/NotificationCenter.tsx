@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { Badge, IconButton } from './ui';
+import { Badge, BrandIcon, IconButton } from './ui';
 
 export type ErrorRuleId = 'critical' | 'sla' | 'health' | 'sync';
 export type ErrorChannel = 'in-app' | 'email';
@@ -323,7 +323,7 @@ export function NotificationBell({
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
       >
-        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3.2a3.4 3.4 0 0 0-3.4 3.4v1.1c0 .9-.3 1.8-.9 2.5l-.5.6c-.4.4-.2 1.2.4 1.2h9.8c.6 0 .8-.8.4-1.2l-.5-.6a4 4 0 0 1-.9-2.5V6.6A3.4 3.4 0 0 0 10 3.2Z"/><path d="M8.2 15.2a1.8 1.8 0 0 0 3.6 0"/></svg>
+        <BrandIcon name="bell" size={18} />
         {unread > 0 ? <span className="notification-dot" /> : null}
       </IconButton>
       {open && (

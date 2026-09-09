@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 
-import { Badge, Button, Card, Field, Select } from './ui';
+import { Badge, BrandIcon, Button, Card, Field, Select } from './ui';
 
 export type CostsWorkspaceItem = {
   id:string;
@@ -96,14 +96,14 @@ export function CostsWorkspace({ items, audience, threshold, onOpenDossier }: {
         </Field>
       </div>
 
-      {missingCount > 0 && <div className="costs-data-notice" role="note"><span aria-hidden="true">i</span><p><b>{missingCount} arbitrage{missingCount > 1 ? 's' : ''} sans montant</b><small>Ces dossiers restent visibles mais ne sont pas inclus dans le total documenté.</small></p></div>}
+      {missingCount > 0 && <div className="costs-data-notice" role="note"><BrandIcon name="info" size={16} /><p><b>{missingCount} arbitrage{missingCount > 1 ? 's' : ''} sans montant</b><small>Ces dossiers restent visibles mais ne sont pas inclus dans le total documenté.</small></p></div>}
 
-      {filteredItems.length === 0 ? <div className="costs-empty" role="status"><span aria-hidden="true">⌕</span><div><h3>Aucun dossier trouvé</h3><p>Élargissez la recherche ou choisissez un autre filtre.</p></div></div> : <div className="costs-list">
+      {filteredItems.length === 0 ? <div className="costs-empty" role="status"><BrandIcon name="search" size={18} /><div><h3>Aucun dossier trouvé</h3><p>Élargissez la recherche ou choisissez un autre filtre.</p></div></div> : <div className="costs-list">
         {filteredItems.map((item) => {
           const overThreshold = item.amount !== null && item.amount >= threshold;
           return <Card key={item.id} className="costs-case-card">
             <div className="costs-case-heading">
-              <span className="costs-case-mark" aria-hidden="true">₣</span>
+              <span className="costs-case-mark" aria-hidden="true"><BrandIcon name="banknote" size={16} /></span>
               <div><small>{item.asset} · {item.id} · {item.anomaly}</small><h3>{item.title}</h3></div>
               <div className="costs-case-badges"><Badge tone={item.kind === 'Risque' ? 'critical' : 'orange'}>{item.kind}</Badge><Badge tone={stateTone(item.state)}>{item.state}</Badge></div>
             </div>

@@ -2,6 +2,8 @@
 
 import { useId, useMemo, type CSSProperties } from 'react';
 
+import { BrandIcon, type BrandIconName } from './ui';
+
 export type HealthAudience = 'administration' | 'facility' | 'electricite' | 'eau_incendie' | 'rondes_assistance';
 export type HealthEquipment = { code: string; label: string; health: number; state: string };
 export type HealthAnomaly = { id: string; priority: string; status: string; asset: string; delayed?: boolean };
@@ -18,10 +20,10 @@ const PERIMETER: Record<HealthAudience, string[] | null> = {
   rondes_assistance: ['DEMO-ESP', 'DEMO-RND'],
 };
 
-const DOMAINS = [
-  { id: 'elec', label: 'Électricité', codes: ['DEMO-GE', 'DEMO-ASC-1/2'] },
-  { id: 'eau', label: 'Eau & incendie', codes: ['DEMO-EAU', 'DEMO-SSI'] },
-  { id: 'services', label: 'Espaces & rondes', codes: ['DEMO-ESP', 'DEMO-RND'] },
+const DOMAINS: { id: string; label: string; codes: string[]; icon: BrandIconName }[] = [
+  { id: 'elec', label: 'Électricité', codes: ['DEMO-GE', 'DEMO-ASC-1/2'], icon: 'zap' },
+  { id: 'eau', label: 'Eau & incendie', codes: ['DEMO-EAU', 'DEMO-SSI'], icon: 'droplet' },
+  { id: 'services', label: 'Espaces & rondes', codes: ['DEMO-ESP', 'DEMO-RND'], icon: 'mapPin' },
 ];
 
 const COPY: Record<HealthAudience, { lead: string; primary: { view: HealthView; label: string } }> = {
@@ -300,7 +302,7 @@ export function BuildingHealthCockpit({
           <div className="health-domain-grid">
             {domains.map((domain) => (
               <div key={domain.id} className={domain.mine ? 'is-mine' : ''}>
-                <span>{domain.label}{domain.mine ? ' · vous' : ''}</span>
+                <span><BrandIcon name={domain.icon} size={16} /> {domain.label}{domain.mine ? ' · vous' : ''}</span>
                 <strong>{domain.score}<small>/100</small></strong>
                 <div className="score-bar-track" role="progressbar" aria-label={`${domain.label}, ${domain.score} sur 100`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={domain.score}>
                   <i className={barTone(domain.score)} style={{ width: `${domain.score}%` }} />
@@ -325,7 +327,7 @@ export function BuildingHealthCockpit({
         </article>
 
         <aside className="insufficient-chart health-trend-note" role="status">
-          <span>⌁</span>
+          <span><BrandIcon name="activity" size={18} /></span>
           <div>
             <b>Tendance 30 jours indisponible</b>
             <p>Aucun instantané quotidien n’est encore enregistré. Le score du jour reste lisible sans variation inventée.</p>
