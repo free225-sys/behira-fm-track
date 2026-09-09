@@ -2,7 +2,7 @@
 
 Ne jamais supprimer ni réécrire une décision actée. Toute évolution doit prendre la forme d'une nouvelle entrée qui complète ou remplace explicitement une décision antérieure.
 
-## DEC-017 — C11-Cœur : arbitrage provisoire de calculabilité locale
+## DEC-018 — C11-Cœur : arbitrage provisoire de calculabilité locale
 
 - **Date :** 3 septembre 2026
 - **Auteur :** Dev Lead, chantier autorisé par Wilkam
@@ -28,6 +28,23 @@ Ne jamais supprimer ni réécrire une décision actée. Toute évolution doit pr
   modifier les données métier ni publier rétroactivement un score.
 - **Suite :** validation des données WILO-01 et des règles internes, puis adaptateurs
   locaux et comparaison avec la porte Supabase ; dry-run distant séparé.
+
+## DEC-017 — Définition métier du score agent et blocage du calcul C11
+
+- **Date :** 9 septembre 2026
+- **Auteur :** Wilkam, consigné par le Dev Lead
+- **Statut :** **Adopté — définition qualitative, calcul et affichage chiffré bloqués**
+- **Périmètre :** cadrage C11 du score agent
+- **Contexte :** le score agent doit être défini sans anticiper une formule, un résultat chiffré ou un usage RH qui ne sont pas encore validés.
+- **Décision :** le score agent comporte exactement trois composantes :
+  1. les rondes quotidiennes réalisées, au titre de la conformité de contrôle ;
+  2. les anomalies de son périmètre résolues dans les délais, en excluant les périodes d’attente Facility Manager, prestataire ou preuve ;
+  3. la zone ou le périmètre maintenu, au regard de l’état des équipements et des constats de sa zone.
+- **État obligatoire :** tant que les poids, les règles d’exclusion et la gouvernance RH ne sont pas tous validés, afficher uniquement : **« Score non calculable — données ou règles insuffisantes »**.
+- **Interdictions :** ne pas inventer de poids ; ne pas afficher de valeur chiffrée, notamment `88` ; ne pas produire de classement ; ne pas relier le score à une prime ; ne pas ajouter d’autre composante.
+- **Garde-fous :** cette décision ne modifie pas `DEC-015`. Elle n’autorise ni calcul, ni développement d’une formule, ni changement de données, ni migration, ni modification du lot C10, ni publication du Site.
+- **Document de cadrage :** `docs/C11_CADRAGE_SCORE_AGENT_2026-09-09.md`.
+- **Suite :** soumettre séparément à validation les poids, les règles d’exclusion et la gouvernance RH avant toute nouvelle décision autorisant un calcul ou un affichage chiffré.
 
 ## DEC-016 — C11-A : cockpit santé conservé, scores suspendus jusqu’à validation métier
 
