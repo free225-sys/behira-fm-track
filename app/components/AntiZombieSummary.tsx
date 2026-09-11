@@ -8,8 +8,9 @@ export function AntiZombieSummary({ data, variant = 'standard' }: { data: AntiZo
   const stateTone = summary.isBlocked ? 'danger' : summary.isDelayed ? 'warning' : 'neutral';
 
   const fields = [
-    { label:'Prochaine action', value:summary.nextAction, priority:true, missing:summary.nextAction === 'Prochaine action non renseignée' },
-    { label:'Responsable', value:summary.responsible, priority:true, missing:summary.responsible === 'Responsable non attribué' },
+    { label:'Prochaine action', value:summary.nextAction, meta:summary.nextActionDetail, priority:true, missing:summary.nextAction === 'Prochaine action non renseignée' },
+    { label:'Acteur attendu', value:summary.expectedActor, priority:true, missing:summary.expectedActor === 'Acteur attendu non renseigné' },
+    { label:'Responsable interne', value:summary.responsible, priority:true, missing:summary.responsible === 'Responsable non attribué' },
     { label:'SLA / Échéance', value:summary.deadlineOrSla, priority:true, missing:summary.deadlineOrSla === 'Échéance non renseignée' },
     { label:'Acteur bloquant', value:summary.blockingActor, priority:true, missing:summary.isBlocked && summary.blockingActor === 'Acteur bloquant non renseigné' },
     { label:'Étape actuelle', value:summary.status, state:`Dossier ${summary.dossierState.toLowerCase()}` },

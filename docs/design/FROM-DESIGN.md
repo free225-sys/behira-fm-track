@@ -8,6 +8,9 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 | id | date | sujet | attendu de | bloque |
 | --- | --- | --- | --- | --- |
+| DESIGN-050 | 2026-09-11 | Badges : ruban/étiquette (pointe + œillet), plus de cran ni sceau | Dev Lead | feat/ge01-pilot |
+| DESIGN-049 | 2026-09-11 | Raccord lot 1 UI → Ge01WorkflowPanel / preuves / nextActionAssignee | Dev Lead | feat/ge01-pilot |
+| DESIGN-048 | 2026-09-11 | Dossier : prochaine action ≠ responsable interne ; traitement et preuves lisibles | Dev Lead | feat/ge01-pilot |
 | DESIGN-046 | 2026-08-31 | Accueil : plus de kicker ni titre jumeau au-dessus du score | Wilkam | DEC-009 |
 | DESIGN-045 | 2026-08-31 | Notifications d’erreur : file + règles (in-app / e-mail simulé) | Wilkam | — |
 | DESIGN-044 | 2026-08-31 | Accueil : chiffre + échelle 0–100 + lollipops | Wilkam | DEC-015 |
@@ -52,6 +55,61 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 | DESIGN-003 | 2026-08-28 | `pnpm dev` échoue sans accès réseau à `fonts.googleapis.com` | Dev Lead | tout audit hors ligne |
 | DESIGN-002 | 2026-08-28 | Nomenclature unique des destinations — *arbitrée, voir DEC-002* | Dev Lead | routes |
 | DESIGN-001 | 2026-08-28 | Lot 1 — spécification du socle de tokens | Dev Lead | lot 2, écran pilote |
+
+---
+
+## DESIGN-050 — Forme des badges
+
+- **Date :** 11 septembre 2026
+- **Statut :** Livré dans le miroir
+- **Forme :** ruban à pointe droite + œillet (planche tags), **sans cran** ni sceau circulaire.
+- **Fichiers :** `app/components/ui/badge.tsx`, `app/globals.css` (bloc DESIGN-050)
+
+---
+
+## DESIGN-049 — Raccord lot 1 sur le vrai parcours GE-01
+
+- **Date :** 11 septembre 2026
+- **Auteur :** Agent design, d’après le dump `BEHIRA_GE01_CODE_DESIGN_2026-09-11`
+- **Statut :** Patch UI proposé ; logique métier intacte
+- **Périmètre :** `Ge01WorkflowPanel`, `AntiZombieSummary`, onglet Preuves de `Detail`
+- **Détail :** [GE01_RACCORD_LOT1.md](GE01_RACCORD_LOT1.md)
+- **Ne copie pas** les adaptateurs supabase ni `globals.css` du dump.
+
+---
+
+## DESIGN-048 — Continuité de dossier (lot 1 GE-01, miroir)
+
+- **Date :** 11 septembre 2026
+- **Auteur :** Agent design, d’après `PASSATION_AGENT_DESIGN_BEHIRA_2026-09-11.md`
+- **Statut :** Livré dans le miroir `design/lot-1-tokens` — **présentation**, pas le backend `feat/ge01-pilot`
+- **Commit de départ consulté :** `fd2b1dc`
+- **Périmètre :** dossier central, synthèse anti-zombie, Rondes Agent Électricité (intitulé seulement)
+
+### Matrice
+
+| Écran actuel | Exigence passation | Adaptation UI | État |
+| --- | --- | --- | --- |
+| Dossier hero + AZ + action principale | Savoir quoi faire, qui, échéance | `DossierActionBoard` : prochaine action, **acteur attendu** ≠ **responsable interne**, échéance, CTA | Miroir |
+| Synthèse AZ « Responsable » unique | Deux informations distinctes | Champ `expectedActor` + libellé Responsable interne | Miroir |
+| Branche / montant seul | OT, coût **retenu**, entreprise ; approbation ≠ exécution | `DossierTreatmentStrip` — OT et coût retenu = *non raccordé dans le miroir* | Maquette honnête |
+| Preuves 0/1, bouton « ＋ Ajouter » | États À valider / Acceptée, dépôt évident | Snapshot + CTA « Déposer un justificatif » 44 px | Miroir |
+| Historique « 0 événement canonique » | Journal attribué | Inchangé — pas d’événements inventés | Futur / `feat/ge01-pilot` |
+| Rondes Agent Électricité générique | Pilote GE-01 ELCOS, saisie directe | Intitulé GE-01 ; **pas** les 22 clés | Maquette |
+| Accueil scores | Aucun score pour utiliser le parcours | DEC-015 conservé ; pas de chiffre agent (DEC-017) | Inchangé |
+| `Ge01Pilot.tsx` etc. | Formulaire 22 clés, examen FM, OT liés | **Absents de ce dépôt** | Fichiers manquants — à raccorder par le dev |
+
+### Non raccordé volontairement
+
+Pas d’OT, CST, PRV, « Demander un complément », formulaire 22 champs, photo factice, score agent, accès prestataire. WILO-01 n’est plus le pilote par défaut visuel.
+
+### Fichiers
+
+`app/components/DossierContinuity.tsx`, `AntiZombieSummary.tsx`, `anti-zombie-contract.ts`, `app/page.tsx`, `app/globals.css`, `scripts/verify-anti-zombie.ts`
+
+### Contrôles
+
+`pnpm exec tsx scripts/verify-anti-zombie.ts` ; recette visuelle dossier DEMO-GE 1440 / 390.
 
 ---
 

@@ -17,8 +17,8 @@ const icons: Record<string, string> = {
 export function Badge({ children, tone = 'neutral' }: { children: ReactNode; tone?: string }) {
   return (
     <span className={`badge badge-${tone}`}>
-      <span className="badge-label">{children}</span>
       <span className="badge-icon" aria-hidden="true">{icons[tone] ?? '•'}</span>
+      <span className="badge-label">{children}</span>
     </span>
   );
 }

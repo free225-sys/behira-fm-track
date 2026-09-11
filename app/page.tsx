@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useId, useMemo, useRef, useState, type ReactNode 
 
 import { AntiZombieSummary } from './components/AntiZombieSummary';
 import type { AntiZombieSummaryData } from './components/anti-zombie-contract';
+import { DossierActionBoard, DossierProofSnapshot, DossierTreatmentStrip, type TreatmentBranch } from './components/DossierContinuity';
 import { AccessWorkspace } from './components/AccessWorkspace';
 import { BuildingHealthCockpit, ScoreRing } from './components/BuildingHealthCockpit';
 import { CostsWorkspace } from './components/CostsWorkspace';
@@ -92,6 +93,23 @@ type FieldRequest = {
   status: 'À traiter par Facility Manager' | 'Complément transmis' | 'Transmise à Direction';
 };
 
+type MirrorProof = {
+  id:string;
+  reference:string;
+  capturedAt:string;
+  verificationStatus:'pending'|'accepted'|'rejected';
+  rejectionReason:string|null;
+  mimeType:string;
+};
+
+type MirrorTreatment = {
+  workOrderReference:string;
+  branch:'internal_without_cost'|'internal_with_cost'|'vendor';
+  costReference:string|null;
+  amount:number|null;
+  vendorLabel:string|null;
+};
+
 type Anomaly = {
   id: string;
   asset: string;
@@ -106,6 +124,8 @@ type Anomaly = {
   proof: boolean;
   proofPending?: boolean;
   description: string;
+  proofs?: MirrorProof[];
+  treatment?: MirrorTreatment;
 };
 
 type VendorReportInput = {
@@ -130,7 +150,10 @@ const seedAnomalies: Anomaly[] = [
   { id:'ANO-0241', asset:'DEMO-SSI', title:'Pression réseau incendie instable', location:'Sous-sol · Local incendie', priority:'Critique', status:'À qualifier', reported:'24 août · 07:36', due:'Aujourd’hui · 12:00', owner:'Non affectée', delayed:false, proof:false, description:'Variations de pression constatées pendant le test matinal. Le manomètre oscille entre 5,8 et 7,2 bars sans sollicitation du réseau.' },
   { id:'ANO-0238', asset:'DEMO-ASC-2', title:'Arrêts intermittents au niveau R+7', location:'Tour A · Ascenseur 2', priority:'Haute', status:'Affectée', reported:'23 août · 08:15', due:'23 août · 18:00', owner:'PREST-ASC', delayed:true, proof:false, description:'Deux arrêts non programmés signalés au niveau R+7. Redémarrage automatique après environ trente secondes.' },
   { id:'ANO-0234', asset:'DEMO-EAU', title:'Fuite légère au collecteur', location:'Sous-sol · Local surpresseur', priority:'Moyenne', status:'En intervention', reported:'21 août · 16:42', due:'22 août · 15:00', owner:'PREST-EAU', delayed:true, proof:false, description:'Suintement visible au raccord du collecteur principal. Bac de rétention en place, sans impact sur la distribution.' },
-  { id:'ANO-0231', asset:'DEMO-GE', title:'Batterie de démarrage sous tension nominale', location:'RDC · Local groupe', priority:'Critique', status:'En validation', reported:'20 août · 11:20', due:'21 août · 10:00', owner:'PREST-GE', delayed:true, proof:true, description:'La batterie mesurée à 11,6 V a été remplacée. Le test de démarrage est concluant, preuve en attente de validation FM.' },
+  { id:'ANO-0231', asset:'DEMO-GE', title:'Batterie de démarrage sous tension nominale', location:'RDC · Local groupe', priority:'Critique', status:'En validation', reported:'20 août · 11:20', due:'21 août · 10:00', owner:'PREST-GE', delayed:true, proof:true, description:'La batterie mesurée à 11,6 V a été remplacée. Le test de démarrage est concluant, preuve en attente de validation FM.', treatment:{ workOrderReference:'OT-DEMO-0231', branch:'vendor', costReference:'CST-DEMO-0231', amount:400000, vendorLabel:'Prestataire Démo' }, proofs:[
+    { id:'prv-0231-a', reference:'PRV-DEMO-0231-A', capturedAt:'20 août · 18:10', verificationStatus:'rejected', rejectionReason:'Photo illisible — reprise demandée', mimeType:'image/jpeg' },
+    { id:'prv-0231-b', reference:'PRV-DEMO-0231-B', capturedAt:'21 août · 09:02', verificationStatus:'accepted', rejectionReason:null, mimeType:'application/pdf' },
+  ] },
   { id:'ANO-0229', asset:'DEMO-ESP', title:'Électrovanne zone jardin bloquée', location:'Extérieur · Jardin nord', priority:'Faible', status:'Clôturée', reported:'19 août · 09:05', due:'20 août · 17:00', owner:'PREST-ESP', delayed:false, proof:true, description:'Électrovanne nettoyée et remise en service. Cycle d’arrosage contrôlé sur vingt minutes.' },
   { id:'ANO-0226', asset:'DEMO-ASC-1', title:'Éclairage cabine défaillant', location:'Tour A · Ascenseur 1', priority:'Moyenne', status:'Clôturée', reported:'18 août · 14:30', due:'19 août · 12:00', owner:'PREST-ASC', delayed:false, proof:true, description:'Bloc LED remplacé et essai d’éclairage de secours réalisé.' },
   { id:'ANO-0222', asset:'DEMO-RND', title:'Porte coupe-feu maintenue ouverte', location:'R+4 · Circulation Est', priority:'Haute', status:'À qualifier', reported:'24 août · 06:58', due:'Aujourd’hui · 14:00', owner:'Non affectée', delayed:false, proof:false, description:'Le ferme-porte ne ramène plus complètement le vantail. Zone balisée pendant la ronde.' },
@@ -351,7 +374,9 @@ function statusTone(status: Status) {
 }
 
 function expectedProofFor(anomaly:Anomaly) {
-  return anomaly.asset === 'DEMO-EAU' ? 'Photo du manomètre et rapport d’intervention' : null;
+  if (anomaly.asset === 'DEMO-GE') return 'Justificatif d’intervention et essai de démarrage';
+  if (anomaly.asset === 'DEMO-EAU') return 'Photo du manomètre et rapport d’intervention';
+  return null;
 }
 
 function canonicalResponsible(anomaly:Anomaly) {
@@ -363,13 +388,37 @@ function externalActorConcerned(anomaly:Anomaly) {
   return anomaly.owner !== 'Non affectée' && !canonicalResponsible(anomaly) ? anomaly.owner : null;
 }
 
+function expectedActorFor(anomaly:Anomaly) {
+  if (anomaly.status === 'Clôturée') return 'Aucune action — dossier clôturé';
+  if (anomaly.proofPending || anomaly.status === 'En validation' || anomaly.status === 'À qualifier') return 'Facility Manager';
+  if ((anomaly.status === 'Affectée' || anomaly.status === 'En intervention') && !canonicalResponsible(anomaly)) return 'Facility Manager';
+  if (anomaly.status === 'Affectée' || anomaly.status === 'En intervention') return canonicalResponsible(anomaly) as string;
+  return 'Acteur attendu non renseigné';
+}
+
 function nextActionFor(anomaly:Anomaly) {
   if (anomaly.status === 'Clôturée') return 'Aucune action — dossier clôturé';
-  if (anomaly.status === 'À qualifier' && !canonicalResponsible(anomaly)) return 'Qualifier et affecter';
-  if (anomaly.status === 'À qualifier' || anomaly.status === 'Affectée') return 'Réaliser et confirmer le diagnostic';
-  if (anomaly.status === 'En intervention') return anomaly.proof ? 'Contrôler la réception' : 'Réaliser l’intervention et déposer la preuve';
-  if (anomaly.status === 'En validation') return anomaly.proofPending || anomaly.proof ? 'Contrôler la preuve' : 'Déposer les preuves attendues';
+  if (anomaly.status === 'À qualifier') return canonicalResponsible(anomaly) ? 'Examiner le rapport et qualifier' : 'Qualifier et affecter un responsable interne';
+  if (anomaly.status === 'Affectée' && !canonicalResponsible(anomaly)) return 'Affecter un responsable interne';
+  if (anomaly.status === 'Affectée') return 'Réaliser et confirmer le diagnostic';
+  if (anomaly.status === 'En intervention') return anomaly.proofPending ? 'Déposer le justificatif' : anomaly.proof ? 'Contrôler la preuve' : 'Réaliser l’intervention et déposer le justificatif';
+  if (anomaly.status === 'En validation') return 'Contrôler la preuve';
   return 'Prochaine action non renseignée';
+}
+
+function treatmentBranchFor(anomaly:Anomaly, decisionAmount:number|null): TreatmentBranch {
+  if (anomaly.treatment?.branch === 'vendor') return 'prestataire';
+  if (anomaly.treatment?.branch === 'internal_with_cost') return 'interne-avec-cout';
+  if (anomaly.treatment?.branch === 'internal_without_cost') return 'interne-sans-cout';
+  if (anomaly.status === 'À qualifier' || anomaly.status === 'Affectée' || !anomaly.treatment) return 'non-choisie';
+  if (decisionAmount !== null) return 'interne-avec-cout';
+  return 'interne-sans-cout';
+}
+
+function dossierOrigin(anomaly:Anomaly) {
+  if (anomaly.asset === 'DEMO-GE') return 'Ronde GE-01 quotidienne';
+  if (anomaly.asset === 'DEMO-EAU') return 'Ronde Surpresseur quotidienne';
+  return 'Constat terrain';
 }
 
 function adaptDossierToAntiZombieSummary(anomaly:Anomaly):AntiZombieSummaryData {
@@ -377,6 +426,8 @@ function adaptDossierToAntiZombieSummary(anomaly:Anomaly):AntiZombieSummaryData 
     dossierState:anomaly.status === 'Clôturée' ? 'Clôturé' : 'Ouvert',
     status:anomaly.status,
     responsible:canonicalResponsible(anomaly),
+    expectedActor:expectedActorFor(anomaly),
+    nextActionAssignee:expectedActorFor(anomaly),
     nextAction:nextActionFor(anomaly),
     deadline:anomaly.due,
     slaLabel:anomaly.delayed && anomaly.status !== 'Clôturée' ? 'En retard' : 'Dans le délai',
@@ -1653,15 +1704,19 @@ function Detail({ anomaly, decisionAmount, persistenceMode, onBack, onStatus, on
     if (result !== 'error') setPendingProof(null);
   };
   const workflow = ['Constat','Qualification','Décision','Intervention','Preuve','Clôture'];
-  const statusStep:Record<Status,number> = { 'À qualifier':1, 'Affectée':2, 'En intervention':3, 'En validation':4, 'Clôturée':5 };
+  const statusStep:Record<Status,number> = { 'À qualifier':1, 'Affectée':1, 'En intervention':3, 'En validation':4, 'Clôturée':5 };
   const currentStep = statusStep[anomaly.status];
   const overThreshold = decisionAmount !== null && decisionAmount >= DECISION_THRESHOLD_FCFA;
   const expectedProof = expectedProofFor(anomaly);
+  const proofs = anomaly.proofs ?? [];
+  const proofCount = proofs.length || ((anomaly.proof || anomaly.proofPending) ? 1 : 0);
   const criticalClosureLocked = nextStatusOption === 'Clôturée' && anomaly.priority === 'Critique' && !anomaly.proof;
-  const proofRequiresAttention = anomaly.proofPending || criticalClosureLocked;
-  const primaryActionLabel = proofRequiresAttention ? 'Ouvrir les preuves' : overThreshold ? 'Examiner la décision financière' : nextStatusOption ? `Valider : ${nextStatus}` : 'Consulter les repères du dossier';
+  const proofRequiresAttention = Boolean(anomaly.proofPending) || criticalClosureLocked;
+  const diagnosisStage = anomaly.status === 'À qualifier' || anomaly.status === 'Affectée';
+  const primaryActionLabel = proofRequiresAttention ? 'Ouvrir les preuves' : diagnosisStage ? nextActionFor(anomaly) : overThreshold ? 'Examiner la décision financière' : nextStatusOption ? `Valider : ${nextStatus}` : 'Consulter les repères du dossier';
   const runPrimaryAction = () => {
     if (proofRequiresAttention) { setSection('evidence'); return; }
+    if (diagnosisStage) { if (nextStatusOption && canonicalResponsible(anomaly)) onStatus(nextStatus); return; }
     if (overThreshold) { setSection('finance'); return; }
     if (nextStatusOption) { onStatus(nextStatus); return; }
     setSection('history');
@@ -1669,15 +1724,15 @@ function Detail({ anomaly, decisionAmount, persistenceMode, onBack, onStatus, on
   return <>
     <input ref={proofInput} className="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(event) => { const file = event.target.files?.[0]; if (file) void submitProof(file); event.currentTarget.value = ''; }} />
     <button className="back-button dossier-back" onClick={onBack}>← Retour à la file</button>
-    <section className="dossier-hero"><div><div className="detail-labels"><Badge tone={priorityTone(anomaly.priority)}>{anomaly.priority}</Badge>{anomaly.delayed && anomaly.status !== 'Clôturée' && <Badge tone="critical">EN RETARD</Badge>}{readOnly && <Badge tone="neutral">CONSULTATION</Badge>}<span>{anomaly.id}</span></div><h2>{anomaly.title}</h2><p>{anomaly.asset} · {anomaly.location}</p></div>{!readOnly && nextStatusOption && <div className="detail-actions"><Select value={nextStatus} onChange={(event) => setNextStatus(event.target.value as Status)} aria-label="Étape suivante"><option value={nextStatusOption}>{nextStatusOption}</option></Select><button className="primary-button" disabled={busy || criticalClosureLocked} onClick={() => onStatus(nextStatus)}>{busy ? 'Enregistrement…' : criticalClosureLocked ? 'Preuve requise avant clôture' : 'Valider l’étape'}</button></div>}</section>
+    <section className="dossier-hero"><div><div className="detail-labels"><Badge tone={priorityTone(anomaly.priority)}>{anomaly.priority}</Badge>{anomaly.delayed && anomaly.status !== 'Clôturée' && <Badge tone="critical">EN RETARD</Badge>}{readOnly && <Badge tone="neutral">CONSULTATION</Badge>}<span>{anomaly.id}</span></div><h2>{anomaly.title}</h2><p>{anomaly.asset} · {anomaly.location}</p></div></section>
     <section className="dossier-workflow" aria-label="Cycle du dossier">{workflow.map((item,index) => <div key={item} className={index < currentStep ? 'done' : index === currentStep ? 'current' : ''}><span>{index < currentStep ? '✓' : index+1}</span><b>{item}</b></div>)}</section>
     {anomaly.priority === 'Critique' && !anomaly.proof && <section className="critical-banner dossier-critical"><BrandIcon name="circleAlert" size={18} /><div><b>Clôture verrouillée jusqu’à l’acceptation de la preuve</b><p>{anomaly.proofPending ? 'Une preuve a été déposée et attend le contrôle de Facility Manager.' : 'La matrice des preuves exige une pièce conforme avant clôture.'}</p></div>{!readOnly && !anomaly.proofPending && <button disabled={busy} onClick={chooseProof}>＋ Ajouter une preuve</button>}</section>}
     <div className="dossier-continuity"><AntiZombieSummary data={adaptDossierToAntiZombieSummary(anomaly)} variant="detailed" /></div>
-    <nav className="dossier-tabs" aria-label="Sections du dossier" role="tablist"><button type="button" role="tab" aria-selected={section === 'overview'} aria-controls="dossier-overview-panel" className={section === 'overview' ? 'active' : ''} onClick={() => setSection('overview')}>Vue d’ensemble</button><button type="button" role="tab" aria-selected={section === 'finance'} aria-controls="dossier-finance-panel" className={section === 'finance' ? 'active' : ''} onClick={() => setSection('finance')}>Coûts & décision</button><button type="button" role="tab" aria-selected={section === 'evidence'} aria-controls="dossier-evidence-panel" className={section === 'evidence' ? 'active' : ''} onClick={() => setSection('evidence')}>Preuves <span>{anomaly.proof || anomaly.proofPending ? '1' : '0'}</span></button><button type="button" role="tab" aria-selected={section === 'history'} aria-controls="dossier-history-panel" className={section === 'history' ? 'active' : ''} onClick={() => setSection('history')}>Historique</button></nav>
+    <nav className="dossier-tabs" aria-label="Sections du dossier" role="tablist"><button type="button" role="tab" aria-selected={section === 'overview'} aria-controls="dossier-overview-panel" className={section === 'overview' ? 'active' : ''} onClick={() => setSection('overview')}>Vue d’ensemble</button><button type="button" role="tab" aria-selected={section === 'finance'} aria-controls="dossier-finance-panel" className={section === 'finance' ? 'active' : ''} onClick={() => setSection('finance')}>Coûts & décision</button><button type="button" role="tab" aria-selected={section === 'evidence'} aria-controls="dossier-evidence-panel" className={section === 'evidence' ? 'active' : ''} onClick={() => setSection('evidence')}>Preuves <span>{proofCount}</span></button><button type="button" role="tab" aria-selected={section === 'history'} aria-controls="dossier-history-panel" className={section === 'history' ? 'active' : ''} onClick={() => setSection('history')}>Historique</button></nav>
 
     {section === 'overview' && <section id="dossier-overview-panel" role="tabpanel" className="dossier-three-zone">
       <aside className="dossier-identity-column">
-        <article className="panel dossier-identity-card"><p className="design-kicker">IDENTITÉ & RISQUE</p><div className="identity-priority"><Badge tone={statusTone(anomaly.status)}>{anomaly.status}</Badge></div><dl><div><dt>Équipement</dt><dd>{anomaly.asset}</dd></div><div><dt>Zone</dt><dd>{anomaly.location}</dd></div><div><dt>Origine</dt><dd>{anomaly.asset === 'DEMO-EAU' ? 'Ronde Surpresseur quotidienne' : 'Constat terrain'}</dd></div><div><dt>Responsable interne actuel</dt><dd className={!canonicalResponsible(anomaly) ? 'missing-value' : ''}>{canonicalResponsible(anomaly) ?? 'Responsable non attribué'}</dd></div>{externalActorConcerned(anomaly) && <div><dt>Acteur externe concerné</dt><dd>{externalActorConcerned(anomaly)}</dd></div>}<div><dt>Constaté le</dt><dd>{anomaly.reported}</dd></div></dl></article>
+        <article className="panel dossier-identity-card"><p className="design-kicker">IDENTITÉ & RISQUE</p><div className="identity-priority"><Badge tone={statusTone(anomaly.status)}>{anomaly.status}</Badge></div><dl><div><dt>Équipement</dt><dd>{anomaly.asset}</dd></div><div><dt>Zone</dt><dd>{anomaly.location}</dd></div><div><dt>Origine</dt><dd>{dossierOrigin(anomaly)}</dd></div>{externalActorConcerned(anomaly) && <div><dt>Acteur externe concerné</dt><dd>{externalActorConcerned(anomaly)}</dd></div>}<div><dt>Constaté le</dt><dd>{anomaly.reported}</dd></div></dl></article>
         <article className="panel dossier-source-card"><span>R</span><div><b>Saisie directe</b><small>Source traçable · aucun import de reporting</small></div></article>
       </aside>
       <div className="dossier-activity-column">
@@ -1685,14 +1740,45 @@ function Detail({ anomaly, decisionAmount, persistenceMode, onBack, onStatus, on
         <article className="panel dossier-diagnostic-card"><div className="panel-head"><div><p className="design-kicker">DIAGNOSTIC & INTERVENTION</p><h3>Progression métier</h3></div><Badge tone={statusTone(anomaly.status)}>{workflow[currentStep]}</Badge></div><div className="diagnostic-state"><BrandIcon name="wrench" size={18} /><div><b>{anomaly.status === 'À qualifier' || anomaly.status === 'Affectée' ? 'Diagnostic technique attendu' : 'Diagnostic enregistré dans le cycle'}</b><p>{anomaly.status === 'À qualifier' || anomaly.status === 'Affectée' ? 'Aucun diagnostic canonique n’est disponible dans la projection actuelle.' : 'Consultez l’historique pour les détails attribués et horodatés.'}</p></div></div></article>
       </div>
       <aside className="dossier-decision-column">
-        <article className="panel next-step-card"><p className="design-kicker">ACTION PRINCIPALE</p><h3>{nextActionFor(anomaly)}</h3><p>{!canonicalResponsible(anomaly) ? 'Facility Manager doit d’abord attribuer un responsable interne autorisé.' : `Responsable interne actuel : ${canonicalResponsible(anomaly)}.`}</p>{externalActorConcerned(anomaly) && <small>Acteur externe concerné : {externalActorConcerned(anomaly)}</small>}{readOnly ? <div className="next-step-read-only" role="note">Consultation uniquement · aucune action métier accordée</div> : <button className="primary-button" disabled={busy} onClick={runPrimaryAction}>{busy ? 'Enregistrement…' : primaryActionLabel}</button>}</article>
-        <article className="panel recurrence-card"><div><span>↻</span><p><b>Récurrence à confirmer</b><small>Historique insuffisant</small></p></div><p>Aucune récurrence n’est affirmée sans événements métier datés.</p></article>
+        <DossierActionBoard
+          nextAction={nextActionFor(anomaly)}
+          expectedActor={expectedActorFor(anomaly)}
+          responsible={canonicalResponsible(anomaly)}
+          deadline={anomaly.due}
+          delayed={Boolean(anomaly.delayed)}
+          closed={anomaly.status === 'Clôturée'}
+          primaryLabel={primaryActionLabel}
+          onPrimary={runPrimaryAction}
+          readOnly={readOnly}
+          busy={busy}
+          showMeta={false}
+        >{readOnly ? <div className="next-step-read-only" role="note">Consultation uniquement · aucune action métier accordée</div> : <button className="primary-button" disabled={busy || criticalClosureLocked} onClick={runPrimaryAction}>{busy ? 'Enregistrement…' : criticalClosureLocked ? 'Preuve requise avant clôture' : primaryActionLabel}</button>}</DossierActionBoard>
+        <DossierTreatmentStrip
+          branch={treatmentBranchFor(anomaly, decisionAmount)}
+          workOrder={anomaly.treatment?.workOrderReference ?? null}
+          retainedCost={anomaly.treatment?.amount ?? null}
+          decisionAmount={decisionAmount}
+          company={anomaly.treatment?.vendorLabel ?? externalActorConcerned(anomaly)}
+          formatMoney={formatMoney}
+        />
+        <DossierProofSnapshot
+          accepted={Boolean(anomaly.proof)}
+          pending={Boolean(anomaly.proofPending)}
+          countLabel={String(proofCount)}
+          onOpen={() => setSection('evidence')}
+        />
       </aside>
     </section>}
 
-    {section === 'finance' && <section id="dossier-finance-panel" role="tabpanel" className="dossier-two-columns"><article className="panel finance-decision-card"><div className="panel-head"><div><p className="design-kicker">BRANCHE DE TRAITEMENT</p><h3>{decisionAmount === null ? 'Montant non renseigné' : 'Intervention avec montant documenté'}</h3></div><Badge tone={decisionAmount === null ? 'neutral' : overThreshold ? 'orange' : 'success'}>{decisionAmount === null ? 'DONNÉES INSUFFISANTES' : overThreshold ? 'ADMINISTRATION' : 'DÉLÉGATION FM'}</Badge></div><div className="finance-amount"><span>Montant de décision</span><strong>{decisionAmount === null ? 'Non renseigné' : formatMoney(decisionAmount)}</strong><small>Seuil d’approbation : {formatMoney(DECISION_THRESHOLD_FCFA)}</small></div>{decisionAmount === null ? <div className="compact-insufficient-state"><b>Qualification financière incomplète</b><p>Aucun montant canonique n’est relié à ce dossier.</p></div> : <><div className={`authority-result ${overThreshold ? 'escalate' : 'delegated'}`}><span>{overThreshold ? '↑' : '✓'}</span><div><b>{overThreshold ? 'Arbitrage de l’Administration' : 'Facility Manager peut décider'}</b><small>{overThreshold ? 'Le montant dépasse la délégation validée.' : 'Le montant reste sous le seuil validé.'}</small></div></div><div className="decision-audit"><span><b>Décision</b>{overThreshold ? 'À soumettre' : 'Autorisée dans la délégation'}</span><span><b>Montant engagé</b>Non renseigné</span><span><b>Montant payé</b>Non renseigné</span></div></>}</article><aside className="panel quote-card"><p className="design-kicker">PIÈCES FINANCIÈRES</p><h3>Devis et engagement</h3><div className="quote-file"><span>▧</span><p><b>Pièce financière non reliée</b><small>Données insuffisantes dans la source actuelle</small></p></div></aside></section>}
+    {section === 'finance' && <section id="dossier-finance-panel" role="tabpanel" className="dossier-two-columns"><article className="panel finance-decision-card"><div className="panel-head"><div><p className="design-kicker">BRANCHE DE TRAITEMENT</p><h3>{decisionAmount === null ? 'Montant non renseigné' : 'Intervention avec montant documenté'}</h3></div><Badge tone={decisionAmount === null ? 'neutral' : overThreshold ? 'orange' : 'success'}>{decisionAmount === null ? 'DONNÉES INSUFFISANTES' : overThreshold ? 'ADMINISTRATION' : 'DÉLÉGATION FM'}</Badge></div><div className="finance-amount"><span>Montant de décision</span><strong>{decisionAmount === null ? 'Non renseigné' : formatMoney(decisionAmount)}</strong><small>Seuil d’approbation : {formatMoney(DECISION_THRESHOLD_FCFA)} · une approbation ne démarre pas l’intervention</small></div>{decisionAmount === null ? <div className="compact-insufficient-state"><b>Qualification financière incomplète</b><p>Aucun montant canonique n’est relié à ce dossier.</p></div> : <><div className={`authority-result ${overThreshold ? 'escalate' : 'delegated'}`}><span>{overThreshold ? '↑' : '✓'}</span><div><b>{overThreshold ? 'Arbitrage de l’Administration' : 'Facility Manager peut décider'}</b><small>{overThreshold ? 'Le montant dépasse la délégation validée.' : 'Le montant reste sous le seuil validé.'}</small></div></div><div className="decision-audit"><span><b>Décision</b>{overThreshold ? 'À soumettre' : 'Autorisée dans la délégation'}</span><span><b>Montant engagé</b>Non renseigné</span><span><b>Montant payé</b>Non renseigné</span></div></>}</article><aside className="panel quote-card"><p className="design-kicker">PIÈCES FINANCIÈRES</p><h3>Devis et engagement</h3><div className="quote-file"><span>▧</span><p><b>Pièce financière non reliée</b><small>Données insuffisantes dans la source actuelle</small></p></div></aside></section>}
 
-    {section === 'evidence' && <section id="dossier-evidence-panel" role="tabpanel" className="dossier-two-columns"><article className="panel evidence-panel"><div className="panel-head"><div><h3>Preuves du dossier</h3><p>Exigence appliquée au dossier lorsqu’elle est disponible</p></div>{!readOnly && !anomaly.proofPending && <button disabled={busy} onClick={chooseProof}>＋ Ajouter</button>}</div>{!readOnly && !anomaly.proof && !anomaly.proofPending && <SyncStatusNotice state={proofTransferState} compact label="État du dépôt de preuve" onRetry={proofTransferState === 'error' && pendingProof ? () => void submitProof(pendingProof) : undefined} />}{anomaly.proof ? <div className="evidence-file"><BrandIcon name="fileCheck" size={18} /><div><b>Preuve d’intervention acceptée</b><small>Fichier privé · contrôle Facility Manager terminé</small></div><Badge tone="success">ACCEPTÉE</Badge></div> : anomaly.proofPending ? <div className="evidence-file"><BrandIcon name="fileCheck" size={18} /><div><b>Preuve reçue</b><small>Contrôle Facility Manager requis</small></div><Badge tone="orange">À VALIDER</Badge>{canVerify && <button className="primary-button" disabled={busy} onClick={onVerify}>Valider</button>}</div> : <div className="proof-requirement"><span>⌁</span><div><b>{expectedProof ?? 'Preuve attendue non définie'}</b><p>{expectedProof ? 'La clôture reste impossible tant que la pièce obligatoire n’est pas acceptée.' : 'Aucune règle de preuve canonique n’est raccordée à ce dossier.'}</p></div>{!readOnly && <button className="primary-button" onClick={chooseProof}>Déposer</button>}</div>}</article><aside className="panel proof-matrix-card"><p className="design-kicker">EXIGENCE APPLIQUÉE</p><h3>{anomaly.asset}</h3>{expectedProof ? <ul><li><span>✓</span>{expectedProof}</li></ul> : <div className="compact-insufficient-state"><b>Preuve attendue non définie</b><p>La règle contextuelle doit être confirmée avant d’afficher une matrice.</p></div>}</aside></section>}
+    {section === 'evidence' && <section id="dossier-evidence-panel" role="tabpanel" className="dossier-two-columns"><article className="panel evidence-panel"><div className="panel-head"><div><h3>Preuves du dossier</h3><p>Consultation, motif de refus et nouveau dépôt au même endroit</p></div>{!readOnly && anomaly.status !== 'Clôturée' && !anomaly.proofPending && <button type="button" className="primary-button" disabled={busy} onClick={chooseProof}><BrandIcon name="plus" size={16} /> {proofs.some((item) => item.verificationStatus === 'rejected') ? 'Déposer la preuve corrigée' : 'Déposer un justificatif'}</button>}</div>
+        {!readOnly && !anomaly.proof && !anomaly.proofPending && <SyncStatusNotice state={proofTransferState} compact label="État du dépôt de preuve" onRetry={proofTransferState === 'error' && pendingProof ? () => void submitProof(pendingProof) : undefined} />}
+        {proofs.length > 0 && <div className="evidence-list" aria-label="Fichiers de preuve enregistrés">{proofs.map((proof) => <article key={proof.id} className="evidence-file evidence-file-record"><BrandIcon name={proof.mimeType === 'application/pdf' ? 'fileCheck' : 'camera'} size={18} /><div><b>{proof.reference}</b><small>{proof.mimeType === 'application/pdf' ? 'Document PDF' : 'Image'} · {proof.capturedAt}</small>{proof.verificationStatus === 'rejected' && proof.rejectionReason ? <em>Motif : {proof.rejectionReason}</em> : null}</div><Badge tone={proof.verificationStatus === 'accepted' ? 'success' : proof.verificationStatus === 'rejected' ? 'critical' : 'orange'}>{proof.verificationStatus === 'accepted' ? 'ACCEPTÉE' : proof.verificationStatus === 'rejected' ? 'REFUSÉE' : 'À VALIDER'}</Badge><button type="button" className="secondary-button" disabled>Consulter · miroir</button></article>)}</div>}
+        {proofs.length === 0 && anomaly.proof ? <div className="evidence-file"><BrandIcon name="fileCheck" size={18} /><div><b>Preuve d’intervention acceptée</b><small>Fichier privé · contrôle Facility Manager terminé</small></div><Badge tone="success">ACCEPTÉE</Badge></div> : null}
+        {proofs.length === 0 && anomaly.proofPending ? <div className="evidence-file"><BrandIcon name="fileCheck" size={18} /><div><b>Preuve reçue</b><small>Contrôle Facility Manager requis</small></div><Badge tone="orange">À VALIDER</Badge>{canVerify && <button className="primary-button" disabled={busy} onClick={onVerify}>Valider</button>}</div> : null}
+        {proofs.length === 0 && !anomaly.proof && !anomaly.proofPending ? <div className="proof-requirement"><BrandIcon name="camera" size={18} /><div><b>{expectedProof ?? 'Preuve attendue non définie'}</b><p>{expectedProof ? 'La clôture reste impossible tant que le dernier justificatif n’est pas accepté.' : 'Aucune règle de preuve canonique n’est raccordée à ce dossier.'}</p></div>{!readOnly && <button className="primary-button" onClick={chooseProof}><BrandIcon name="plus" size={16} /> Déposer</button>}</div> : null}
+      </article><aside className="panel proof-matrix-card"><p className="design-kicker">EXIGENCE APPLIQUÉE</p><h3>{anomaly.asset}</h3>{expectedProof ? <ul><li><span>✓</span>{expectedProof}</li></ul> : <div className="compact-insufficient-state"><b>Preuve attendue non définie</b><p>La règle contextuelle doit être confirmée avant d’afficher une matrice.</p></div>}</aside></section>}
     {vendorReport ? <InternalVendorReportPanel anomalies={[anomaly]} vendors={vendorReport.vendors} canUpload={vendorReport.canUpload} busy={vendorReport.busy} onSubmit={vendorReport.onSubmit} /> : null}
 
     {section === 'history' && <section id="dossier-history-panel" role="tabpanel" className="panel dossier-history"><div className="panel-head"><div><h3>Historique du dossier</h3><p>Seuls les événements métier datés et attribués peuvent constituer l’historique</p></div><span className="panel-count">0 événement canonique</span></div><div className="dossier-history-missing" role="note"><BrandIcon name="info" size={18} /><div><b>Historique métier indisponible</b><p>Aucune source chargée ne fournit actuellement l’action, l’acteur, l’étape et l’horodatage complets. Les repères ci-dessous ne remplacent pas un journal métier.</p></div></div><div className="dossier-current-markers" aria-label="Repères disponibles hors historique"><article><span>R</span><div><b>Constat d’origine</b><small>{anomaly.reported} · auteur non renseigné</small></div><em>REPÈRE DOSSIER</em></article><article className="current"><span>{currentStep+1}</span><div><b>Étape actuelle : {anomaly.status}</b><small>Date et auteur de transition non disponibles</small></div><em>ÉTAT ACTUEL</em></article></div></section>}
@@ -1723,7 +1809,7 @@ function Report({ persona, onNavigate }: { persona:Persona; onNavigate:(v:View)=
   if (!surpresseurAccess) {
     const isRoundsAssistance = persona.id === 'rondes_assistance';
     return <>
-      <section className="section-heading round-heading"><div><p className="design-kicker">SAISIE DIRECTE · MAQUETTE CIBLE</p><h2 className="visually-hidden">Rondes</h2><p>{isRoundsAssistance ? 'Ronde cleaning & jardinage' : 'Ronde technique'} : un constat terrain est enregistré dans l’application puis transmis à Facility Manager pour qualification.</p></div><span className="mockup-label">Aucun import</span></section>
+      <section className="section-heading round-heading"><div><p className="design-kicker">{persona.id === 'electricite' ? 'SAISIE DIRECTE · GE-01' : 'SAISIE DIRECTE · MAQUETTE CIBLE'}</p><h2 className="visually-hidden">Rondes</h2><p>{isRoundsAssistance ? 'Ronde cleaning & jardinage' : persona.id === 'electricite' ? 'Ronde GE-01 · groupe électrogène ELCOS, saisie directe' : 'Ronde technique'} : un constat terrain est enregistré dans l’application puis transmis à Facility Manager pour qualification.</p></div><span className="mockup-label">Aucun import</span></section>
       <section className="quick-round-layout">
         <form className="panel quick-round-card" onSubmit={(event) => { event.preventDefault(); setSubmitted(true); }}>
           <div className="round-card-head"><span className="round-icon">{isRoundsAssistance ? 'R' : 'GE'}</span><div><b>{isRoundsAssistance ? 'DEMO-RND' : 'DEMO-GE'}</b><small>{isRoundsAssistance ? 'Périmètre cleaning et jardinage' : 'Périmètre électrique autorisé'}</small></div><span className="mockup-label">MAQUETTE</span></div>

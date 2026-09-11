@@ -72,10 +72,10 @@ assert.match(managerSource, /<AntiZombieSummary\s/, 'AntiZombieSummary doit êtr
 assert.match(registrySource, /<AntiZombieSummary\s/, 'Le registre doit intégrer la variante compacte.');
 assert.match(detailSource, /<AntiZombieSummary\s/, 'Le dossier central doit intégrer la variante détaillée.');
 
-for (const label of ['Étape actuelle','Responsable','Prochaine action','SLA / Échéance','Acteur bloquant','Motif du blocage ou du retard','Preuve attendue','Dernière activité']) {
+for (const label of ['Étape actuelle','Responsable','Acteur attendu','Prochaine action','SLA / Échéance','Acteur bloquant','Motif du blocage ou du retard','Preuve attendue','Dernière activité']) {
   assert.ok(component.includes(label), `Libellé manquant : ${label}`);
 }
-for (const fallback of ['Responsable non attribué','Prochaine action non renseignée','Échéance non renseignée','Aucun blocage déclaré','Motif non renseigné','Preuve attendue non définie','Historique indisponible','Informations de blocage à compléter']) {
+for (const fallback of ['Responsable non attribué','Acteur attendu non renseigné','Prochaine action non renseignée','Échéance non renseignée','Aucun blocage déclaré','Motif non renseigné','Preuve attendue non définie','Historique indisponible','Informations de blocage à compléter']) {
   assert.ok(`${component}\n${contract}`.includes(fallback), `Valeur de repli manquante : ${fallback}`);
 }
 

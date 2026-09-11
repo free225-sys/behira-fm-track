@@ -2,6 +2,20 @@
 
 Ne jamais supprimer ni réécrire une décision actée. Toute évolution doit prendre la forme d'une nouvelle entrée qui complète ou remplace explicitement une décision antérieure.
 
+## DEC-018 — GE-01 est le pilote opérationnel prioritaire (miroir)
+
+- **Date :** 11 septembre 2026
+- **Auteur :** Passation Administration / produit, consignée par l’agent design
+- **Statut :** **Proposé — intégré en présentation dans le miroir**
+- **Périmètre :** priorité d’équipement, saisie quotidienne, scores vs parcours
+- **Contexte :** Retour Administration du 10 septembre : le design convainc, le travail réel jusqu’à la clôture démontrée manquait. Les réalisations GE-01 sont dans `feat/ge01-pilot` (hors ce miroir).
+- **Décision :**
+  - **GE-01 (groupe électrogène ELCOS, Agent Électricité)** est le pilote prioritaire. Ne plus présenter WILO-01 comme premier pilote par défaut.
+  - Le parcours quotidien part d’une **saisie directe**. L’import reste facultatif.
+  - **Aucun score n’est nécessaire** pour accomplir ce parcours. DEC-015 (Accueil santé) n’est pas réécrit ; DEC-017 (score agent non calculable) n’est pas réécrit.
+- **Ne remplace pas :** DEC-015, DEC-017, C10 (seuil 400 000 FCFA).
+- **Fichiers concernés :** `app/page.tsx`, `app/components/DossierContinuity.tsx`, `docs/design/FROM-DESIGN.md` (DESIGN-048)
+
 ## DEC-015 — Accueil = Santé du bâtiment pour tous les personas
 
 - **Date :** 31 août 2026
