@@ -1640,50 +1640,45 @@ button.manager-health-card:hover{
   font-size:24px;
 }
 
-/* DESIGN-050 — ruban / étiquette (réf. tags), sans cran ni sceau */
+/* DESIGN-051 — mentions : italique + lavis sémantique. Pas de ruban, cran, sceau, ni flou. */
 .badge,
 .badge.badge-critical,.badge.badge-high,.badge.badge-orange,
 .badge.badge-medium,.badge.badge-blue,.badge.badge-low,
 .badge.badge-neutral,.badge.badge-success,.badge.badge-purple{
   box-sizing:border-box;
   display:inline-flex;
-  align-items:center;
+  align-items:baseline;
   justify-content:flex-start;
   flex:0 1 auto;
   position:relative;
   width:max-content;
   max-width:100%;
   min-width:0;
-  min-height:26px;
-  height:26px;
-  gap:6px;
-  padding:0 16px 0 8px;
+  min-height:0;
+  height:auto;
+  gap:0;
+  padding:3px 8px;
   border:0;
-  border-radius:3px 0 0 3px;
+  border-radius:4px;
   overflow:visible;
-  background:var(--neutral-text);
-  color:var(--surface);
+  background:var(--neutral-surface);
+  color:var(--neutral-text);
   font-size:var(--font-size-label);
-  font-weight:800;
-  letter-spacing:.03em;
-  line-height:1;
+  font-weight:650;
+  font-style:italic;
+  letter-spacing:.01em;
+  line-height:1.25;
   white-space:nowrap;
-  vertical-align:middle;
-  clip-path:polygon(0 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,0 100%);
+  vertical-align:baseline;
+  clip-path:none;
 }
 .badge .badge-icon{
-  display:grid;
+  display:none;
   place-items:center;
   flex:0 0 auto;
-  width:6px;
-  height:6px;
+  width:0;
+  height:0;
   border:0;
-  border-radius:50%;
-  background:var(--background);
-  color:transparent;
-  font-size:0;
-  font-weight:900;
-  line-height:1;
   overflow:hidden;
 }
 .badge .badge-label{
@@ -1692,43 +1687,35 @@ button.manager-health-card:hover{
   overflow:hidden;
   text-overflow:ellipsis;
   line-height:1.25;
+  font-style:italic;
 }
 .badge.badge-critical{
-  background:var(--danger-text);
-  color:var(--surface);
+  background:var(--danger-surface);
+  color:var(--danger-text);
 }
-.badge.badge-critical .badge-icon{background:var(--background)}
 .badge.badge-high,
 .badge.badge-orange{
-  background:var(--warning-text);
-  color:var(--surface);
+  background:var(--warning-surface);
+  color:var(--warning-text);
 }
-.badge.badge-high .badge-icon,
-.badge.badge-orange .badge-icon{background:var(--background)}
 .badge.badge-medium,
 .badge.badge-blue{
-  background:var(--info-text);
-  color:var(--surface);
+  background:var(--info-surface);
+  color:var(--info-text);
 }
-.badge.badge-medium .badge-icon,
-.badge.badge-blue .badge-icon{background:var(--background)}
 .badge.badge-low,
 .badge.badge-neutral{
-  background:var(--neutral-text);
-  color:var(--surface);
+  background:var(--neutral-surface);
+  color:var(--neutral-text);
 }
-.badge.badge-low .badge-icon,
-.badge.badge-neutral .badge-icon{background:var(--background)}
 .badge.badge-success{
-  background:var(--success-text);
-  color:var(--surface);
+  background:var(--success-surface);
+  color:var(--success-text);
 }
-.badge.badge-success .badge-icon{background:var(--background)}
 .badge.badge-purple{
-  background:#65428d;
-  color:var(--surface);
+  background:#f0ebf8;
+  color:#65428d;
 }
-.badge.badge-purple .badge-icon{background:var(--background)}
 .fm-inbox-list>button>.badge,
 .registry-row .badge,
 .direction-case-card .badge,

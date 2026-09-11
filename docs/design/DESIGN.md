@@ -5,11 +5,15 @@ Date : 28 août 2026
 
 Ce document complète la direction artistique existante et prévaut pour l’ordre des prochains lots. Il ne modifie aucune règle métier.
 
+**Application :** avec `DECISIONS.md` et `FROM-DESIGN.md`, ce fichier est la spécification UI. Codex et tout chantier `feat/*` l’appliquent **en entier**. Voir `CONTRAT_PRIMITIVES_CODEX.md`.
+
 ## 1. Principes non négociables
 
 - Préserver l’identité BEHIRA, le vocabulaire validé, les rôles et les responsabilités.
 - Utiliser une structure sobre de type Ui/shadcn et une densité analytique inspirée de Dub, sans copie littérale.
 - Ne pas ajouter de dégradé décoratif, glassmorphism, ombre lourde ou double bordure colorée.
+- Les contrôles natifs du système (select OS, date picker non tokenisé) sont interdits dans le produit. Utiliser les primitives `app/components/ui/` : `Select`, `Badge` (mention italique DESIGN-051), `Button`, `Field`, `Card`, `BrandIcon`.
+- Conserver les workflows, seuils, validations, preuves, droits, mode hors ligne et restrictions existants.
 - Conserver les workflows, seuils, validations, preuves, droits, mode hors ligne et restrictions existants.
 - Présenter les données absentes comme « données insuffisantes » ; ne jamais fabriquer un historique pour remplir un graphique.
 - Les scores agents sont une aide au pilotage et ne produisent jamais de sanction automatique.
