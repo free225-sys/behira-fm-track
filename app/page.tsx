@@ -12,7 +12,7 @@ import { EquipmentWorkspace } from './components/EquipmentWorkspace';
 import { NotificationBell } from './components/NotificationCenter';
 import { ParametersWorkspace, type ParameterWorkspaceData } from './components/ParametersWorkspace';
 import { SyncStatusNotice, type SyncStatusState } from './components/SyncStatusNotice';
-import { Badge, BrandIcon, Button, Card, Field, FieldError, Select } from './components/ui';
+import { Badge, BrandIcon, Button, Card, DateInput, DateTimeInput, Field, FieldError, Select } from './components/ui';
 import { WorkflowAnalytics } from './components/WorkflowAnalytics';
 import {
   hasFieldErrors,
@@ -1417,7 +1417,7 @@ function InternalVendorReportPanel({ anomalies, vendors, canUpload, busy, onSubm
       </div>
       <div className="two-fields">
         <label className="field">Nature du document<Select value={reportType} onChange={(event) => setReportType(event.target.value as VendorReportInput['reportType'])}><option value="intervention_report">Rapport d’intervention</option><option value="pv">Procès-verbal</option><option value="quote">Devis</option><option value="photo_bundle">Dossier photos</option></Select></label>
-        <label className={`field ${fieldErrors.reportDate ? 'is-invalid' : ''}`}>Date du rapport<input type="date" max={new Date().toISOString().slice(0,10)} value={reportDate} aria-invalid={Boolean(fieldErrors.reportDate)} aria-describedby={fieldErrors.reportDate ? `${formId}-date` : undefined} onChange={(event) => { setReportDate(event.target.value); if (fieldErrors.reportDate) setFieldErrors((current) => ({ ...current, reportDate: undefined })); }} /><FieldError id={`${formId}-date`} message={fieldErrors.reportDate} /></label>
+        <label className={`field ${fieldErrors.reportDate ? 'is-invalid' : ''}`}>Date du rapport<DateInput max={new Date().toISOString().slice(0,10)} value={reportDate} aria-invalid={Boolean(fieldErrors.reportDate)} aria-describedby={fieldErrors.reportDate ? `${formId}-date` : undefined} onChange={(event) => { setReportDate(event.target.value); if (fieldErrors.reportDate) setFieldErrors((current) => ({ ...current, reportDate: undefined })); }} /><FieldError id={`${formId}-date`} message={fieldErrors.reportDate} /></label>
       </div>
       <label className={`field ${fieldErrors.summary ? 'is-invalid' : ''}`}>Résumé de l’intervention<textarea value={summary} maxLength={2000} aria-invalid={Boolean(fieldErrors.summary)} aria-describedby={fieldErrors.summary ? `${formId}-summary` : undefined} onChange={(event) => { setSummary(event.target.value); if (fieldErrors.summary) setFieldErrors((current) => ({ ...current, summary: undefined })); }} placeholder="Diagnostic, action réalisée, essais et résultat…" /><FieldError id={`${formId}-summary`} message={fieldErrors.summary} /></label>
       <div className="two-fields">
@@ -1670,7 +1670,7 @@ function Manager({ anomalies, tab, setTab, onOpen }: { anomalies:Anomaly[]; tab:
 
         <div className="fm-decision-fields">
           <label className="field proposed-field">Nouveau responsable proposé<small>Valeur actuelle : {canonicalResponsible(focus) ?? 'Responsable non attribué'}</small>{externalActorConcerned(focus) && <small>Acteur externe concerné : {externalActorConcerned(focus)}</small>}<Select key={`owner-${focus.id}`} defaultValue={focus.asset === 'DEMO-EAU' || focus.asset === 'DEMO-SSI' ? 'Agent Eau & Incendie Démo' : 'Agent Électricité Démo'}><option>Agent Eau & Incendie Démo</option><option>Agent Électricité Démo</option><option>Agente Rondes & Assistance Démo</option></Select></label>
-          <label className="field proposed-field">Nouvelle échéance proposée<small>Valeur actuelle : {focus.due}</small><input key={`due-${focus.id}`} type="datetime-local" defaultValue="2026-08-28T12:00" /></label>
+          <label className="field proposed-field">Nouvelle échéance proposée<small>Valeur actuelle : {focus.due}</small><DateTimeInput key={`due-${focus.id}`} defaultValue="2026-08-28T12:00" /></label>
           <label className="field proposed-field">Coût estimé proposé (FCFA)<small>Non enregistré</small><input type="number" min="0" step="10000" value={amount} onChange={(event) => setAmount(event.target.value)} disabled={branchLocked || branch === 'internal'} /></label>
         </div>
 

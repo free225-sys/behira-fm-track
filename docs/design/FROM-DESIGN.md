@@ -10,6 +10,7 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 | id | date | sujet | attendu de | bloque |
 | --- | --- | --- | --- | --- |
+| DESIGN-052 | 2026-09-11 | DateInput / TimeInput / DateTimeInput (Select, wrap, plus d’horloge OS) | Dev Lead | feat/ge01-pilot |
 | DESIGN-051 | 2026-09-11 | Mentions italiques à la place des badges-stickers ; contrat primitives Codex | Dev Lead | feat/ge01-pilot |
 | DESIGN-050 | 2026-09-11 | Badges : ruban/étiquette (pointe + œillet), plus de cran ni sceau | Dev Lead | feat/ge01-pilot |
 | DESIGN-049 | 2026-09-11 | Raccord lot 1 UI → Ge01WorkflowPanel / preuves / nextActionAssignee | Dev Lead | feat/ge01-pilot |
@@ -58,6 +59,16 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 | DESIGN-003 | 2026-08-28 | `pnpm dev` échoue sans accès réseau à `fonts.googleapis.com` | Dev Lead | tout audit hors ligne |
 | DESIGN-002 | 2026-08-28 | Nomenclature unique des destinations — *arbitrée, voir DEC-002* | Dev Lead | routes |
 | DESIGN-001 | 2026-08-28 | Lot 1 — spécification du socle de tokens | Dev Lead | lot 2, écran pilote |
+
+---
+
+## DESIGN-052 — Dates et heures Behira
+
+- **Date :** 11 septembre 2026
+- **Source :** paquet `BEHIRA_UI_VALIDEE_DESIGN051_2026-09-11_V2` (correctif Groc : plus de `type="time"` visible)
+- **Statut :** Porté dans le miroir
+- **Fichiers :** `date-input.tsx`, `time-input.tsx`, `select.tsx`, `app/globals.css` (wrap), `AntiZombieSummary` en `Badge`
+- **Ne copie pas** `Ge01*` ni les adaptateurs supabase.
 
 ---
 

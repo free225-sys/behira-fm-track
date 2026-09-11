@@ -3532,9 +3532,16 @@ button.executive-metric.is-link:hover{
   .evidence-file-record .badge,.evidence-file-record .secondary-button{grid-column:2}
 }
 
-
-
-
-
-
-
+.app-select>button:disabled{cursor:not-allowed;opacity:.6}
+.app-select-list{z-index:calc(var(--z-modal) + 1);max-width:calc(100vw - 16px)}
+.app-select-list button:disabled{cursor:not-allowed;opacity:.5}
+.app-select-list button:focus-visible{outline:2px solid var(--focus-ring);outline-offset:-2px}
+.app-select-proxy{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;inset:0}
+.app-select-proxy[hidden]{display:none!important}
+.date-input{position:relative;display:flex;flex-wrap:wrap;gap:var(--space-2);min-width:0;width:100%;max-width:100%}
+.date-input>.app-select{flex:1 1 6rem}
+.date-input>.app-select:first-of-type{flex-basis:4rem}
+.date-input>.app-select:nth-of-type(2){flex-basis:7rem}
+.date-time-input{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--space-2);min-width:0;width:100%;max-width:100%}
+.time-input{position:relative;display:flex;flex-wrap:wrap;gap:var(--space-2);min-width:0;width:100%;max-width:100%}
+.time-input>.app-select{flex:1 1 5rem}

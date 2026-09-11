@@ -46,6 +46,7 @@ Fichiers à **copier / importer**, pas à réécrire :
 | Import | Fichier | Interdit en parallèle |
 | --- | --- | --- |
 | `Select` | `app/components/ui/select.tsx` | `<select>` hors ce fichier (bleu OS) — DESIGN-040 |
+| `DateInput` `DateTimeInput` `TimeInput` | `date-input.tsx`, `time-input.tsx` | `type="date"` / `time` / `datetime-local` visibles — DESIGN-052 |
 | `Badge` | `app/components/ui/badge.tsx` | sticker, ruban, sceau, `backdrop-filter` — DESIGN-051 |
 | `BrandIcon` | `app/components/ui/icon.tsx` | emoji / PNG / autre set — commit `fd2b1dc` |
 | `Button` `Field` `Card` `IconButton` | `app/components/ui/` | styles bouton/champ hors tokens |

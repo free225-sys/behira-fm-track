@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { Badge } from './ui';
 
 import { normalizeAntiZombieSummary, type AntiZombieSummaryData } from './anti-zombie-contract';
 
@@ -27,7 +28,7 @@ export function AntiZombieSummary({ data, variant = 'standard' }: { data: AntiZo
           <p>CONTINUITÉ DE TRAITEMENT</p>
           <h4 id={headingId}>Synthèse de pilotage</h4>
         </div>
-        <strong className={`anti-zombie-state ${stateTone}`}><span aria-hidden="true">{summary.isBlocked ? '!' : summary.isDelayed ? '↗' : '✓'}</span>{summary.isBlocked ? 'BLOQUÉ' : summary.isDelayed ? 'EN RETARD' : 'NORMALE'}</strong>
+        <Badge tone={stateTone === 'danger' ? 'critical' : stateTone === 'warning' ? 'orange' : 'neutral'}>{summary.isBlocked ? 'BLOQUÉ' : summary.isDelayed ? 'EN RETARD' : 'NORMALE'}</Badge>
       </header>
 
       {summary.blockingInformationIncomplete && (
