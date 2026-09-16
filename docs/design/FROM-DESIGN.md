@@ -4,14 +4,21 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 > **Propriété du fichier.** `FROM-DESIGN.md` est écrit par le design et lu par le développement. Une version reconstruite depuis un résumé de conversation a écrasé ce fichier le 28 août à 22:32 ; le présent fichier rétablit le contenu d'origine et le complète. Les entrées de planification rédigées par le développement ont leur place dans `FROM-DEV.md`, sous sa propre numérotation. La numérotation `DESIGN-00x` ci-dessous fait foi.
 >
-> **Application intégrale.** Le développement (Codex y compris) applique **tout** ce journal, pas un extrait. La plus récente entrée sur un sujet l’emporte visuellement. Contrat : [CONTRAT_PRIMITIVES_CODEX.md](CONTRAT_PRIMITIVES_CODEX.md).
+> **Portée.** La spécification applicable est `DESIGN.md` (articles 12 et 13 en priorité). Ce journal en garde l’historique : le développement (Codex y compris) applique les entrées marquées **En vigueur** dans l’index ci-dessous ; les entrées **remplacées** sont conservées pour mémoire et ne doivent plus être implémentées. En cas de doute, la plus récente entrée sur un sujet l’emporte. Contrat : [CONTRAT_PRIMITIVES_CODEX.md](CONTRAT_PRIMITIVES_CODEX.md).
+>
+> **Entrées remplacées (ne plus appliquer) :** DESIGN-041 à 044 (accueil identique pour tous les profils, scan complet du parc pour les agents) → DESIGN-062, 064 et 065 ; DESIGN-010 (ordre de la première page du FM) → DESIGN-064 ; valeur de `--mark` dans DESIGN-020 → DEC-013 ; formes de badge de DESIGN-017, 025 et 050 → DESIGN-051 ; mentions « Ouvrir À traiter », « Registre entrée secondaire » et « ruban des 7 files affiché » dans DESIGN-062, 064 et 065 → DESIGN-066 et 067.
 
-## Ouvert
+## Index
+
+Statuts : les entrées 062 à 069 sont **En vigueur** (la plus récente l’emporte). DESIGN-003 (Geist auto-hébergé) est traité (DESIGN-015). DESIGN-005 (`.gitattributes`) reste à vérifier dans le dépôt.
 
 | id | date | sujet | attendu de | bloque |
 | --- | --- | --- | --- | --- |
+| DESIGN-069 | 2026-09-17 | Cohérence documentaire avant intégration Codex | Codex | En vigueur |
+| DESIGN-068 | 2026-09-16 | Spécimen `/design-system` aligné sur la clôture UI | Wilkam | livré |
 | DESIGN-067 | 2026-09-16 | Passe corrective nav / Dossiers / captures 380 px | Wilkam | livré |
 | DESIGN-066 | 2026-09-16 | Clôture design, Dossiers recalé, passation Codex | Wilkam | livré |
+| DESIGN-065 | 2026-09-16 | Recalage fidèle sur les maquettes HTML (seconde passe) | Wilkam | livré |
 | DESIGN-064 | 2026-09-16 | Alignement maquettes accueil agent / FM / Dossiers / Administration | Wilkam | livré |
 | DESIGN-063 | 2026-09-16 | Étape C : Pilotage, Paramètres, Coûts, passation Codex | Wilkam | livré |
 | DESIGN-062 | 2026-09-16 | Étape B : codes canoniques, accueils, Dossiers | Wilkam | livré |
@@ -67,7 +74,34 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 ---
 
+## DESIGN-069 — Cohérence documentaire avant intégration Codex
+
+- **Date :** 17 septembre 2026
+- **Statut :** En vigueur
+- **Périmètre :** documentation uniquement (`DESIGN.md`, `FROM-DESIGN.md`). Aucun code modifié.
+
+1. **Portée du journal.** `DESIGN.md` est la spécification ; ce journal est l’historique. Seules les entrées en vigueur s’appliquent ; la liste des entrées remplacées figure en tête.
+2. **DESIGN.md révisé.** Doublon supprimé à l’article 1 ; primitives de date ajoutées et exception `datetime-local` explicitée ; articles 4 et 6 alignés sur la répartition Accueil / Dossiers / Pilotage / Paramètres ; heatmap sur le référentiel de 76 zones ; scores agents limités à Pilotage > Équipe ; nouvel article 13 reprenant le contrat d’affichage lot 0 et son complément (trois états du score, statut inconnu, `controlValidity`, `displayBreakdown`, `hiddenItemCount`, `pendingDecisions` par audience, score final entier, rondes quotidiennes, sélecteur de démonstration).
+3. **Poids.** Les poids 70 / 15 / 10 / 5 sont décidés et peuvent s’afficher. Ce qui manque, ce sont les points obtenus par domaine.
+4. **Codes.** Les codes DEMO-* ne restent en source que jusqu’à leur migration par Codex. `RND-LET` est un périmètre de rondes de services, jamais un équipement de santé.
+5. **Seuil.** 400 000 FCFA, date d’effet 30/08/2026, montant ≥ seuil → Administration, lu depuis `financial_decision_threshold`.
+6. **Index.** Titres ajoutés aux entrées 066, 065 et 064 ; DESIGN-065 ajoutée à l’index.
+7. **À vérifier par Codex :** présence de `DECISIONS.md`, `CONTRAT_PRIMITIVES_CODEX.md` et `GE01_RACCORD_LOT1.md` ; cohérence de DEC-017 avec l’article 9 de `DESIGN.md` ; présence d’un `.gitattributes` (DESIGN-005) ; comportement réel de l’en-tête (`sticky` selon DESIGN-067).
+
+---
+
+## DESIGN-068 — Spécimen `/design-system` aligné sur la clôture
+
+- **Date :** 16 septembre 2026
+- **Statut :** Livré
+- **Périmètre :** `app/design-system/page.tsx`, `shared-specimen.tsx`, `docs/design/DESIGN.md` §12. Pas de `data.ts`.
+
+Le spécimen hors navigation produit reprend : navigation par rôle, codes canoniques, CTA « Ouvrir Dossiers », KPI « Dossiers à traiter », `datetime-local` vide, pastilles Dossiers, lignes Décisions (bouton à droite), Hygiène Qualifier, Mes actions agent, `InsufficientNote`, sélecteur de scénario.
+
+---
+
 ## DESIGN-067 — Passe corrective de clôture (nav, Dossiers, captures)
+
 
 - **Date :** 16 septembre 2026
 - **Statut :** Livré côté interface
@@ -82,7 +116,7 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 ---
 
-
+## DESIGN-066 — Clôture design : Dossiers recalé, redirections, passation
 
 - **Date :** 16 septembre 2026
 - **Statut :** Livré. Chantier design clos.
@@ -94,7 +128,7 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 ---
 
-
+## DESIGN-065 — Recalage fidèle sur les maquettes HTML (seconde passe)
 
 - **Date :** 16 septembre 2026
 - **Statut :** Livré côté interface
@@ -112,7 +146,7 @@ Les quatre HTML de référence (`behira-accueil-agent.html`, `behira-accueil-fm.
 
 ---
 
-
+## DESIGN-064 — Alignement des quatre écrans sur les maquettes HTML
 
 - **Date :** 16 septembre 2026
 - **Statut :** Livré côté interface
@@ -149,7 +183,7 @@ Coûts : navigation `costs` redirige vers Dossiers > Tous. Le composant CostsWor
 - File unique Dossiers : À traiter / Tous / Clôturés. Coûts documentés dans le dossier, pas une route parallèle.
 - Codes canoniques GE-01, WILO-01, RIA-01, ASC-A1, ASC-A2, IRR-01, RND-LET. DEMO-* = miroir UI seulement.
 - Seuil 400 000 FCFA : une seule source `financial_decision_threshold`.
-- Ne pas inventer 92 %, courbe 30 jours, poids 70/15/10/5, 89 %, 24 clôturées.
+- Ne pas inventer 92 %, courbe 30 jours, points par domaine, 89 %, 24 clôturées. Les poids 70/15/10/5 sont décidés (DESIGN-069).
 
 ---
 
