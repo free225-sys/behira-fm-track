@@ -93,18 +93,12 @@ export function ParametersWorkspace({ parameter, onOpenCosts }: {
         <Card as="section" className="parameter-governance">
           <p className="design-kicker">GARDE-FOU</p>
           <h3>Pourquoi l’édition est bloquée</h3>
-          <ol>
-            <li><span>1</span><p><b>Une seule source</b><small>La valeur ne doit pas diverger entre les écrans.</small></p></li>
-            <li><span>2</span><p><b>Historique obligatoire</b><small>Ancienne et nouvelle valeur, auteur, date et justification.</small></p></li>
-            <li><span>3</span><p><b>Application contrôlée</b><small>La règle réelle sera modifiée uniquement côté serveur sécurisé.</small></p></li>
-          </ol>
+          <p>Une seule source, un historique obligatoire (ancienne et nouvelle valeur, auteur, date, justification) et une application uniquement côté serveur sécurisé.</p>
         </Card>
 
         <Card as="section" className="parameter-gaps">
-          <div className="parameter-gaps-head"><div><p className="design-kicker">DONNÉES À COMPLÉTER</p><h3>Familles non activées</h3></div><span className="panel-count">{unavailableFamilies.length}</span></div>
-          <div className="parameter-gap-list">
-            {unavailableFamilies.map((family) => <article key={family.label}><div><b>{family.label}</b><Badge tone="neutral">{family.state}</Badge></div><p>{family.detail}</p></article>)}
-          </div>
+          <div className="parameter-gaps-head"><div><p className="design-kicker">DONNÉES À COMPLÉTER</p><h3>Familles non activées</h3></div></div>
+          <p>Délais SLA par priorité, seuils techniques des équipements et méthodes de calcul des scores : aucune liste canonique complète n’est exposée. Méthode à valider avant affichage.</p>
         </Card>
       </aside>
     </div>

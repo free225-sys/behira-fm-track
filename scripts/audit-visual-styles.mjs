@@ -14,6 +14,12 @@ const costsWorkspace = await readFile(path.join(root, 'app', 'components', 'Cost
 const accessWorkspace = await readFile(path.join(root, 'app', 'components', 'AccessWorkspace.tsx'), 'utf8')
 const parametersWorkspace = await readFile(path.join(root, 'app', 'components', 'ParametersWorkspace.tsx'), 'utf8')
 const notificationCenter = await readFile(path.join(root, 'app', 'components', 'NotificationCenter.tsx'), 'utf8')
+const ge01Pilot = await readFile(path.join(root, 'app', 'components', 'Ge01Pilot.tsx'), 'utf8')
+const ge01Thresholds = await readFile(path.join(root, 'app', 'lib', 'ge01', 'thresholds.ts'), 'utf8')
+const scoreScale = await readFile(path.join(root, 'app', 'components', 'shared', 'ScoreScale.tsx'), 'utf8')
+const homeBanner = await readFile(path.join(root, 'app', 'components', 'shared', 'HomeHeroBanner.tsx'), 'utf8')
+const equipmentTable = await readFile(path.join(root, 'app', 'components', 'shared', 'EquipmentTable.tsx'), 'utf8')
+const healthScoreBlock = await readFile(path.join(root, 'app', 'components', 'shared', 'HealthScoreBlock.tsx'), 'utf8')
 
 const cssWithoutComments = css.replace(/\/\*[\s\S]*?\*\//g, '')
 const rules = [...cssWithoutComments.matchAll(/([^{}]+)\{([^{}]+)\}/g)].map((match, order) => ({
@@ -45,9 +51,9 @@ const checks = [
   ['Références équipement insécables', page.includes('className="equipment-reference"') && css.includes('.equipment-reference{white-space:nowrap;word-break:keep-all;overflow-wrap:normal}')],
   ['Shell sans rail latéral résiduel', page.includes('className="app-navigation"') && !page.includes('className="sidebar"') && !css.includes('.sidebar')],
   ['Navigation unique et état courant accessible', page.includes('const navItems: NavigationItem[]') && page.includes('className="primary-navigation"') && page.includes("aria-current={active ? 'page' : undefined}")],
-  ['Nomenclature principale DEC-008 stable', ['Accueil','À traiter','Rondes','Registre','Pilotage'].every((label) => page.includes(`label:'${label}'`)) && !page.includes('navigationLabel =')],
+  ['Nomenclature principale DEC-008 stable', ['Accueil','Dossiers','Rondes','Registre','Pilotage'].every((label) => page.includes(`label:'${label}'`)) && !page.includes('navigationLabel =')],
   ['Logo renvoyant vers Accueil', page.includes("className=\"brand\" onClick={() => navigate('workspace')}")],
-  ['CTA de ronde limité à l’Accueil autorisé', page.includes("const showRoundCta = view === 'workspace' && canStartRound") && !page.includes("personaId !== 'administration' && <button className=\"primary-button top-create\"")],
+  ['CTA de ronde retiré de l’en-tête', !page.includes('＋ Nouvelle ronde') && !page.includes('showRoundCta') && !page.includes("personaId !== 'administration' && <button className=\"primary-button top-create\"")],
   ['En-tête de page sur surface claire', css.includes('.topbar { min-height:56px; padding:10px clamp(24px,4vw,54px); background:var(--surface);') && !css.includes('background:#16345a')],
   ['Accueil sans titre jumeau', !page.includes('<WorkspaceIntro') && !page.includes('<h2>{title}</h2>') && !page.includes('Bonjour Facility Manager') && cockpit.includes('className="visually-hidden">Santé du bâtiment')],
   ['Hero À traiter sans second titre', page.includes('aria-label="Contexte opérationnel"') && !page.includes('id="manager-operational-title"') && !page.includes('Dossiers à traiter')],
@@ -68,7 +74,7 @@ const checks = [
   ['DEC-003 maintenue à 12 px', css.includes('--font-size-label:12px') && css.includes('.manager-pilot{display:grid;gap:var(--space-4);color:var(--foreground);font-variant-numeric:tabular-nums}')],
   ['Libellés des sept files au plancher 12 px', finalDeclaration('.manager-pilot .queue-tabs button small', 'font-size') === 'var(--font-size-label)'],
   ['DEC-007 À traiter sans bloc santé', page.includes('fm-decision-layout') && page.includes('function Manager({ anomalies, tab, setTab, onOpen }') && !/function Manager\([\s\S]*?<BuildingHealthCockpit/.test(page) && !/function Manager\([\s\S]*?<ManagerHealthOverview/.test(page)],
-  ['Santé du bâtiment sur Accueil FM', page.includes('<BuildingHealthCockpit audience="facility"') && page.indexOf('function FacilityManagerWorkspace') < page.indexOf('<BuildingHealthCockpit audience="facility"')],
+  ['Santé du bâtiment sur Accueil FM', page.includes("sessionForAudience('facility'") && page.indexOf('function FacilityManagerWorkspace') < page.indexOf("sessionForAudience('facility'")],
   ['File Facility Manager élargie', css.includes('grid-template-columns:minmax(400px,.88fr) minmax(0,1.12fr)')],
   ['Ticket actif identifié par deux canaux', css.includes('.fm-inbox-list>button.active{border-left-color:var(--brand);background:var(--surface-emphasis)')],
   ['Pipeline renforcé et connecté', css.includes('.workflow-pipeline b{display:block;color:var(--foreground);font-size:28px') && css.includes('.workflow-pipeline>div:not(:last-child)::after')],
@@ -114,10 +120,10 @@ const checks = [
   ['Actions principales tactiles sur mobile', css.includes('.manager-pilot .primary-button,\n  .manager-pilot .secondary-button,\n  .score-explain-card button{min-height:44px}') && css.includes('.auth-signout-top{width:44px;height:44px;min-width:44px;min-height:44px}')],
   ['Porte d’authentification sans panneau navy', page.includes('className="auth-chrome"') && page.includes('function AuthFrame') && finalDeclaration('.auth-brand-panel', 'background') === 'transparent' && finalDeclaration('.auth-shell', 'grid-template-rows') === 'auto 1fr' && css.includes('.demo-account-grid>button.is-selected>span{\n  background:var(--brand);\n  color:var(--brand-foreground);\n}')],
   ['Menu compact sans double bordure', css.includes('.app-navigation .nav-item.active{\n    border:0;\n    box-shadow:none;\n    background:var(--teal);\n    color:var(--brand-foreground);\n  }')],
-  ['Accueil FM sans bandeau opérationnel doublon', page.includes('<BuildingHealthCockpit audience="facility"') && page.includes('Ouvrir À traiter') && !page.includes('Ouvrir le poste de pilotage complet') && !page.includes('todo="2 qualifications"')],
-  ['Cockpit santé partagé tous personas', page.includes('<BuildingHealthCockpit audience="administration"') && page.includes('<BuildingHealthCockpit audience={agentKey}') && page.includes('<BuildingHealthCockpit audience="rondes_assistance"') && css.includes('.building-health-cockpit{')],
-  ['Scan du parc en tuiles de score', css.includes('.health-equip-board{') && css.includes('.health-equip-tile{') && cockpit.includes('Scan du parc')],
-  ['Échelle commune 0–100 du parc', cockpit.includes('ÉCHELLE COMMUNE 0–100') && css.includes('.health-lollipop{') && css.includes('.health-scale-axis{')],
+  ['Accueil FM sans bandeau opérationnel doublon', page.includes("sessionForAudience('facility'") && cockpit.includes('Ouvrir Dossiers') && !page.includes('workspace-next') && !page.includes('Ouvrir le poste de pilotage complet') && !page.includes('todo="2 qualifications"')],
+  ['Cockpit santé partagé tous personas', page.includes("sessionForAudience('administration'") && page.includes('sessionForAudience(agentKey') && page.includes("sessionForAudience('rondes_assistance'") && css.includes('.building-health-cockpit{')],
+  ['Parc technique en tuiles de score', css.includes('.health-equip-board{') && css.includes('.health-equip-tile{') && (cockpit.includes('Parc technique') || cockpit.includes('Équipements de votre périmètre'))],
+  ['Échelle commune 0–100 du parc', scoreScale.includes('ÉCHELLE COMMUNE 0–100') && css.includes('.health-lollipop{') && css.includes('.health-scale-axis{')],
   ['Notifications d’erreur configurables', page.includes('<NotificationBell') && parametersWorkspace.includes('<ErrorNotificationRules') && css.includes('.notif-panel{') && css.includes('.notif-switch.is-on{background:var(--teal)}')],
   ['Analytique santé unique sur Pilotage', page.includes("{dashboardTab === 'health' &&") && page.includes('<OperationalAnalytics equipment={equipment} />') && !page.includes('<OperationalAnalytics equipment={equipment} variant="direction" />')],
   ['Parc Pilotage pointe vers Équipements', page.includes('dashboard-equipment-pointer') && page.includes("onNavigate('equipment')") && !page.includes('dashboard-equipment-panel')],
@@ -126,6 +132,12 @@ const checks = [
   ['Rondes sans bande navy', page.includes('className="visually-hidden">Rondes') && finalDeclaration('.surpresseur-progress button.active', 'background') === 'var(--teal)' && finalDeclaration('.mission-switch button.active', 'background') === 'var(--teal)'],
   ['Rondes sans bandeau ni score dupliqué', !page.includes('todo="6 zones à parcourir"') && !page.includes('className="surpresseur-health"') && finalDeclaration('.surpresseur-progress', 'background') === 'var(--surface-muted)'],
   ['Listes déroulantes Behira', page.includes('<Select') && !page.includes('<select') && costsWorkspace.includes('<Select') && accessWorkspace.includes('<Select') && finalDeclaration('.app-select-list button.is-selected', 'background') === 'var(--teal)'],
+  ['GE-01 mesures numériques live', ge01Pilot.includes('sanitizeNumeric') && ge01Thresholds.includes('evaluateFuel') && css.includes('.ge-measure-input.is-ok') && ge01Pilot.includes('BooleanObservation') && !ge01Pilot.includes('<select')],
+  ['Largeurs de scène tokenisées', css.includes('--layout-content:1480px') && css.includes('--layout-form:1040px') && css.includes('--field-number:152px') && css.includes('--field-measure:280px') && css.includes('.field.is-measure{max-width:var(--field-measure)}') && css.includes('width:min(100%,var(--field-number))') && ge01Pilot.includes('size="measure"') && ge01Pilot.includes('className="ge-field-grid"') && css.includes('.ge-field-grid{display:grid') && !css.includes('80vw') && !css.includes('is-canvas-trial')],
+  ['Contexte GE-01 réorganisé', ge01Pilot.includes('type="date"') && ge01Pilot.includes('type="time"') && ge01Pilot.includes('Maintenant') && ge01Pilot.includes('ge-context-markers') && ge01Pilot.includes('ge-agent-chip') && ge01Pilot.includes('ge-stepper') && css.includes('position:sticky') && css.includes('.ge-hours-hint.is-below')],
+  ['GE-01 étapes 2–4', ge01Pilot.includes('ge-review-hero') && ge01Pilot.includes('Photo recommandée') && ge01Pilot.includes('Placé dans la file d’envoi · en attente de confirmation serveur') && ge01Pilot.includes('ge-auto-warning') && ge01Pilot.includes('ge-dmc-line') && ge01Pilot.includes('Ajouter une photo') && css.includes('.ge-threshold-line') && css.includes('.ge-review-list') && css.includes('.ge-choice-grid.four') && ge01Pilot.includes("disabled={submitting}") && !ge01Pilot.includes('À observer') && !ge01Pilot.includes('<Select')],
+  ['Lot 0 contrat d’affichage', healthScoreBlock.includes("score.state === 'not_computable'") && cockpit.includes('KpiStrip') && cockpit.includes('Équipements à risque') && !cockpit.includes('92%') && !cockpit.includes('Parc à surveiller') && !cockpit.includes('Plafonné par') && equipmentWorkspace.includes('Contrôle à renouveler') && css.includes('DESIGN-057') && page.includes('demoHomeSnapshot')],
+  ['Lot 1 composants partagés', homeBanner.includes('home-hero-banner') && ge01Pilot.includes('SegmentedControl') && equipmentWorkspace.includes('EquipmentTable') && equipmentTable.includes('familyLabel') && css.includes('DESIGN-058') && !page.includes('direction-number') && !page.includes("'EN RETARD'")],
 ]
 
 for (const [label, ok] of checks) console.log(`${ok ? '✓' : '✗'} ${label}`)

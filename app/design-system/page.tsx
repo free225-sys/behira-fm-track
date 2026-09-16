@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Badge, Button, Card, CardHeader, Field, IconButton } from '../components/ui';
+import { SharedSpecimen } from './shared-specimen';
 
 export const metadata: Metadata = {
   title: 'Système de design · BEHIRA FM / GB TRACK',
@@ -224,6 +225,8 @@ export default function DesignSystemPage() {
             </div>
           </Card>
         </section>
+
+        <SharedSpecimen />
       </div>
     </main>
   );

@@ -10,6 +10,11 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 | id | date | sujet | attendu de | bloque |
 | --- | --- | --- | --- | --- |
+| DESIGN-067 | 2026-09-16 | Passe corrective nav / Dossiers / captures 380 px | Wilkam | livré |
+| DESIGN-066 | 2026-09-16 | Clôture design, Dossiers recalé, passation Codex | Wilkam | livré |
+| DESIGN-064 | 2026-09-16 | Alignement maquettes accueil agent / FM / Dossiers / Administration | Wilkam | livré |
+| DESIGN-063 | 2026-09-16 | Étape C : Pilotage, Paramètres, Coûts, passation Codex | Wilkam | livré |
+| DESIGN-062 | 2026-09-16 | Étape B : codes canoniques, accueils, Dossiers | Wilkam | livré |
 | DESIGN-052 | 2026-09-11 | DateInput / TimeInput / DateTimeInput (Select, wrap, plus d’horloge OS) | Dev Lead | feat/ge01-pilot |
 | DESIGN-051 | 2026-09-11 | Mentions italiques à la place des badges-stickers ; contrat primitives Codex | Dev Lead | feat/ge01-pilot |
 | DESIGN-050 | 2026-09-11 | Badges : ruban/étiquette (pointe + œillet), plus de cran ni sceau | Dev Lead | feat/ge01-pilot |
@@ -59,6 +64,108 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 | DESIGN-003 | 2026-08-28 | `pnpm dev` échoue sans accès réseau à `fonts.googleapis.com` | Dev Lead | tout audit hors ligne |
 | DESIGN-002 | 2026-08-28 | Nomenclature unique des destinations — *arbitrée, voir DEC-002* | Dev Lead | routes |
 | DESIGN-001 | 2026-08-28 | Lot 1 — spécification du socle de tokens | Dev Lead | lot 2, écran pilote |
+
+---
+
+## DESIGN-067 — Passe corrective de clôture (nav, Dossiers, captures)
+
+- **Date :** 16 septembre 2026
+- **Statut :** Livré côté interface
+- **Périmètre :** affichage. Pas de `data.ts`.
+
+1. Accueil FM : en-tête collant (`position: sticky; top: 0; z-index` relevé, `overflow-x: clip`). Titres de section à 24 px, comme les maquettes. Hygiène : un seul bouton Qualifier. Décisions : bouton selon l’étape (Qualifier, Réaffecter, Soumettre à l’Administration, Valider).
+2. Dossiers : file unique À qualifier, y compris Hygiène et paysage (origine + Hors score). Filtres À décider et Au-dessus du seuil, montant sur les lignes, aucun filtre actif par défaut. Panneau À qualifier : type, priorité, responsable, échéance `datetime-local`, coût vide avec contrôle du seuil, note vide, Conserver en brouillon / Qualifier et affecter. Détails de traitement repliés. Historique en bas. Un seul titre Dossiers (topbar masqué).
+3. Navigation affichée : FM Accueil · Dossiers · Rondes · Équipements · Pilotage · Plus. Administration Arbitrages · Dossiers · Équipements · Pilotage · Paramètres. Registre retiré du menu, redirection conservée. Matrice `allowedViewsByPersona` inchangée.
+4. Mes actions agent : badge + référence au-dessus du titre, faits sur une ligne, boutons à droite, badges non tronqués, retards en premier.
+5. Arbitrages Administration : sections Preuves (avec statut) et Historique.
+6. Ouvert Codex : échéance RIA-01 10:30 (bandeau accueil FM) vs 12:00 (Dossiers). Non tranché.
+
+---
+
+
+
+- **Date :** 16 septembre 2026
+- **Statut :** Livré. Chantier design clos.
+- **Périmètre :** affichage. Pas de `data.ts`.
+
+1. Dossiers : une rangée de pastilles (7 files + compteur), sans second bandeau. Synthèse de pilotage dans « Détails de traitement », fermé par défaut, champs renseignés seulement. A/B/C : une phrase tant que le diagnostic n’est pas confirmé, les trois choix ensuite.
+2. Redirections : Registre et Coûts → Dossiers ; Utilisateurs (Administration) → Paramètres. Matrice des rôles inchangée dans `allowedViewsByPersona`.
+3. Passation Codex : [PASSATION_CODEX_CLOTURE_DESIGN_2026-09-16.md](PASSATION_CODEX_CLOTURE_DESIGN_2026-09-16.md).
+
+---
+
+
+
+- **Date :** 16 septembre 2026
+- **Statut :** Livré côté interface
+- **Périmètre :** affichage. Pas de `data.ts`. Geist conservé (DESIGN-003 : pas de Google Fonts Barlow / Public Sans).
+
+Les quatre HTML de référence (`behira-accueil-agent.html`, `behira-accueil-fm.html`, `behira-dossiers.html`, `behira-accueil-admin.html`) deviennent la cible d’organisation, de densité et de libellés.
+
+1. **Codes canoniques** — affichage uniquement via `displayAssetCode` / `displayAssetText` (Registre, Pilotage, Rondes, invitation, remontées, Utilisateurs). DEMO-* inchangés en source.
+2. **Accueil agent** — non calculable = une ligne, pas d’échelle vide. Plafonné/normal = chiffre + pill + échelle + liste courte. Menu « Démarrer une ronde » en liste code / délai. Historique 5 lignes. `+ Déposer un rapport prestataire` en lien tireté. Initiales AE via `asciiInitials`.
+3. **Accueil FM** — KPI chiffre puis libellé en casse de phrase. Décisions / Points / Rondes / Hygiène. Cause du plafond à droite si `capped`. Pas de courbe 30 jours ni poids 70/15/10/5.
+4. **Dossiers** — liste titre + code/zone + pastilles ; panneau : prochaine action, jalons, qualification. Ruban 7 files et branches A/B/C conservés (audit).
+5. **Accueil Administration** — liste barre + montant, détail sticky. Engagements / dernières décisions.
+
+Étape C dans le même passage : Pilotage sans 01–04 ; 89 % / 24 clôturées toujours « Données insuffisantes » ; Coûts redirige vers Dossiers.
+
+---
+
+
+
+- **Date :** 16 septembre 2026
+- **Statut :** Livré côté interface
+- **Périmètre :** affichage. Pas de `data.ts`. Tokens `--chrome` / `--teal` / `--mark` et Geist conservés (DESIGN-003 : pas de Google Fonts).
+
+Quatre écrans alignés sur les maquettes HTML de référence :
+
+1. **Accueil agent** — bandeau « Bonjour, N actions », échéances du jour, Démarrer une ronde, fiche santé 3 colonnes, file À faire / Terminées / Historique compact.
+2. **Accueil FM** — bandeau score + cause du plafond, KPI chevauchant, Décisions | Points (pondérations non raccordées), tableau équipements, Rondes | Hygiène. CTA « Ouvrir À traiter ». Pas de `workspace-next`.
+3. **Dossiers** — en-tête chrome « Dossiers » + seuil 400 000 FCFA, onglets À traiter / Tous / Clôturés, liste + détail. Ruban des 7 files et branches A/B/C conservés (contrats d’audit).
+4. **Accueil Administration** — bandeau « N arbitrages attendent », 3 chiffres documentés (5,25 M = 2,4 M + 950 k + 1,9 M), mini-score, 4 points de contrôle, liste + détail, Engagements | Dernières décisions. Utilisateurs / zones / scores agents sortis de l’accueil.
+
+Écarts volontaires : chrome produit (nav + topbar) vs en-tête unique des maquettes (DEC-008) ; score par défaut `not_computable` ; pas de courbe 30 jours ni poids 70/15/10/5.
+
+---
+
+## DESIGN-063 — Étape C : Pilotage, Paramètres, Coûts
+
+- **Date :** 16 septembre 2026
+- **Statut :** Livré côté interface
+- **Périmètre :** affichage. Pas de `data.ts`.
+
+Pilotage : numérotation 01–04 retirée. « 89 % » et « 24 clôturées » n’avaient pas de source : remplacés par « Données insuffisantes ». « Décisions recommandées » devient un lien vers Dossiers.
+
+Paramètres (Utilisateurs) : périmètres d’affichage GE-01 / WILO-01 / RIA-01 / IRR-01 / RND-LET. Cartes de règles remplacées par une phrase. Seuils : familles SLA / technique / scores en une phrase.
+
+Coûts : navigation `costs` redirige vers Dossiers > Tous. Le composant CostsWorkspace reste pour la recette jusqu’au raccord Codex.
+
+### Passation Codex
+
+- Formule, plafond, couverture, disponibilité, statuts métier, périmètres réels, planning HP, pondérations : toujours côté serveur.
+- RIA-01 live : `operationalStatus` et `score` restent null tant que Dégradé vs Indisponible n’est pas tranché.
+- IRR-01 : hors périmètre électricité ; HP hors score.
+- File unique Dossiers : À traiter / Tous / Clôturés. Coûts documentés dans le dossier, pas une route parallèle.
+- Codes canoniques GE-01, WILO-01, RIA-01, ASC-A1, ASC-A2, IRR-01, RND-LET. DEMO-* = miroir UI seulement.
+- Seuil 400 000 FCFA : une seule source `financial_decision_threshold`.
+- Ne pas inventer 92 %, courbe 30 jours, poids 70/15/10/5, 89 %, 24 clôturées.
+
+---
+
+## DESIGN-062 — Étape B : codes canoniques, accueils compact, Dossiers
+
+- **Date :** 16 septembre 2026
+- **Statut :** Livré côté interface
+- **Périmètre :** affichage. Pas de `data.ts`.
+
+Codes DEMO-* conservés en source (personas, filtres, matching). Correspondance d’affichage unique : DEMO-GE→GE-01, DEMO-EAU→WILO-01, DEMO-SSI→RIA-01, DEMO-ASC-1→ASC-A1, DEMO-ASC-2→ASC-A2, DEMO-ASC-1/2→ASC-A1 · ASC-A2, DEMO-ESP→IRR-01, DEMO-RND→RND-LET.
+
+Accueil agent : une ligne si score non calculable ; bande + échelle si normal/plafonné ; liste courte d’équipements (code, statut métier, score provisoire) ; historique une ligne (date/heure, équipement, résultat, étape actuelle, Voir) max 5 + « Voir tout l’historique » ; un seul badge Démo (en-tête) ; initiales AE sans accent.
+
+Accueil FM : bas de page = Décisions à prendre | Points perdus | Rondes du jour | Hygiène et paysage. Plus de « Retours de l’Administration ». KPI en casse unifiée. Bandeau non calculable : liste manquante à droite.
+
+Dossiers : fusion À traiter / Tous / Clôturés, en-tête chrome + seuil 400 000 FCFA, clé de nav `manager`. Registre reste entrée secondaire vers l’onglet Tous.
 
 ---
 

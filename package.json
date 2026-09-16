@@ -17,7 +17,9 @@
     "verify:resilience": "node scripts/verify-resilience.mjs",
     "audit:visual": "node scripts/audit-visual-styles.mjs",
     "verify:fonts": "node scripts/verify-font-assets.mjs",
-    "verify:release": "pnpm audit:visual && pnpm verify:personas && pnpm verify:resilience && pnpm verify:fonts"
+    "verify:lot0": "node scripts/verify-lot0-ui.mjs",
+    "verify:lot1": "node scripts/verify-lot1-ui.mjs",
+    "verify:release": "pnpm audit:visual && pnpm verify:personas && pnpm verify:resilience && pnpm verify:fonts && pnpm verify:lot0"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",

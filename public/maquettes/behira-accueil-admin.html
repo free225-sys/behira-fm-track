@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BEHIRA FM Track, accueil Administration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --nuit:#0E2238;--nuit-2:#18324F;--ink:#16202B;--ink-2:#4A5563;--ink-3:#6F7A88;
+  --paper:#F2F4F6;--card:#FFFFFF;--line:#DCE2E8;--line-soft:#EBEFF3;
+  --signal:#1F5FAE;--signal-bg:#E7EFF9;
+  --ok:#1C7F53;--ok-bg:#E2F2EA;--warn:#A85A0C;--warn-bg:#FBEEDC;--bad:#B8352A;--bad-bg:#FBE5E2;
+  --teal:#23B8A4;
+  --display:"Barlow Semi Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --nuit:#0A1A2B;--nuit-2:#14304D;--ink:#E7ECF1;--ink-2:#B3BDC8;--ink-3:#8A95A3;
+  --paper:#0F151C;--card:#17202A;--line:#2A3642;--line-soft:#212B36;
+  --signal:#5B9BE6;--signal-bg:#16304D;
+  --ok:#4CC08A;--ok-bg:#133326;--warn:#E3A04F;--warn-bg:#3A2A14;--bad:#EE7A6E;--bad-bg:#3D1C19;
+}}
+:root[data-theme="dark"]{
+  --nuit:#0A1A2B;--nuit-2:#14304D;--ink:#E7ECF1;--ink-2:#B3BDC8;--ink-3:#8A95A3;
+  --paper:#0F151C;--card:#17202A;--line:#2A3642;--line-soft:#212B36;
+  --signal:#5B9BE6;--signal-bg:#16304D;
+  --ok:#4CC08A;--ok-bg:#133326;--warn:#E3A04F;--warn-bg:#3A2A14;--bad:#EE7A6E;--bad-bg:#3D1C19;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;font-variant-numeric:tabular-nums}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--signal);outline-offset:2px;border-radius:4px}
+h1,h2,h3{font-family:var(--display);font-weight:600;margin:0;line-height:1.15}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+
+.top{background:var(--nuit);color:#fff}
+.top .wrap{display:flex;align-items:center;gap:24px;height:64px}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:36px;height:36px;border-radius:9px;background:var(--teal);color:#0A1A2B;display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:20px}
+.brand b{font-family:var(--display);font-size:20px;letter-spacing:.04em;display:block;line-height:1}
+.brand small{font-size:11px;color:#9FB2C8;letter-spacing:.06em}
+.nav{display:flex;gap:2px;height:100%}
+.nav a{display:flex;align-items:center;padding:0 11px;color:#B9C7D6;text-decoration:none;font-weight:500;border-bottom:3px solid transparent}
+.nav a[aria-current]{color:#fff;border-color:var(--teal)}
+.nav .n{background:var(--bad);color:#fff;font-size:11px;border-radius:999px;padding:0 6px;margin-left:5px}
+.who{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:13px}
+.av{width:32px;height:32px;border-radius:50%;background:var(--nuit-2);display:grid;place-items:center;font-weight:600;font-size:12px}
+.demo{background:#F6D9B0;color:#6B3B06;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px}
+
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:6px;white-space:nowrap}
+.p-ok{background:var(--ok-bg);color:var(--ok)}.p-warn{background:var(--warn-bg);color:var(--warn)}.p-bad{background:var(--bad-bg);color:var(--bad)}.p-mute{background:var(--line-soft);color:var(--ink-2)}.p-sig{background:var(--signal-bg);color:var(--signal)}
+.btn{border-radius:8px;border:1px solid var(--line);background:var(--card);padding:7px 12px;font-weight:600;font-size:13px}
+.btn:hover{background:var(--paper)}
+.btn-main{background:var(--signal);border-color:var(--signal);color:#fff}
+.btn-main:hover{filter:brightness(1.08);background:var(--signal)}
+.linkbtn{background:none;border:0;padding:4px 0;color:var(--signal);font-weight:600;font-size:13px}
+
+
+.band{background:var(--nuit);color:#fff;padding:22px 0 30px}
+.band .wrap{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:36px;align-items:end}
+.band h1{font-size:40px}
+.band p{margin:4px 0 0;color:#B9C7D6}
+.big{display:flex;gap:28px;margin-top:14px;flex-wrap:wrap}
+.big div b{display:block;font-family:var(--display);font-size:44px;font-weight:600;line-height:1}
+.big div span{font-size:13px;color:#B9C7D6}
+.mini{border-left:2px solid #FF8A7E;padding-left:18px}
+.mini .l{font-size:13px;color:#9FB2C8}
+.mini .v{font-family:var(--display);font-size:40px;font-weight:600;line-height:1;color:#FF8A7E}
+.mini .v small{font-size:16px;color:#9FB2C8}
+.mini p{font-size:13px}
+.ctrl{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-top:-16px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+.ctrl button{background:none;border:0;border-right:1px solid var(--line-soft);text-align:left;padding:14px 18px}
+.ctrl button:last-child{border-right:0}
+.ctrl button:hover{background:var(--paper)}
+.ctrl .n{font-family:var(--display);font-size:30px;font-weight:600;line-height:1}
+.ctrl .k{font-size:13px;font-weight:600;margin-top:4px}
+.ctrl .s{font-size:12px;color:var(--ink-3)}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 470px;gap:18px;align-items:start;margin-top:20px}
+.list{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.lh{display:flex;justify-content:space-between;align-items:baseline;padding:16px 18px 10px;gap:10px;flex-wrap:wrap}
+.lh h2{font-size:24px}
+.lh p{margin:2px 0 0;font-size:13px;color:var(--ink-2)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;padding:0 18px 12px}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:4px 12px;font-size:13px;font-weight:500;color:var(--ink-2)}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.item{width:100%;display:grid;grid-template-columns:4px minmax(0,1fr) auto;gap:12px;text-align:left;background:none;border:0;border-top:1px solid var(--line-soft);padding:12px 18px 12px 0}
+.item:hover{background:var(--paper)}
+.item[aria-current="true"]{background:var(--signal-bg)}
+.item h3{font-family:var(--body);font-size:15px;font-weight:600}
+.item .sub{display:block;font-size:13px;color:var(--ink-2);margin-top:2px}
+.item .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.item .rt{text-align:right;font-size:13px;display:flex;flex-direction:column;gap:3px;align-items:flex-end}
+.amt{font-family:var(--display);font-size:20px;font-weight:600}
+.detail{background:var(--card);border:1px solid var(--line);border-radius:14px;position:sticky;top:12px}
+.dh{padding:16px 20px;border-bottom:1px solid var(--line)}
+.dh .ids{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--ink-3)}
+.dh h2{font-size:26px;margin-top:6px}
+.dh p{margin:2px 0 0;font-size:13px;color:var(--ink-2)}
+.blk{padding:14px 20px;border-bottom:1px solid var(--line-soft)}
+.blk h3{font-size:17px;margin-bottom:6px}
+.money{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.money b{font-family:var(--display);font-size:38px;font-weight:600;line-height:1}
+.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
+.facts div{background:var(--paper);border-radius:8px;padding:8px 10px;font-size:13px}
+.facts small{display:block;color:var(--ink-3);font-size:12px}
+.reco{background:var(--signal-bg);border-radius:10px;padding:10px 12px;font-size:14px}
+.reco small{display:block;font-size:12px;font-weight:600;color:var(--signal);margin-bottom:2px}
+.proof{list-style:none;margin:0;padding:0;font-size:13px}
+.proof li{display:flex;justify-content:space-between;gap:8px;padding:4px 0}
+.inp{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--card)}
+.lbl{display:block;font-size:13px;font-weight:600;color:var(--ink-2);margin:0 0 4px}
+.foot{display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;flex-wrap:wrap}
+.msg{padding:0 20px 12px;font-size:13px}
+.hist{list-style:none;margin:0;padding:0}
+.hist li{display:grid;grid-template-columns:58px minmax(0,1fr);gap:10px;font-size:13px;padding:4px 0}
+.hist li span{color:var(--ink-3)}
+.lower{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:20px 0 48px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.card h2{font-size:22px}
+.card p.d{margin:2px 0 10px;font-size:13px;color:var(--ink-2)}
+.line{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line-soft);font-size:14px}
+.line b{font-family:var(--display);font-size:20px;font-weight:600}
+@media (max-width:1000px){.band .wrap,.layout,.lower{grid-template-columns:1fr}.mini{border-left:0;border-top:2px solid #FF8A7E;padding:12px 0 0}.ctrl{grid-template-columns:repeat(2,minmax(0,1fr))}.detail{position:static}.nav{display:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><div class="logo" aria-hidden="true">B</div><div><b>BEHIRA</b><small>FM Track</small></div></div>
+    <nav class="nav" aria-label="Navigation principale">
+      <a href="#" aria-current="page">Arbitrages<span class="n">4</span></a><a href="#">Dossiers</a><a href="#">Équipements</a><a href="#">Pilotage</a><a href="#">Paramètres</a>
+    </nav>
+    <div class="who"><span class="demo">Démo</span><div class="av" aria-hidden="true">AD</div><div class="nm">Administration Démo<br><span style="color:#9FB2C8">SCI Groupe Behira</span></div></div>
+  </div>
+</header>
+
+<section class="band" aria-labelledby="t">
+  <div class="wrap">
+    <div>
+      <h1 id="t">4 arbitrages attendent votre décision</h1>
+      <p>Mercredi 16 septembre. Seuil d'approbation en vigueur : 400 000 FCFA.</p>
+      <div class="big">
+        <div><b>5,25 M</b><span>FCFA soumis à décision</span></div>
+        <div><b>10:30</b><span>première échéance, RIA-01</span></div>
+        <div><b>1</b><span>arbitrage en retard</span></div>
+      </div>
+    </div>
+    <div class="mini">
+      <div class="l">Santé du bâtiment</div>
+      <div class="v">69<small> /100, plafonné</small></div>
+      <p>RIA-01 indisponible. Score brut 82, couverture 83 %. <a href="#" style="color:#9FE0CF">Voir l'accueil du FM</a></p>
+    </div>
+  </div>
+</section>
+
+<main class="wrap">
+  <div class="ctrl" role="group" aria-label="Points de contrôle">
+    <button type="button"><div class="n" style="color:var(--warn)">1</div><div class="k">Clôture sensible à contrôler</div><div class="s">ANO-0234, WILO-01, récidive</div></button>
+    <button type="button"><div class="n" style="color:var(--signal)">1</div><div class="k">Demande d'accès du FM</div><div class="s">Périmètre à confirmer</div></button>
+    <button type="button"><div class="n" style="color:var(--bad)">3</div><div class="k">Dossiers en retard</div><div class="s">dont 1 au-dessus du seuil</div></button>
+    <button type="button"><div class="n">3</div><div class="k">Règles à raccorder</div><div class="s">SLA, seuils techniques, scores</div></button>
+  </div>
+
+  <div class="layout">
+    <section class="list" aria-labelledby="h-arb">
+      <div class="lh"><div><h2 id="h-arb">Arbitrages</h2><p>Proposés par le Facility Manager, triés par échéance.</p></div></div>
+      <div class="chips" id="chips"></div>
+      <div id="items"></div>
+    </section>
+    <aside class="detail" id="detail" aria-live="polite"></aside>
+  </div>
+
+  <div class="lower">
+    <section class="card" aria-labelledby="h-cout">
+      <h2 id="h-cout">Engagements financiers</h2>
+      <p class="d">Montants documentés dans les dossiers ouverts.</p>
+      <div class="line"><span>Soumis à votre décision</span><b>5 250 000 FCFA</b></div>
+      <div class="line"><span>Dossiers au-dessus du seuil</span><b>3</b></div>
+      <div class="line"><span>Arbitrages sans montant</span><b>1</b></div>
+      <div class="line"><span>Engagé et payé</span><span class="muted" style="color:var(--ink-3)">Pas encore suivis dans l'outil</span></div>
+      <button class="btn" type="button" style="margin-top:8px">Ouvrir Pilotage, coûts</button>
+    </section>
+    <section class="card" aria-labelledby="h-rec">
+      <h2 id="h-rec">Vos dernières décisions</h2>
+      <p class="d">Décisions et changements de règles les plus récents.</p>
+      <div class="line"><span>DEC-014, ASC-A1, clôture finale</span><span class="pill p-ok">Approuvée le 22/08</span></div>
+      <div class="line"><span>Seuil financier fixé à 400 000 FCFA</span><span class="pill p-mute">Effet au 30/08</span></div>
+      <div class="line"><span>Historique complet</span><button class="linkbtn" type="button">Journal d'audit</button></div>
+    </section>
+  </div>
+</main>
+
+<script>
+const SEUIL=400000;
+const fmt=n=>n.toLocaleString("fr-FR").replace(/\u202f|\u00a0/g," ")+" FCFA";
+const A=[
+ {id:"DEC-016",ano:"ANO-0238",eq:"ASC-A2",t:"Intervention interne ou PREST-ASC",type:"Arbitrage",amt:950000,due:"En retard depuis le 23/08",late:true,g:"Haute",
+  reco:"Confier à PREST-ASC : deux arrêts au R+7, compétence constructeur requise.",risk:"Perte de redondance, impact usagers",
+  proofs:[["Devis PREST-ASC","Joint"],["Photo du code défaut","Manquante"]],h:[["20/08","Devis PREST-ASC reçu"],["21/08","Proposition du FM transmise"],["23/08","Échéance dépassée"]]},
+ {id:"DEC-018",ano:"ANO-0241",eq:"RIA-01",t:"Maintien en service sous surveillance",type:"Risque",amt:null,due:"Aujourd'hui 10:30",late:false,g:"Critique",
+  reco:"Maintenir sous surveillance 24 h avec contrôle PREST-SSI, ronde renforcée toutes les 4 h.",risk:"Sécurité incendie, impact critique",
+  proofs:[["Photo du manomètre","Jointe"],["Avis PREST-SSI","Attendu"]],h:[["07:40","Constat à la ronde"],["08:30","Plafond du score appliqué"],["08:45","Proposition du FM transmise"]]},
+ {id:"DEC-017",ano:"ANO-0231",eq:"GE-01",t:"Remplacement préventif du banc batteries",type:"Coût",amt:2400000,due:"Aujourd'hui 15:00",late:false,g:"Moyenne",
+  reco:"Remplacer avant la saison des coupures, batteries à 24,6 V le 11/09.",risk:"Continuité électrique",
+  proofs:[["Relevé de tension","Joint"],["Devis PREST-GE","Joint"]],h:[["11/09","Alerte batterie à la ronde"],["14/09","Devis reçu"],["15/09","Proposition du FM transmise"]]},
+ {id:"DEC-015",ano:"ANO-0234",eq:"WILO-01",t:"Validation finale de clôture après récidive",type:"Clôture sensible",amt:1900000,due:"Aujourd'hui 17:00",late:false,g:"Haute",
+  reco:"Refuser la clôture : deuxième réarmement en 7 jours, remplacement de la pompe P1 à engager.",risk:"Alimentation en eau, récidive",
+  proofs:[["Rapport PREST-EAU","Joint"],["Essai après intervention","Non concluant"]],h:[["hier","Diagnostic PREST-EAU"],["07:15","Ronde : état dégradé"],["08:10","Clôture proposée par le prestataire"]]}
+];
+const GR={Critique:["var(--bad)","p-bad"],Haute:["var(--warn)","p-warn"],Moyenne:["var(--signal)","p-sig"]};
+const TYPES=["Tous","Risque","Coût","Arbitrage","Clôture sensible"];
+let f="Tous",sel="DEC-016",done={};
+function draw(){
+ document.getElementById("chips").innerHTML=TYPES.map(t=>{const n=t==="Tous"?A.length:A.filter(a=>a.type===t).length;return `<button class="chip" data-t="${t}" aria-pressed="${f===t}">${t} ${n}</button>`}).join("");
+ document.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{f=b.dataset.t;draw()});
+ const L=A.filter(a=>f==="Tous"||a.type===f);
+ if(!L.find(a=>a.id===sel)&&L.length)sel=L[0].id;
+ document.getElementById("items").innerHTML=L.map(a=>`<button class="item" type="button" data-id="${a.id}" aria-current="${a.id===sel}">
+  <span style="background:${GR[a.g][0]}"></span>
+  <span><h3>${a.eq}, ${a.t}</h3><span class="sub">${a.id}, ${a.ano}</span>
+   <span class="tags"><span class="pill ${GR[a.g][1]}">${a.g}</span><span class="pill p-mute">${a.type}</span>${done[a.id]?`<span class="pill p-ok">${done[a.id]}</span>`:""}</span></span>
+  <span class="rt">${a.amt?`<span class="amt">${fmt(a.amt)}</span>`:'<span style="color:var(--ink-3)">Sans montant</span>'}
+   <span style="${a.late?"color:var(--bad);font-weight:600":"color:var(--ink-2)"}">${a.due}</span></span></button>`).join("");
+ document.querySelectorAll(".item").forEach(b=>b.onclick=()=>{sel=b.dataset.id;draw();if(matchMedia("(max-width:1000px)").matches)document.getElementById("detail").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})});
+ detail(A.find(a=>a.id===sel));
+}
+function detail(a){
+ const el=document.getElementById("detail");
+ const isClose=a.type==="Clôture sensible";
+ el.innerHTML=`<div class="dh"><div class="ids"><span class="pill ${GR[a.g][1]}">${a.g}</span><span>${a.id}, ${a.ano}</span><span class="pill p-mute">${a.type}</span></div>
+  <h2>${a.eq}, ${a.t}</h2><p style="${a.late?"color:var(--bad);font-weight:600":""}">${a.due}</p></div>
+  <div class="blk">${a.amt?`<div class="money"><b>${fmt(a.amt)}</b><span class="pill p-warn">Au-dessus du seuil de ${fmt(SEUIL)}</span></div>`:'<p style="margin:0;font-size:14px">Décision de risque, sans montant associé.</p>'}
+   <div class="facts"><div><small>Risque</small>${a.risk}</div><div><small>Proposé par</small>Facility Manager</div></div></div>
+  <div class="blk"><div class="reco"><small>Recommandation du Facility Manager</small>${a.reco}</div></div>
+  <div class="blk"><h3>Preuves</h3><ul class="proof">${a.proofs.map(p=>`<li><span>${p[0]}</span><span class="pill ${p[1]==="Joint"||p[1]==="Jointe"?"p-ok":p[1]==="Manquante"||p[1]==="Non concluant"?"p-bad":"p-mute"}">${p[1]}</span></li>`).join("")}</ul></div>
+  <div class="blk"><label class="lbl" for="motif">Motif de votre décision</label><textarea class="inp" id="motif" rows="2" placeholder="Obligatoire pour refuser ou renvoyer"></textarea></div>
+  <div class="foot"><button class="btn" type="button" data-a="Renvoyé au FM">Renvoyer au FM</button><button class="btn" type="button" data-a="Refusé">${isClose?"Refuser la clôture":"Refuser"}</button><button class="btn btn-main" type="button" data-a="Approuvé">${isClose?"Approuver la clôture":"Approuver"}</button></div>
+  <div class="msg" id="msg"></div>
+  <div class="blk" style="border-bottom:0;border-top:1px solid var(--line-soft)"><h3>Historique</h3><ul class="hist">${a.h.map(h=>`<li><span>${h[0]}</span>${h[1]}</li>`).join("")}</ul></div>`;
+ el.querySelectorAll("[data-a]").forEach(b=>b.onclick=()=>{
+  const m=el.querySelector("#motif").value.trim(),msg=el.querySelector("#msg");
+  if(b.dataset.a!=="Approuvé"&&!m){msg.innerHTML='<span style="color:var(--bad)">Indiquez un motif pour refuser ou renvoyer.</span>';el.querySelector("#motif").focus();return}
+  done[a.id]=b.dataset.a;msg.innerHTML=`<span style="color:var(--ok)">${b.dataset.a}. Décision tracée avec votre nom, l'heure et le motif.</span>`;
+  const keep=msg.innerHTML;draw();document.getElementById("msg").innerHTML=keep;
+ });
+}
+draw();
+</script>
+</body>
+</html>

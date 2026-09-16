@@ -3,10 +3,22 @@ import { Badge } from './ui';
 
 import { normalizeAntiZombieSummary, type AntiZombieSummaryData } from './anti-zombie-contract';
 
-export function AntiZombieSummary({ data, variant = 'standard' }: { data: AntiZombieSummaryData; variant?:'compact'|'standard'|'detailed' }) {
+const UNSET = [
+  'Responsable non attribué',
+  'Acteur attendu non renseigné',
+  'Prochaine action non renseignée',
+  'Échéance non renseignée',
+  'Aucun blocage déclaré',
+  'Motif non renseigné',
+  'Preuve attendue non définie',
+  'Historique indisponible',
+];
+
+export function AntiZombieSummary({ data, variant = 'standard', hideMissing = false }: { data: AntiZombieSummaryData; variant?:'compact'|'standard'|'detailed'; hideMissing?: boolean }) {
   const headingId = useId();
   const summary = normalizeAntiZombieSummary(data);
   const stateTone = summary.isBlocked ? 'danger' : summary.isDelayed ? 'warning' : 'neutral';
+  const continuity = summary.isBlocked ? 'Bloqué' : summary.isDelayed ? 'En retard' : 'NORMALE';
 
   const fields = [
     { label:'Prochaine action', value:summary.nextAction, meta:summary.nextActionDetail, priority:true, missing:summary.nextAction === 'Prochaine action non renseignée' },
@@ -19,6 +31,9 @@ export function AntiZombieSummary({ data, variant = 'standard' }: { data: AntiZo
     { label:'Preuve attendue', value:summary.expectedProof, meta:summary.expectedProofState, missing:summary.expectedProof === 'Preuve attendue non définie' },
     { label:'Dernière activité', value:summary.lastActivityLabel, meta:summary.lastActivityMeta, missing:summary.lastActivityLabel === 'Historique indisponible' },
   ];
+  const visible = hideMissing
+    ? fields.filter((field) => !field.missing && !UNSET.includes(String(field.value ?? '')))
+    : fields;
 
   return (
     <section className={`anti-zombie-summary anti-zombie-${variant}`} aria-labelledby={headingId} tabIndex={0}>
@@ -28,7 +43,7 @@ export function AntiZombieSummary({ data, variant = 'standard' }: { data: AntiZo
           <p>CONTINUITÉ DE TRAITEMENT</p>
           <h4 id={headingId}>Synthèse de pilotage</h4>
         </div>
-        <Badge tone={stateTone === 'danger' ? 'critical' : stateTone === 'warning' ? 'orange' : 'neutral'}>{summary.isBlocked ? 'BLOQUÉ' : summary.isDelayed ? 'EN RETARD' : 'NORMALE'}</Badge>
+        <Badge tone={stateTone === 'danger' ? 'critical' : stateTone === 'warning' ? 'orange' : 'neutral'}>{continuity === 'NORMALE' ? 'Normale' : continuity}</Badge>
       </header>
 
       {summary.blockingInformationIncomplete && (
@@ -36,7 +51,7 @@ export function AntiZombieSummary({ data, variant = 'standard' }: { data: AntiZo
       )}
 
       <dl className="anti-zombie-fields">
-        {fields.map((field) => (
+        {visible.map((field) => (
           <div className={`${field.priority ? 'priority' : 'secondary'}${field.missing ? ' missing' : ''}`} key={field.label}>
             <dt>{field.label}</dt>
             <dd>{field.value}</dd>

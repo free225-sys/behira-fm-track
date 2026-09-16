@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from 'react';
 
+import { displayAssetCode, displayAssetText } from '../lib/ui-contract/display.ts';
 import { Badge, BrandIcon, Button, Card, Field, Select } from './ui';
 import { hasFieldErrors, validateAccessAction, validateAccessCreate, type FieldErrors } from '../lib/client-validation';
 
@@ -76,7 +77,7 @@ export function AccessWorkspace({ users, audience }: {
           {users.map((user) => <article key={user.id} className={selectedUserId === user.id ? 'active' : ''}>
             <button type="button" onClick={() => setSelectedUserId(user.id)} aria-pressed={selectedUserId === user.id}>
               <span className="access-avatar">{user.initials}</span>
-              <span className="access-user-copy"><b>{user.name}</b><small>{user.role}</small><em>{user.scope}</em></span>
+              <span className="access-user-copy"><b>{user.name}</b><small>{user.role}</small><em>{displayAssetText(user.scope)}</em></span>
               <Badge tone="neutral">PROFIL DÉMO</Badge>
             </button>
           </article>)}
@@ -90,18 +91,18 @@ export function AccessWorkspace({ users, audience }: {
           <div className="access-form-heading"><p className="design-kicker">{audience === 'administration' ? adminAction === 'create' ? 'CRÉATION' : 'DÉSACTIVATION' : 'PROPOSITION FACILITY MANAGER'}</p><h3>{audience === 'administration' ? adminAction === 'create' ? 'Préparer un nouvel accès' : 'Préparer une désactivation' : 'Proposer un rôle ou un périmètre'}</h3><p>Aucune action de ce formulaire ne modifie Supabase Auth, les RLS ou les utilisateurs réels.</p></div>
 
           {audience === 'administration' && adminAction === 'create' ? <>
-            <Field label="Nom complet" error={fieldErrors.name}><input value={name} aria-invalid={Boolean(fieldErrors.name)} onChange={(event) => {setName(event.target.value);setFieldErrors((current) => ({ ...current, name: undefined }))}} placeholder="Prénom et nom" /></Field>
-            <Field label="Email professionnel" error={fieldErrors.email}><input type="email" value={email} aria-invalid={Boolean(fieldErrors.email)} onChange={(event) => {setEmail(event.target.value);setFieldErrors((current) => ({ ...current, email: undefined }))}} placeholder="nom@entreprise.com" /></Field>
-          </> : <Field label="Profil concerné" error={fieldErrors.selectedUserId}><Select value={selectedUserId} onChange={(event) => {setSelectedUserId(event.target.value);setFieldErrors((current) => ({ ...current, selectedUserId: undefined }))}}>{users.filter((user) => user.id !== 'administration').map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}</Select></Field>}
+            <Field label="Nom complet" size="standard" error={fieldErrors.name}><input value={name} aria-invalid={Boolean(fieldErrors.name)} onChange={(event) => {setName(event.target.value);setFieldErrors((current) => ({ ...current, name: undefined }))}} placeholder="Prénom et nom" /></Field>
+            <Field label="Email professionnel" size="standard" error={fieldErrors.email}><input type="email" value={email} aria-invalid={Boolean(fieldErrors.email)} onChange={(event) => {setEmail(event.target.value);setFieldErrors((current) => ({ ...current, email: undefined }))}} placeholder="nom@entreprise.com" /></Field>
+          </> : <Field label="Profil concerné" size="select" error={fieldErrors.selectedUserId}><Select value={selectedUserId} onChange={(event) => {setSelectedUserId(event.target.value);setFieldErrors((current) => ({ ...current, selectedUserId: undefined }))}}>{users.filter((user) => user.id !== 'administration').map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}</Select></Field>}
 
           {(audience === 'facility' || adminAction === 'create') && <div className="access-form-grid">
-            <Field label={audience === 'facility' ? 'Rôle proposé' : 'Rôle'}><Select value={role} onChange={(event) => setRole(event.target.value)}><option>Agent terrain</option><option>Facility Manager</option><option>Agente & assistante</option>{audience === 'administration' && <option>Administration</option>}</Select></Field>
-            <Field label={audience === 'facility' ? 'Périmètre proposé' : 'Périmètre'}><Select value={scope} onChange={(event) => setScope(event.target.value)}><option>Périmètre à confirmer</option><option>DEMO-GE</option><option>DEMO-EAU · DEMO-SSI · DEMO-ESP</option><option>DEMO-RND</option><option>Tous périmètres</option></Select></Field>
+            <Field label={audience === 'facility' ? 'Rôle proposé' : 'Rôle'} size="select"><Select value={role} onChange={(event) => setRole(event.target.value)}><option>Agent terrain</option><option>Facility Manager</option><option>Agente & assistante</option>{audience === 'administration' && <option>Administration</option>}</Select></Field>
+            <Field label={audience === 'facility' ? 'Périmètre proposé' : 'Périmètre'} size="select"><Select value={scope} onChange={(event) => setScope(event.target.value)}><option>Périmètre à confirmer</option><option value="DEMO-GE">{displayAssetCode('DEMO-GE')}</option><option value="DEMO-EAU · DEMO-SSI · DEMO-ESP">{displayAssetText('DEMO-EAU · DEMO-SSI · DEMO-ESP')}</option><option value="DEMO-RND">{displayAssetCode('DEMO-RND')}</option><option>Tous périmètres</option></Select></Field>
           </div>}
 
-          <Field label="Justification" error={fieldErrors.reason}><textarea value={reason} maxLength={1000} aria-invalid={Boolean(fieldErrors.reason)} onChange={(event) => {setReason(event.target.value);setFieldErrors((current) => ({ ...current, reason: undefined }))}} placeholder={audience === 'facility' ? 'Expliquez le besoin métier et le périmètre demandé.' : adminAction === 'create' ? 'Expliquez pourquoi cet accès doit être créé.' : 'Expliquez pourquoi cet accès doit être désactivé.'} /></Field>
+          <Field label="Justification" size="long" error={fieldErrors.reason}><textarea value={reason} maxLength={1000} aria-invalid={Boolean(fieldErrors.reason)} onChange={(event) => {setReason(event.target.value);setFieldErrors((current) => ({ ...current, reason: undefined }))}} placeholder={audience === 'facility' ? 'Expliquez le besoin métier et le périmètre demandé.' : adminAction === 'create' ? 'Expliquez pourquoi cet accès doit être créé.' : 'Expliquez pourquoi cet accès doit être désactivé.'} /></Field>
 
-          <div className="access-security-note" role="note"><BrandIcon name="lock" size={18} /><p><b>Exécution sécurisée hors du navigateur</b><small>La cible réelle devra contrôler l’auteur, le rôle, le périmètre et la justification côté serveur, puis historiser le résultat.</small></p></div>
+          <div className="access-security-note" role="note"><BrandIcon name="lock" size={18} /><p><b>Exécution sécurisée hors du navigateur</b><small>La cible réelle devra contrôler l’auteur, le rôle, le périmètre et la justification côté serveur, puis historiser le résultat. Les cartes de règles détaillées sont remplacées par cette phrase tant que le référentiel d’accès n’est pas raccordé.</small></p></div>
           {confirmation && <div className="access-confirmation" role="status"><span aria-hidden="true">✓</span>{confirmation}</div>}
           <Button type="submit">{audience === 'facility' ? 'Envoyer la proposition' : adminAction === 'create' ? 'Préparer la création' : 'Préparer la désactivation'}</Button>
           <small className="access-simulation-note">Simulation locale · aucun compte, rôle ou périmètre réel n’est modifié.</small>

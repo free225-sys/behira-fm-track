@@ -11,7 +11,8 @@ const costsWorkspace = await readFile(path.join(root, 'app', 'components', 'Cost
 const accessWorkspace = await readFile(path.join(root, 'app', 'components', 'AccessWorkspace.tsx'), 'utf8')
 const parametersWorkspace = await readFile(path.join(root, 'app', 'components', 'ParametersWorkspace.tsx'), 'utf8')
 const syncStatusNotice = await readFile(path.join(root, 'app', 'components', 'SyncStatusNotice.tsx'), 'utf8')
-const appSource = `${page}\n${css}\n${badge}\n${equipmentWorkspace}\n${costsWorkspace}\n${accessWorkspace}\n${parametersWorkspace}\n${syncStatusNotice}`
+const dossiersWorkspace = await readFile(path.join(root, 'app', 'components', 'DossiersWorkspace.tsx'), 'utf8')
+const appSource = `${page}\n${css}\n${badge}\n${equipmentWorkspace}\n${costsWorkspace}\n${accessWorkspace}\n${parametersWorkspace}\n${syncStatusNotice}\n${dossiersWorkspace}`
 
 const checks = []
 const requireAll = (label, source, values) => {
@@ -41,6 +42,7 @@ requireAll('Droits visibles par persona', page, [
   "['workspace','report']",
   "personaId === 'electricite' || personaId === 'eau_incendie'",
   "Cleaning · jardinage · suivi administratif",
+  "primaryNavKeysByPersona",
 ])
 requireAll('Responsive', css, [
   '@media (max-width:1180px)', '@media (max-width:900px)', '@media (max-width:700px)', '@media (max-width:430px)',
@@ -80,11 +82,11 @@ requireAll('Clôture design des cockpits', page, [
 ])
 requireAll('Navigation analytique du tableau de bord', appSource, [
   'dashboard-section-tabs', 'Vue d’ensemble', 'Actions & risques', 'Santé & scores', 'Parc technique',
-  'scroll-snap-type:x proximity', 'PILOTAGE FACILITY MANAGER', 'Disponibilité technique 92%',
+  'scroll-snap-type:x proximity', 'PILOTAGE FACILITY MANAGER', 'Disponibilité : données insuffisantes',
 ])
 requireAll('Destination Équipements limitée à Administration et Facility Manager', appSource, [
   "key:'equipment'", "secondary:true", 'EquipmentWorkspace', 'Parc technique',
-  'Fraîcheur du score', 'Facteurs explicatifs', 'Données insuffisantes',
+  'À risque', 'Statut métier', 'Données insuffisantes',
 ])
 requireAll('Destination Coûts limitée à Administration et Facility Manager', appSource, [
   "key:'costs'", "label:'Coûts'", 'CostsWorkspace', 'Coûts documentés',

@@ -5,14 +5,20 @@ import { FormEvent, useEffect, useId, useMemo, useRef, useState, type ReactNode 
 import { AntiZombieSummary } from './components/AntiZombieSummary';
 import type { AntiZombieSummaryData } from './components/anti-zombie-contract';
 import { DossierActionBoard, DossierProofSnapshot, DossierTreatmentStrip, type TreatmentBranch } from './components/DossierContinuity';
+import { DossiersWorkspace, dossierActionLabel, type DossiersTab } from './components/DossiersWorkspace';
 import { AccessWorkspace } from './components/AccessWorkspace';
 import { BuildingHealthCockpit, ScoreRing } from './components/BuildingHealthCockpit';
+import { DemoScenarioProvider, DemoScenarioSelect, InsufficientNote, ReportTrackingLine, SegmentedControl, useDemoScoreScenario } from './components/shared';
+import { demoHomeSnapshot, demoReportTracking, demoRoundsFor, sessionForAudience } from './lib/ui-contract/fixtures.ts';
+import type { UiSession } from './lib/ui-contract/building-health.ts';
+import { asciiInitials, displayAssetCode, displayAssetText, formatCompactMoney, formatTime, formatWeekdayDate, roundStateLabel, scoreFigure } from './lib/ui-contract/display.ts';
+import { Ge01AgentForm } from './components/Ge01Pilot';
 import { CostsWorkspace } from './components/CostsWorkspace';
 import { EquipmentWorkspace } from './components/EquipmentWorkspace';
 import { NotificationBell } from './components/NotificationCenter';
 import { ParametersWorkspace, type ParameterWorkspaceData } from './components/ParametersWorkspace';
 import { SyncStatusNotice, type SyncStatusState } from './components/SyncStatusNotice';
-import { Badge, BrandIcon, Button, Card, DateInput, DateTimeInput, Field, FieldError, Select } from './components/ui';
+import { Badge, BrandIcon, Button, Card, DateInput, Field, FieldError, Select } from './components/ui';
 import { WorkflowAnalytics } from './components/WorkflowAnalytics';
 import {
   hasFieldErrors,
@@ -35,7 +41,7 @@ import { advanceAnomalyWorkflow, uploadAnomalyProof, uploadVendorInterventionRep
 type View = 'workspace' | 'dashboard' | 'registry' | 'equipment' | 'costs' | 'access' | 'settings' | 'manager' | 'report' | 'detail';
 type Priority = 'Critique' | 'Haute' | 'Moyenne' | 'Faible';
 type Status = 'À qualifier' | 'Affectée' | 'En intervention' | 'En validation' | 'Clôturée';
-type ManagerQueue = 'qualify'|'late'|'unassigned'|'proof'|'reception'|'reservations'|'reopened';
+type ManagerQueue = 'all'|'qualify'|'decide'|'late'|'unassigned'|'overThreshold'|'proof'|'reception'|'reservations'|'reopened';
 type PersonaId = 'facility' | 'administration' | 'electricite' | 'eau_incendie' | 'rondes_assistance';
 type DecisionState = 'À décider' | 'Approuvée' | 'Refusée' | 'Renvoyée à Facility Manager';
 type AuthScreen = 'login' | 'forgot' | 'invite';
@@ -124,6 +130,8 @@ type Anomaly = {
   proof: boolean;
   proofPending?: boolean;
   description: string;
+  origin?: string;
+  horsScore?: boolean;
   proofs?: MirrorProof[];
   treatment?: MirrorTreatment;
 };
@@ -218,7 +226,7 @@ type NavigationItem = {
    pas une nomenclature parallèle. */
 const navItems: NavigationItem[] = [
   { key:'workspace', label:'Accueil', subtitle:'Santé du bâtiment et scores des équipements.', group:'Mon travail' },
-  { key:'manager', label:'À traiter', subtitle:'Dossiers nécessitant votre intervention.', group:'Mon travail' },
+  { key:'manager', label:'Dossiers', subtitle:'Dossiers nécessitant votre intervention.', group:'Mon travail' },
   { key:'report', label:'Rondes', subtitle:'Contrôles terrain et rondes planifiées.', group:'Mon travail' },
   { key:'registry', label:'Registre', subtitle:'Consultez et recherchez l’ensemble des dossiers.', group:'Le bâtiment' },
   { key:'equipment', label:'Équipements', subtitle:'Santé et informations disponibles du parc technique.', group:'Le bâtiment', secondary:true },
@@ -228,6 +236,19 @@ const navItems: NavigationItem[] = [
   { key:'settings', label:'Seuils et paramètres', subtitle:'Règles confirmées, portée et historique disponible.', group:'Administration', secondary:true },
 ];
 const navigationGroups: NavigationGroup[] = ['Mon travail','Le bâtiment','Pilotage','Administration'];
+const hiddenNavKeys: View[] = ['registry','costs'];
+const primaryNavKeysByPersona: Record<PersonaId, View[]> = {
+  facility:['workspace','manager','report','equipment','dashboard'],
+  administration:['workspace','manager','equipment','dashboard','settings'],
+  electricite:['workspace','report'],
+  eau_incendie:['workspace','report'],
+  rondes_assistance:['workspace','report'],
+};
+function navItemLabel(item: NavigationItem, personaId: PersonaId) {
+  if (personaId === 'administration' && item.key === 'workspace') return 'Arbitrages';
+  if (personaId === 'administration' && item.key === 'settings') return 'Paramètres';
+  return item.label;
+}
 
 const navIconByView: Record<NavigationItem['key'], 'building'|'clipboard'|'mapPin'|'files'|'wrench'|'layout'|'banknote'|'users'|'settings'> = {
   workspace: 'building',
@@ -591,7 +612,7 @@ function AuthExperience({ onAuthenticate, onDemoAuthenticate, onForgot, onReset,
 
         {screen === 'invite' && <>
           <button type="button" className="auth-back" onClick={() => switchScreen('login')}>← Retour à la connexion</button>
-          <div className="auth-heading"><span className="auth-mode-chip">INVITATION DE DÉMONSTRATION</span><h2>Activez votre compte</h2><p>Compte invité : <b>Agente Rondes & Assistance Démo</b><br />Rôle : Rondes & constats · périmètre DEMO-RND</p></div>
+          <div className="auth-heading"><span className="auth-mode-chip">INVITATION DE DÉMONSTRATION</span><h2>Activez votre compte</h2><p>Compte invité : <b>Agente Rondes & Assistance Démo</b><br />Rôle : Rondes & constats · périmètre {displayAssetCode('DEMO-RND')}</p></div>
           <form className="auth-form" onSubmit={submitInvite} noValidate>
             <label className={`auth-field ${fieldErrors.password ? 'is-invalid' : ''}`}>Créer un mot de passe<input type="password" autoComplete="new-password" value={invitePassword} onChange={(event) => {setInvitePassword(event.target.value);setStatus('idle');setFieldErrors((current) => ({ ...current, password: undefined }))}} aria-invalid={Boolean(fieldErrors.password)} aria-describedby="password-rules invite-password-error auth-message" /><FieldError id="invite-password-error" message={fieldErrors.password} /></label>
             <label className={`auth-field ${fieldErrors.confirm ? 'is-invalid' : ''}`}>Confirmer le mot de passe<input type="password" autoComplete="new-password" value={inviteConfirm} onChange={(event) => {setInviteConfirm(event.target.value);setStatus('idle');setFieldErrors((current) => ({ ...current, confirm: undefined }))}} aria-invalid={Boolean(fieldErrors.confirm)} /><FieldError id="invite-confirm-error" message={fieldErrors.confirm} /></label>
@@ -671,6 +692,18 @@ function RequiredPasswordChange({ requirement, onComplete, onSignOut }: {
   );
 }
 
+function LiveHealthCockpit({ session, onNavigate, actionCount, causeActions, bannerExtras, children }: { session: UiSession; onNavigate: (view: View) => void; actionCount?: number; causeActions?: ReactNode; bannerExtras?: ReactNode; children?: ReactNode }) {
+  const { scenario } = useDemoScoreScenario();
+  const snapshot = demoHomeSnapshot(session, session.demo ? scenario : 'not_computable');
+  return <BuildingHealthCockpit snapshot={snapshot} session={session} onNavigate={onNavigate} rounds={demoRoundsFor(session)} actionCount={actionCount} causeActions={causeActions} bannerExtras={bannerExtras}>{children}</BuildingHealthCockpit>;
+}
+
+function LiveEquipmentWorkspace({ session }: { session: UiSession }) {
+  const { scenario } = useDemoScoreScenario();
+  const snapshot = demoHomeSnapshot(session, session.demo ? scenario : 'not_computable');
+  return <EquipmentWorkspace equipment={snapshot.equipment} />;
+}
+
 export default function Home() {
   const supabaseIntegration = getSupabaseIntegrationState();
   const [session, setSession] = useState<DemoSession|null>(null);
@@ -696,7 +729,8 @@ export default function Home() {
   const [query, setQuery] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('Toutes');
   const [statusFilter, setStatusFilter] = useState('Tous');
-  const [managerTab, setManagerTab] = useState<ManagerQueue>('qualify');
+  const [managerTab, setManagerTab] = useState<ManagerQueue>('all');
+  const [dossiersTab, setDossiersTab] = useState<DossiersTab>('atraiter');
   const [toast, setToast] = useState('');
   const [mutationBusy, setMutationBusy] = useState(false);
   const [moreNavOpen, setMoreNavOpen] = useState(false);
@@ -830,18 +864,27 @@ export default function Home() {
     : canUploadVendorReport;
   const selected = anomalies.find((a) => a.id === selectedId) ?? anomalies[0];
   const filtered = useMemo(() => anomalies.filter((a) => {
-    const haystack = `${a.id} ${a.asset} ${a.title} ${a.location}`.toLowerCase();
+    const haystack = `${a.id} ${a.asset} ${displayAssetCode(a.asset)} ${a.title} ${a.location}`.toLowerCase();
     return haystack.includes(query.toLowerCase()) && (priorityFilter === 'Toutes' || a.priority === priorityFilter) && (statusFilter === 'Tous' || a.status === statusFilter);
   }), [anomalies, query, priorityFilter, statusFilter]);
 
   const navigate = (next: View) => {
-    if (next !== 'detail' && !allowedViewsByPersona[personaId].includes(next)) {
+    const permitted = allowedViewsByPersona[personaId].includes(next) || primaryNavKeysByPersona[personaId].includes(next);
+    if (next !== 'detail' && !permitted) {
       setToast('Accès masqué pour ce rôle de démonstration.');
       window.setTimeout(() => setToast(''), 3200);
       return;
     }
     setMoreNavOpen(false);
-    setView(next);
+    if (next === 'registry' || next === 'costs') {
+      setDossiersTab('tous');
+      setView('manager');
+    } else if (next === 'access' && personaId === 'administration') {
+      setView('settings');
+    } else {
+      if (next === 'manager') setDossiersTab('atraiter');
+      setView(next);
+    }
     setToast('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -1067,14 +1110,18 @@ export default function Home() {
     flash(`${id} transmise à l’Administration pour arbitrage.`);
   };
 
-  const visibleNav = navItems.filter((item) => allowedViewsByPersona[personaId].includes(item.key));
-  const primaryCandidates = visibleNav.filter((item) => !item.secondary);
-  const primaryNav = primaryCandidates.slice(0,6);
-  const primaryKeys = new Set(primaryNav.map((item) => item.key));
-  const overflowNav = visibleNav.filter((item) => !primaryKeys.has(item.key));
+  const primaryNavKeys = primaryNavKeysByPersona[personaId];
+  const visibleNav = navItems.filter((item) => allowedViewsByPersona[personaId].includes(item.key) || primaryNavKeys.includes(item.key));
+  const primaryNav = primaryNavKeys.map((key) => navItems.find((item) => item.key === key)).filter((item): item is NavigationItem => Boolean(item));
+  const overflowNav = visibleNav.filter((item) => !primaryNavKeys.includes(item.key) && !hiddenNavKeys.includes(item.key) && !(personaId === 'administration' && item.key === 'access'));
   const activeNavKey = view === 'detail' ? previousView : view;
-  const overflowIsActive = overflowNav.some((item) => item.key === activeNavKey);
-  const isNavigationActive = (key:NavigationItem['key']) => key === activeNavKey;
+  const isNavigationActive = (key:NavigationItem['key']) => {
+    if (key === activeNavKey) return true;
+    if (view === 'manager' && key === 'registry' && !allowedViewsByPersona[personaId].includes('manager')) return true;
+    if (view === 'settings' && key === 'settings') return true;
+    return false;
+  };
+  const overflowIsActive = overflowNav.some((item) => isNavigationActive(item.key));
   const focusOverflowItem = (index:number) => {
     const items = moreNavItemRefs.current.filter((item): item is HTMLButtonElement => Boolean(item));
     if (!items.length) return;
@@ -1097,22 +1144,22 @@ export default function Home() {
   };
   const currentNavigationItem = navItems.find((item) => item.key === activeNavKey) ?? navItems[0];
   const pageTitle = view === 'detail' ? selected.id : currentNavigationItem.label;
-  const pageSubtitle = view === 'detail' ? `${selected.asset} · ${selected.title}` : currentNavigationItem.subtitle;
+  const pageSubtitle = view === 'detail' ? `${displayAssetCode(selected.asset)} · ${selected.title}` : currentNavigationItem.subtitle;
   const canStartRound = allowedViewsByPersona[personaId].includes('report') && personaId !== 'administration';
-  const showRoundCta = view === 'workspace' && canStartRound;
 
   if (!authReady) return <main className="auth-loading" aria-label="Chargement de la session"><span className="brand-mark">B</span><p>Préparation de votre espace…</p></main>;
   if (passwordChangeRequirement) return <RequiredPasswordChange requirement={passwordChangeRequirement} onComplete={completeRequiredPasswordChange} onSignOut={signOutLockedSession} />;
   if (!session) return <AuthExperience onAuthenticate={authenticate} onDemoAuthenticate={authenticateDemo} onForgot={requestPasswordReset} onReset={resetDemo} supabaseMode={isSupabaseIntegrationEnabled} allowDemoFallback={supabaseIntegration.demoFallback} environmentLabel={supabaseIntegration.environmentLabel} />;
 
   return (
+    <DemoScenarioProvider>
     <div className="app-shell">
       <header className="app-navigation">
         <button className="brand" onClick={() => navigate('workspace')} aria-label="BEHIRA — aller à l’Accueil"><span className="brand-mark">B</span><span className="brand-wordmark">BEHIRA<small>FM / GB TRACK</small></span></button>
         <nav className="primary-navigation" aria-label="Navigation principale">
           {primaryNav.map((item) => {
             const active = isNavigationActive(item.key);
-            return <button key={item.key} type="button" className={`nav-item ${active ? 'active' : ''}`} aria-current={active ? 'page' : undefined} onClick={() => navigate(item.key)}><NavigationIcon view={item.key} active={active}/><span className="nav-item-label">{item.label}</span></button>;
+            return <button key={item.key} type="button" className={`nav-item ${active ? 'active' : ''}`} aria-current={active ? 'page' : undefined} onClick={() => navigate(item.key)}><NavigationIcon view={item.key} active={active}/><span className="nav-item-label">{navItemLabel(item, personaId)}</span></button>;
           })}
           {overflowNav.length > 0 && <div className="nav-overflow" ref={moreNavRef}>
             <button ref={moreNavTriggerRef} type="button" className={`nav-item nav-more-trigger ${overflowIsActive ? 'active' : ''}`} aria-current={overflowIsActive ? 'page' : undefined} aria-haspopup="menu" aria-expanded={moreNavOpen} aria-controls="navigation-more-menu" onKeyDown={(event) => {if (event.key === 'ArrowDown') {event.preventDefault();setMoreNavOpen(true);window.requestAnimationFrame(() => focusOverflowItem(0))}}} onClick={() => setMoreNavOpen((open) => !open)}><BrandIcon name="more" className="nav-icon nav-more-icon" size={18} strokeWidth={overflowIsActive ? 2.25 : 1.75} /><span className="nav-item-label">Plus</span></button>
@@ -1123,7 +1170,7 @@ export default function Home() {
                 return <section className="nav-more-group" key={group} aria-label={group}><p>{group}</p>{groupItems.map((item) => {
                   const active = isNavigationActive(item.key);
                   const overflowIndex = overflowNav.findIndex((candidate) => candidate.key === item.key);
-                  return <button ref={(node) => {moreNavItemRefs.current[overflowIndex] = node}} type="button" role="menuitem" key={item.key} className={active ? 'active' : ''} aria-current={active ? 'page' : undefined} onClick={() => navigate(item.key)}><NavigationIcon view={item.key} active={active}/><span>{item.label}</span></button>;
+                  return <button ref={(node) => {moreNavItemRefs.current[overflowIndex] = node}} type="button" role="menuitem" key={item.key} className={active ? 'active' : ''} aria-current={active ? 'page' : undefined} onClick={() => navigate(item.key)}><NavigationIcon view={item.key} active={active}/><span>{navItemLabel(item, personaId)}</span></button>;
                 })}</section>;
               })}
             </div>}
@@ -1133,21 +1180,47 @@ export default function Home() {
         <div className="app-navigation-user"><button className="logout-button" onClick={() => setSignOutConfirm(true)} aria-label="Se déconnecter">↪</button></div>
       </header>
 
-      <main className="main-column">
+      <main className={`main-column${view === 'manager' || view === 'registry' ? ' is-dossiers-page' : ''}`}>
         <header className="topbar">
           <div className="topbar-title"><h1>{pageTitle}</h1><p>{pageSubtitle}</p></div>
-          <div className="top-actions">{session.mode === 'demo' ? <PersonaSwitcher value={personaId} onChange={changePersona} /> : <div className={`authenticated-persona data-${dataState}`} title={`${session.email} · ${dataState === 'live' ? `données ${supabaseIntegration.environmentLabel}` : 'données de repli'}`}><span>{persona.initials}</span><p><b>{persona.name}</b><small>{dataState === 'live' ? `${supabaseIntegration.environmentLabel} · ${referenceCounts.anomalies} anomalies visibles` : dataState === 'loading' ? `Connexion à ${supabaseIntegration.environmentLabel}…` : `Mode de repli · ${persona.role}`}</small></p></div>}<NotificationBell personaId={personaId} anomalies={anomalies} equipment={equipmentItems} dataState={dataState} canConfigure={personaId === 'facility' || personaId === 'administration'} canOpenEquipment={allowedViewsByPersona[personaId].includes('equipment')} onOpenAnomaly={(id) => openDetail(id, view === 'detail' ? previousView : view)} onOpenEquipment={() => navigate('equipment')} onOpenHome={() => navigate('workspace')} /><button className="auth-signout-top" onClick={() => setSignOutConfirm(true)} aria-label="Se déconnecter"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 4.5H5.5A1.5 1.5 0 0 0 4 6v8a1.5 1.5 0 0 0 1.5 1.5H8"/><path d="M8.5 10H16m0 0-2.4-2.4M16 10l-2.4 2.4"/></svg></button>{showRoundCta && <Button className="top-create" onClick={() => navigate('report')}>＋ Nouvelle ronde</Button>}</div>
+          <div className="top-actions">{session.mode === 'demo' ? <PersonaSwitcher value={personaId} onChange={changePersona} /> : <div className={`authenticated-persona data-${dataState}`} title={`${session.email} · ${dataState === 'live' ? `données ${supabaseIntegration.environmentLabel}` : 'données de repli'}`}><span>{persona.initials}</span><p><b>{persona.name}</b><small>{dataState === 'live' ? `${supabaseIntegration.environmentLabel} · ${referenceCounts.anomalies} anomalies visibles` : dataState === 'loading' ? `Connexion à ${supabaseIntegration.environmentLabel}…` : `Mode de repli · ${persona.role}`}</small></p></div>}<NotificationBell personaId={personaId} anomalies={anomalies} equipment={equipmentItems} dataState={dataState} canConfigure={personaId === 'facility' || personaId === 'administration'} canOpenEquipment={allowedViewsByPersona[personaId].includes('equipment')} onOpenAnomaly={(id) => openDetail(id, view === 'detail' ? previousView : view)} onOpenEquipment={() => navigate('equipment')} onOpenHome={() => navigate('workspace')} /><button className="auth-signout-top" onClick={() => setSignOutConfirm(true)} aria-label="Se déconnecter"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 4.5H5.5A1.5 1.5 0 0 0 4 6v8a1.5 1.5 0 0 0 1.5 1.5H8"/><path d="M8.5 10H16m0 0-2.4-2.4M16 10l-2.4 2.4"/></svg></button></div>
         </header>
 
         <div className="content">
           {view === 'workspace' && <PersonaWorkspace persona={persona} anomalies={anomalies} equipment={equipmentItems} vendors={vendorReferences} canUploadVendorReport={effectiveCanUploadVendorReport} vendorReportBusy={mutationBusy} onVendorReport={persistVendorReport} escalations={escalations} fieldRequests={fieldRequests} onEscalationDecision={decideEscalation} onEscalateToDirection={escalateToDirection} onFieldRequest={submitFieldRequest} onOpen={(id) => openDetail(id, 'workspace')} onNavigate={navigate} flash={flash} />}
           {view === 'dashboard' && <Dashboard anomalies={anomalies} equipment={equipmentItems} escalations={escalations} audience={personaId === 'administration' ? 'administration' : 'facility'} onOpen={openDetail} onNavigate={navigate} />}
-          {view === 'registry' && <Registry anomalies={filtered} query={query} setQuery={setQuery} priority={priorityFilter} setPriority={setPriorityFilter} status={statusFilter} setStatus={setStatusFilter} onOpen={(id) => openDetail(id, 'registry')} />}
-          {view === 'equipment' && <EquipmentWorkspace equipment={equipmentItems} />}
+          {(view === 'manager' || view === 'registry') && <DossiersWorkspace
+            tab={view === 'registry' ? 'tous' : dossiersTab}
+            onTab={(tab) => { setDossiersTab(tab); if (view === 'registry') setView('manager'); }}
+            threshold={DECISION_THRESHOLD_FCFA}
+            query={query}
+            onQuery={setQuery}
+            counts={{
+              atraiter: anomalies.filter((item) => item.status !== 'Clôturée' && (item.status === 'À qualifier' || item.delayed || !canonicalResponsible(item) || item.proofPending)).length,
+              tous: anomalies.length,
+              clotures: anomalies.filter((item) => item.status === 'Clôturée').length,
+            }}
+          >
+            {(view === 'registry' ? 'tous' : dossiersTab) === 'atraiter'
+              ? <Manager anomalies={anomalies.filter((item) => !query || `${item.id} ${item.asset} ${displayAssetCode(item.asset)} ${item.title}`.toLowerCase().includes(query.toLowerCase()))} tab={managerTab} setTab={setManagerTab} onOpen={(id) => openDetail(id, 'manager')} escalations={escalations} fieldRequests={fieldRequests} />
+              : <Registry
+                  anomalies={(view === 'registry' || dossiersTab === 'tous' ? filtered : filtered.filter((item) => item.status === 'Clôturée'))}
+                  query={query}
+                  setQuery={setQuery}
+                  priority={priorityFilter}
+                  setPriority={setPriorityFilter}
+                  status={statusFilter}
+                  setStatus={setStatusFilter}
+                  onOpen={(id) => openDetail(id, 'manager')}
+                />}
+          </DossiersWorkspace>}
+          {view === 'equipment' && <LiveEquipmentWorkspace session={sessionForAudience(personaId === 'administration' ? 'administration' : 'facility', persona.name)} />}
           {view === 'costs' && <CostsWorkspace items={escalations.map((item) => ({ id:item.id, anomaly:item.anomaly, asset:item.asset, title:item.title, kind:item.kind, amount:item.amount ?? null, due:item.due, state:item.state }))} audience={personaId === 'administration' ? 'administration' : 'facility'} threshold={DECISION_THRESHOLD_FCFA} onOpenDossier={(id) => openDetail(id, 'costs')} />}
           {view === 'access' && <AccessWorkspace users={personas.map((item) => ({ id:item.id, name:item.name, initials:item.initials, role:item.role, scope:item.scope }))} audience={personaId === 'administration' ? 'administration' : 'facility'} />}
-          {view === 'settings' && <ParametersWorkspace parameter={FINANCIAL_DECISION_PARAMETER} onOpenCosts={() => navigate('costs')} />}
-          {view === 'manager' && <Manager anomalies={anomalies} tab={managerTab} setTab={setManagerTab} onOpen={(id) => openDetail(id, 'manager')} />}
+          {view === 'settings' && <>
+            <ParametersWorkspace parameter={FINANCIAL_DECISION_PARAMETER} onOpenCosts={() => navigate('costs')} />
+            {personaId === 'administration' ? <AccessWorkspace users={personas.map((item) => ({ id:item.id, name:item.name, initials:item.initials, role:item.role, scope:item.scope }))} audience="administration" /> : null}
+          </>}
           {view === 'report' && <>
             <Report persona={persona} onNavigate={navigate} />
             {(personaId === 'electricite' || personaId === 'eau_incendie') && <InternalVendorReportPanel anomalies={anomalies.filter((item) => (personaId === 'electricite' ? ['DEMO-GE'] : ['DEMO-EAU','DEMO-SSI','DEMO-ESP']).includes(item.asset) && item.status !== 'Clôturée')} vendors={vendorReferences} canUpload={effectiveCanUploadVendorReport} busy={mutationBusy} onSubmit={persistVendorReport} />}
@@ -1158,6 +1231,7 @@ export default function Home() {
       {toast && <div className={`toast ${/impossible|non enregistrée/i.test(toast) ? 'toast-error' : ''}`} role="status"><span>{/impossible|non enregistrée/i.test(toast) ? '!' : '✓'}</span>{toast}</div>}
       {signOutConfirm && <div className="signout-backdrop" role="presentation" onMouseDown={(event) => {if (event.target === event.currentTarget) setSignOutConfirm(false)}}><section className="signout-dialog" role="dialog" aria-modal="true" aria-labelledby="signout-title"><span className="signout-icon">↪</span><h2 id="signout-title">Se déconnecter ?</h2><p>{session.mode === 'supabase' ? `La session ${supabaseIntegration.environmentLabel} sera fermée. Les données métier de démonstration resteront disponibles.` : 'La session simulée sera supprimée de cet appareil. Les données de démonstration resteront disponibles.'}</p><div><Button ref={signOutCancelRef} variant="secondary" onClick={() => setSignOutConfirm(false)}>Annuler</Button><Button onClick={() => void signOut()}>Se déconnecter</Button></div><button className="reset-session-link" onClick={resetDemo}>Déconnecter et réinitialiser toute la démo</button></section></div>}
     </div>
+    </DemoScenarioProvider>
   );
 }
 
@@ -1197,72 +1271,212 @@ function DirectionWorkspace({ anomalies, equipment, escalations, onDecision, onO
   const threshold = DECISION_THRESHOLD_FCFA;
   const [tab, setTab] = useState<'pending'|'history'>('pending');
   const [filter, setFilter] = useState<'Tous'|Escalation['kind']>('Tous');
-  const [selectedCaseId, setSelectedCaseId] = useState('DEC-018');
-  const [draft, setDraft] = useState<{id:string; state:DecisionState}|null>(null);
+  const [selectedCaseId, setSelectedCaseId] = useState('DEC-016');
   const [motive, setMotive] = useState('');
-  const [adminPanel, setAdminPanel] = useState<'zones'|null>(null);
-  const [adminConfirmation, setAdminConfirmation] = useState('');
-  const [newZone, setNewZone] = useState('');
-  const [zoneError, setZoneError] = useState('');
   const [motiveError, setMotiveError] = useState('');
-  const stateItems = tab === 'pending' ? escalations.filter((item) => item.state === 'À décider') : escalations.filter((item) => item.state !== 'À décider');
+  const [decisionMsg, setDecisionMsg] = useState('');
+  const pending = escalations.filter((item) => item.state === 'À décider').slice().sort((a, b) => {
+    const late = (item: Escalation) => /retard/i.test(item.due) ? 0 : 1;
+    const today = (item: Escalation) => /aujourd/i.test(item.due) ? 0 : 1;
+    return late(a) - late(b) || today(a) - today(b) || a.due.localeCompare(b.due);
+  });
+  const decided = escalations.filter((item) => item.state !== 'À décider');
+  const stateItems = tab === 'pending' ? pending : decided;
   const activeItems = filter === 'Tous' ? stateItems : stateItems.filter((item) => item.kind === filter);
   const focusItem = activeItems.find((item) => item.id === selectedCaseId) ?? activeItems[0];
-  const selected = draft ? escalations.find((item) => item.id === draft.id) : null;
-  const documentedCostItems = escalations.filter((item) => item.amount !== undefined);
+  const documentedCostItems = pending.filter((item) => item.amount !== undefined);
   const documentedCostTotal = documentedCostItems.reduce((total,item) => total + (item.amount ?? 0),0);
+  const lateCount = pending.filter((item) => /retard/i.test(item.due)).length;
+  const firstDue = pending.find((item) => /10:30/.test(item.due)) ?? pending[0];
   const filters: Array<'Tous'|Escalation['kind']> = ['Tous','Risque','Coût','Arbitrage','Clôture sensible'];
-  const confirm = () => {
-    if (!draft) return;
+  const decide = (state: DecisionState) => {
+    if (!focusItem) return;
     const motiveText = motive.trim();
-    if (!motiveText) { setMotiveError('Le motif de la décision est obligatoire.'); return; }
-    if (motiveText.length < 12) { setMotiveError('Le motif doit contenir au moins 12 caractères.'); return; }
-    onDecision(draft.id, draft.state, motiveText);
-    setDraft(null);
-    setMotive('');
+    const needsMotive = state !== 'Approuvée';
+    if (needsMotive && !motiveText) { setMotiveError('Indiquez un motif pour refuser ou renvoyer.'); return; }
+    if (needsMotive && motiveText.length < 12) { setMotiveError('Le motif doit contenir au moins 12 caractères.'); return; }
+    onDecision(focusItem.id, state, motiveText || 'Approuvé sans motif complémentaire.');
     setMotiveError('');
+    setDecisionMsg(`${state === 'Approuvée' ? 'Approuvé' : state === 'Refusée' ? 'Refusé' : 'Renvoyé au FM'}. Décision tracée avec votre nom, l’heure et le motif.`);
   };
-  return <>
-    <BuildingHealthCockpit audience="administration" anomalies={anomalies} equipment={equipment} onNavigate={onNavigate} />
-    <div className="authority-split" role="note"><div><span>✓</span><p><b>Validation métier Administration</b><small>Risques, coûts à partir de {formatMoney(DECISION_THRESHOLD_FCFA)} et contrôle des clôtures sensibles</small></p></div><div className="technical-admin"><span>⌘</span><p><b>Utilisateurs et paramètres</b><small>Comptes, droits sensibles, zones et seuil financier consultable</small></p><Badge tone="blue">ACCÈS ADMIN</Badge></div></div>
-    <AnswerStrip todo={`${escalations.filter((item) => item.state === 'À décider').length} arbitrages`} risk="2 dossiers critiques" due="1 décision avant 10:30" proof="1 clôture sensible" />
-    <section className="direction-summary-grid"><article className="panel executive-metric"><span>RISQUES CRITIQUES</span><strong>2</strong><small>DEMO-SSI et continuité DEMO-GE</small></article><article className="panel executive-metric"><span>MONTANTS DOCUMENTÉS</span><strong>{formatMoney(documentedCostTotal)}</strong><small>{documentedCostItems.length} dossiers chiffrés · ni engagés ni payés</small></article><article className="panel executive-metric"><span>DISPONIBILITÉ</span><strong className="healthy">92%</strong><small>Technique · valeur de démonstration</small></article><article className="panel threshold-card"><span>Seuil d’approbation Administration</span><strong>{formatMoney(threshold)}</strong><small>Valeur confirmée · historique persistant non raccordé.</small><button type="button" className="text-button" onClick={() => onNavigate('settings')}>Voir les paramètres →</button></article></section>
-    <section className="decision-workbench">
+  return <div className="admin-home">
+    <LiveHealthCockpit
+      session={sessionForAudience('administration', 'Administration Démo')}
+      onNavigate={onNavigate}
+      actionCount={pending.length}
+      bannerExtras={<div className="admin-big">{[
+        { n: formatCompactMoney(documentedCostTotal), k: 'FCFA soumis à décision' },
+        { n: firstDue ? firstDue.due.replace('Aujourd’hui · ', '') : '—', k: firstDue ? `première échéance, ${displayAssetCode(firstDue.asset)}` : 'aucune échéance' },
+        { n: String(lateCount), k: 'arbitrage en retard' },
+      ].map((item) => <div key={item.k}><b>{item.n}</b><span>{item.k}</span></div>)}</div>}
+    >
+      <div className="admin-ctrl" role="group" aria-label="Points de contrôle">
+        <button type="button" onClick={() => { setTab('pending'); setFilter('Clôture sensible'); setSelectedCaseId('DEC-015'); }}>
+          <div className="n is-warn">1</div><div className="k">Clôture sensible à contrôler</div><div className="s">ANO-0234, WILO-01, récidive</div>
+        </button>
+        <button type="button" onClick={() => onNavigate('access')}>
+          <div className="n is-sig">1</div><div className="k">Demande d’accès du FM</div><div className="s">Périmètre à confirmer</div>
+        </button>
+        <button type="button" onClick={() => { setTab('pending'); setFilter('Tous'); }}>
+          <div className="n is-bad">{anomalies.filter((item) => item.delayed && item.status !== 'Clôturée').length}</div><div className="k">Dossiers en retard</div><div className="s">dont 1 au-dessus du seuil</div>
+        </button>
+        <button type="button" onClick={() => onNavigate('settings')}>
+          <div className="n">3</div><div className="k">Règles à raccorder</div><div className="s">SLA, seuils techniques, scores</div>
+        </button>
+      </div>
+    </LiveHealthCockpit>
+    <section className="decision-workbench admin-layout">
       <article className="panel direction-inbox">
-        <div className="workspace-tabs"><button className={tab === 'pending' ? 'active' : ''} onClick={() => setTab('pending')}>À décider <span>{escalations.filter((item) => item.state === 'À décider').length}</span></button><button className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')}>Historique <span>{escalations.filter((item) => item.state !== 'À décider').length}</span></button></div>
-        <div className="decision-filters" aria-label="Filtrer par type d’arbitrage">{filters.map((item) => <button key={item} className={filter === item ? 'active' : ''} aria-pressed={filter === item} onClick={() => setFilter(item)}>{item}</button>)}</div>
-        <div className="direction-case-list">{activeItems.length === 0 ? <div className="empty-state compact"><span>✓</span><h3>Aucun dossier</h3><p>Changez de filtre ou consultez l’autre onglet.</p></div> : activeItems.map((item) => <button type="button" key={item.id} className={`direction-case-card ${focusItem?.id === item.id ? 'active' : ''}`} aria-pressed={focusItem?.id === item.id} onClick={() => setSelectedCaseId(item.id)}><span className={`decision-kind-mark kind-${item.kind.toLowerCase().replaceAll(' ','-')}`}>{item.kind === 'Risque' ? '!' : item.kind === 'Coût' ? '₣' : item.kind === 'Clôture sensible' ? '✓' : '↔'}</span><span className="decision-card-copy"><span><b>{item.asset}</b> · {item.id}</span><strong>{item.title}</strong><small>{item.due}</small></span><Badge tone={item.state === 'Approuvée' ? 'success' : item.state === 'Refusée' ? 'critical' : item.state === 'Renvoyée à Facility Manager' ? 'orange' : 'neutral'}>{item.state}</Badge></button>)}</div>
+        <div className="lh"><div><h2>Arbitrages</h2><p>Proposés par le Facility Manager, triés par échéance.</p></div></div>
+        <div className="workspace-tabs visually-hidden"><button className={tab === 'pending' ? 'active' : ''} onClick={() => setTab('pending')}>À décider <span>{pending.length}</span></button><button className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')}>Historique <span>{decided.length}</span></button></div>
+        <div className="decision-filters chips" aria-label="Filtrer par type d’arbitrage">{filters.map((item) => <button key={item} className={`chip${filter === item ? ' is-pressed' : ''}`} aria-pressed={filter === item} onClick={() => setFilter(item)}>{item} {item === 'Tous' ? pending.length : pending.filter((row) => row.kind === item).length}</button>)}</div>
+        <div className="direction-case-list">{activeItems.length === 0 ? <div className="empty-state compact"><span>✓</span><h3>Aucun dossier</h3><p>Changez de filtre ou consultez l’autre onglet.</p></div> : activeItems.map((item) => <button type="button" key={item.id} className={`direction-case-card ${focusItem?.id === item.id ? 'active' : ''}`} aria-pressed={focusItem?.id === item.id} onClick={() => { setSelectedCaseId(item.id); setMotive(''); setMotiveError(''); setDecisionMsg(''); }}><span className={`decision-kind-mark kind-${item.kind.toLowerCase().replaceAll(' ','-')}`} aria-hidden="true" /><span className="decision-card-copy"><strong>{displayAssetCode(item.asset)}, {item.title}</strong><span className="sub">{item.id}, {item.anomaly}</span><span className="tags"><Badge tone={item.kind === 'Risque' ? 'critical' : item.kind === 'Coût' || item.kind === 'Clôture sensible' ? 'orange' : 'blue'}>{item.kind === 'Risque' ? 'Critique' : item.kind === 'Coût' ? 'Moyenne' : 'Haute'}</Badge><Badge tone="neutral">{item.kind}</Badge></span></span><span className="rt">{item.amount != null ? <span className="amt">{formatMoney(item.amount)}</span> : <span className="muted">Sans montant</span>}<span className={/retard/i.test(item.due) ? 'late-text' : ''}>{item.due}</span></span></button>)}</div>
       </article>
       <aside className="panel direction-focus" aria-live="polite">{focusItem ? <>
-        <div className="direction-focus-head"><div><Badge tone={focusItem.kind === 'Risque' ? 'critical' : focusItem.kind === 'Coût' || focusItem.kind === 'Clôture sensible' ? 'orange' : 'blue'}>{focusItem.kind}</Badge><span>{focusItem.id} · {focusItem.anomaly}</span></div><Badge tone={focusItem.state === 'Approuvée' ? 'success' : focusItem.state === 'Refusée' ? 'critical' : focusItem.state === 'Renvoyée à Facility Manager' ? 'orange' : 'neutral'}>{focusItem.state}</Badge></div>
-        <h3>{focusItem.asset} · {focusItem.title}</h3>
-        <div className="case-facts"><span><b>Risque</b>{focusItem.risk}</span><span><b>Échéance</b>{focusItem.due}</span>{focusItem.amount && <span><b>Montant de décision</b>{formatMoney(focusItem.amount)} {focusItem.amount >= threshold && <em>AU-DESSUS DU SEUIL</em>}</span>}</div>
-        <div className="recommendation"><span>RECOMMANDATION</span><p>{focusItem.recommendation}</p></div>
+        <div className="direction-focus-head"><div><Badge tone={focusItem.kind === 'Risque' ? 'critical' : focusItem.kind === 'Coût' || focusItem.kind === 'Clôture sensible' ? 'orange' : 'blue'}>{focusItem.kind === 'Risque' ? 'Critique' : focusItem.kind === 'Coût' ? 'Moyenne' : 'Haute'}</Badge><span>{focusItem.id}, {focusItem.anomaly}</span><Badge tone="neutral">{focusItem.kind}</Badge></div></div>
+        <h3>{displayAssetCode(focusItem.asset)}, {focusItem.title}</h3>
+        <p className={/retard/i.test(focusItem.due) ? 'late-text' : 'muted'}>{focusItem.due}</p>
+        <div className="blk admin-money-blk">
+          {focusItem.amount != null
+            ? <div className="dossier-money"><b>{formatMoney(focusItem.amount)}</b>{focusItem.amount >= threshold ? <Badge tone="orange">Au-dessus du seuil de {formatMoney(threshold)}</Badge> : null}</div>
+            : <p className="hint">Décision de risque, sans montant associé.</p>}
+          <div className="admin-facts"><div><small>Risque</small>{focusItem.risk}</div><div><small>Proposé par</small>Facility Manager</div></div>
+        </div>
+        <div className="recommendation"><small>Recommandation du Facility Manager</small><p>{focusItem.recommendation}</p></div>
         {focusItem.motive && <p className="decision-motive"><b>Motif :</b> {focusItem.motive}</p>}
-        {focusItem.state === 'À décider' && <div className="case-actions">{focusItem.anomaly.startsWith('ANO-') && <button className="secondary-button" onClick={() => onOpen(focusItem.anomaly)}>Voir l’anomalie</button>}<button className="reject-action" onClick={() => {setDraft({id:focusItem.id,state:'Refusée'});setMotive('')}}>Refuser</button><button className="return-action" onClick={() => {setDraft({id:focusItem.id,state:'Renvoyée à Facility Manager'});setMotive('')}}>Renvoyer à Facility Manager</button><button className="primary-button" onClick={() => {setDraft({id:focusItem.id,state:'Approuvée'});setMotive('')}}>Approuver</button></div>}
-        <div className="direction-detail-kpis"><span><b>92%</b> disponibilité</span><span><b>3,2 j</b> délai moyen</span><span><b>{documentedCostItems.length}</b> dossiers chiffrés</span></div>
+        <section className="admin-proofs">
+          <h4>Preuves</h4>
+          {(() => {
+            const linked = anomalies.find((item) => item.id === focusItem.anomaly);
+            const proofs = linked?.proofs ?? [];
+            if (!proofs.length) return <p className="hint">Données insuffisantes</p>;
+            return <ul className="admin-proof-list">{proofs.map((proof) => <li key={proof.id}><span>{proof.reference}</span><Badge tone={proof.verificationStatus === 'accepted' ? 'success' : proof.verificationStatus === 'rejected' ? 'critical' : 'neutral'}>{proof.verificationStatus === 'accepted' ? 'Jointe' : proof.verificationStatus === 'rejected' ? 'Non concluant' : 'Attendu'}</Badge></li>)}</ul>;
+          })()}
+        </section>
+        {focusItem.state === 'À décider' ? <>
+          <label className={`field ${motiveError ? 'is-invalid' : ''}`}>Motif de votre décision<textarea value={motive} aria-invalid={Boolean(motiveError)} onChange={(event) => { setMotive(event.target.value); setMotiveError(''); setDecisionMsg(''); }} placeholder="Obligatoire pour refuser ou renvoyer" rows={2} /><FieldError message={motiveError} /></label>
+          <div className="case-actions admin-decide-foot">
+            {focusItem.anomaly.startsWith('ANO-') && <button className="secondary-button" onClick={() => onOpen(focusItem.anomaly)}>Voir l’anomalie</button>}
+            <button className="return-action" type="button" aria-label="Renvoyer à Facility Manager" onClick={() => decide('Renvoyée à Facility Manager')}>Renvoyer au FM</button>
+            <button className="reject-action" type="button" onClick={() => decide('Refusée')}>{focusItem.kind === 'Clôture sensible' ? 'Refuser la clôture' : 'Refuser'}</button>
+            <button className="primary-button" type="button" onClick={() => decide('Approuvée')}>{focusItem.kind === 'Clôture sensible' ? 'Approuver la clôture' : 'Approuver'}</button>
+            <span className="visually-hidden">Confirmer et notifier Facility Manager</span>
+          </div>
+          {decisionMsg ? <p className="admin-decision-msg" role="status">{decisionMsg}</p> : null}
+        </> : <Badge tone={focusItem.state === 'Approuvée' ? 'success' : focusItem.state === 'Refusée' ? 'critical' : 'orange'}>{focusItem.state}</Badge>}
+        <section className="admin-history">
+          <h4>Historique</h4>
+          {focusItem.motive || focusItem.state !== 'À décider' ? <ul className="hist"><li><span>{focusItem.due}</span>{focusItem.state}{focusItem.motive ? ` — ${focusItem.motive}` : ''}</li></ul> : <p className="hint">Données insuffisantes</p>}
+        </section>
       </> : <div className="empty-state compact"><span>⌁</span><h3>Sélectionnez un dossier</h3><p>Le détail de l’arbitrage apparaîtra ici.</p></div>}</aside>
     </section>
-    <section className="admin-preview-grid">
-      <article className="panel admin-users-preview"><div className="panel-head"><div><p className="design-kicker">UTILISATEURS & ACCÈS</p><h3>5 profils de démonstration</h3><p>Facility Manager propose ; l’Administration prépare la création ou la désactivation.</p></div><button className="primary-button" onClick={() => onNavigate('access')}>Ouvrir utilisateurs et droits</button></div>{adminConfirmation && <div className="admin-inline-confirmation" role="status"><span>✓</span>{adminConfirmation}</div>}<div className="admin-user-list">{[['FM','Facility Manager Démo','Facility Manager','Tous périmètres'],['AE','Agent Électricité Démo','Agent électricité','DEMO-GE'],['AI','Agent Eau & Incendie Démo','Agent eau / incendie','DEMO-EAU · DEMO-SSI · DEMO-ESP'],['RA','Agente Rondes & Assistance Démo','Agente & assistante','DEMO-RND']].map((user) => <button key={user[1]} onClick={() => onNavigate('access')}><span>{user[0]}</span><p><b>{user[1]}</b><small>{user[2]} · {user[3]}</small></p><Badge tone="neutral">PROFIL DÉMO</Badge><em>Consulter →</em></button>)}</div></article>
-      <aside className="admin-parameters"><article className="panel"><p className="design-kicker">RÉFÉRENTIEL</p><div className="parameter-value"><strong>76</strong><span>zones actives</span></div><p>Ajouter, modifier ou désactiver une zone sans intervention technique.</p><button className="secondary-button" onClick={() => {setAdminPanel('zones');setAdminConfirmation('')}}>Gérer les zones</button></article><article className="panel"><p className="design-kicker">SCORES AGENTS</p><div className="agent-score-mini"><span><b>Agent Électricité</b>88</span><span><b>Agent Eau & Incendie</b>84</span><span><b>Agente Rondes & Assistance</b>91</span></div><small>Visibles par tous les agents · détail explicatif disponible</small></article></aside>
-    </section>
-    <WorkflowAnalytics items={anomalies.map((item) => ({ ...item, owner:canonicalResponsible(item) ?? 'Non affectée' }))} variant="administration" onOpenRegistry={() => onNavigate('registry')} />
-    {draft && selected && <div className="demo-modal-backdrop" role="presentation"><section className="demo-modal" role="dialog" aria-modal="true" aria-labelledby="decision-dialog-title"><button className="modal-close" aria-label="Fermer" onClick={() => {setDraft(null);setMotiveError('')}}>×</button><Badge tone={draft.state === 'Approuvée' ? 'success' : draft.state === 'Refusée' ? 'critical' : 'orange'}>{draft.state}</Badge><h3 id="decision-dialog-title">{selected.id} · Confirmer la décision</h3><p>{selected.asset} · {selected.title}</p><label className={`field ${motiveError ? 'is-invalid' : ''}`}>Motif obligatoire<textarea autoFocus value={motive} aria-invalid={Boolean(motiveError)} onChange={(e) => {setMotive(e.target.value);setMotiveError('')}} placeholder="Expliquez la décision et les conditions éventuelles…" /><FieldError message={motiveError} /></label><div className="modal-actions"><button className="secondary-button" onClick={() => {setDraft(null);setMotiveError('')}}>Annuler</button><button className="primary-button" onClick={confirm}>Confirmer et notifier Facility Manager</button></div><small>Simulation locale · aucune donnée n’est persistée.</small></section></div>}
-    {adminPanel && <div className="demo-modal-backdrop" role="presentation" onMouseDown={(event) => {if (event.target === event.currentTarget) setAdminPanel(null)}}><section className="demo-modal admin-dialog" role="dialog" aria-modal="true" aria-labelledby="admin-dialog-title"><button className="modal-close" aria-label="Fermer" onClick={() => setAdminPanel(null)}>×</button><Badge tone="blue">ADMINISTRATION</Badge><form noValidate onSubmit={(event) => {event.preventDefault(); const next = validateZoneName(newZone); setZoneError(next.name ?? ''); if (next.name) return; setAdminPanel(null); setAdminConfirmation(`La zone « ${newZone.trim()} » est prête à être ajoutée après validation.`); setNewZone(''); setZoneError('')}}><h3 id="admin-dialog-title">Gérer les zones</h3><p>Le référentiel contient 24 zones actives. Toute modification reste traçable.</p><div className="zone-preview-list"><span><b>Sous-sol</b>12 zones</span><span><b>Rez-de-chaussée</b>18 zones</span><span><b>Étages R+1 à R+4</b>38 zones</span><span><b>Extérieurs</b>8 zones</span></div><label className={`field ${zoneError ? 'is-invalid' : ''}`}>Nouvelle zone<input autoFocus value={newZone} aria-invalid={Boolean(zoneError)} onChange={(e) => {setNewZone(e.target.value);setZoneError('')}} placeholder="Ex. Local technique R+3" /><FieldError message={zoneError} /></label><div className="modal-actions"><button type="button" className="secondary-button" onClick={() => setAdminPanel(null)}>Annuler</button><button type="submit" className="primary-button">Préparer l’ajout</button></div><small>Maquette interactive · aucun référentiel n’est modifié.</small></form></section></div>}
-  </>;
+    <div className="admin-lower">
+      <section className="sheet">
+        <h2>Engagements financiers</h2>
+        <p>Montants documentés dans les dossiers ouverts.</p>
+        <div className="admin-line"><span>Soumis à votre décision</span><b>{formatMoney(documentedCostTotal)}</b></div>
+        <div className="admin-line"><span>Dossiers au-dessus du seuil</span><b>{documentedCostItems.filter((item) => (item.amount ?? 0) >= threshold).length}</b></div>
+        <div className="admin-line"><span>Arbitrages sans montant</span><b>{pending.filter((item) => item.amount == null).length}</b></div>
+        <div className="admin-line"><span>Engagé et payé</span><em>Pas encore suivis dans l’outil</em></div>
+        <button type="button" className="secondary-button" onClick={() => onNavigate('costs')}>Ouvrir Pilotage, coûts</button>
+      </section>
+      <section className="sheet">
+        <h2>Vos dernières décisions</h2>
+        <p>Décisions et changements de règles les plus récents.</p>
+        {decided.map((item) => <div className="admin-line" key={item.id}><span>{item.id}, {displayAssetCode(item.asset)}, {item.title}</span><Badge tone={item.state === 'Approuvée' ? 'success' : item.state === 'Refusée' ? 'critical' : 'orange'}>{item.state}</Badge></div>)}
+        <div className="admin-line"><span>Seuil financier fixé à {formatMoney(threshold)}</span><Badge tone="neutral">Effet au 30/08</Badge></div>
+        <div className="admin-line"><span>Journal des décisions</span><button type="button" className="health-link" onClick={() => setTab('history')}>Ouvrir l’historique</button></div>
+      </section>
+    </div>
+  </div>;
 }
 
-function FacilityManagerWorkspace({ anomalies, equipment, escalations, fieldRequests, onEscalate, onOpen, onNavigate }: { anomalies:Anomaly[]; equipment:EquipmentItem[]; escalations:Escalation[]; fieldRequests:FieldRequest[]; onEscalate:(request:FieldRequest)=>void; onOpen:(id:string)=>void; onNavigate:(view:View)=>void }) {
-  const responses = escalations.filter((item) => item.state !== 'À décider');
-  const pendingRequests = fieldRequests.filter((item) => item.status === 'À traiter par Facility Manager').length;
+function FacilityManagerWorkspace({ anomalies, escalations, fieldRequests, onOpen, onNavigate }: { anomalies:Anomaly[]; equipment:EquipmentItem[]; escalations:Escalation[]; fieldRequests:FieldRequest[]; onEscalate:(request:FieldRequest)=>void; onOpen:(id:string)=>void; onNavigate:(view:View)=>void }) {
+  const session = sessionForAudience('facility', 'Facility Manager Démo');
+  const rounds = demoRoundsFor(session);
+  const doneCount = rounds.filter((item) => item.state === 'done').length;
+  const withMeta = (item: Anomaly) => ({
+    ...item,
+    amount: escalations.find((row) => row.anomaly === item.id)?.amount ?? item.treatment?.amount ?? null,
+  });
+  const decisions: Anomaly[] = [];
+  const seen = new Set<string>();
+  const push = (item?: Anomaly) => {
+    if (!item || seen.has(item.id) || decisions.length >= 4) return;
+    seen.add(item.id);
+    decisions.push(item);
+  };
+  push(anomalies.find((item) => item.status === 'À qualifier'));
+  push(anomalies.find((item) => item.status !== 'À qualifier' && item.status !== 'Clôturée' && item.owner === 'Non affectée'));
+  push(anomalies.find((item) => (item.treatment?.amount ?? escalations.find((row) => row.anomaly === item.id)?.amount ?? 0) >= DECISION_THRESHOLD_FCFA));
+  push(anomalies.find((item) => ['Affectée', 'En intervention', 'En validation'].includes(item.status) && (item.treatment?.amount ?? escalations.find((row) => row.anomaly === item.id)?.amount ?? 0) < DECISION_THRESHOLD_FCFA));
+  for (const item of anomalies) {
+    if (item.status === 'Clôturée') continue;
+    push(item);
+  }
   return <>
-    <BuildingHealthCockpit audience="facility" anomalies={anomalies} equipment={equipment} onNavigate={onNavigate} />
-    <section className="facility-personal-grid"><article className="panel"><div className="panel-head"><div><h3>Remontées terrain</h3><p>Demandes reçues des agents et de Agente Rondes & Assistance</p></div><span className="panel-count">{pendingRequests} à traiter</span></div><div className="field-request-list">{fieldRequests.map((request) => {
-      const exceedsDelegation = /deuxième|critique|coût|sécurité/i.test(`${request.subject} ${request.note}`);
-      return <article key={request.id}><div><Badge tone={request.status === 'Transmise à Direction' ? 'blue' : 'orange'}>{request.status}</Badge><span>{request.id} · {request.from}</span>{exceedsDelegation && request.status === 'À traiter par Facility Manager' && <Badge tone="critical">Hors délégation</Badge>}</div><h4>{request.subject}</h4><p>{request.note}</p>{request.status === 'À traiter par Facility Manager' ? <div><button className="primary-button qualify-action" onClick={() => onNavigate('manager')}>Qualifier maintenant</button><button className={`escalate-action ${exceedsDelegation ? 'is-recommended' : ''}`} onClick={() => onEscalate(request)}>Soumettre à l’Administration</button></div> : <small>En attente de décision de l’Administration.</small>}</article>;
-    })}</div></article><article className="panel"><div className="panel-head"><div><h3>Retours de l’Administration</h3><p>Décisions métier reçues après arbitrage</p></div><span className="panel-count">{responses.length} réponse{responses.length > 1 ? 's' : ''}</span></div><div className="direction-return-list">{responses.length ? responses.map((item) => <button key={item.id} onClick={() => item.anomaly.startsWith('ANO-') && onOpen(item.anomaly)}><span className={`return-mark ${item.state === 'Approuvée' ? 'ok' : item.state === 'Refusée' ? 'no' : 'back'}`}>{item.state === 'Approuvée' ? '✓' : item.state === 'Refusée' ? '×' : '↩'}</span><div><b>{item.id} · {item.asset}</b><p>{item.state} — {item.motive}</p></div></button>) : <div className="empty-state compact"><span>⌁</span><h3>Aucun retour reçu</h3><p>Les décisions de l’Administration apparaîtront ici.</p></div>}</div></article></section>
-    <button className="workspace-next" onClick={() => onNavigate('manager')}>Ouvrir À traiter <span>→</span></button>
+    <LiveHealthCockpit
+      session={session}
+      onNavigate={onNavigate}
+      causeActions={<>
+        <button type="button" className="primary-button qualify-action" onClick={() => onNavigate('manager')}>Qualifier</button>
+        <button type="button" className="secondary-button" onClick={() => onNavigate('manager')}>Affecter</button>
+        <button type="button" className="escalate-action" onClick={() => onNavigate('manager')}>Escalader à l’Administration</button>
+        <button type="button" className="secondary-button" onClick={() => onNavigate('manager')}>Voir les preuves</button>
+      </>}
+    >
+      <div className="facility-home-grid">
+        <article className="sheet">
+          <div className="analytics-card-head">
+            <div><h3>Décisions à prendre</h3><p>Triées par échéance. Chaque décision fait remonter le score.</p></div>
+            <button type="button" className="health-link" onClick={() => onNavigate('manager')}>Ouvrir Dossiers</button>
+          </div>
+          <div className="fm-decision-list">
+            {decisions.length === 0 ? <div className="empty-state compact"><span>✓</span><h3>File à jour</h3><p>Aucune décision en attente.</p></div> : decisions.map((item) => (
+              <article key={item.id} className={`dec-row${item.delayed ? ' is-late' : ''}`}>
+                <span className={`queue-mark ${priorityTone(item.priority)}`} aria-hidden="true" />
+                <div>
+                  <h3>{displayAssetCode(item.asset)}, {item.title}</h3>
+                  <p>{item.description}</p>
+                  <span className={item.delayed ? 'late-text' : ''}>{item.delayed ? 'En retard · ' : ''}{item.due}</span>
+                </div>
+                <button type="button" className={item.status === 'À qualifier' || item.horsScore ? 'primary-button qualify-action' : 'secondary-button'} onClick={() => item.id.startsWith('REQ-') ? onNavigate('manager') : onOpen(item.id)}>{dossierActionLabel({ id:item.id, asset:item.asset, title:item.title, priority:item.priority, status:item.status, due:item.due, delayed:item.delayed, owner:item.owner, amount:withMeta(item).amount, horsScore:item.horsScore }, DECISION_THRESHOLD_FCFA)}</button>
+              </article>
+            ))}
+          </div>
+        </article>
+        <article className="sheet">
+          <div className="analytics-card-head"><div><h3>Où se perdent les points</h3><p>Score brut, par domaine.</p></div></div>
+          <InsufficientNote title="Poids de domaine non raccordés" detail="La formule et les pondérations d’équipement sont en attente de validation. Aucune courbe historique n’est affichée." />
+        </article>
+      </div>
+    </LiveHealthCockpit>
+    <div className="facility-home-grid">
+      <article className="sheet">
+        <div className="analytics-card-head"><div><h3>Rondes du jour</h3><p>Rondes techniques quotidiennes de tous les agents.</p></div></div>
+        <div className="rd-prog"><span><i style={{ width: `${rounds.length ? Math.round((doneCount / rounds.length) * 100) : 0}%` }} /></span><b>{doneCount} sur {rounds.length} faites</b></div>
+        <ul className="today-rounds-list">
+          {rounds.map((item) => (
+            <li key={item.roundId}>
+              <small>{item.deadline ? formatTime(item.deadline) : '—'}</small>
+              <span>{item.equipmentCode ?? 'Zone'}, {item.agentName}</span>
+              <em>{roundStateLabel(item.state)}{item.missedYesterday ? ' · manquée hier' : ''}</em>
+            </li>
+          ))}
+        </ul>
+      </article>
+      <article className="sheet">
+        <div className="analytics-card-head"><div><h3>Hygiène et paysage</h3><p>Notifications de l’agente rondes. Hors score tant qu’elles ne sont pas qualifiées.</p></div></div>
+        <div className="hygiene-list">
+          {fieldRequests.map((request) => {
+            return <article key={request.id}>
+              <div><h3>{displayAssetText(request.subject)}</h3><p>{request.note}</p><small>{request.from} · {request.status}</small></div>
+              {request.status === 'À traiter par Facility Manager' ? <div className="hygiene-acts"><button type="button" className="primary-button qualify-action" onClick={() => onNavigate('manager')}>Qualifier</button></div> : <small>En attente de décision de l’Administration.</small>}
+            </article>;
+          })}
+        </div>
+      </article>
+    </div>
   </>;
 }
 
@@ -1284,11 +1498,15 @@ const agentTaskSets: Record<'electricite'|'eau_incendie', AgentTask[]> = {
 function AgentWorkspace({ persona, anomalies, equipment, vendors, canUploadVendorReport, vendorReportBusy, onVendorReport, onFieldRequest, onNavigate, flash }: { persona:Persona; anomalies:Anomaly[]; equipment:EquipmentItem[]; vendors:OperationalVendor[]; canUploadVendorReport:boolean; vendorReportBusy:boolean; onVendorReport:(input:VendorReportInput)=>Promise<void>; onFieldRequest:(request:Omit<FieldRequest,'id'|'status'>)=>void; onNavigate:(view:View)=>void; flash:(message:string)=>void }) {
   const agentKey = persona.id as 'electricite'|'eau_incendie';
   const [tasks, setTasks] = useState(agentTaskSets[agentKey]);
-  const [tab, setTab] = useState<'active'|'done'>('active');
+  const [tab, setTab] = useState<'todo'|'done'|'hist'>('todo');
   const [action, setAction] = useState<{type:'measure'|'proof'|'escalate'|'reset'; id:string}|null>(null);
   const [note, setNote] = useState('');
-  const visible = tasks.filter((task) => tab === 'done' ? task.status === 'Terminé' : task.status !== 'Terminé');
+  const visible = tasks.filter((task) => tab === 'done' ? task.status === 'Terminé' : task.status !== 'Terminé').slice().sort((a, b) => Number(Boolean(b.delayed)) - Number(Boolean(a.delayed)));
   const activeTask = action ? tasks.find((task) => task.id === action.id) : null;
+  const history = demoReportTracking.filter((item) => {
+    const codes = agentKey === 'electricite' ? ['GE-01', 'ASC-A1', 'ASC-A2'] : ['WILO-01', 'RIA-01', 'IRR-01'];
+    return codes.includes(item.equipmentCode);
+  }).slice(0, 5);
   const completeAction = () => {
     if (!action || !activeTask || !note.trim()) return;
     if (action.type === 'proof') setTasks((items) => items.map((task) => task.id === action.id ? { ...task, proof:true } : task));
@@ -1296,17 +1514,31 @@ function AgentWorkspace({ persona, anomalies, equipment, vendors, canUploadVendo
     if (action.type === 'reset') setTasks((items) => items.map((task) => task.id === action.id ? { ...task, status:'Rétabli provisoirement', proof:false } : task));
     if (action.type === 'escalate') {
       setTasks((items) => items.map((task) => task.id === action.id ? { ...task, escalated:true } : task));
-      onFieldRequest({ from:persona.name, subject:`${activeTask.asset} · ${activeTask.title}`, note:note.trim() });
+      onFieldRequest({ from:persona.name, subject:`${displayAssetCode(activeTask.asset)} · ${activeTask.title}`, note:note.trim() });
     } else flash(`${activeTask.id} · action enregistrée en simulation.`);
     setAction(null); setNote('');
   };
   return <>
-    <BuildingHealthCockpit audience={agentKey} anomalies={anomalies} equipment={equipment} onNavigate={onNavigate} />
-    <AnswerStrip todo={`${tasks.filter((task) => !['Terminé'].includes(task.status)).length} actions`} risk={agentKey === 'eau_incendie' ? 'DEMO-SSI critique' : 'DEMO-ASC-2 en retard'} due={agentKey === 'eau_incendie' ? 'Contrôle avant 10:30' : 'Ronde GE avant 10:00'} proof={`${tasks.filter((task) => task.status !== 'Terminé' && !task.proof).length} requises`} />
+    <LiveHealthCockpit session={sessionForAudience(agentKey, persona.name)} onNavigate={onNavigate} actionCount={tasks.filter((task) => task.status !== 'Terminé').length} />
     {agentKey === 'eau_incendie' && <section className="provisional-rule"><span>↻</span><div><b>Réarmement = rétablissement provisoire</b><p>L’anomalie reste ouverte jusqu’au diagnostic, à l’intervention corrective et à la preuve validée par Facility Manager.</p></div></section>}
-    <section className="panel task-board"><div className="workspace-tabs"><button className={tab === 'active' ? 'active' : ''} onClick={() => setTab('active')}>Mes actions <span>{tasks.filter((task) => task.status !== 'Terminé').length}</span></button><button className={tab === 'done' ? 'active' : ''} onClick={() => setTab('done')}>Terminées <span>{tasks.filter((task) => task.status === 'Terminé').length}</span></button></div><div className="agent-task-list">{visible.length === 0 ? <div className="empty-state compact"><span>✓</span><h3>Tout est terminé</h3><p>Aucune action dans cette file.</p></div> : visible.map((task) => <article key={task.id} className={task.delayed ? 'late' : ''}><div className="task-status"><Badge tone={task.delayed ? 'critical' : task.status === 'Terminé' ? 'success' : task.status === 'Rétabli provisoirement' ? 'orange' : 'blue'}>{task.delayed ? 'EN RETARD' : task.status}</Badge><span>{task.id}</span></div><div className="task-copy"><span className="asset-square">{task.asset.slice(0,2)}</span><div><h3>{task.asset} · {task.title}</h3><p>{task.detail}</p><div><span><b>Risque</b>{task.risk}</span><span><b>Échéance</b>{task.due}</span><span><b>Preuve</b>{task.proof ? 'Jointe' : 'Manquante'}</span></div></div></div>{tab === 'active' && <div className="task-actions"><button onClick={() => {setAction({type:'measure',id:task.id});setNote('')}}>Saisie rapide</button>{agentKey === 'eau_incendie' && task.asset === 'DEMO-EAU' && <button className="reset-action" onClick={() => {setAction({type:'reset',id:task.id});setNote('')}}>↻ Réarmement provisoire</button>}<button onClick={() => {setAction({type:'proof',id:task.id});setNote('')}}>＋ Ajouter preuve</button><button onClick={() => {setAction({type:'escalate',id:task.id});setNote('')}}>{task.escalated ? '✓ Escalade envoyée' : '↑ Escalader à Facility Manager'}</button></div>}</article>)}</div></section>
+    <section className="sheet agent-actions-sheet" aria-labelledby="h-actions">
+      <div className="analytics-card-head"><div><h2 id="h-actions">Mes actions</h2><p>Ce qui vous a été affecté, et ce que sont devenus vos rapports.</p></div></div>
+      <div className="workspace-tabs agent-action-tabs" role="tablist">
+        <button type="button" role="tab" aria-selected={tab === 'todo'} className={tab === 'todo' ? 'active' : ''} onClick={() => setTab('todo')}>À faire <span>{tasks.filter((task) => task.status !== 'Terminé').length}</span></button>
+        <button type="button" role="tab" aria-selected={tab === 'done'} className={tab === 'done' ? 'active' : ''} onClick={() => setTab('done')}>Terminées <span>{tasks.filter((task) => task.status === 'Terminé').length}</span></button>
+        <button type="button" role="tab" aria-selected={tab === 'hist'} className={tab === 'hist' ? 'active' : ''} onClick={() => setTab('hist')}>Historique des rondes</button>
+      </div>
+      {tab !== 'hist' ? (
+        <div className="agent-task-list">{visible.length === 0 ? <div className="empty-state compact"><span>✓</span><h3>Tout est terminé</h3><p>Aucune action dans cette file.</p></div> : visible.map((task) => <article key={task.id} className={`act-row${task.delayed ? ' late' : ''}`}><span className={`act-bar ${task.delayed ? 'is-bad' : task.status === 'Terminé' ? 'is-ok' : 'is-sig'}`} /><div className="task-copy"><div className="task-status"><Badge tone={task.delayed ? 'critical' : task.status === 'Terminé' ? 'success' : task.status === 'Rétabli provisoirement' ? 'orange' : 'blue'}>{task.delayed ? 'En retard' : tab === 'todo' && task.status === 'À faire' ? 'À faire' : task.status}</Badge><span className="task-ref">{task.id}</span></div><h3>{displayAssetCode(task.asset)}, {task.title}</h3><p>{task.detail}</p><div className="facts"><span>Risque : <b>{task.risk}</b></span><span>Échéance : <b>{task.due}</b></span><span>Preuve : <b>{task.proof ? 'Jointe' : 'Manquante'}</b></span></div></div>{tab === 'todo' && <div className="task-actions"><button type="button" onClick={() => {setAction({type:'measure',id:task.id});setNote('')}}>Saisie rapide</button>{agentKey === 'eau_incendie' && task.asset === 'DEMO-EAU' && <button type="button" className="reset-action" onClick={() => {setAction({type:'reset',id:task.id});setNote('')}}>↻ Réarmement provisoire</button>}<button type="button" onClick={() => {setAction({type:'proof',id:task.id});setNote('')}}>Ajouter une preuve</button><button type="button" onClick={() => {setAction({type:'escalate',id:task.id});setNote('')}}>{task.escalated ? '✓ Escalade envoyée' : 'Escalader au FM'}</button></div>}</article>)}</div>
+      ) : (
+        <div className="agent-round-history">
+          {history.length === 0 ? <p className="empty">Aucun rapport dans cet historique.</p> : history.map((item) => <ReportTrackingLine key={item.clientMutationId} item={item} onView={() => onNavigate('report')} />)}
+          <div className="hl-foot"><button type="button" className="health-link" onClick={() => onNavigate('report')}>Voir tout l’historique</button></div>
+        </div>
+      )}
+    </section>
     <InternalVendorReportPanel anomalies={anomalies.filter((item) => (agentKey === 'electricite' ? ['DEMO-GE'] : ['DEMO-EAU','DEMO-SSI','DEMO-ESP']).includes(item.asset) && item.status !== 'Clôturée')} vendors={vendors} canUpload={canUploadVendorReport} busy={vendorReportBusy} onSubmit={onVendorReport} />
-    {action && activeTask && <div className="demo-modal-backdrop"><section className="demo-modal" role="dialog" aria-modal="true" aria-labelledby="agent-action-title"><button className="modal-close" aria-label="Fermer" onClick={() => setAction(null)}>×</button><Badge tone={action.type === 'escalate' ? 'orange' : action.type === 'reset' ? 'critical' : 'blue'}>{action.type === 'measure' ? 'SAISIE RAPIDE' : action.type === 'proof' ? 'PREUVE' : action.type === 'reset' ? 'RÉARMEMENT PROVISOIRE' : 'ESCALADE FACILITY MANAGER'}</Badge><h3 id="agent-action-title">{activeTask.asset} · {activeTask.title}</h3><p>{action.type === 'reset' ? 'Le service sera indiqué comme rétabli provisoirement. Le dossier restera ouvert.' : action.type === 'proof' ? 'Décrivez la photo ou le document illustré dans la maquette.' : action.type === 'escalate' ? 'Expliquez le risque ou le blocage qui nécessite Facility Manager.' : 'Saisissez les mesures et observations relevées.'}</p><label className="field">{action.type === 'proof' ? 'Description de la preuve' : 'Observation obligatoire'}<textarea autoFocus value={note} onChange={(e) => setNote(e.target.value)} placeholder={action.type === 'measure' ? 'Ex. batterie 25,8 V · mode AUTO confirmé…' : 'Ajoutez un commentaire précis…'} /></label>{action.type === 'proof' && <div className="simulated-file"><span>▧</span><div><b>photo_terrain_demo.jpg</b><small>Illustration de maquette · aucun fichier téléversé</small></div></div>}<SyncStatusNotice state="demo-volatile" compact label="État de l’action terrain" /><div className="modal-actions"><button className="secondary-button" onClick={() => setAction(null)}>Annuler</button><button className="primary-button" disabled={!note.trim()} onClick={completeAction}>Appliquer dans la démonstration</button></div></section></div>}
+    {action && activeTask && <div className="demo-modal-backdrop"><section className="demo-modal" role="dialog" aria-modal="true" aria-labelledby="agent-action-title"><button className="modal-close" aria-label="Fermer" onClick={() => setAction(null)}>×</button><Badge tone={action.type === 'escalate' ? 'orange' : action.type === 'reset' ? 'critical' : 'blue'}>{action.type === 'measure' ? 'SAISIE RAPIDE' : action.type === 'proof' ? 'PREUVE' : action.type === 'reset' ? 'RÉARMEMENT PROVISOIRE' : 'ESCALADE FACILITY MANAGER'}</Badge><h3 id="agent-action-title">{displayAssetCode(activeTask.asset)} · {activeTask.title}</h3><p>{action.type === 'reset' ? 'Le service sera indiqué comme rétabli provisoirement. Le dossier restera ouvert.' : action.type === 'proof' ? 'Décrivez la photo ou le document illustré dans la maquette.' : action.type === 'escalate' ? 'Expliquez le risque ou le blocage qui nécessite Facility Manager.' : 'Saisissez les mesures et observations relevées.'}</p><label className="field">{action.type === 'proof' ? 'Description de la preuve' : 'Observation obligatoire'}<textarea autoFocus value={note} onChange={(e) => setNote(e.target.value)} placeholder={action.type === 'measure' ? 'Ex. batterie 25,8 V · mode AUTO confirmé…' : 'Ajoutez un commentaire précis…'} /></label>{action.type === 'proof' && <div className="simulated-file"><span>▧</span><div><b>photo_terrain_demo.jpg</b><small>Illustration de maquette · aucun fichier téléversé</small></div></div>}<SyncStatusNotice state="demo-volatile" compact label="État de l’action terrain" /><div className="modal-actions"><button className="secondary-button" onClick={() => setAction(null)}>Annuler</button><button className="primary-button" disabled={!note.trim()} onClick={completeAction}>Appliquer dans la démonstration</button></div></section></div>}
   </>;
 }
 
@@ -1385,7 +1617,7 @@ function InternalVendorReportPanel({ anomalies, vendors, canUpload, busy, onSubm
 
   if (!open && !receipt) {
     return <div className="vendor-report-launcher">
-      <button type="button" className="secondary-button vendor-report-launch-button" aria-expanded={false} aria-controls={formId} onClick={() => setOpen(true)}><BrandIcon name="plus" size={16} /> Déposer un rapport prestataire</button>
+      <button type="button" className="link vendor-report-launch-button" aria-expanded={false} aria-controls={formId} onClick={() => setOpen(true)}>+ Déposer un rapport prestataire</button>
     </div>;
   }
 
@@ -1412,7 +1644,7 @@ function InternalVendorReportPanel({ anomalies, vendors, canUpload, busy, onSubm
     {!canUpload ? <div className="permission-empty"><p>Ce profil ne dispose pas du droit nominatif de dépôt. Agent Électricité et Agent Eau & Incendie sont les seuls agents internes habilités.</p><button className="secondary-button" type="button" disabled>Déposer un rapport prestataire</button></div> :
     <form className="internal-vendor-form" onSubmit={submit} noValidate>
       <div className="two-fields">
-        <label className={`field ${fieldErrors.anomalyReference ? 'is-invalid' : ''}`}>Anomalie<Select value={anomalyReference} aria-invalid={Boolean(fieldErrors.anomalyReference)} aria-describedby={fieldErrors.anomalyReference ? `${formId}-anomaly` : undefined} onChange={(event) => { setAnomalyReference(event.target.value); if (fieldErrors.anomalyReference) setFieldErrors((current) => ({ ...current, anomalyReference: undefined })); }}>{anomalies.length ? anomalies.map((item) => <option key={item.id} value={item.id}>{item.id} · {item.asset} · {item.title}</option>) : <option value="">Aucune anomalie ouverte</option>}</Select><FieldError id={`${formId}-anomaly`} message={fieldErrors.anomalyReference} /></label>
+        <label className={`field ${fieldErrors.anomalyReference ? 'is-invalid' : ''}`}>Anomalie<Select value={anomalyReference} aria-invalid={Boolean(fieldErrors.anomalyReference)} aria-describedby={fieldErrors.anomalyReference ? `${formId}-anomaly` : undefined} onChange={(event) => { setAnomalyReference(event.target.value); if (fieldErrors.anomalyReference) setFieldErrors((current) => ({ ...current, anomalyReference: undefined })); }}>{anomalies.length ? anomalies.map((item) => <option key={item.id} value={item.id}>{item.id} · {displayAssetCode(item.asset)} · {item.title}</option>) : <option value="">Aucune anomalie ouverte</option>}</Select><FieldError id={`${formId}-anomaly`} message={fieldErrors.anomalyReference} /></label>
         <label className={`field ${fieldErrors.vendorCode ? 'is-invalid' : ''}`}>Entreprise concernée<Select value={vendorCode} aria-invalid={Boolean(fieldErrors.vendorCode)} aria-describedby={fieldErrors.vendorCode ? `${formId}-vendor` : undefined} onChange={(event) => { setVendorCode(event.target.value); if (fieldErrors.vendorCode) setFieldErrors((current) => ({ ...current, vendorCode: undefined })); }}>{vendors.length ? vendors.map((vendor) => <option key={vendor.code} value={vendor.code}>{vendor.code} · {vendor.label}</option>) : <option value="">Aucun prestataire</option>}</Select><FieldError id={`${formId}-vendor`} message={fieldErrors.vendorCode} /></label>
       </div>
       <div className="two-fields">
@@ -1442,9 +1674,9 @@ function RoundsAssistanceWorkspace({ fieldRequests, equipment, anomalies, onNavi
   ]);
   const [complementDone, setComplementDone] = useState(false);
   return <>
-    <BuildingHealthCockpit audience="rondes_assistance" anomalies={anomalies} equipment={equipment} onNavigate={onNavigate} />
+    <LiveHealthCockpit session={sessionForAudience('rondes_assistance', 'Agente Rondes & Assistance Démo')} onNavigate={onNavigate} />
     <div className="mission-switch" role="tablist" aria-label="Fonction de Agente Rondes & Assistance"><button type="button" role="tab" aria-selected={missionTab === 'terrain'} className={missionTab === 'terrain' ? 'active' : ''} onClick={() => setMissionTab('terrain')}><BrandIcon name="mapPin" size={16} /><b>Terrain</b><small>Rondes, constats et brouillons de démonstration</small></button><button type="button" role="tab" aria-selected={missionTab === 'administration'} className={missionTab === 'administration' ? 'active' : ''} onClick={() => setMissionTab('administration')}><BrandIcon name="files" size={16} /><b>Administratif</b><small>Devis, paiements et autorisations</small></button></div>
-    {missionTab === 'terrain' && <><section className="rondes_assistance-grid"><article className="panel zone-rounds"><div className="panel-head"><div><h3>Zones du jour</h3><p>Ronde DEMO-RND · 24 août</p></div><span className="panel-count">4 / 6 contrôlées</span></div>{['Hall & accueil|Terminé','Atrium restaurant|À vérifier','Jardinières RDC|En cours','Sanitaires R+2|Terminé','Terrasse R+4|À faire','Parking sous-sol|À faire'].map((item) => {const [label,status] = item.split('|'); return <button key={label}><span className={status === 'Terminé' ? 'done' : status === 'En cours' ? 'current' : ''}>{status === 'Terminé' ? '✓' : '○'}</span><div><b>{label}</b><small>Propreté · plantes · fuite · dégradation</small></div><Badge tone={status === 'Terminé' ? 'success' : status === 'À vérifier' ? 'critical' : status === 'En cours' ? 'blue' : 'neutral'}>{status}</Badge></button>})}</article><article className="panel quick-finding"><div className="panel-head"><div><h3>Saisie dans Rondes</h3><p>Un seul formulaire de constat, pour éviter une double saisie.</p></div><Badge tone="blue">RONDES</Badge></div><p className="finding-pointer-copy">Les zones du jour restent ici. La création et la photo se font dans la destination Rondes.</p><button type="button" className="primary-button" onClick={() => onNavigate('report')}>Ouvrir la ronde →</button></article></section><section className="panel signal-tracker"><div className="panel-head"><div><h3>Mes signalements</h3><p>Statuts visibles sans accès aux décisions techniques</p></div><Badge>{submitted.length} dossiers</Badge></div><div className="signal-list">{submitted.map((item,index) => <article key={`${item.title}-${index}`}><div><b>{item.title}</b><p>{item.zone} · {item.category}</p></div><Badge tone={item.status === 'Complément demandé' && !complementDone ? 'orange' : item.status === 'À qualifier' ? 'blue' : 'success'}>{item.status === 'Complément demandé' && complementDone ? 'Complément transmis' : item.status}</Badge>{item.status === 'Complément demandé' && !complementDone && <button onClick={() => {setComplementDone(true);flash('Complément photo transmis à Facility Manager — simulation locale.')}}>Ajouter la photo demandée</button>}</article>)}</div><div className="field-feed-note">{fieldRequests.filter((request) => request.from === 'Agente Rondes & Assistance Démo').length} remontée(s) visible(s) dans la file de Facility Manager.</div></section></>}
+    {missionTab === 'terrain' && <><section className="rondes_assistance-grid"><article className="panel zone-rounds"><div className="panel-head"><div><h3>Zones du jour</h3><p>Ronde {displayAssetCode('DEMO-RND')} · 24 août</p></div><span className="panel-count">4 / 6 contrôlées</span></div>{['Hall & accueil|Terminé','Atrium restaurant|À vérifier','Jardinières RDC|En cours','Sanitaires R+2|Terminé','Terrasse R+4|À faire','Parking sous-sol|À faire'].map((item) => {const [label,status] = item.split('|'); return <button key={label}><span className={status === 'Terminé' ? 'done' : status === 'En cours' ? 'current' : ''}>{status === 'Terminé' ? '✓' : '○'}</span><div><b>{label}</b><small>Propreté · plantes · fuite · dégradation</small></div><Badge tone={status === 'Terminé' ? 'success' : status === 'À vérifier' ? 'critical' : status === 'En cours' ? 'blue' : 'neutral'}>{status}</Badge></button>})}</article><article className="panel quick-finding"><div className="panel-head"><div><h3>Saisie dans Rondes</h3><p>Un seul formulaire de constat, pour éviter une double saisie.</p></div><Badge tone="blue">RONDES</Badge></div><p className="finding-pointer-copy">Les zones du jour restent ici. La création et la photo se font dans la destination Rondes.</p><button type="button" className="primary-button" onClick={() => onNavigate('report')}>Ouvrir la ronde →</button></article></section><section className="panel signal-tracker"><div className="panel-head"><div><h3>Mes signalements</h3><p>Statuts visibles sans accès aux décisions techniques</p></div><Badge>{submitted.length} dossiers</Badge></div><div className="signal-list">{submitted.map((item,index) => <article key={`${item.title}-${index}`}><div><b>{item.title}</b><p>{item.zone} · {item.category}</p></div><Badge tone={item.status === 'Complément demandé' && !complementDone ? 'orange' : item.status === 'À qualifier' ? 'blue' : 'success'}>{item.status === 'Complément demandé' && complementDone ? 'Complément transmis' : item.status}</Badge>{item.status === 'Complément demandé' && !complementDone && <button onClick={() => {setComplementDone(true);flash('Complément photo transmis à Facility Manager — simulation locale.')}}>Ajouter la photo demandée</button>}</article>)}</div><div className="field-feed-note">{fieldRequests.filter((request) => request.from === 'Agente Rondes & Assistance Démo').length} remontée(s) visible(s) dans la file de Facility Manager.</div></section></>}
     {missionTab === 'administration' && <><section className="mission-permission-note"><span>i</span><div><b>Fonction administrative, sans décision technique</b><p>Agente Rondes & Assistance prépare et suit les pièces. Facility Manager et l’Administration conservent leurs validations respectives.</p></div></section><section className="rondes_assistance-admin-grid"><article className="panel"><div className="panel-head"><div><p className="design-kicker">SUIVI ADMINISTRATIF</p><h3>Devis et autorisations</h3></div><span className="panel-count is-alert">3 à suivre</span></div>{[['DEV-031','PREST-EAU','280 000 FCFA','Validation Facility Manager'],['DEV-029','PREST-ASC','950 000 FCFA','Arbitrage Administration'],['DEV-026','PREST-ESP','190 000 FCFA','Bon à payer']].map((item) => <button className="admin-follow-row" key={item[0]}><span>{item[0]}</span><p><b>{item[1]}</b><small>{item[2]} · {item[3]}</small></p><em>Voir →</em></button>)}</article><article className="panel"><div className="panel-head"><div><p className="design-kicker">COÛTS & PAIEMENTS</p><h3>Échéances de la semaine</h3></div></div><div className="payment-summary"><strong>2,12 M</strong><span>FCFA à contrôler</span></div><div className="payment-lines"><span><i className="done" /> 3 pièces complètes</span><span><i /> 1 autorisation attendue</span><span><i className="late" /> 1 paiement en retard</span></div><button className="secondary-button">Ouvrir le suivi financier</button></article></section></>}
   </>;
 }
@@ -1460,6 +1692,8 @@ function OperationalAnalytics({ equipment, variant = 'direction' }: { equipment:
   const [equipmentFilter, setEquipmentFilter] = useState<'all'|'watch'>('all');
   const visibleEquipment = (equipmentFilter === 'watch' ? equipment.filter((item) => item.health < 90) : equipment).slice(0,6);
   const periodLabel = period === '7j' ? '7 jours' : period === '30j' ? '30 jours' : '90 jours';
+  const { scenario } = useDemoScoreScenario();
+  const homeScoreValue = scoreFigure(demoHomeSnapshot(sessionForAudience('facility', 'Facility Manager Démo'), scenario).score);
   return <section className={`operational-analytics analytics-${variant}`} aria-labelledby={`${variant}-analytics-title`}>
     <div className="analytics-heading">
       <div><p className="design-kicker">SCORES & TENDANCES</p><h3 id={`${variant}-analytics-title`}>Santé et performance</h3><p>Lecture dynamique des équipements et du traitement des anomalies.</p></div>
@@ -1469,15 +1703,14 @@ function OperationalAnalytics({ equipment, variant = 'direction' }: { equipment:
       <article className="panel analytics-card building-health-card">
         <div className="analytics-card-head"><div><span>SANTÉ BÂTIMENT</span><h4>Score global actuel</h4></div><span className="mockup-label">Fraîcheur à confirmer</span></div>
         <div className="building-health-content">
-          <ScoreRing value={82} />
+          {homeScoreValue == null
+            ? <div className="insufficient-chart" role="status"><BrandIcon name="activity" size={18} /><div><b>Score non calculable</b><p>La formule et les pondérations sont en attente. Aucun chiffre n’est affiché.</p></div></div>
+            : <ScoreRing value={homeScoreValue} />}
           <div className="score-components" aria-label="Composition du score bâtiment">
-            <span><i className="series-1" /><b>70%</b> Équipements</span>
-            <span><i className="series-2" /><b>15%</b> Sécurité</span>
-            <span><i className="series-3" /><b>10%</b> Zones</span>
-            <span><i className="series-4" /><b>5%</b> Continuité</span>
+            <InsufficientNote title="Composition du score" detail="Les pondérations de domaine ne sont pas raccordées." />
           </div>
         </div>
-        <div className="score-causes"><span><b>Facteur négatif</b> DEMO-SSI à 61/100</span><span><b>Facteur positif</b> DEMO-ESP à 98/100</span></div>
+        <div className="score-causes"><span><b>Facteur négatif</b> Données insuffisantes</span><span><b>Facteur positif</b> Données insuffisantes</span></div>
         <p className="analytics-note">Le score est plafonné si un équipement vital devient indisponible. La variation sera affichée après constitution de l’historique.</p>
       </article>
 
@@ -1488,7 +1721,7 @@ function OperationalAnalytics({ equipment, variant = 'direction' }: { equipment:
       </article>
 
       <article className="panel analytics-card equipment-chart-card">
-        <div className="analytics-card-head"><div><span>PARC TECHNIQUE</span><h4>Scores par équipement</h4></div><div className="chart-switch" aria-label="Filtre des équipements"><button type="button" aria-pressed={equipmentFilter === 'all'} onClick={() => setEquipmentFilter('all')}>Tous</button><button type="button" aria-pressed={equipmentFilter === 'watch'} onClick={() => setEquipmentFilter('watch')}>À surveiller</button></div></div>
+        <div className="analytics-card-head"><div><span>PARC TECHNIQUE</span><h4>Scores par équipement</h4></div><div className="chart-switch" aria-label="Filtre des équipements"><button type="button" aria-pressed={equipmentFilter === 'all'} onClick={() => setEquipmentFilter('all')}>Tous</button><button type="button" aria-pressed={equipmentFilter === 'watch'} onClick={() => setEquipmentFilter('watch')}>À risque</button></div></div>
         <div className="horizontal-score-chart" aria-live="polite">{visibleEquipment.map((item) => <div className="score-bar-row" key={item.code}><span><b>{item.code}</b><small>{item.label}</small></span><div className="score-bar-track" role="progressbar" aria-label={`${item.label}, ${item.health} sur 100`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={item.health}><i className={item.health < 70 ? 'danger' : item.health < 90 ? 'warning' : 'success'} style={{width:`${item.health}%`}} /></div><strong>{item.health}</strong></div>)}</div>
         <div className="chart-legend"><span><i className="success" /> Sain ≥ 90</span><span><i className="warning" /> Surveillance 70–89</span><span><i className="danger" /> Critique &lt; 70</span></div>
       </article>
@@ -1526,31 +1759,31 @@ function Dashboard({ anomalies, equipment, escalations, audience = 'facility', o
   const documentedCostTotal = documentedCosts.reduce((total,item) => total + (item.amount ?? 0),0);
   const overThresholdCosts = documentedCosts.filter((item) => (item.amount ?? 0) >= DECISION_THRESHOLD_FCFA).length;
   const dashboardTabs = [
-    { id:'overview' as const, icon:'01', label:'Vue d’ensemble', detail:'5 angles du jour', count:'Synthèse' },
-    { id:'actions' as const, icon:'02', label:'Actions & risques', detail:`${openCount} ouverts · ${lateCount} retards`, count:'À traiter' },
-    { id:'health' as const, icon:'03', label:'Santé & scores', detail:'Bâtiment · équipements · agents', count:'82/100' },
-    { id:'equipment' as const, icon:'04', label:'Parc technique', detail:`${equipment.length} modules suivis`, count:'Équipements' },
+    { id:'overview' as const, icon:'', label:'Vue d’ensemble', detail:'5 angles du jour', count:'Synthèse' },
+    { id:'actions' as const, icon:'', label:'Actions & risques', detail:`${openCount} ouverts · ${lateCount} retards`, count:'À traiter' },
+    { id:'health' as const, icon:'', label:'Santé & scores', detail:'Bâtiment · équipements · agents', count:'Score' },
+    { id:'equipment' as const, icon:'', label:'Parc technique', detail:`${equipment.length} modules suivis`, count:'Équipements' },
   ];
   return <>
-    <section className="hero-row dashboard-hero"><div><p className="direction-kicker">{readOnly ? 'CONSULTATION AUTORISÉE' : audience === 'administration' ? 'PILOTAGE ADMINISTRATION' : 'PILOTAGE FACILITY MANAGER'}</p><p>{readOnly ? 'Indicateurs et registre accessibles sans action de modification.' : audience === 'administration' ? 'Synthèse décisionnelle, risques, coûts et performance.' : 'Priorités opérationnelles, santé du parc et actions attendues.'}</p></div><span className="health-pill"><i /> Disponibilité technique 92%</span></section>
-    <nav className="dashboard-section-tabs" role="tablist" aria-label="Sections du tableau de bord">{dashboardTabs.map((item) => <button key={item.id} type="button" role="tab" aria-selected={dashboardTab === item.id} aria-controls={`dashboard-panel-${item.id}`} id={`dashboard-tab-${item.id}`} className={dashboardTab === item.id ? 'active' : ''} onClick={() => setDashboardTab(item.id)}><span className="dashboard-tab-index">{item.icon}</span><span className="dashboard-tab-copy"><b>{item.label}</b><small>{item.detail}</small></span><em>{item.count}</em></button>)}</nav>
+    <section className="hero-row dashboard-hero"><div><p className="direction-kicker">{readOnly ? 'CONSULTATION AUTORISÉE' : audience === 'administration' ? 'PILOTAGE ADMINISTRATION' : 'PILOTAGE FACILITY MANAGER'}</p><p>{readOnly ? 'Indicateurs et registre accessibles sans action de modification.' : audience === 'administration' ? 'Synthèse décisionnelle, risques, coûts et performance.' : 'Priorités opérationnelles, santé du parc et actions attendues.'}</p></div><span className="health-pill"><i /> Disponibilité : données insuffisantes</span></section>
+    <nav className="dashboard-section-tabs" role="tablist" aria-label="Sections du tableau de bord">{dashboardTabs.map((item) => <button key={item.id} type="button" role="tab" aria-selected={dashboardTab === item.id} aria-controls={`dashboard-panel-${item.id}`} id={`dashboard-tab-${item.id}`} className={dashboardTab === item.id ? 'active' : ''} onClick={() => setDashboardTab(item.id)}>{item.icon ? <span className="dashboard-tab-index">{item.icon}</span> : null}<span className="dashboard-tab-copy"><b>{item.label}</b><small>{item.detail}</small></span><em>{item.count}</em></button>)}</nav>
     {(dashboardTab === 'overview' || dashboardTab === 'actions') && <section id={`dashboard-panel-${dashboardTab}`} role="tabpanel" aria-labelledby={`dashboard-tab-${dashboardTab}`} className={`direction-grid dashboard-tab-panel ${dashboardTab === 'actions' ? 'actions-view' : ''}`} aria-label="Tableau de bord en cinq angles de décision">
       <article className="panel direction-block todo-block">
-        <div className="direction-head"><span className="direction-number">01</span><div><h3>À faire aujourd’hui</h3><p>Actions qui débloquent le workflow</p></div><span className="panel-count is-alert">{openCount} ouvertes</span></div>
+        <div className="direction-head"><div><h3>À faire aujourd’hui</h3><p>Actions qui débloquent le workflow</p></div><span className="panel-count is-alert">{openCount} ouvertes</span></div>
         <div className="todo-summary"><strong>5</strong><span>actions prioritaires<br />avant 17:00</span></div>
-        <div className="compact-actions">{urgent.slice(0,2).map((a) => <button key={a.id} onClick={() => onOpen(a.id,'dashboard')}><span className={`risk-dot ${a.priority === 'Critique' ? 'critical' : ''}`} /><div><b>{a.asset} · {a.title}</b><small>{a.status} · échéance {a.due}</small></div><span>›</span></button>)}</div>
+        <div className="compact-actions">{urgent.slice(0,2).map((a) => <button key={a.id} onClick={() => onOpen(a.id,'dashboard')}><span className={`risk-dot ${a.priority === 'Critique' ? 'critical' : ''}`} /><div><b>{displayAssetCode(a.asset)} · {a.title}</b><small>{a.status} · échéance {a.due}</small></div><span>›</span></button>)}</div>
         <button className="text-action" onClick={() => onNavigate(readOnly ? 'registry' : 'manager')}>{readOnly ? 'Consulter le registre →' : 'Ouvrir la file de Facility Manager →'}</button>
       </article>
 
       <article className="panel direction-block risks-block">
-        <div className="direction-head"><span className="direction-number">02</span><div><h3>Risques</h3><p>Sécurité et continuité</p></div></div>
+        <div className="direction-head"><div><h3>Risques</h3><p>Sécurité et continuité</p></div></div>
         <div className="risk-metrics"><button onClick={() => onOpen('ANO-0241','dashboard')}><strong>2</strong><span>critiques</span></button><button onClick={() => onNavigate(readOnly ? 'registry' : 'manager')}><strong>{lateCount}</strong><span>en retard</span></button></div>
-        <div className="risk-focus"><span>!</span><div><b>DEMO-SSI sous surveillance</b><small>Pression incendie instable</small></div></div>
+        <div className="risk-focus"><span>!</span><div><b>{displayAssetCode('DEMO-SSI')} sous surveillance</b><small>Pression incendie instable</small></div></div>
         <button className="text-action" onClick={() => onNavigate('registry')}>Voir la cartographie des risques →</button>
       </article>
 
       {dashboardTab === 'overview' && <article className="panel direction-block costs-block">
-        <div className="direction-head"><span className="direction-number">03</span><div><h3>Coûts</h3><p>Montants réellement renseignés</p></div></div>
+        <div className="direction-head"><div><h3>Coûts</h3><p>Montants réellement renseignés</p></div></div>
         <div className="cost-main"><span>Montants documentés</span><strong>{formatMoney(documentedCostTotal)}</strong></div>
         <div className="cost-details"><div><span>Dossiers chiffrés</span><b>{documentedCosts.length}</b></div><div className="cost-gap"><span>Au-dessus du seuil</span><b>{overThresholdCosts}</b></div></div>
         <small className="cost-note">Budget, engagé et payé : données insuffisantes.</small>
@@ -1558,23 +1791,24 @@ function Dashboard({ anomalies, equipment, escalations, audience = 'facility', o
       </article>}
 
       {dashboardTab === 'overview' && <article className="panel direction-block performance-block">
-        <div className="direction-head"><span className="direction-number">04</span><div><h3>Performance</h3><p>Qualité de service</p></div></div>
-        <div className="performance-score"><strong>89%</strong><span>interventions dans les délais</span></div>
+        <div className="direction-head"><div><h3>Performance</h3><p>Qualité de service</p></div></div>
+        <div className="performance-score"><InsufficientNote title="Délais tenus" detail="Le taux d’interventions dans les délais n’a pas de source raccordée." /></div>
         <div className="performance-bar"><i /></div>
-        <div className="performance-facts"><span><b>24</b> clôturées ce mois</span><span><b>92%</b> disponibilité technique</span></div>
+        <InsufficientNote title="Clôtures du mois" detail="Le nombre de dossiers clôturés n’a pas de source raccordée." />
       </article>}
 
       <article className="panel direction-block decisions-block">
-        <div className="direction-head"><span className="direction-number">05</span><div><h3>Décisions recommandées</h3><p>Arbitrages proposés selon le niveau de risque</p></div><span className="panel-count is-danger">3 décisions</span></div>
+        <div className="direction-head"><div><h3>Décisions recommandées</h3><p>Les priorités se traitent dans Dossiers</p></div></div>
+        <button className="text-action" onClick={() => onNavigate(readOnly ? 'registry' : 'manager')}>{readOnly ? 'Consulter Dossiers →' : 'Ouvrir Dossiers →'}</button>
         <div className="decision-list">
-          <button onClick={() => onOpen('ANO-0241','dashboard')}><span className="decision-priority critical">1</span><div><b>Qualifier DEMO-SSI en priorité critique</b><small>Sécurité incendie · décision requise avant 10:30</small></div><span>{readOnly ? 'Consulter →' : 'Décider →'}</span></button>
-          <button onClick={() => onOpen('ANO-0238','dashboard')}><span className="decision-priority warning">2</span><div><b>Relancer le prestataire DEMO-ASC-2</b><small>Intervention en retard · impact usagers</small></div><span>{readOnly ? 'Consulter →' : 'Relancer →'}</span></button>
-          <button onClick={() => onOpen('ANO-0231','dashboard')}><span className="decision-priority blue">3</span><div><b>Valider la preuve DEMO-GE</b><small>Test de démarrage concluant · clôture possible</small></div><span>{readOnly ? 'Consulter →' : 'Valider →'}</span></button>
+          <button onClick={() => onOpen('ANO-0241','dashboard')}><span className="decision-priority critical">1</span><div><b>Qualifier {displayAssetCode('DEMO-SSI')} en priorité critique</b><small>Sécurité incendie · décision requise avant 10:30</small></div><span>{readOnly ? 'Consulter →' : 'Décider →'}</span></button>
+          <button onClick={() => onOpen('ANO-0238','dashboard')}><span className="decision-priority warning">2</span><div><b>Relancer le prestataire {displayAssetCode('DEMO-ASC-2')}</b><small>Intervention en retard · impact usagers</small></div><span>{readOnly ? 'Consulter →' : 'Relancer →'}</span></button>
+          <button onClick={() => onOpen('ANO-0231','dashboard')}><span className="decision-priority blue">3</span><div><b>Valider la preuve {displayAssetCode('DEMO-GE')}</b><small>Test de démarrage concluant · clôture possible</small></div><span>{readOnly ? 'Consulter →' : 'Valider →'}</span></button>
         </div>
       </article>
     </section>}
     {dashboardTab === 'health' && <section id="dashboard-panel-health" role="tabpanel" aria-labelledby="dashboard-tab-health" className="dashboard-tab-panel"><OperationalAnalytics equipment={equipment} /></section>}
-    {dashboardTab === 'equipment' && <section id="dashboard-panel-equipment" role="tabpanel" aria-labelledby="dashboard-tab-equipment" className="dashboard-tab-panel"><article className="panel dashboard-equipment-pointer"><div className="panel-head"><div><p className="design-kicker">PARC TECHNIQUE</p><h3>Le catalogue vit dans Équipements</h3><p>{equipment.length} modules suivis · {equipment.filter((item) => item.health < 90).length} à surveiller. Pilotage n’en garde qu’un aperçu.</p></div><button type="button" className="primary-button" onClick={() => onNavigate('equipment')}>Ouvrir Équipements →</button></div><div className="compact-actions">{equipment.filter((item) => item.health < 90).slice(0,4).map((item) => <button type="button" key={item.code} onClick={() => onNavigate('equipment')}><span className={`risk-dot ${item.health < 70 ? 'critical' : ''}`} /><div><b>{item.code} · {item.label}</b><small>{item.state} · indice {item.health}/100</small></div><span>›</span></button>)}</div></article></section>}
+    {dashboardTab === 'equipment' && <section id="dashboard-panel-equipment" role="tabpanel" aria-labelledby="dashboard-tab-equipment" className="dashboard-tab-panel"><article className="panel dashboard-equipment-pointer"><div className="panel-head"><div><p className="design-kicker">PARC TECHNIQUE</p><h3>Le catalogue vit dans Équipements</h3><p>{equipment.length} modules suivis · {equipment.filter((item) => item.health < 90).length} à surveiller. Pilotage n’en garde qu’un aperçu.</p></div><button type="button" className="primary-button" onClick={() => onNavigate('equipment')}>Ouvrir Équipements →</button></div><div className="compact-actions">{equipment.filter((item) => item.health < 90).slice(0,4).map((item) => <button type="button" key={item.code} onClick={() => onNavigate('equipment')}><span className={`risk-dot ${item.health < 70 ? 'critical' : ''}`} /><div><b>{displayAssetCode(item.code)} · {item.label}</b><small>{item.state} · indice {item.health}/100</small></div><span>›</span></button>)}</div></article></section>}
   </>;
 }
 
@@ -1583,21 +1817,45 @@ function Registry({ anomalies, query, setQuery, priority, setPriority, status, s
   return <>
     <section className="section-heading"><div><p>{anomalies.length} anomalie{anomalies.length > 1 ? 's' : ''} correspondant à vos critères</p></div><button className="secondary-button">⇩ Exporter</button></section>
     <section className="filter-bar"><label className="search-box"><span>⌕</span><input aria-label="Rechercher dans le registre" placeholder="Rechercher par équipement, anomalie…" value={query} onChange={(e) => setQuery(e.target.value)} /></label><label>Priorité<Select value={priority} onChange={(e) => setPriority(e.target.value)}><option>Toutes</option><option>Critique</option><option>Haute</option><option>Moyenne</option><option>Faible</option></Select></label><label>Statut<Select value={status} onChange={(e) => setStatus(e.target.value)}><option>Tous</option><option>À qualifier</option><option>Affectée</option><option>En intervention</option><option>En validation</option><option>Clôturée</option></Select></label>{(query || priority !== 'Toutes' || status !== 'Tous') && <button className="clear-button" onClick={() => {setQuery('');setPriority('Toutes');setStatus('Tous')}}>Effacer</button>}</section>
-    <section className="registry-card"><div className="registry-head"><span>Anomalie</span><span>Priorité</span><span>Étape</span><span>Échéance</span><span>Responsable</span><span /></div>{anomalies.length === 0 ? <div className="empty-state"><span>⌕</span><h3>Aucun résultat</h3><p>Essayez d’élargir vos critères de recherche.</p></div> : anomalies.map((a) => <article className={`registry-entry ${expandedId === a.id ? 'is-expanded' : ''}`} key={a.id}><button className="registry-row" onClick={() => onOpen(a.id)}><div className="registry-title"><span className={`asset-square ${priorityTone(a.priority)}`}>{a.asset.split('-')[0].slice(0,2)}</span><div><b>{a.title}</b><small>{a.id} · <span className="equipment-reference">{a.asset}</span> · {a.location}</small></div></div><div><Badge tone={priorityTone(a.priority)}>{a.priority}</Badge></div><div><Badge tone={statusTone(a.status)}>{a.status}</Badge></div><div className={a.delayed && a.status !== 'Clôturée' ? 'late-text' : ''}>{a.delayed && a.status !== 'Clôturée' && <b>EN RETARD</b>}<span>{a.due}</span></div><div className="owner-cell"><span className="mini-avatar">{canonicalResponsible(a) ? canonicalResponsible(a)!.split(' ').map((w) => w[0]).join('').slice(0,2) : '—'}</span><span>{canonicalResponsible(a) ?? 'Non attribué'}{externalActorConcerned(a) && <small>Acteur externe : {externalActorConcerned(a)}</small>}</span></div><div className="registry-mobile-meta"><Badge tone={priorityTone(a.priority)}>{a.priority}</Badge><Badge tone={statusTone(a.status)}>{a.status}</Badge>{a.delayed && a.status !== 'Clôturée' && <Badge tone="critical">EN RETARD</Badge>}</div><div className="registry-mobile-details"><span><b>Échéance</b>{a.due}</span><span><b>Responsable interne</b>{canonicalResponsible(a) ?? 'Non attribué'}{externalActorConcerned(a) && <small>Acteur externe : {externalActorConcerned(a)}</small>}</span></div><span className="row-arrow">›</span></button><button type="button" className="registry-summary-toggle" aria-expanded={expandedId === a.id} onClick={() => setExpandedId((current) => current === a.id ? null : a.id)}>{expandedId === a.id ? 'Masquer la continuité de traitement' : 'Afficher la continuité de traitement'} <span>{expandedId === a.id ? '−' : '+'}</span></button>{expandedId === a.id && <AntiZombieSummary data={adaptDossierToAntiZombieSummary(a)} variant="compact" />}</article>)}</section>
+    <section className="registry-card"><div className="registry-head"><span>Anomalie</span><span>Priorité</span><span>Étape</span><span>Échéance</span><span>Responsable</span><span /></div>{anomalies.length === 0 ? <div className="empty-state"><span>⌕</span><h3>Aucun résultat</h3><p>Essayez d’élargir vos critères de recherche.</p></div> : anomalies.map((a) => <article className={`registry-entry ${expandedId === a.id ? 'is-expanded' : ''}`} key={a.id}><button className="registry-row" onClick={() => onOpen(a.id)}><div className="registry-title"><span className={`asset-square ${priorityTone(a.priority)}`}>{a.asset.split('-')[0].slice(0,2)}</span><div><b>{a.title}</b><small>{a.id} · <span className="equipment-reference">{displayAssetCode(a.asset)}</span> · {a.location}</small></div></div><div><Badge tone={priorityTone(a.priority)}>{a.priority}</Badge></div><div><Badge tone={statusTone(a.status)}>{a.status}</Badge></div><div className={a.delayed && a.status !== 'Clôturée' ? 'late-text' : ''}>{a.delayed && a.status !== 'Clôturée' && <b>En retard</b>}<span>{a.due}</span></div><div className="owner-cell"><span className="mini-avatar">{canonicalResponsible(a) ? asciiInitials(canonicalResponsible(a)!) : '—'}</span><span>{canonicalResponsible(a) ?? 'Non attribué'}{externalActorConcerned(a) && <small>Acteur externe : {externalActorConcerned(a)}</small>}</span></div><div className="registry-mobile-meta"><Badge tone={priorityTone(a.priority)}>{a.priority}</Badge><Badge tone={statusTone(a.status)}>{a.status}</Badge>{a.delayed && a.status !== 'Clôturée' && <Badge tone="critical">En retard</Badge>}</div><div className="registry-mobile-details"><span><b>Échéance</b>{a.due}</span><span><b>Responsable interne</b>{canonicalResponsible(a) ?? 'Non attribué'}{externalActorConcerned(a) && <small>Acteur externe : {externalActorConcerned(a)}</small>}</span></div><span className="row-arrow">›</span></button><button type="button" className="registry-summary-toggle" aria-expanded={expandedId === a.id} onClick={() => setExpandedId((current) => current === a.id ? null : a.id)}>{expandedId === a.id ? 'Masquer la continuité de traitement' : 'Afficher la continuité de traitement'} <span>{expandedId === a.id ? '−' : '+'}</span></button>{expandedId === a.id && <AntiZombieSummary data={adaptDossierToAntiZombieSummary(a)} variant="compact" />}</article>)}</section>
   </>;
 }
 
-function Manager({ anomalies, tab, setTab, onOpen }: { anomalies:Anomaly[]; tab:ManagerQueue; setTab:(v:ManagerQueue)=>void; onOpen:(id:string)=>void }) {
+function Manager({ anomalies, tab, setTab, onOpen }: { anomalies:Anomaly[]; tab:ManagerQueue; setTab:(v:ManagerQueue)=>void; onOpen:(id:string)=>void; escalations?:Escalation[]; fieldRequests?:FieldRequest[] }) {
+  const escalations = (arguments[0] as { escalations?: Escalation[] }).escalations ?? [];
+  const fieldRequests = (arguments[0] as { fieldRequests?: FieldRequest[] }).fieldRequests ?? [];
+  const hygieneItems: Anomaly[] = fieldRequests.filter((item) => item.status === 'À traiter par Facility Manager').map((request) => ({
+    id: request.id,
+    asset: request.subject.includes('DEMO-EAU') ? 'DEMO-EAU' : 'DEMO-RND',
+    title: displayAssetText(request.subject),
+    location: 'Rondes et services',
+    priority: 'Faible' as Priority,
+    status: 'À qualifier' as Status,
+    reported: 'Aujourd’hui',
+    due: 'Aujourd’hui · 12:00',
+    owner: 'Non affectée',
+    delayed: false,
+    proof: false,
+    description: request.note,
+    origin: 'Rondes et services',
+    horsScore: true,
+  }));
+  const openItems = [...anomalies.filter((item) => item.status !== 'Clôturée'), ...hygieneItems];
+  const amountOf = (item: Anomaly) => item.treatment?.amount ?? escalations.find((row) => row.anomaly === item.id)?.amount ?? null;
+  const originOf = (item: Anomaly) => item.origin ?? (item.asset === 'DEMO-RND' || item.id.startsWith('REQ-') ? 'Rondes et services' : item.owner === 'Non affectée' ? 'Agent terrain' : item.owner);
   const groups:Record<ManagerQueue,Anomaly[]> = {
-    qualify:anomalies.filter((a) => a.status === 'À qualifier'),
-    late:anomalies.filter((a) => a.delayed && a.status !== 'Clôturée'),
-    unassigned:anomalies.filter((a) => !canonicalResponsible(a) && a.status !== 'Clôturée'),
-    proof:anomalies.filter((a) => a.proofPending),
+    all: openItems,
+    qualify: openItems.filter((item) => item.status === 'À qualifier' || item.horsScore),
+    decide: openItems.filter((item) => item.status === 'Affectée' || item.status === 'En intervention' || item.status === 'En validation'),
+    late: openItems.filter((item) => item.delayed),
+    unassigned: openItems.filter((item) => !canonicalResponsible(item)),
+    overThreshold: openItems.filter((item) => (amountOf(item) ?? 0) >= DECISION_THRESHOLD_FCFA),
+    proof: openItems.filter((item) => item.proofPending),
     reception:[],
     reservations:[],
     reopened:[],
   };
-  const queueMeta:Record<ManagerQueue,{label:string;short:string;tone:string;pending?:boolean}> = {
+  const queueMeta:Record<Exclude<ManagerQueue,'all'|'decide'|'overThreshold'>,{label:string;short:string;tone:string;pending?:boolean}> = {
     qualify:{label:'À qualifier',short:'AQ',tone:'amber'},
     late:{label:'En retard',short:'SLA',tone:'red'},
     unassigned:{label:'Sans responsable',short:'SR',tone:'orange'},
@@ -1606,16 +1864,34 @@ function Manager({ anomalies, tab, setTab, onOpen }: { anomalies:Anomaly[]; tab:
     reservations:{label:'Réserves',short:'RS',tone:'neutral',pending:true},
     reopened:{label:'Dossiers rouverts',short:'RO',tone:'neutral',pending:true},
   };
-  const active = groups[tab];
+  const visibleFilters: Array<{ key:ManagerQueue; label:string }> = [
+    { key:'qualify', label:'À qualifier' },
+    { key:'decide', label:'À décider' },
+    { key:'late', label:'En retard' },
+    { key:'unassigned', label:'Sans responsable' },
+    { key:'overThreshold', label:'Au-dessus du seuil' },
+    { key:'proof', label:'Preuves à vérifier' },
+  ];
+  const active = groups[tab] ?? openItems;
   const [selectedId, setSelectedId] = useState('ANO-0241');
   const [branch, setBranch] = useState<'internal'|'cost'|'external'>('cost');
-  const [amount, setAmount] = useState('280000');
+  const [amount, setAmount] = useState('');
+  const [dueValue, setDueValue] = useState('');
+  const [note, setNote] = useState('');
+  const [qualifyPriority, setQualifyPriority] = useState<Priority | ''>('');
+  const [qualifyOwner, setQualifyOwner] = useState('');
   const [decisionDone, setDecisionDone] = useState(false);
+  const [qualifyKind, setQualifyKind] = useState<'Notification'|'Ticket'|'Urgence'|null>(null);
+  const [qualifyError, setQualifyError] = useState('');
   const focus = active.find((item) => item.id === selectedId) ?? active[0];
   const amountValue = Number(amount || 0);
-  const overThreshold = amountValue >= DECISION_THRESHOLD_FCFA;
+  const overThreshold = Boolean(amount) && amountValue >= DECISION_THRESHOLD_FCFA;
   const branchLocked = Boolean(focus && focus.status === 'À qualifier' && !canonicalResponsible(focus));
-  const priorityCode:Record<Priority,string> = { Critique:'C', Haute:'H', Moyenne:'M', Faible:'F' };
+  const focusAmount = focus ? amountOf(focus) : null;
+  const historyLines = focus ? [
+    { at: focus.reported, text: focus.horsScore ? 'Notification créée par l’agente rondes' : 'Constat créé' },
+    ...(focus.proofs ?? []).map((proof) => ({ at: proof.capturedAt, text: `Preuve ${proof.reference} · ${proof.verificationStatus === 'accepted' ? 'Jointe' : proof.verificationStatus === 'rejected' ? 'Non concluant' : 'Attendu'}` })),
+  ] : [];
 
   return <div className="manager-pilot">
     <ManagerOperationalContext />
@@ -1630,56 +1906,131 @@ function Manager({ anomalies, tab, setTab, onOpen }: { anomalies:Anomaly[]; tab:
       <button type="button" role="tab" aria-selected={tab === 'proof'} aria-controls="manager-queue-panel" className={tab === 'proof' ? 'active' : ''} onClick={() => {setTab('proof');setDecisionDone(false)}}>
         <span className="kpi-icon blue">PV</span><div><strong>{groups.proof.length}</strong><small>Preuves à vérifier</small></div>
       </button>
-      <div className="completion" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={86} aria-label="Score de traitement 86 sur 100">
-        <div className="completion-head"><span>Score traitement</span><b>86<small>/100</small></b></div>
-        <div className="completion-bar" aria-hidden="true"><i style={{width:'86%'}} /></div>
-        <p>Délais 88 · réactivité 91 · preuves 79</p>
+      <div className="completion" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={0} aria-label="Score de traitement indisponible">
+        <div className="completion-head"><span>Score traitement</span><b>—<small>/100</small></b></div>
+        <div className="completion-bar" aria-hidden="true"><i style={{width:'0%'}} /></div>
+        <p>Données insuffisantes. Délais, réactivité et preuves non raccordés.</p>
       </div>
     </section>
 
     <section className={`fm-decision-layout ${focus ? '' : 'is-empty'}`}>
       <article className="panel fm-inbox">
+        <div className="dossiers-filters" role="group" aria-label="Filtres des dossiers">
+          {visibleFilters.map((item) => {
+            const count = groups[item.key].length;
+            const pressed = tab === item.key;
+            return <button type="button" key={item.key} className={`chip${pressed ? ' is-pressed' : ''}${count === 0 ? ' is-zero' : ''}`} aria-pressed={pressed} onClick={() => { setTab(pressed ? 'all' : item.key); setDecisionDone(false); }}>{item.label}<b>{count}</b></button>;
+          })}
+        </div>
         <div className="queue-tabs" role="tablist" aria-label="Files de travail">
-          {(Object.keys(queueMeta) as ManagerQueue[]).map((key) => <button type="button" role="tab" key={key} title={queueMeta[key].label} aria-selected={tab === key} aria-controls="manager-queue-panel" className={[tab === key ? 'active' : '', queueMeta[key].pending ? 'is-pending' : ''].filter(Boolean).join(' ')} onClick={() => {setTab(key);setDecisionDone(false)}}><b>{queueMeta[key].short}</b><span>{groups[key].length}</span><small>{queueMeta[key].label}</small></button>)}
+          {(Object.keys(queueMeta) as Array<keyof typeof queueMeta>).map((key) => <button type="button" role="tab" key={key} title={queueMeta[key].label} aria-selected={tab === key} aria-controls="manager-queue-panel" className={[tab === key ? 'active' : '', queueMeta[key].pending ? 'is-pending' : ''].filter(Boolean).join(' ')} onClick={() => {setTab(key);setDecisionDone(false)}}><b>{queueMeta[key].short}</b><span>{groups[key].length}</span><small>{queueMeta[key].label}</small></button>)}
         </div>
         <div className="fm-inbox-list" id="manager-queue-panel" aria-live="polite">
-          {active.length ? active.map((item) => <button type="button" key={item.id} aria-pressed={focus.id === item.id} className={focus.id === item.id ? 'active' : ''} onClick={() => {setSelectedId(item.id);setDecisionDone(false)}}>
-            <span className={`queue-mark ${priorityTone(item.priority)}`} aria-label={`Priorité ${item.priority}`}>{priorityCode[item.priority]}</span>
-            <div><span>{item.asset} · {item.id}</span><b>{item.title}</b><small>{canonicalResponsible(item) ?? 'Responsable non attribué'} · échéance {item.due}</small>{externalActorConcerned(item) && <small>Acteur externe concerné : {externalActorConcerned(item)}</small>}</div>
-            <Badge tone={priorityTone(item.priority)}>{item.priority}</Badge>
-          </button>) : <div className="empty-state compact"><span>{['reception','reservations','reopened'].includes(tab) ? '⌁' : '✓'}</span><h3>{['reception','reservations','reopened'].includes(tab) ? 'Donnée non raccordée' : 'File à jour'}</h3><p>{['reception','reservations','reopened'].includes(tab) ? 'La source métier canonique de cette file doit encore être raccordée.' : 'Aucune action dans cette catégorie.'}</p></div>}
+          {active.length ? active.map((item) => {
+            const rowAmount = amountOf(item);
+            return <button type="button" key={item.id} aria-pressed={focus?.id === item.id} className={focus?.id === item.id ? 'active' : ''} onClick={() => {setSelectedId(item.id);setDecisionDone(false);setQualifyKind(null);setAmount('');setNote('');setQualifyPriority('');setQualifyOwner('');setDueValue('');setQualifyError('')}}>
+              <span className={`queue-mark ${priorityTone(item.priority)}`} aria-label={`Priorité ${item.priority}`} />
+              <div>
+                <h3>{item.title}</h3>
+                <span className="sub">{item.asset === 'DEMO-RND' || item.horsScore ? item.location : `${displayAssetCode(item.asset)}, ${item.location}`}</span>
+                <span className="tags"><Badge tone={item.horsScore ? 'neutral' : priorityTone(item.priority)}>{item.horsScore ? 'Notification' : item.priority}</Badge><Badge tone="neutral">{item.status === 'À qualifier' ? 'À qualifier' : item.status}</Badge><span className="origin">{originOf(item)}</span>{item.horsScore ? <span className="origin">Hors score</span> : null}</span>
+              </div>
+              <span className="rt">
+                <span className={item.delayed ? 'late-text' : ''}>{item.delayed ? 'En retard, ' : ''}{item.due}</span>
+                {rowAmount != null ? <span className="amt">{formatMoney(rowAmount)}</span> : null}
+                {rowAmount != null && rowAmount >= DECISION_THRESHOLD_FCFA ? <Badge tone="orange">Administration</Badge> : null}
+                <span className={canonicalResponsible(item) ? 'muted' : 'late-text'}>{canonicalResponsible(item) ?? 'Sans responsable'}</span>
+              </span>
+            </button>;
+          }) : <div className="empty-state compact"><span>{['reception','reservations','reopened'].includes(tab) ? '⌁' : '✓'}</span><h3>{['reception','reservations','reopened'].includes(tab) ? 'Donnée non raccordée' : 'File à jour'}</h3><p>{['reception','reservations','reopened'].includes(tab) ? 'La source métier canonique de cette file doit encore être raccordée.' : 'Aucune action dans cette catégorie.'}</p></div>}
         </div>
       </article>
 
       <div className="fm-right-column">
       {focus ? <Card className="fm-decision-card">
         <div className="fm-decision-head">
-          <div><div><Badge tone={priorityTone(focus.priority)}>{focus.priority}</Badge><span>{focus.id} · {focus.asset}</span></div><h3>{focus.title}</h3><p>{focus.location}</p></div>
-          <Button variant="secondary" onClick={() => onOpen(focus.id)}>Voir le dossier complet</Button>
+          <div><div><Badge tone={focus.horsScore ? 'neutral' : priorityTone(focus.priority)}>{focus.horsScore ? 'Notification' : focus.priority}</Badge><span>{focus.id}</span><span className="origin">{originOf(focus)}</span>{focus.horsScore ? <span className="origin">Hors score</span> : null}</div><h3>{focus.title}</h3><p>{focus.horsScore ? focus.location : `${displayAssetCode(focus.asset)}, ${focus.location}`}</p></div>
+          {focus.id.startsWith('REQ-') ? null : <Button variant="secondary" onClick={() => onOpen(focus.id)}>Voir le dossier complet</Button>}
+        </div>
+        <div className="dossier-next">
+          <div className="k">Prochaine action</div>
+          <div className="v">{focus.status === 'À qualifier' || focus.horsScore ? 'Qualifier et affecter' : !canonicalResponsible(focus) ? 'Réaffecter' : (focusAmount ?? 0) >= DECISION_THRESHOLD_FCFA ? 'Soumettre à l’Administration' : 'Valider'}</div>
+          <div className={`due${focus.delayed ? ' is-late' : ''}`}>{focus.delayed ? 'En retard, ' : ''}{focus.due}{canonicalResponsible(focus) ? `, ${canonicalResponsible(focus)}` : ''}</div>
+        </div>
+        <div className="dossier-steps" aria-label="Avancement">
+          {['Constat','Qualification','Décision','Intervention','Preuve','Clôture'].map((label, index) => {
+            const now = focus.status === 'À qualifier' || focus.horsScore ? 2 : focus.status === 'Affectée' ? 3 : focus.status === 'En intervention' ? 4 : focus.status === 'En validation' ? 5 : 7;
+            const state = index + 1 < now ? 'done' : index + 1 === now ? 'now' : '';
+            return <div key={label} className={state}><i /><span>{label}</span></div>;
+          })}
         </div>
 
-        <AntiZombieSummary data={adaptDossierToAntiZombieSummary(focus)} variant="standard" />
+        {focus.status === 'À qualifier' || focus.horsScore ? (
+          <div className="dossier-qualify">
+            <h3>Qualifier <span className="visually-hidden">Qualifier maintenant</span></h3>
+            <span className="lbl">Ce constat devient</span>
+            <div className="seg" role="group" aria-label="Type de qualification">
+              {(['Notification','Ticket','Urgence'] as const).map((kind) => (
+                <button type="button" key={kind} aria-pressed={qualifyKind === kind} onClick={() => { setQualifyKind(kind); setQualifyError(''); }}>{kind}</button>
+              ))}
+            </div>
+            {qualifyKind === 'Urgence' ? <p className="hint is-bad">Intervention immédiate autorisée, l’Administration sera informée.</p> : null}
+            {qualifyKind === 'Notification' ? <p className="hint">Reste hors score, suivi par l’agente rondes.</p> : null}
+            <span className="lbl">Priorité</span>
+            <div className="seg" role="group" aria-label="Priorité">
+              {(['Critique','Haute','Moyenne','Faible'] as const).map((item) => (
+                <button type="button" key={item} aria-pressed={qualifyPriority === item} onClick={() => setQualifyPriority(item)}>{item}</button>
+              ))}
+            </div>
+            <div className="fm-decision-fields">
+              <label className="field proposed-field">Responsable<Select value={qualifyOwner} onChange={(event) => setQualifyOwner(event.target.value)}><option value="">Choisir</option><option>Agent Eau & Incendie Démo</option><option>Agent Électricité Démo</option><option>Agente Rondes & Assistance Démo</option></Select></label>
+              <label className="field proposed-field">Échéance<input type="datetime-local" value={dueValue} onChange={(event) => setDueValue(event.target.value)} /></label>
+            </div>
+            <label className="field proposed-field">Coût estimé<input type="number" min="0" step="1000" inputMode="numeric" placeholder="Montant en FCFA" value={amount} onChange={(event) => setAmount(event.target.value)} /></label>
+            {!amount ? <p className="hint">Facultatif à ce stade. À partir de {formatMoney(DECISION_THRESHOLD_FCFA)}, la décision revient à l’Administration.</p> : amountValue < 0 || Number.isNaN(amountValue) ? <p className="hint is-bad">Saisissez un montant en chiffres.</p> : overThreshold ? <p className="hint is-warn">Au-dessus du seuil : la décision sera soumise à l’Administration.</p> : <p className="hint is-ok">Sous le seuil : vous pourrez valider vous-même.</p>}
+            <p className="branch-lock-phrase">Le choix entre interne sans coût, interne avec coût et intervention externe se fera après le diagnostic confirmé.</p>
+            <Field label="Note"><textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Consigne pour le responsable" rows={2} /></Field>
+            {qualifyError ? <p className="hint is-bad" role="alert">{qualifyError}</p> : null}
+            <div className="fm-decision-actions"><Button variant="secondary" onClick={() => { setDecisionDone(false); setQualifyError(''); }}>Conserver en brouillon</Button><Button onClick={() => {
+              if (!qualifyKind) { setQualifyError('Choisissez ce que devient le constat.'); return; }
+              if (!qualifyPriority) { setQualifyError('Choisissez une priorité.'); return; }
+              if (!qualifyOwner) { setQualifyError('Choisissez un responsable.'); return; }
+              setQualifyError('');
+              setDecisionDone(true);
+            }}>Qualifier et affecter</Button></div>
+          </div>
+        ) : (
+          <>
+            {branchLocked ? (
+              <p className="branch-lock-phrase">Le choix entre interne sans coût, interne avec coût et intervention externe se fera après le diagnostic confirmé.</p>
+            ) : (
+              <div className="fm-section-title"><div><span>1</span><p><b>Choisir la branche de traitement</b><small>Une décision explicite oriente le reste du dossier.</small></p></div></div>
+            )}
+            <div className={`branch-selector ${branchLocked ? 'is-locked' : ''}`} aria-label="Branche de traitement" aria-disabled={branchLocked} hidden={branchLocked}>
+              <button type="button" disabled={branchLocked} aria-pressed={branch === 'internal'} className={branch === 'internal' ? 'active' : ''} onClick={() => {setBranch('internal');setAmount('0')}}><span>A</span><b>Interne sans coût</b><small>Action dans le périmètre agent</small></button>
+              <button type="button" disabled={branchLocked} aria-pressed={branch === 'cost'} className={branch === 'cost' ? 'active' : ''} onClick={() => setBranch('cost')}><span>B</span><b>Interne avec coût</b><small>Achat ou petite prestation</small></button>
+              <button type="button" disabled={branchLocked} aria-pressed={branch === 'external'} className={branch === 'external' ? 'active' : ''} onClick={() => setBranch('external')}><span>C</span><b>Intervention externe</b><small>Devis et entreprise référencée</small></button>
+            </div>
+            {branchLocked && <div className="branch-lock-note visually-hidden" role="note"><BrandIcon name="lock" size={18} /><div><b>Choix de branche indisponible à cette étape</b><small>Action actuelle : qualifier, affecter, puis attendre le diagnostic confirmé.</small></div></div>}
+            {focusAmount != null ? <div className="dossier-money"><b>{formatMoney(focusAmount)}</b><Badge tone={(focusAmount ?? 0) >= DECISION_THRESHOLD_FCFA ? 'orange' : 'success'}>{(focusAmount ?? 0) >= DECISION_THRESHOLD_FCFA ? 'Au-dessus du seuil' : 'Sous le seuil'}</Badge></div> : null}
+            <div className={`authority-result ${overThreshold || (focusAmount ?? 0) >= DECISION_THRESHOLD_FCFA ? 'escalate' : 'delegated'}`} role="status">
+              <span>{(focusAmount ?? 0) >= DECISION_THRESHOLD_FCFA ? '↑' : '✓'}</span><div><b>{(focusAmount ?? 0) >= DECISION_THRESHOLD_FCFA ? 'Validation de l’Administration requise' : 'Décision dans la délégation de Facility Manager'}</b><small>{(focusAmount ?? 0) >= DECISION_THRESHOLD_FCFA ? `${formatMoney(focusAmount ?? 0)} dépasse ou atteint le seuil de ${formatMoney(DECISION_THRESHOLD_FCFA)}.` : `${formatMoney(focusAmount ?? 0)} reste sous le seuil validé.`}</small></div>
+            </div>
+            <span className="visually-hidden">Qualification requise avant arbitrage financier</span>
+            <Field label="Recommandation"><textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Votre recommandation motivée" rows={2} /></Field>
+            <div className="fm-decision-actions"><Button variant="secondary">Demander un complément</Button><Button variant="secondary">Refuser</Button><Button onClick={() => setDecisionDone(true)}>{(focusAmount ?? 0) >= DECISION_THRESHOLD_FCFA ? 'Soumettre à l’Administration' : 'Valider'}</Button></div>
+          </>
+        )}
 
-        <div className="fm-section-title"><div><span>1</span><p><b>{branchLocked ? 'Préparer la qualification et l’affectation' : 'Choisir la branche de traitement'}</b><small>{branchLocked ? 'Le diagnostic agent doit être enregistré avant le choix de la branche.' : 'Une décision explicite oriente le reste du dossier.'}</small></p></div></div>
-        <div className={`branch-selector ${branchLocked ? 'is-locked' : ''}`} aria-label="Branche de traitement" aria-disabled={branchLocked}>
-          <button type="button" disabled={branchLocked} aria-pressed={branch === 'internal'} className={branch === 'internal' ? 'active' : ''} onClick={() => {setBranch('internal');setAmount('0')}}><span>A</span><b>Interne sans coût</b><small>Action dans le périmètre agent</small></button>
-          <button type="button" disabled={branchLocked} aria-pressed={branch === 'cost'} className={branch === 'cost' ? 'active' : ''} onClick={() => setBranch('cost')}><span>B</span><b>Interne avec coût</b><small>Achat ou petite prestation</small></button>
-          <button type="button" disabled={branchLocked} aria-pressed={branch === 'external'} className={branch === 'external' ? 'active' : ''} onClick={() => setBranch('external')}><span>C</span><b>Intervention externe</b><small>Devis et entreprise référencée</small></button>
+        <details className="dossier-treatment-details">
+          <summary>Détails de traitement</summary>
+          {focus.id.startsWith('REQ-') ? <p className="hint">Notification hors score. Qualification requise avant toute branche de traitement.</p> : <AntiZombieSummary data={adaptDossierToAntiZombieSummary(focus)} variant="standard" hideMissing />}
+        </details>
+        {decisionDone && <div className="inline-success" role="status"><span>✓</span><p><b>{focus.status === 'À qualifier' || focus.horsScore ? 'Qualifié et affecté' : 'Proposition préparée'}</b><small>Elle reste distincte de l’état actuel du dossier jusqu’à son enregistrement côté serveur.</small></p></div>}
+        <div className="dossier-history-block">
+          <h3>Historique</h3>
+          {historyLines.length ? <ul className="hist">{historyLines.map((line) => <li key={`${line.at}-${line.text}`}><span>{line.at}</span>{line.text}</li>)}</ul> : <p className="hint">Données insuffisantes</p>}
         </div>
-        {branchLocked && <div className="branch-lock-note" role="note"><BrandIcon name="lock" size={18} /><div><b>Choix de branche indisponible à cette étape</b><small>Action actuelle : qualifier, affecter, puis attendre le diagnostic confirmé.</small></div></div>}
-
-        <div className="fm-decision-fields">
-          <label className="field proposed-field">Nouveau responsable proposé<small>Valeur actuelle : {canonicalResponsible(focus) ?? 'Responsable non attribué'}</small>{externalActorConcerned(focus) && <small>Acteur externe concerné : {externalActorConcerned(focus)}</small>}<Select key={`owner-${focus.id}`} defaultValue={focus.asset === 'DEMO-EAU' || focus.asset === 'DEMO-SSI' ? 'Agent Eau & Incendie Démo' : 'Agent Électricité Démo'}><option>Agent Eau & Incendie Démo</option><option>Agent Électricité Démo</option><option>Agente Rondes & Assistance Démo</option></Select></label>
-          <label className="field proposed-field">Nouvelle échéance proposée<small>Valeur actuelle : {focus.due}</small><DateTimeInput key={`due-${focus.id}`} defaultValue="2026-08-28T12:00" /></label>
-          <label className="field proposed-field">Coût estimé proposé (FCFA)<small>Non enregistré</small><input type="number" min="0" step="10000" value={amount} onChange={(event) => setAmount(event.target.value)} disabled={branchLocked || branch === 'internal'} /></label>
-        </div>
-
-        <div className={`authority-result ${branchLocked ? 'pending' : overThreshold ? 'escalate' : 'delegated'}`} role="status">
-          <span>{branchLocked ? '⌁' : overThreshold ? '↑' : '✓'}</span><div><b>{branchLocked ? 'Qualification requise avant arbitrage financier' : overThreshold ? 'Validation de l’Administration requise' : 'Décision dans la délégation de Facility Manager'}</b><small>{branchLocked ? `Le seuil de ${formatMoney(DECISION_THRESHOLD_FCFA)} sera appliqué après le diagnostic et le choix de la branche.` : overThreshold ? `${formatMoney(amountValue)} dépasse ou atteint le seuil de ${formatMoney(DECISION_THRESHOLD_FCFA)}.` : `${formatMoney(amountValue)} reste sous le seuil validé.`}</small></div>
-        </div>
-        <Field label={branchLocked ? 'Note de qualification' : 'Décision motivée'}><textarea defaultValue={branchLocked ? 'Affectation proposée pour réaliser et confirmer le diagnostic terrain.' : overThreshold ? 'Intervention à soumettre avec devis et justification de continuité de service.' : 'Intervention autorisée pour rétablir le fonctionnement et éviter une récidive.'} /></Field>
-        <div className="fm-decision-actions"><small>Proposition de maquette · la synthèse conserve les valeurs actuelles tant qu’aucune transaction n’est confirmée</small><Button variant="secondary" onClick={() => setDecisionDone(false)}>Conserver en brouillon</Button><Button onClick={() => setDecisionDone(true)}>{branchLocked ? 'Préparer l’affectation' : overThreshold ? 'Soumettre à l’Administration' : 'Préparer la décision'}</Button></div>
-        {decisionDone && <div className="inline-success" role="status"><span>✓</span><p><b>Proposition préparée</b><small>Elle reste distincte de l’état actuel du dossier jusqu’à son enregistrement côté serveur.</small></p></div>}
       </Card> : null}
       </div>
     </section>
@@ -1724,7 +2075,7 @@ function Detail({ anomaly, decisionAmount, persistenceMode, onBack, onStatus, on
   return <>
     <input ref={proofInput} className="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(event) => { const file = event.target.files?.[0]; if (file) void submitProof(file); event.currentTarget.value = ''; }} />
     <button className="back-button dossier-back" onClick={onBack}>← Retour à la file</button>
-    <section className="dossier-hero"><div><div className="detail-labels"><Badge tone={priorityTone(anomaly.priority)}>{anomaly.priority}</Badge>{anomaly.delayed && anomaly.status !== 'Clôturée' && <Badge tone="critical">EN RETARD</Badge>}{readOnly && <Badge tone="neutral">CONSULTATION</Badge>}<span>{anomaly.id}</span></div><h2>{anomaly.title}</h2><p>{anomaly.asset} · {anomaly.location}</p></div></section>
+    <section className="dossier-hero"><div><div className="detail-labels"><Badge tone={priorityTone(anomaly.priority)}>{anomaly.priority}</Badge>{anomaly.delayed && anomaly.status !== 'Clôturée' && <Badge tone="critical">En retard</Badge>}{readOnly && <Badge tone="neutral">CONSULTATION</Badge>}<span>{anomaly.id}</span></div><h2>{anomaly.title}</h2><p>{anomaly.asset} · {anomaly.location}</p></div></section>
     <section className="dossier-workflow" aria-label="Cycle du dossier">{workflow.map((item,index) => <div key={item} className={index < currentStep ? 'done' : index === currentStep ? 'current' : ''}><span>{index < currentStep ? '✓' : index+1}</span><b>{item}</b></div>)}</section>
     {anomaly.priority === 'Critique' && !anomaly.proof && <section className="critical-banner dossier-critical"><BrandIcon name="circleAlert" size={18} /><div><b>Clôture verrouillée jusqu’à l’acceptation de la preuve</b><p>{anomaly.proofPending ? 'Une preuve a été déposée et attend le contrôle de Facility Manager.' : 'La matrice des preuves exige une pièce conforme avant clôture.'}</p></div>{!readOnly && !anomaly.proofPending && <button disabled={busy} onClick={chooseProof}>＋ Ajouter une preuve</button>}</section>}
     <div className="dossier-continuity"><AntiZombieSummary data={adaptDossierToAntiZombieSummary(anomaly)} variant="detailed" /></div>
@@ -1806,13 +2157,17 @@ function Report({ persona, onNavigate }: { persona:Persona; onNavigate:(v:View)=
   const [checks, setChecks] = useState<Record<string,boolean>>({ auto:true, p1:false, p2:true, leak:true, valves:true, alarm:true });
   const setCheck = (key:string) => setChecks((items) => ({ ...items, [key]:!items[key] }));
 
+  if (persona.id === 'electricite') {
+    return <Ge01AgentForm agentName={persona.name} />;
+  }
+
   if (!surpresseurAccess) {
     const isRoundsAssistance = persona.id === 'rondes_assistance';
     return <>
       <section className="section-heading round-heading"><div><p className="design-kicker">{persona.id === 'electricite' ? 'SAISIE DIRECTE · GE-01' : 'SAISIE DIRECTE · MAQUETTE CIBLE'}</p><h2 className="visually-hidden">Rondes</h2><p>{isRoundsAssistance ? 'Ronde cleaning & jardinage' : persona.id === 'electricite' ? 'Ronde GE-01 · groupe électrogène ELCOS, saisie directe' : 'Ronde technique'} : un constat terrain est enregistré dans l’application puis transmis à Facility Manager pour qualification.</p></div><span className="mockup-label">Aucun import</span></section>
       <section className="quick-round-layout">
         <form className="panel quick-round-card" onSubmit={(event) => { event.preventDefault(); setSubmitted(true); }}>
-          <div className="round-card-head"><span className="round-icon">{isRoundsAssistance ? 'R' : 'GE'}</span><div><b>{isRoundsAssistance ? 'DEMO-RND' : 'DEMO-GE'}</b><small>{isRoundsAssistance ? 'Périmètre cleaning et jardinage' : 'Périmètre électrique autorisé'}</small></div><span className="mockup-label">MAQUETTE</span></div>
+          <div className="round-card-head"><span className="round-icon">{isRoundsAssistance ? 'R' : 'GE'}</span><div><b>{isRoundsAssistance ? displayAssetCode('DEMO-RND') : displayAssetCode('DEMO-GE')}</b><small>{isRoundsAssistance ? 'Périmètre cleaning et jardinage' : 'Périmètre électrique autorisé'}</small></div><span className="mockup-label">MAQUETTE</span></div>
           <div className="two-fields"><label className="field">Zone<Select defaultValue={isRoundsAssistance ? 'Jardin nord' : 'Local groupe électrogène'}><option>{isRoundsAssistance ? 'Jardin nord' : 'Local groupe électrogène'}</option><option>{isRoundsAssistance ? 'Atrium restaurant' : 'Local TGBT'}</option></Select></label><label className="field">Type de contrôle<Select><option>{isRoundsAssistance ? 'Propreté & état' : 'Ronde préventive'}</option><option>{isRoundsAssistance ? 'Jardinage' : 'Constat incident'}</option></Select></label></div>
           <label className="field">Constat<textarea defaultValue={isRoundsAssistance ? 'Présence d’eau stagnante près de l’accès jardin nord.' : 'Mode AUTO confirmé. Tension batterie à contrôler au prochain démarrage.'} /></label>
           <div className="evidence-drop"><BrandIcon name="camera" size={20} /><div><b>Ajouter une photo</b><small>La pièce reste attachée au constat, jamais importée comme reporting.</small></div></div>
@@ -1832,7 +2187,7 @@ function Report({ persona, onNavigate }: { persona:Persona; onNavigate:(v:View)=
 
   return <>
     <section className="surpresseur-hero">
-      <div className="surpresseur-identity"><span className="surpresseur-monogram">WI</span><div><p className="design-kicker">MODULE PILOTE · SURPRESSEUR</p><h2 className="visually-hidden">Rondes</h2><p>Ronde Surpresseur · DEMO-EAU · Sous-sol · Local surpresseur · Fréquence quotidienne</p></div></div>
+      <div className="surpresseur-identity"><span className="surpresseur-monogram">WI</span><div><p className="design-kicker">MODULE PILOTE · SURPRESSEUR</p><h2 className="visually-hidden">Rondes</h2><p>Ronde Surpresseur · {displayAssetCode('DEMO-EAU')} · Sous-sol · Local surpresseur · Fréquence quotidienne</p></div></div>
     </section>
 
     <SyncStatusNotice state="demo-volatile" label="État de la ronde Surpresseur" />
@@ -1853,7 +2208,7 @@ function Report({ persona, onNavigate }: { persona:Persona; onNavigate:(v:View)=
 
         {step === 3 && <div className="surpresseur-fields"><div className="check-grid compact">{[['valves','Vannes en position normale','Aspiration et refoulement'],['alarm','Aucune alarme active','Coffret et supervision']].map(([key,title,detail]) => <button type="button" key={key} className={checks[key] ? 'checked' : 'unchecked'} onClick={() => setCheck(key)}><span>{checks[key] ? '✓' : '!'}</span><p><b>{title}</b><small>{detail}</small></p><em>{checks[key] ? 'Conforme' : 'À signaler'}</em></button>)}</div><label className="field">Observation terrain<textarea value={observation} onChange={(event) => setObservation(event.target.value)} /></label><div className="evidence-drop"><BrandIcon name="camera" size={20} /><div><b>Photo du manomètre ou du coffret</b><small>Illustration de maquette · compression et synchronisation non implémentées</small></div><button type="button">Choisir</button></div></div>}
 
-        {step === 4 && <div className="surpresseur-fields"><div className="round-summary"><div><span>MESURES</span><b className={hasPressureAlert ? 'warning' : ''}>{pressure} bar</b><small>Pression réseau</small></div><div><span>NIVEAU</span><b>{tankLevel} %</b><small>Bâche de stockage</small></div><div><span>CONTRÔLES</span><b>{completedChecks}/6</b><small>Points conformes</small></div></div><div className="proposed-finding"><span>!</span><div><p>CONSTAT PROPOSÉ</p><h4>Pression Surpresseur sous le seuil attendu</h4><small>Priorité proposée : Haute · Transmission à la file de qualification de Facility Manager.</small></div><Badge tone="orange">À QUALIFIER</Badge></div><label className="confirmation-line"><input type="checkbox" defaultChecked /><span>Je confirme que les valeurs correspondent à la ronde réalisée sur DEMO-EAU.</span></label></div>}
+        {step === 4 && <div className="surpresseur-fields"><div className="round-summary"><div><span>MESURES</span><b className={hasPressureAlert ? 'warning' : ''}>{pressure} bar</b><small>Pression réseau</small></div><div><span>NIVEAU</span><b>{tankLevel} %</b><small>Bâche de stockage</small></div><div><span>CONTRÔLES</span><b>{completedChecks}/6</b><small>Points conformes</small></div></div><div className="proposed-finding"><span>!</span><div><p>CONSTAT PROPOSÉ</p><h4>Pression Surpresseur sous le seuil attendu</h4><small>Priorité proposée : Haute · Transmission à la file de qualification de Facility Manager.</small></div><Badge tone="orange">À QUALIFIER</Badge></div><label className="confirmation-line"><input type="checkbox" defaultChecked /><span>Je confirme que les valeurs correspondent à la ronde réalisée sur {displayAssetCode('DEMO-EAU')}.</span></label></div>}
 
         <div className="surpresseur-actions"><button className="secondary-button" disabled={step === 0} onClick={() => setStep((value) => Math.max(0,value-1))}>← Précédent</button><p>Brouillon temporaire dans cette page</p>{step < 4 ? <button className="primary-button" onClick={() => setStep((value) => Math.min(4,value+1))}>Continuer →</button> : <button className="primary-button" onClick={() => setSubmitted(true)}>Valider la maquette</button>}</div>
       </article>

@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BEHIRA FM Track, dossiers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --nuit:#0E2238;--nuit-2:#18324F;--ink:#16202B;--ink-2:#4A5563;--ink-3:#6F7A88;
+  --paper:#F2F4F6;--card:#FFFFFF;--line:#DCE2E8;--line-soft:#EBEFF3;
+  --signal:#1F5FAE;--signal-bg:#E7EFF9;
+  --ok:#1C7F53;--ok-bg:#E2F2EA;--warn:#A85A0C;--warn-bg:#FBEEDC;--bad:#B8352A;--bad-bg:#FBE5E2;
+  --teal:#23B8A4;
+  --display:"Barlow Semi Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --nuit:#0A1A2B;--nuit-2:#14304D;--ink:#E7ECF1;--ink-2:#B3BDC8;--ink-3:#8A95A3;
+  --paper:#0F151C;--card:#17202A;--line:#2A3642;--line-soft:#212B36;
+  --signal:#5B9BE6;--signal-bg:#16304D;
+  --ok:#4CC08A;--ok-bg:#133326;--warn:#E3A04F;--warn-bg:#3A2A14;--bad:#EE7A6E;--bad-bg:#3D1C19;
+}}
+:root[data-theme="dark"]{
+  --nuit:#0A1A2B;--nuit-2:#14304D;--ink:#E7ECF1;--ink-2:#B3BDC8;--ink-3:#8A95A3;
+  --paper:#0F151C;--card:#17202A;--line:#2A3642;--line-soft:#212B36;
+  --signal:#5B9BE6;--signal-bg:#16304D;
+  --ok:#4CC08A;--ok-bg:#133326;--warn:#E3A04F;--warn-bg:#3A2A14;--bad:#EE7A6E;--bad-bg:#3D1C19;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;font-variant-numeric:tabular-nums}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--signal);outline-offset:2px;border-radius:4px}
+h1,h2,h3{font-family:var(--display);font-weight:600;margin:0;line-height:1.15}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+
+.top{background:var(--nuit);color:#fff}
+.top .wrap{display:flex;align-items:center;gap:24px;height:64px}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:36px;height:36px;border-radius:9px;background:var(--teal);color:#0A1A2B;display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:20px}
+.brand b{font-family:var(--display);font-size:20px;letter-spacing:.04em;display:block;line-height:1}
+.brand small{font-size:11px;color:#9FB2C8;letter-spacing:.06em}
+.nav{display:flex;gap:2px;height:100%}
+.nav a{display:flex;align-items:center;padding:0 11px;color:#B9C7D6;text-decoration:none;font-weight:500;border-bottom:3px solid transparent}
+.nav a[aria-current]{color:#fff;border-color:var(--teal)}
+.nav .n{background:var(--bad);color:#fff;font-size:11px;border-radius:999px;padding:0 6px;margin-left:5px}
+.who{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:13px}
+.av{width:32px;height:32px;border-radius:50%;background:var(--nuit-2);display:grid;place-items:center;font-weight:600;font-size:12px}
+.demo{background:#F6D9B0;color:#6B3B06;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px}
+
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:6px;white-space:nowrap}
+.p-ok{background:var(--ok-bg);color:var(--ok)}.p-warn{background:var(--warn-bg);color:var(--warn)}.p-bad{background:var(--bad-bg);color:var(--bad)}.p-mute{background:var(--line-soft);color:var(--ink-2)}.p-sig{background:var(--signal-bg);color:var(--signal)}
+.btn{border-radius:8px;border:1px solid var(--line);background:var(--card);padding:7px 12px;font-weight:600;font-size:13px}
+.btn:hover{background:var(--paper)}
+.btn-main{background:var(--signal);border-color:var(--signal);color:#fff}
+.btn-main:hover{filter:brightness(1.08);background:var(--signal)}
+.linkbtn{background:none;border:0;padding:4px 0;color:var(--signal);font-weight:600;font-size:13px}
+
+
+.ph{background:var(--nuit);color:#fff;padding:18px 0 0}
+.ph .row1{display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap}
+.ph h1{font-size:38px}
+.ph p{margin:2px 0 0;color:#B9C7D6;font-size:14px}
+.ph .srch{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:8px;padding:8px 12px;min-width:280px}
+.ph .srch::placeholder{color:#9FB2C8}
+.tabs{display:flex;gap:22px;margin-top:14px}
+.tabs button{background:none;border:0;color:#9FB2C8;font-weight:600;padding:10px 0;border-bottom:3px solid transparent}
+.tabs button[aria-selected="true"]{color:#fff;border-color:var(--teal)}
+.tabs .cnt{font-size:11px;background:rgba(255,255,255,.14);border-radius:999px;padding:1px 7px;margin-left:5px}
+.filters{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:14px 0}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:500;color:var(--ink-2)}
+.chip b{margin-left:4px;color:var(--ink)}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.chip[aria-pressed="true"] b{color:var(--card)}
+.chip.zero{opacity:.55}
+.spacer{flex:1}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 460px;gap:18px;align-items:start;padding-bottom:40px}
+.list{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.item{width:100%;display:grid;grid-template-columns:4px minmax(0,1fr) auto;gap:12px;text-align:left;background:none;border:0;border-bottom:1px solid var(--line-soft);padding:12px 16px 12px 0}
+.item:last-child{border-bottom:0}
+.item:hover{background:var(--paper)}
+.item[aria-current="true"]{background:var(--signal-bg)}
+.item .g{border-radius:0 2px 2px 0}
+.item h3{font-family:var(--body);font-size:15px;font-weight:600}
+.item .sub{font-size:13px;color:var(--ink-2);margin-top:2px}
+.item .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.item .rt{text-align:right;font-size:13px;display:flex;flex-direction:column;gap:4px;align-items:flex-end}
+.item .rt .amt{font-weight:600}
+.origin{font-size:11px;font-weight:600;color:var(--ink-3);border:1px solid var(--line);border-radius:6px;padding:1px 6px}
+.empty{padding:28px 20px;color:var(--ink-2)}
+.detail{background:var(--card);border:1px solid var(--line);border-radius:14px;position:sticky;top:12px}
+.dh{padding:16px 20px;border-bottom:1px solid var(--line)}
+.dh .ids{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--ink-3)}
+.dh h2{font-size:26px;margin-top:6px}
+.dh p{margin:2px 0 0;font-size:13px;color:var(--ink-2)}
+.next{margin:14px 20px 0;padding:12px 14px;border-radius:10px;background:var(--paper)}
+.next .k{font-size:12px;color:var(--ink-3);font-weight:600}
+.next .v{font-weight:600;margin-top:2px}
+.next .due{font-size:13px;font-weight:600;margin-top:2px}
+.steps{display:flex;margin:14px 20px 0;gap:4px}
+.steps div{flex:1;font-size:11px;color:var(--ink-3);text-align:center}
+.steps div i{display:block;height:4px;border-radius:2px;background:var(--line);margin-bottom:4px}
+.steps div.done i{background:var(--signal)}
+.steps div.now{color:var(--signal);font-weight:600}
+.steps div.now i{background:var(--signal)}
+.blk{padding:14px 20px;border-top:1px solid var(--line-soft);margin-top:14px}
+.blk h3{font-size:18px;margin-bottom:8px}
+.lbl{display:block;font-size:13px;font-weight:600;color:var(--ink-2);margin:10px 0 4px}
+.inp{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--card)}
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px}
+.seg button{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:8px 4px;font-size:13px;font-weight:600}
+.seg button[aria-pressed="true"]{background:var(--signal-bg);border-color:var(--signal);color:var(--signal)}
+.hint{font-size:12px;color:var(--ink-3);margin:4px 0 0}
+.lock{font-size:13px;color:var(--ink-2);background:var(--paper);border-radius:8px;padding:8px 10px;margin-top:10px}
+.foot{display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:1px solid var(--line);flex-wrap:wrap}
+.money{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.money b{font-family:var(--display);font-size:32px;font-weight:600}
+.hist{list-style:none;margin:0;padding:0}
+.hist li{display:grid;grid-template-columns:56px minmax(0,1fr);gap:10px;font-size:13px;padding:5px 0}
+.hist li span{color:var(--ink-3)}
+.err{color:var(--bad);font-size:12px;margin:4px 0 0}
+@media (max-width:1000px){.layout{grid-template-columns:1fr}.detail{position:static}.nav{display:none}.ph .srch{min-width:0;width:100%}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><div class="logo" aria-hidden="true">B</div><div><b>BEHIRA</b><small>FM Track</small></div></div>
+    <nav class="nav" aria-label="Navigation principale">
+      <a href="#">Accueil</a><a href="#" aria-current="page">Dossiers<span class="n">7</span></a><a href="#">Rondes</a><a href="#">Équipements</a><a href="#">Pilotage</a><a href="#">Plus</a>
+    </nav>
+    <div class="who"><span class="demo">Démo</span><div class="av" aria-hidden="true">FM</div><div class="nm">Facility Manager Démo<br><span style="color:#9FB2C8">SCI Groupe Behira</span></div></div>
+  </div>
+</header>
+
+<section class="ph">
+  <div class="wrap">
+    <div class="row1">
+      <div><h1>Dossiers</h1><p>Constats, notifications, tickets et arbitrages au même endroit. Seuil de délégation : 400 000 FCFA.</p></div>
+      <input class="srch" id="q" type="search" placeholder="Code, équipement, zone ou titre" aria-label="Rechercher un dossier">
+    </div>
+    <div class="tabs" role="tablist">
+      <button role="tab" data-t="todo" aria-selected="true">À traiter<span class="cnt" id="c-todo"></span></button>
+      <button role="tab" data-t="all" aria-selected="false">Tous<span class="cnt" id="c-all"></span></button>
+      <button role="tab" data-t="closed" aria-selected="false">Clôturés<span class="cnt" id="c-closed"></span></button>
+    </div>
+  </div>
+</section>
+
+<main class="wrap">
+  <div class="filters" id="filters" role="group" aria-label="Filtres"></div>
+  <div class="layout">
+    <div class="list" id="list" aria-label="Liste des dossiers"></div>
+    <aside class="detail" id="detail" aria-live="polite"></aside>
+  </div>
+</main>
+
+<script>
+const SEUIL=400000;
+const fmt=n=>n.toLocaleString("fr-FR").replace(/\u202f|\u00a0/g," ")+" FCFA";
+const GR={Critique:["var(--bad)","p-bad"],Haute:["var(--warn)","p-warn"],Moyenne:["var(--signal)","p-sig"],Faible:["var(--ink-3)","p-mute"],Notification:["var(--ink-3)","p-mute"]};
+const STEPS=["Constat","Qualification","Décision","Intervention","Preuve","Clôture"];
+const D=[
+ {id:"ANO-0241",t:"Pression réseau incendie instable",eq:"RIA-01",z:"Sous-sol, local incendie",g:"Critique",st:1,o:"Agent Eau et incendie",due:"Aujourd'hui 09:00",late:false,resp:null,amt:null,score:true,
+  next:"Qualifier et affecter",h:[["07:40","Constat créé à la ronde RIA-01, pression sous le seuil"],["07:41","Photo du manomètre jointe"]]},
+ {id:"ANO-0238",t:"Arrêts intermittents au niveau R+7",eq:"ASC-A2",z:"Tour A, ascenseur 2",g:"Haute",st:2,o:"Agent Électricité",due:"23/08 18:00",late:true,resp:"PREST-ASC, externe",amt:950000,score:true,
+  next:"Arbitrer : intervention interne ou PREST-ASC",h:[["23/08","Échéance dépassée"],["20/08","Devis PREST-ASC reçu"],["18/08","Qualifié en ticket, priorité haute"]]},
+ {id:"ANO-0234",t:"Deuxième réarmement du surpresseur en 7 jours",eq:"WILO-01",z:"Local technique RDC",g:"Haute",st:2,o:"Agent Eau et incendie",due:"Aujourd'hui 17:00",late:false,resp:"PREST-EAU, externe",amt:1900000,score:true,
+  next:"Décider du remplacement de la pompe P1",h:[["07:15","Ronde : état dégradé confirmé"],["hier","Diagnostic PREST-EAU déposé"]]},
+ {id:"ANO-0231",t:"Remplacement préventif du banc batteries",eq:"GE-01",z:"RDC, local groupe",g:"Moyenne",st:2,o:"Agent Électricité",due:"Aujourd'hui 15:00",late:false,resp:"Agent Électricité, interne",amt:320000,score:true,
+  next:"Valider la dépense sous délégation",h:[["11/09","Alerte batterie 24,6 V à la ronde"],["12/09","Qualifié en ticket"]]},
+ {id:"NOT-0112",t:"Infiltration légère, atrium restaurant",eq:"Zone",z:"RDC, atrium restaurant",g:"Notification",st:1,o:"Rondes et services",due:"Aujourd'hui 12:00",late:false,resp:null,amt:null,score:false,
+  next:"Décider : notification, ticket ou urgence",h:[["07:05","Notification créée par l'agente rondes, photo jointe"]]},
+ {id:"ANO-0222",t:"Porte coupe-feu maintenue ouverte",eq:"Zone",z:"R+4, circulation Est",g:"Haute",st:1,o:"Rondes et services",due:"Aujourd'hui 14:00",late:false,resp:null,amt:null,score:true,
+  next:"Qualifier et affecter",h:[["08:02","Constat créé, cale retirée sur place"]]},
+ {id:"NOT-0113",t:"Encombrement du local poubelles",eq:"Zone",z:"RDC, local poubelles",g:"Notification",st:1,o:"Rondes et services",due:"Demain 12:00",late:false,resp:null,amt:null,score:false,
+  next:"Décider : notification, ticket ou urgence",h:[["08:20","Deuxième signalement cette semaine"]]},
+ {id:"ANO-0218",t:"Niveau carburant inférieur au seuil",eq:"GE-01",z:"RDC, local groupe",g:"Moyenne",st:3,o:"Agent Électricité",due:"Aujourd'hui 17:00",late:false,resp:"PREST-GE, externe",amt:180000,score:true,
+  next:"En attente de la livraison PREST-GE",wait:true,h:[["hier","Commande validée sous délégation"]]},
+ {id:"ANO-0229",t:"Électrovanne zone jardin bloquée",eq:"IRR-01",z:"Extérieur, jardin nord",g:"Faible",st:6,o:"Rondes et services",due:"Clôturé le 20/08",late:false,resp:"PREST-ESP, externe",amt:null,score:true,closed:true,next:"Clôturé",h:[["20/08","Clôture, preuve jointe"]]},
+ {id:"ANO-0226",t:"Éclairage cabine défaillant",eq:"ASC-A1",z:"Tour A, ascenseur 1",g:"Moyenne",st:6,o:"Agent Électricité",due:"Clôturé le 22/08",late:false,resp:"PREST-ASC, externe",amt:null,score:true,closed:true,next:"Clôturé",h:[["22/08","DEC-014 : clôture approuvée par l'Administration"]]}
+];
+const lab=d=>d.closed?"Clôturé":d.st===1?"À qualifier":d.st===2?"À décider":"En intervention";
+const stepNow=d=>d.closed?7:d.st+1;
+const todo=d=>!d.closed&&!d.wait;
+const TAB={todo:D.filter(todo),all:D.filter(d=>!d.closed),closed:D.filter(d=>d.closed)};
+for(const k in TAB)document.getElementById("c-"+k).textContent=TAB[k].length;
+const F=[
+ ["qual","À qualifier",d=>d.st===1],
+ ["dec","À décider",d=>d.st===2],
+ ["late","En retard",d=>d.late],
+ ["noresp","Sans responsable",d=>!d.resp&&!d.closed],
+ ["above","Au-dessus du seuil",d=>d.amt>=SEUIL],
+ ["proof","Preuves à vérifier",d=>d.st===4]
+];
+let tab="todo",flt=null,sel="ANO-0241",form={};
+function list(){
+ const q=document.getElementById("q").value.trim().toLowerCase();
+ let L=TAB[tab];
+ const fx=F.find(f=>f[0]===flt);
+ if(fx)L=L.filter(fx[2]);
+ if(q)L=L.filter(d=>(d.id+d.t+d.eq+d.z).toLowerCase().includes(q));
+ const order={true:0,false:1};
+ L=[...L].sort((a,b)=>(order[a.late]-order[b.late])||(a.due.startsWith("Aujourd")?0:1)-(b.due.startsWith("Aujourd")?0:1)||a.due.localeCompare(b.due));
+ return L;
+}
+function draw(){
+ document.getElementById("filters").innerHTML=F.map(f=>{const n=TAB[tab].filter(f[2]).length;return `<button class="chip${n?"":" zero"}" data-f="${f[0]}" aria-pressed="${flt===f[0]}">${f[1]}<b>${n}</b></button>`}).join("")+(tab==="all"?'<span class="spacer"></span><button class="btn" type="button">Exporter</button>':"");
+ document.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{flt=flt===b.dataset.f?null:b.dataset.f;draw()});
+ const L=list();
+ const box=document.getElementById("list");
+ if(!L.length){box.innerHTML='<div class="empty">Aucun dossier ne correspond. Retirez le filtre ou modifiez la recherche.</div>'}
+ else box.innerHTML=L.map(d=>`<button class="item" type="button" data-id="${d.id}" aria-current="${d.id===sel}">
+  <span class="g" style="background:${GR[d.g][0]}"></span>
+  <span><h3>${d.t}</h3><span class="sub" style="display:block">${d.eq==="Zone"?d.z:d.eq+", "+d.z}</span>
+   <span class="tags"><span class="pill ${GR[d.g][1]}">${d.g}</span><span class="pill p-mute">${lab(d)}</span><span class="origin">${d.o}</span>${d.score?"":'<span class="origin">Hors score</span>'}</span></span>
+  <span class="rt"><span style="${d.late?"color:var(--bad);font-weight:600":"color:var(--ink-2)"}">${d.late?"En retard, ":""}${d.due}</span>
+   ${d.amt?`<span class="amt">${fmt(d.amt)}</span>`:""}${d.amt>=SEUIL?'<span class="pill p-warn">Administration</span>':""}
+   <span style="color:${d.resp?"var(--ink-3)":"var(--bad)"}">${d.resp||"Sans responsable"}</span></span>
+ </button>`).join("");
+ box.querySelectorAll(".item").forEach(b=>b.onclick=()=>{sel=b.dataset.id;form={};draw();if(matchMedia("(max-width:1000px)").matches)document.getElementById("detail").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})});
+ if(!L.find(d=>d.id===sel)&&L.length)sel=L[0].id;
+ detail(D.find(d=>d.id===sel&&L.includes(d)));
+}
+function segs(k,opts){return `<div class="seg">${opts.map(o=>`<button type="button" data-k="${k}" data-v="${o}" aria-pressed="${form[k]===o}">${o}</button>`).join("")}</div>`}
+function costNote(){
+ const v=Number(String(form.cost||"").replace(/\s/g,""));
+ if(!form.cost)return `<p class="hint">Facultatif à ce stade. À partir de ${fmt(SEUIL)}, la décision revient à l'Administration.</p>`;
+ if(isNaN(v)||v<0)return '<p class="err">Saisissez un montant en chiffres.</p>';
+ return v>=SEUIL?`<p class="hint" style="color:var(--warn)">Au-dessus du seuil : la décision sera soumise à l'Administration.</p>`:`<p class="hint" style="color:var(--ok)">Sous le seuil : vous pourrez valider vous-même.</p>`;
+}
+function detail(d){
+ const el=document.getElementById("detail");
+ if(!d){el.innerHTML='<div class="empty">Sélectionnez un dossier pour voir son détail.</div>';return}
+ let body="";
+ if(d.st===1){
+  const isNot=d.id.startsWith("NOT");
+  body=`<div class="blk"><h3>Qualifier</h3>
+   <span class="lbl">Ce constat devient</span>${segs("type",["Notification","Ticket","Urgence"])}
+   ${form.type==="Urgence"?'<p class="hint" style="color:var(--bad)">Intervention immédiate autorisée, l\'Administration sera informée.</p>':form.type==="Notification"?'<p class="hint">Reste hors score, suivi par l\'agente rondes.</p>':""}
+   ${form.type&&form.type!=="Notification"?`<span class="lbl">Priorité</span>${segs("prio",["Critique","Haute","Moyenne","Faible"])}`:""}
+   <div class="g2"><div><label class="lbl" for="resp">Responsable</label><select class="inp" id="resp"><option value="">Choisir</option><option>Agent Eau et incendie</option><option>Agent Électricité</option><option>Agente Rondes</option><option>Prestataire externe</option></select></div>
+   <div><label class="lbl" for="due">Échéance</label><input class="inp" id="due" type="datetime-local" value="2026-09-16T12:00"></div></div>
+   ${form.type&&form.type!=="Notification"?`<label class="lbl" for="cost">Coût estimé</label><input class="inp" id="cost" inputmode="numeric" placeholder="280 000" value="${form.cost||""}">${costNote()}`:""}
+   <p class="lock">Le choix entre interne sans coût, interne avec coût et intervention externe se fera après le diagnostic confirmé.</p>
+   <label class="lbl" for="note">Note</label><textarea class="inp" id="note" rows="2" placeholder="Consigne pour le responsable"></textarea>
+   <div id="ferr"></div></div>
+   <div class="foot"><button class="btn" type="button">Conserver en brouillon</button><button class="btn btn-main" type="button" id="go">Qualifier et affecter</button></div>`;
+ } else if(d.st===2){
+  const above=d.amt>=SEUIL;
+  body=`<div class="blk"><h3>Décider</h3>
+   <div class="money"><b>${fmt(d.amt)}</b><span class="pill ${above?"p-warn":"p-ok"}">${above?"Au-dessus du seuil":"Sous le seuil"}</span></div>
+   <p class="hint">${above?"Votre rôle : proposer une décision. L'Administration valide.":"Vous pouvez valider directement."}</p>
+   <label class="lbl" for="note">Recommandation</label><textarea class="inp" id="note" rows="2" placeholder="Votre recommandation motivée"></textarea></div>
+   <div class="foot"><button class="btn" type="button">Demander un complément</button><button class="btn" type="button">Refuser</button><button class="btn btn-main" type="button" id="go">${above?"Soumettre à l'Administration":"Valider la dépense"}</button></div>`;
+ } else {
+  body=`<div class="blk"><h3>${d.closed?"Dossier clôturé":"En cours"}</h3><p class="hint" style="font-size:13px">${d.closed?"Consultation seule. Vous pouvez proposer une réouverture.":"Aucune action de votre part pour le moment."}</p>
+   ${d.amt?`<div class="money" style="margin-top:8px"><b>${fmt(d.amt)}</b><span class="pill p-ok">Sous le seuil</span></div>`:""}</div>
+   <div class="foot">${d.closed?'<button class="btn" type="button">Proposer une réouverture</button>':'<button class="btn" type="button">Relancer le responsable</button>'}</div>`;
+ }
+ el.innerHTML=`<div class="dh"><div class="ids"><span class="pill ${GR[d.g][1]}">${d.g}</span><span>${d.id}</span><span class="origin">${d.o}</span></div>
+  <h2>${d.t}</h2><p>${d.eq==="Zone"?d.z:d.eq+", "+d.z}${d.score?"":". Hors score tant que non qualifié"}</p></div>
+  <div class="next"><div class="k">Prochaine action</div><div class="v">${d.next}</div>
+   <div class="due" style="color:${d.late?"var(--bad)":"var(--ink-2)"}">${d.late?"En retard depuis le ":""}${d.due}${d.resp?", "+d.resp:""}</div></div>
+  <div class="steps" aria-label="Avancement">${STEPS.map((s,i)=>`<div class="${i+1<stepNow(d)?"done":i+1===stepNow(d)?"now":""}"><i></i>${s}</div>`).join("")}</div>
+  ${body}
+  <div class="blk"><h3>Historique</h3><ul class="hist">${d.h.map(h=>`<li><span>${h[0]}</span>${h[1]}</li>`).join("")}</ul></div>`;
+ el.querySelectorAll("[data-k]").forEach(b=>b.onclick=()=>{form[b.dataset.k]=b.dataset.v;detail(d)});
+ const c=el.querySelector("#cost");if(c)c.oninput=()=>{form.cost=c.value;const n=c.nextElementSibling;n.outerHTML=costNote()};
+ const go=el.querySelector("#go");if(go)go.onclick=()=>{
+  const fe=el.querySelector("#ferr");
+  if(d.st===1){
+   const r=el.querySelector("#resp").value;
+   if(!form.type){fe.innerHTML='<p class="err">Choisissez ce que devient le constat.</p>';return}
+   if(form.type!=="Notification"&&!form.prio){fe.innerHTML='<p class="err">Choisissez une priorité.</p>';return}
+   if(!r){fe.innerHTML='<p class="err">Choisissez un responsable.</p>';return}
+   fe.innerHTML=`<p class="hint" style="color:var(--ok)">Qualifié en ${form.type.toLowerCase()} et affecté à ${r}.</p>`;
+  } else {go.textContent=go.textContent.startsWith("Soumettre")?"Soumis à l'Administration":"Dépense validée";go.disabled=false}
+ };
+}
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{tab=b.dataset.t;flt=null;document.querySelectorAll(".tabs button").forEach(x=>x.setAttribute("aria-selected",x===b));draw()});
+document.getElementById("q").addEventListener("input",draw);
+draw();
+</script>
+</body>
+</html>

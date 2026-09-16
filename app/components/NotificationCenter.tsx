@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Badge, BrandIcon, IconButton } from './ui';
+import { displayAssetCode } from '../lib/ui-contract/display.ts';
 
 export type ErrorRuleId = 'critical' | 'sla' | 'health' | 'sync';
 export type ErrorChannel = 'in-app' | 'email';
@@ -104,7 +105,7 @@ export function deriveErrorNotifications({
         id: `critical-${item.id}`,
         rule: 'critical',
         title: `${item.id} · Critique`,
-        detail: `${item.asset} · ${item.title}`,
+        detail: `${displayAssetCode(item.asset)} · ${item.title}`,
         when: 'À traiter',
         tone: 'danger',
         anomalyId: item.id,
@@ -119,7 +120,7 @@ export function deriveErrorNotifications({
         id: `sla-${item.id}`,
         rule: 'sla',
         title: `${item.id} · En retard`,
-        detail: `${item.asset} · échéance dépassée`,
+        detail: `${displayAssetCode(item.asset)} · échéance dépassée`,
         when: 'SLA',
         tone: 'warning',
         anomalyId: item.id,
@@ -133,7 +134,7 @@ export function deriveErrorNotifications({
       items.push({
         id: `health-${item.code}`,
         rule: 'health',
-        title: `${item.code} · ${item.health}/100`,
+        title: `${displayAssetCode(item.code)} · ${item.health}/100`,
         detail: `${item.label} sous le seuil critique 70`,
         when: 'Santé',
         tone: 'danger',

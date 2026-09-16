@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BEHIRA FM Track, accueil Facility Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --nuit:#0E2238;--nuit-2:#18324F;--ink:#16202B;--ink-2:#4A5563;--ink-3:#6F7A88;
+  --paper:#F2F4F6;--card:#FFFFFF;--line:#DCE2E8;--line-soft:#EBEFF3;
+  --signal:#1F5FAE;--signal-bg:#E7EFF9;
+  --ok:#1C7F53;--ok-bg:#E2F2EA;--warn:#A85A0C;--warn-bg:#FBEEDC;--bad:#B8352A;--bad-bg:#FBE5E2;
+  --teal:#23B8A4;
+  --display:"Barlow Semi Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --nuit:#0A1A2B;--nuit-2:#14304D;--ink:#E7ECF1;--ink-2:#B3BDC8;--ink-3:#8A95A3;
+  --paper:#0F151C;--card:#17202A;--line:#2A3642;--line-soft:#212B36;
+  --signal:#5B9BE6;--signal-bg:#16304D;
+  --ok:#4CC08A;--ok-bg:#133326;--warn:#E3A04F;--warn-bg:#3A2A14;--bad:#EE7A6E;--bad-bg:#3D1C19;
+}}
+:root[data-theme="dark"]{
+  --nuit:#0A1A2B;--nuit-2:#14304D;--ink:#E7ECF1;--ink-2:#B3BDC8;--ink-3:#8A95A3;
+  --paper:#0F151C;--card:#17202A;--line:#2A3642;--line-soft:#212B36;
+  --signal:#5B9BE6;--signal-bg:#16304D;
+  --ok:#4CC08A;--ok-bg:#133326;--warn:#E3A04F;--warn-bg:#3A2A14;--bad:#EE7A6E;--bad-bg:#3D1C19;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;font-variant-numeric:tabular-nums}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--signal);outline-offset:2px;border-radius:4px}
+h1,h2,h3{font-family:var(--display);font-weight:600;margin:0;line-height:1.15}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+
+.top{background:var(--nuit);color:#fff}
+.top .wrap{display:flex;align-items:center;gap:24px;height:64px}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:36px;height:36px;border-radius:9px;background:var(--teal);color:#0A1A2B;display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:20px}
+.brand b{font-family:var(--display);font-size:20px;letter-spacing:.04em;display:block;line-height:1}
+.brand small{font-size:11px;color:#9FB2C8;letter-spacing:.06em}
+.nav{display:flex;gap:2px;height:100%}
+.nav a{display:flex;align-items:center;padding:0 11px;color:#B9C7D6;text-decoration:none;font-weight:500;border-bottom:3px solid transparent}
+.nav a[aria-current]{color:#fff;border-color:var(--teal)}
+.nav .n{background:var(--bad);color:#fff;font-size:11px;border-radius:999px;padding:0 6px;margin-left:5px}
+.who{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:13px}
+.av{width:32px;height:32px;border-radius:50%;background:var(--nuit-2);display:grid;place-items:center;font-weight:600;font-size:12px}
+.demo{background:#F6D9B0;color:#6B3B06;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px}
+
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:6px;white-space:nowrap}
+.p-ok{background:var(--ok-bg);color:var(--ok)}.p-warn{background:var(--warn-bg);color:var(--warn)}.p-bad{background:var(--bad-bg);color:var(--bad)}.p-mute{background:var(--line-soft);color:var(--ink-2)}.p-sig{background:var(--signal-bg);color:var(--signal)}
+.btn{border-radius:8px;border:1px solid var(--line);background:var(--card);padding:7px 12px;font-weight:600;font-size:13px}
+.btn:hover{background:var(--paper)}
+.btn-main{background:var(--signal);border-color:var(--signal);color:#fff}
+.btn-main:hover{filter:brightness(1.08);background:var(--signal)}
+.linkbtn{background:none;border:0;padding:4px 0;color:var(--signal);font-weight:600;font-size:13px}
+
+/* Bandeau santé */
+.health{background:var(--nuit);color:#fff;padding:22px 0 30px}
+.health .wrap{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:36px;align-items:stretch}
+.hl{font-size:13px;color:#9FB2C8;margin:0 0 4px;font-weight:500}
+.hscore{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.hscore .v{font-family:var(--display);font-size:84px;font-weight:600;line-height:.9;color:#FF8A7E}
+.hscore .v small{font-size:22px;color:#9FB2C8;margin-left:2px}
+.hscore .st{font-family:var(--display);font-size:26px;font-weight:600}
+.scale{position:relative;height:12px;display:flex;gap:2px;margin-top:18px}
+.scale .z{height:100%}
+.z1{flex:70;background:rgba(255,138,126,.28);border-radius:6px 0 0 6px}.z2{flex:20;background:rgba(240,176,96,.3)}.z3{flex:10;background:rgba(76,192,138,.3);border-radius:0 6px 6px 0}
+.mk-fin{position:absolute;top:-5px;width:22px;height:22px;margin-left:-11px;border-radius:50%;background:#FF8A7E;border:4px solid var(--nuit)}
+.mk-brut{position:absolute;top:-8px;width:2px;height:28px;margin-left:-1px;background:#fff}
+.mk-brut span{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:11px;white-space:nowrap;color:#C9D5E2}
+.slab{position:relative;height:16px;font-size:11px;color:#8FA3BA;margin-top:4px}
+.slab span{position:absolute;transform:translateX(-50%)}
+.meta{display:flex;flex-wrap:wrap;gap:4px 18px;margin-top:10px;font-size:13px;color:#C9D5E2}
+.meta b{color:#fff;font-weight:600}
+.cause{border-left:2px solid #FF8A7E;padding-left:20px;display:flex;flex-direction:column;justify-content:center}
+.cause h2{font-size:32px}
+.cause p{margin:4px 0 0;color:#C9D5E2}
+.cause .req{margin-top:14px;font-weight:600;color:#FFB3AA}
+.cause .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.cause .btn{background:transparent;border-color:rgba(255,255,255,.35);color:#fff}
+.cause .btn:hover{background:rgba(255,255,255,.08)}
+.cause .btn-main{background:#fff;border-color:#fff;color:var(--nuit)}
+.cause .btn-main:hover{background:#E4ECF5}
+
+/* KPI */
+.kpis{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-top:-16px;display:grid;grid-template-columns:repeat(6,minmax(0,1fr))}
+.kpi{padding:14px 18px;border-right:1px solid var(--line-soft);background:none;border-top:0;border-bottom:0;border-left:0;text-align:left}
+.kpi:last-child{border-right:0}
+.kpi:hover{background:var(--paper)}
+.kpi .n{font-family:var(--display);font-size:32px;font-weight:600;line-height:1}
+.kpi .k{font-size:13px;font-weight:600;margin-top:4px}
+.kpi .s{font-size:12px;color:var(--ink-3)}
+
+.sheet{background:var(--card);border:1px solid var(--line);border-radius:14px}
+.sec{margin-top:20px}
+.head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;padding:16px 20px 10px}
+.head h2{font-size:24px}
+.head p{margin:2px 0 0;font-size:13px;color:var(--ink-2)}
+.two{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:20px;margin-top:20px}
+.two .sheet{margin:0}
+
+/* Décisions */
+.dec{display:grid;grid-template-columns:4px minmax(0,1fr) auto;gap:14px;padding:13px 20px;border-top:1px solid var(--line-soft);align-items:center}
+.dec .bar{align-self:stretch;border-radius:2px}
+.dec h3{font-family:var(--body);font-size:15px;font-weight:600}
+.dec p{margin:2px 0 0;font-size:13px;color:var(--ink-2)}
+.dec .due{font-size:12px;font-weight:600}
+
+/* Points perdus */
+.dom{padding:4px 20px 6px}
+.drow{display:grid;grid-template-columns:120px minmax(0,1fr) 70px;gap:12px;align-items:center;padding:7px 0}
+.drow .nm{font-size:14px;font-weight:500}
+.drow .nm small{display:block;font-size:12px;color:var(--ink-3);font-weight:400}
+.dbar{height:10px;border-radius:5px;background:var(--bad-bg);position:relative;overflow:hidden}
+.dbar i{position:absolute;inset:0 auto 0 0;background:var(--signal);border-radius:5px 0 0 5px}
+.drow .pts{text-align:right;font-size:13px;color:var(--ink-2)}
+.drow .pts b{color:var(--ink);font-size:15px}
+.trend{border-top:1px solid var(--line-soft);padding:12px 20px 16px}
+.trend .th{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.trend h3{font-size:18px}
+.trend svg{width:100%;height:90px;display:block;margin-top:6px}
+
+/* Équipements */
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.search{border:1px solid var(--line);border-radius:8px;padding:6px 10px;min-width:200px;background:var(--card)}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:4px 12px;font-size:13px;font-weight:500;color:var(--ink-2)}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.eqt{width:100%;border-collapse:collapse;font-size:14px}
+.eqt th{font-size:12px;font-weight:600;color:var(--ink-3);text-align:left;padding:8px 12px;border-top:1px solid var(--line)}
+.eqt td{padding:10px 12px;border-top:1px solid var(--line-soft);vertical-align:middle}
+.eqt th:first-child,.eqt td:first-child{padding-left:20px}
+.eqt th:last-child,.eqt td:last-child{padding-right:20px}
+.fam td{background:var(--paper);font-size:12px;font-weight:600;color:var(--ink-2);padding-top:6px;padding-bottom:6px}
+.code{font-family:var(--display);font-weight:600;font-size:17px}
+.code small{display:block;font-family:var(--body);font-weight:400;font-size:12px;color:var(--ink-3)}
+.sbar{display:flex;align-items:center;gap:8px}
+.sbar b{font-family:var(--display);font-size:18px;width:26px;text-align:right}
+.sbar span{flex:1;height:6px;border-radius:3px;background:var(--line-soft);min-width:60px;position:relative}
+.sbar span i{position:absolute;inset:0 auto 0 0;border-radius:3px}
+.muted{color:var(--ink-3);font-size:13px}
+.tw{overflow-x:auto}
+.foot-note{font-size:12px;color:var(--ink-3);padding:10px 20px 14px;margin:0}
+
+/* Rondes et notifications */
+.rd{display:grid;grid-template-columns:70px minmax(0,1fr) auto;gap:12px;align-items:center;padding:9px 20px;border-top:1px solid var(--line-soft);font-size:14px}
+.rd .t{color:var(--ink-3);font-size:13px}
+.prog{display:flex;align-items:center;gap:10px;padding:0 20px 12px}
+.prog span{flex:1;height:8px;border-radius:4px;background:var(--line-soft);position:relative;overflow:hidden}
+.prog i{position:absolute;inset:0 auto 0 0;background:var(--ok);width:50%}
+.prog b{font-size:13px}
+.notif{padding:10px 20px;border-top:1px solid var(--line-soft)}
+.notif h3{font-family:var(--body);font-size:14px;font-weight:600}
+.notif p{margin:2px 0 6px;font-size:13px;color:var(--ink-2)}
+.adm{margin:0 20px 16px;padding:10px 12px;border-radius:8px;background:var(--ok-bg);color:var(--ok);font-size:13px}
+.adm b{display:block}
+
+@media (max-width:1000px){
+  .health .wrap,.two{grid-template-columns:1fr}
+  .cause{border-left:0;border-top:2px solid #FF8A7E;padding:16px 0 0}
+  .kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .kpi:nth-child(3n){border-right:0}
+  .kpi:nth-child(-n+3){border-bottom:1px solid var(--line-soft)}
+  .nav{display:none}
+}
+@media (max-width:640px){
+  .hscore .v{font-size:64px}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kpi{border-right:1px solid var(--line-soft)!important;border-bottom:1px solid var(--line-soft)}
+  .kpi:nth-child(2n){border-right:0!important}
+  .who .nm{display:none}
+  .dec{grid-template-columns:4px minmax(0,1fr)}
+  .dec .btn{grid-column:2;justify-self:start}
+  .eqt .hide-m{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><div class="logo" aria-hidden="true">B</div><div><b>BEHIRA</b><small>FM Track</small></div></div>
+    <nav class="nav" aria-label="Navigation principale">
+      <a href="#" aria-current="page">Accueil</a><a href="#">À traiter<span class="n">4</span></a><a href="#">Rondes</a><a href="#">Registre</a><a href="#">Pilotage</a><a href="#">Plus</a>
+    </nav>
+    <div class="who"><span class="demo">Démo</span><div class="av" aria-hidden="true">FM</div><div class="nm">Facility Manager Démo<br><span style="color:#9FB2C8">SCI Groupe Behira</span></div></div>
+  </div>
+</header>
+
+<section class="health" aria-labelledby="h-sante">
+  <div class="wrap">
+    <div>
+      <p class="hl" id="h-sante">Santé du bâtiment, mercredi 16 septembre</p>
+      <div class="hscore"><span class="v">69<small>/100</small></span><span class="st">Situation dégradée</span></div>
+      <div class="scale" role="img" aria-label="Score final 69 sur 100. Score brut 82. Plafond de 69 appliqué.">
+        <div class="z z1"></div><div class="z z2"></div><div class="z z3"></div>
+        <i class="mk-brut" style="left:82%"><span>brut 82</span></i>
+        <i class="mk-fin" style="left:69%"></i>
+      </div>
+      <div class="slab"><span style="left:0;transform:none">0</span><span style="left:70%">70</span><span style="left:90%">90</span><span style="right:0;transform:none">100</span></div>
+      <div class="meta"><span>Plafond <b>69</b> appliqué</span><span>Couverture <b>83 %</b></span><span>Mis à jour à <b>08:30</b></span></div>
+    </div>
+    <div class="cause">
+      <p class="hl">Cause du plafond</p>
+      <h2>RIA-01 indisponible</h2>
+      <p>Chaîne de sécurité incendie non confirmée, relevé à la ronde de 07:40. Sans ce plafond, le bâtiment serait en surveillance.</p>
+      <p class="req">Qualifier avant 09:00</p>
+      <div class="acts">
+        <button class="btn btn-main" type="button">Qualifier</button>
+        <button class="btn" type="button">Affecter</button>
+        <button class="btn" type="button">Escalader à l'Administration</button>
+        <button class="btn" type="button">Voir les preuves</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<main class="wrap" style="padding-bottom:48px">
+
+  <div class="kpis" role="group" aria-label="Indicateurs du jour">
+    <button class="kpi" type="button"><div class="n" style="color:var(--bad)">3</div><div class="k">Équipements à risque</div><div class="s">1 indisponible, 1 dégradé, 1 contrôle</div></button>
+    <button class="kpi" type="button"><div class="n">80 %</div><div class="k">Disponibilité</div><div class="s">4 fonctionnels sur 5 contrôlés</div></button>
+    <button class="kpi" type="button"><div class="n">83 %</div><div class="k">Couverture</div><div class="s">5 équipements sur 6 à jour</div></button>
+    <button class="kpi" type="button"><div class="n" style="color:var(--signal)">4</div><div class="k">Décisions en attente</div><div class="s">dont 1 avant 09:00</div></button>
+    <button class="kpi" type="button"><div class="n" style="color:var(--bad)">1</div><div class="k">Critiques hors délai</div><div class="s">ACT-079, depuis le 23/08</div></button>
+    <button class="kpi" type="button"><div class="n">0</div><div class="k">Réserves ouvertes</div><div class="s">aucune réception en cours</div></button>
+  </div>
+
+  <div class="two">
+    <section class="sheet" aria-labelledby="h-dec">
+      <div class="head"><div><h2 id="h-dec">Décisions à prendre</h2><p>Triées par échéance. Chaque décision fait remonter le score.</p></div><button class="linkbtn" type="button">Tout ouvrir dans À traiter</button></div>
+      <div id="decs"></div>
+    </section>
+
+    <section class="sheet" aria-labelledby="h-pts">
+      <div class="head"><div><h2 id="h-pts">Où se perdent les points</h2><p>Score brut 82 sur 100, par domaine.</p></div></div>
+      <div class="dom" id="dom"></div>
+      <div class="trend">
+        <div class="th"><h3>Score sur 30 jours</h3><span class="pill p-mute">Illustratif</span></div>
+        <svg id="trend" viewBox="0 0 400 90" preserveAspectRatio="none" role="img" aria-label="Exemple d'évolution : score final stable vers 84, puis chute à 69 quand RIA-01 devient indisponible"></svg>
+        <p class="muted" style="margin:6px 0 0">La courbe réelle s'affichera après 7 jours d'instantanés. Trait plein : score final. Pointillés : score brut.</p>
+      </div>
+    </section>
+  </div>
+
+  <section class="sheet sec" aria-labelledby="h-eq">
+    <div class="head">
+      <div><h2 id="h-eq">Équipements</h2><p>Du plus faible au plus sain, regroupés par famille.</p></div>
+      <div class="tools">
+        <input class="search" id="q" type="search" placeholder="Code, nom ou zone" aria-label="Rechercher un équipement">
+        <button class="chip" data-f="all" aria-pressed="true">Tous</button>
+        <button class="chip" data-f="risk" aria-pressed="false">À risque</button>
+      </div>
+    </div>
+    <div class="tw">
+      <table class="eqt">
+        <thead><tr><th>Équipement</th><th>Statut</th><th>Score</th><th class="hide-m">Dossiers</th><th class="hide-m">Ronde du jour</th><th class="hide-m">Responsable</th></tr></thead>
+        <tbody id="eqb"></tbody>
+      </table>
+    </div>
+    <p class="foot-note">Scores par équipement provisoires, en attente de validation de la formule. Poids actuel : 18 % par équipement critique, 10 % pour l'irrigation.</p>
+  </section>
+
+  <div class="two">
+    <section class="sheet" aria-labelledby="h-rd">
+      <div class="head"><div><h2 id="h-rd">Rondes du jour</h2><p>Rondes techniques quotidiennes de tous les agents.</p></div></div>
+      <div class="prog"><span><i></i></span><b>3 sur 6 faites</b></div>
+      <div id="rds"></div>
+    </section>
+
+    <section class="sheet" aria-labelledby="h-nt">
+      <div class="head"><div><h2 id="h-nt">Hygiène et paysage</h2><p>Notifications de l'agente rondes. Hors score tant qu'elles ne sont pas qualifiées.</p></div></div>
+      <div class="notif"><h3>Infiltration légère, atrium restaurant</h3><p>Photo ajoutée, origine à qualifier après la pluie. Signalée à 07:05.</p><button class="btn" type="button">Qualifier</button></div>
+      <div class="notif"><h3>Encombrement, local poubelles RDC</h3><p>Deuxième signalement cette semaine sur la même zone.</p><button class="btn" type="button">Qualifier</button></div>
+      <div class="adm"><b>Réponse de l'Administration</b>DEC-014, ASC-A1 : clôture approuvée, preuves complètes.</div>
+    </section>
+  </div>
+
+</main>
+
+<script>
+const DEC=[
+ {k:"bad",t:"RIA-01, chaîne incendie non confirmée",d:"Équipement critique indisponible, plafonne le score à 69.",due:"Avant 09:00",b:"Qualifier",main:true},
+ {k:"bad",t:"ASC-A2, action en retard et ronde d'hier manquée",d:"ACT-079 ouverte depuis le 23/08, photo du code défaut manquante.",due:"En retard",b:"Réaffecter"},
+ {k:"warn",t:"WILO-01, deuxième réarmement en 7 jours",d:"Diagnostic demandé. Devis estimé au-dessus du seuil de 400 000 FCFA.",due:"Aujourd'hui 17:00",b:"Soumettre à l'Administration"},
+ {k:"sig",t:"GE-01, remplacement préventif du banc batteries",d:"Suite à l'alerte batterie du 11/09. Sous le seuil de délégation.",due:"Aujourd'hui 15:00",b:"Valider"}
+];
+const COL={bad:"var(--bad)",warn:"var(--warn)",sig:"var(--signal)"};
+document.getElementById("decs").innerHTML=DEC.map(x=>`<div class="dec"><div class="bar" style="background:${COL[x.k]}"></div>
+ <div><h3>${x.t}</h3><p>${x.d}</p><span class="due" style="color:${COL[x.k]}">${x.due}</span></div>
+ <button class="btn${x.main?" btn-main":""}" type="button">${x.b}</button></div>`).join("");
+
+const DOM=[["Équipements","70 %",55.6,70],["Sécurité","15 %",12.8,15],["Zones","10 %",9.6,10],["Continuité","5 %",4.0,5]];
+const fr=v=>v.toFixed(1).replace(".",",");
+document.getElementById("dom").innerHTML=DOM.map(d=>`<div class="drow"><div class="nm">${d[0]}<small>poids ${d[1]}</small></div>
+ <div class="dbar" role="img" aria-label="${d[0]} : ${fr(d[2])} points sur ${d[3]}"><i style="width:${d[2]/d[3]*100}%"></i></div>
+ <div class="pts"><b>${fr(d[2])}</b> / ${d[3]}<br><span style="color:var(--bad)">−${fr(d[3]-d[2])}</span></div></div>`).join("");
+
+(function(){
+ const n=30,brut=[],fin=[];
+ for(let i=0;i<n;i++){const b=84+Math.sin(i/3)*2-(i>20?(i-20)*.3:0);brut.push(b);fin.push(i>=27?69:b)}
+ const x=i=>i/(n-1)*400,y=v=>90-(v-50)/50*90;
+ const path=a=>a.map((v,i)=>(i?"L":"M")+x(i).toFixed(1)+" "+y(v).toFixed(1)).join(" ");
+ const cs=getComputedStyle(document.documentElement);
+ const sig=cs.getPropertyValue("--signal").trim(),mut=cs.getPropertyValue("--ink-3").trim(),bad=cs.getPropertyValue("--bad-bg").trim();
+ document.getElementById("trend").innerHTML=`<rect x="0" y="${y(70)}" width="400" height="${90-y(70)}" fill="${bad}"/>
+ <path d="${path(brut)}" fill="none" stroke="${mut}" stroke-width="1.5" stroke-dasharray="4 3" vector-effect="non-scaling-stroke"/>
+ <path d="${path(fin)}" fill="none" stroke="${sig}" stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+})();
+
+const ST={Disponible:"p-ok","Dégradé":"p-warn",Indisponible:"p-bad","Contrôle à renouveler":"p-warn"};
+const EQ=[
+ {f:"Eau et incendie",c:"RIA-01",n:"Réseau incendie",z:"Sous-sol",s:"Indisponible",sc:61,dos:'<span class="pill p-bad">1 critique</span>',r:'<span class="pill p-warn">Anomalie, 07:40</span>',who:"Agent Eau et incendie"},
+ {f:"Ascenseurs",c:"ASC-A2",n:"Ascenseur A2",z:"Hall A",s:"Contrôle à renouveler",sc:72,dos:'<span class="pill p-bad">1 hors délai</span>',r:'<span class="pill p-sig">À faire, 09:00</span>',who:"Agent Électricité"},
+ {f:"Eau et incendie",c:"WILO-01",n:"Surpresseur",z:"Local technique RDC",s:"Dégradé",sc:78,dos:'<span class="pill p-warn">1 haute</span>',r:'<span class="pill p-warn">Dégradé, 07:15</span>',who:"Agent Eau et incendie"},
+ {f:"Électricité",c:"GE-01",n:"Groupe électrogène",z:"Local groupe",s:"Disponible",sc:86,dos:'<span class="pill p-mute">1 moyenne</span>',r:'<span class="pill p-sig">À faire, 10:00</span>',who:"Agent Électricité"},
+ {f:"Ascenseurs",c:"ASC-A1",n:"Ascenseur A1",z:"Hall A",s:"Disponible",sc:90,dos:'<span class="muted">Aucun</span>',r:'<span class="pill p-sig">À faire, 12:00</span>',who:"Agent Électricité"},
+ {f:"Espaces",c:"IRR-01",n:"Irrigation",z:"Jardins",s:"Disponible",sc:98,dos:'<span class="muted">Aucun</span>',r:'<span class="pill p-ok">Conforme, 06:50</span>',who:"Agente Rondes"}
+];
+const scol=v=>v<70?"var(--bad)":v<90?"var(--warn)":"var(--ok)";
+let flt="all";
+function drawEq(){
+ const q=document.getElementById("q").value.trim().toLowerCase();
+ const L=EQ.filter(e=>(flt==="all"||e.s!=="Disponible")&&(e.c+e.n+e.z).toLowerCase().includes(q));
+ const fams=[...new Set(L.map(e=>e.f))];
+ const body=document.getElementById("eqb");
+ if(!L.length){body.innerHTML='<tr><td colspan="6" class="muted">Aucun équipement ne correspond. Effacez la recherche ou choisissez « Tous ».</td></tr>';return}
+ body.innerHTML=fams.map(f=>`<tr class="fam"><td colspan="6">${f}</td></tr>`+L.filter(e=>e.f===f).map(e=>`<tr>
+  <td><span class="code">${e.c}<small>${e.n}, ${e.z}</small></span></td>
+  <td><span class="pill ${ST[e.s]}">${e.s}</span></td>
+  <td><div class="sbar"><b style="color:${scol(e.sc)}">${e.sc}</b><span><i style="width:${e.sc}%;background:${scol(e.sc)}"></i></span></div></td>
+  <td class="hide-m">${e.dos}</td><td class="hide-m">${e.r}</td><td class="hide-m muted">${e.who}</td></tr>`).join("")).join("");
+}
+document.getElementById("q").addEventListener("input",drawEq);
+document.querySelectorAll(".chip").forEach(c=>c.addEventListener("click",()=>{flt=c.dataset.f;document.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed",x===c));drawEq()}));
+drawEq();
+
+const RD=[
+ ["06:50","IRR-01, Agente Rondes",'<span class="pill p-ok">Conforme</span>'],
+ ["07:15","WILO-01, Agent Eau et incendie",'<span class="pill p-warn">Dégradé</span>'],
+ ["07:40","RIA-01, Agent Eau et incendie",'<span class="pill p-bad">Anomalie critique</span>'],
+ ["09:00","ASC-A2, Agent Électricité",'<span class="pill p-bad">Manquée hier</span>'],
+ ["10:00","GE-01, Agent Électricité",'<span class="pill p-sig">À faire</span>'],
+ ["12:00","ASC-A1, Agent Électricité",'<span class="pill p-sig">À faire</span>']
+];
+document.getElementById("rds").innerHTML=RD.map(r=>`<div class="rd"><span class="t">${r[0]}</span><span>${r[1]}</span>${r[2]}</div>`).join("");
+</script>
+</body>
+</html>

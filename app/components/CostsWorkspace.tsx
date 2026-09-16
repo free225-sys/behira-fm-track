@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 
 import { Badge, BrandIcon, Button, Card, Field, Select } from './ui';
+import { displayAssetCode } from '../lib/ui-contract/display.ts';
 
 export type CostsWorkspaceItem = {
   id:string;
@@ -83,10 +84,10 @@ export function CostsWorkspace({ items, audience, threshold, onOpenDossier }: {
         <span className="panel-count">{filteredItems.length} résultat{filteredItems.length > 1 ? 's' : ''}</span>
       </div>
       <div className="costs-filters">
-        <Field label="Rechercher un dossier">
+        <Field label="Rechercher un dossier" size="search">
           <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Décision, anomalie, équipement…" />
         </Field>
-        <Field label="Disponibilité du montant">
+        <Field label="Disponibilité du montant" size="select">
           <Select value={filter} onChange={(event) => setFilter(event.target.value as CostFilter)}>
             <option value="all">Tous les arbitrages</option>
             <option value="documented">Montant renseigné</option>
@@ -104,7 +105,7 @@ export function CostsWorkspace({ items, audience, threshold, onOpenDossier }: {
           return <Card key={item.id} className="costs-case-card">
             <div className="costs-case-heading">
               <span className="costs-case-mark" aria-hidden="true"><BrandIcon name="banknote" size={16} /></span>
-              <div><small>{item.asset} · {item.id} · {item.anomaly}</small><h3>{item.title}</h3></div>
+              <div><small>{displayAssetCode(item.asset)} · {item.id} · {item.anomaly}</small><h3>{item.title}</h3></div>
               <div className="costs-case-badges"><Badge tone={item.kind === 'Risque' ? 'critical' : 'orange'}>{item.kind}</Badge><Badge tone={stateTone(item.state)}>{item.state}</Badge></div>
             </div>
             <div className="costs-case-body">
@@ -114,11 +115,10 @@ export function CostsWorkspace({ items, audience, threshold, onOpenDossier }: {
                 <small>{item.amount === null ? 'Aucun montant enregistré pour cet arbitrage' : overThreshold ? 'Validation de l’Administration requise' : 'Dans la délégation du Facility Manager'}</small>
               </div>
               <dl className="costs-case-facts">
-                <div><dt>Échéance</dt><dd>{item.due || 'Non renseignée'}</dd></div>
+                {item.due ? <div><dt>Échéance</dt><dd>{item.due}</dd></div> : null}
                 <div><dt>Seuil applicable</dt><dd>{formatMoney(threshold)}</dd></div>
-                <div><dt>Montant engagé</dt><dd>Non renseigné</dd></div>
-                <div><dt>Montant payé</dt><dd>Non renseigné</dd></div>
               </dl>
+              <p className="health-insufficient">Données insuffisantes. Montant engagé et montant payé non raccordés.</p>
               <div className="costs-case-action"><p>{audience === 'administration' && overThreshold ? 'Arbitrage global attendu dans l’Accueil Administration.' : 'Consultation financière sans nouvelle action accordée.'}</p>{item.anomaly.startsWith('ANO-') && <Button variant="secondary" onClick={() => onOpenDossier(item.anomaly)}>Ouvrir le dossier</Button>}</div>
             </div>
           </Card>;
