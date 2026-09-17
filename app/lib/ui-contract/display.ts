@@ -337,7 +337,7 @@ export function roundStateLabel(state: 'due' | 'overdue' | 'draft' | 'done'): st
 
 export function roundSubjectLabel(round: { equipmentCode?: string | null }): string {
   if (round.equipmentCode) return round.equipmentCode;
-  return 'RND-LET';
+  return 'Rondes de services · zones';
 }
 
 export function roundResultLabel(result: 'compliant' | 'anomaly' | 'impossible' | null): string | null {

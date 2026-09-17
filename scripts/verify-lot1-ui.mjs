@@ -60,6 +60,8 @@ check('CTA unique : pas de bas de page ni Nouvelle ronde', !page.includes('works
 check('sélecteur scénario compact', sources.scenario.includes('demo-scenario-line') && cockpit.includes('session.demo') && cockpit.includes('DemoScenarioSelect') && css.includes('.demo-scenario-line{') && !css.includes('border:1px dashed var(--border);\n  border-radius:var(--radius-md);\n  background:var(--surface-muted);'))
 check('tuile Statut inconnu', equipment.includes('STATUT INCONNU') && equipment.includes('counts.unknown'))
 check('GE-01 emplacement unique', ge01.includes("EQUIPMENT_META['GE-01']") && fixtures.EQUIPMENT_META['GE-01'].zone === 'RDC · Local groupe' && !ge01.includes('Local TGBT'))
+check('ronde sans équipement = Rondes de services · zones', display.roundSubjectLabel({ equipmentCode: null }) === 'Rondes de services · zones' && display.roundSubjectLabel({ equipmentCode: 'GE-01' }) === 'GE-01')
+check('Pilotage Performance reprend le tableau parc', page.includes('<EquipmentTable equipment={parkEquipment}') && !page.includes('Sain ≥ 90'))
 
 const failed = cases.filter((item) => !item.ok)
 if (failed.length) {

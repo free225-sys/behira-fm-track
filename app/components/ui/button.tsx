@@ -2,11 +2,12 @@
 
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 
-type ButtonVariant = 'primary' | 'secondary';
+type ButtonVariant = 'primary' | 'secondary' | 'ghost';
 
 const variantClass: Record<ButtonVariant, string> = {
   primary: 'primary-button',
   secondary: 'secondary-button',
+  ghost: 'ghost-button',
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & {

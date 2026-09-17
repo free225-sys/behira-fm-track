@@ -17,7 +17,7 @@ function roundHint(round: TodaysRound) {
   if (round.missedYesterday) return 'Contrôle quotidien, ronde d’hier manquée';
   if (round.equipmentCode === 'GE-01') return 'Contrôle quotidien, essai prévu';
   if (round.equipmentCode) return `Contrôle quotidien, ${EQUIPMENT_META[round.equipmentCode]?.name ?? ''}`.trim();
-  return 'Ronde de services · RND-LET';
+  return 'Rondes de services · zones';
 }
 
 function deadlinePill(round: TodaysRound) {

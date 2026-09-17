@@ -140,6 +140,16 @@ const checks = [
   ['Lot 1 composants partagés', homeBanner.includes('home-hero-banner') && ge01Pilot.includes('SegmentedControl') && equipmentWorkspace.includes('EquipmentTable') && equipmentTable.includes('familyLabel') && css.includes('DESIGN-058') && !page.includes('direction-number') && !page.includes("'EN RETARD'")],
   ['Offset sous barre fixe', css.includes('--app-nav-height:64px') && css.includes('padding-top:var(--app-nav-height)') && css.includes('.main-column.is-dossiers-page>.topbar{display:none}') && css.includes('.main-column.is-dossiers-page .content{padding-top:0}') && css.includes('.main-column.is-dossiers-page .dossiers-hero.is-bleed{margin-top:0}')],
   ['Carte Contexte GE-01 alignée parc', ge01Pilot.includes('MetierStatusBadge') && ge01Pilot.includes("EQUIPMENT_META['GE-01']") && ge01Pilot.includes('essai de démarrage prévu') && ge01Pilot.includes('Dernier relevé compteur') && ge01Pilot.includes('État au dernier contrôle') && !ge01Pilot.includes('Local TGBT') && !ge01Pilot.includes("controlStatus === 'ok' ? 'Disponible'")],
+  ['Pilotage parc sans DEMO ni légende Sain', page.includes('<EquipmentTable equipment={parkEquipment}') && page.includes('Ouvrir Équipements') && !page.includes('Sain ≥ 90') && !page.includes('Scores par équipement')],
+  ['Ronde de services hors équipement', page.includes('roundSubjectLabel') && !page.includes("return 'RND-LET'")],
+  ['Accès Paramètres sans Lecture seule', parametersWorkspace.includes("tab !== 'acces'") && parametersWorkspace.includes('LECTURE SEULE')],
+  ['Échelle de jetons sans 13/15/26/38', !cssWithoutComments.includes('font-size:13px') && !cssWithoutComments.includes('font-size:15px') && !cssWithoutComments.includes('font-size:26px') && !cssWithoutComments.includes('font-size:38px') && css.includes('--font-size-display:28px')],
+  ['Trois graisses tokenisées', css.includes('--font-weight-regular:400') && css.includes('--font-weight-medium:600') && css.includes('--font-weight-bold:700') && !cssWithoutComments.includes('font-weight:650') && !cssWithoutComments.includes('font-weight:850')],
+  ['Hiérarchie titre de page > carte', css.includes('.topbar h1,\nh1{\n  font-size:var(--font-size-display)') && css.includes('.panel h3,\n.direction-head h3,\n.analytics-heading h3') && css.includes('font-size:var(--font-size-title)')],
+  ['Bouton discret + pastille', css.includes('.ghost-button') && css.includes('.chip,\n.decision-filters button')],
+  ['Onglets Pilotage = Paramètres', page.includes('workspace-tabs parameters-tabs') && parametersWorkspace.includes('parameters-tabs workspace-tabs') && css.includes('.workspace-tabs.parameters-tabs button.active')],
+  ['Score non calculable élargi', page.includes('insufficient-chart is-wide') && css.includes('.building-health-card:has(.insufficient-chart.is-wide)')],
+  ['Coûts pleine largeur et points perdus compact', page.includes('is-costs-wide') && page.includes('points-lost-card${scoreNotComputable') && css.includes('.dashboard-tab-panel.actions-view.is-costs-wide .costs-block')],
 ]
 
 for (const [label, ok] of checks) console.log(`${ok ? '✓' : '✗'} ${label}`)

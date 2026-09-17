@@ -10,10 +10,11 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 ## Index
 
-Statuts : les entrées 062 à 071 sont **En vigueur** (la plus récente l’emporte). DESIGN-003 (Geist auto-hébergé) est traité (DESIGN-015). DESIGN-005 (`.gitattributes`) reste à vérifier dans le dépôt.
+Statuts : les entrées 062 à 072 sont **En vigueur** (la plus récente l’emporte). DESIGN-003 (Geist auto-hébergé) est traité (DESIGN-015). DESIGN-005 (`.gitattributes`) reste à vérifier dans le dépôt.
 
 | id | date | sujet | attendu de | bloque |
 | --- | --- | --- | --- | --- |
+| DESIGN-072 | 2026-09-17 | Conformité design : parc, typo, boutons, onglets, densité | Wilkam | livré |
 | DESIGN-071 | 2026-09-17 | Offset sous barre fixe + carte Contexte GE-01 | Wilkam | livré |
 | DESIGN-070 | 2026-09-17 | Finitions clôture : Pilotage, Paramètres, Rondes, 380 px | Wilkam | livré |
 | DESIGN-069 | 2026-09-17 | Cohérence documentaire avant intégration Codex | Codex | En vigueur |
@@ -73,6 +74,24 @@ Statuts : les entrées 062 à 071 sont **En vigueur** (la plus récente l’empo
 | DESIGN-003 | 2026-08-28 | `pnpm dev` échoue sans accès réseau à `fonts.googleapis.com` | Dev Lead | tout audit hors ligne |
 | DESIGN-002 | 2026-08-28 | Nomenclature unique des destinations — *arbitrée, voir DEC-002* | Dev Lead | routes |
 | DESIGN-001 | 2026-08-28 | Lot 1 — spécification du socle de tokens | Dev Lead | lot 2, écran pilote |
+
+---
+
+## DESIGN-072 — Conformité design : parc, typo, boutons, onglets, densité
+
+- **Date :** 17 septembre 2026
+- **Statut :** Livré.
+- **Périmètre :** affichage. Pas de `data.ts`.
+
+1. **Pilotage > Performance.** Le bloc « Scores par équipement » reprend le tableau Équipements (codes canoniques, statut métier avant le score, palier en couleur). Plus de DEMO-*, plus de RND-LET comme équipement, plus de légende Sain / À surveiller / Critique. Lien « Ouvrir Équipements ».
+2. **Rondes FM.** Une ronde sans équipement s’affiche « Rondes de services · zones », jamais comme un équipement.
+3. **Paramètres > Accès.** Le badge « Lecture seule » n’apparaît plus sur l’onglet Accès (Approuver / Refuser). Il reste sur Règles, Notifications, Zones et Journal.
+4. **Typographie.** Tailles ramenées aux jetons label / body / subtitle / title / display. Intermédiaires 13, 15, 26, 28 et 38 px retirés. Graisses ramenées à 400 / 600 / 700.
+5. **Hiérarchie.** Titre de page = display ; titres de carte = title. Dossiers n’est plus à 38 px.
+6. **Boutons.** Trois variantes (principal, secondaire, discret) plus pastille de filtre, rayon unique par variante.
+7. **Onglets.** Pilotage et Paramètres partagent le même modèle (pastille, actif plein).
+8. **Score non calculable.** Le bloc occupe la largeur de la carte, texte non comprimé.
+9. **Densité.** Pilotage > Coûts en pleine largeur. Accueil FM : « Où se perdent les points » compact tant que le score n’est pas calculable.
 
 ---
 

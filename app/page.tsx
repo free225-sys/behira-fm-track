@@ -8,7 +8,7 @@ import { DossierActionBoard, DossierProofSnapshot, DossierTreatmentStrip, type T
 import { DossiersWorkspace, dossierActionLabel, type DossiersTab } from './components/DossiersWorkspace';
 import { AccessWorkspace } from './components/AccessWorkspace';
 import { BuildingHealthCockpit, ScoreRing } from './components/BuildingHealthCockpit';
-import { DemoScenarioProvider, DemoScenarioSelect, InsufficientNote, ReportTrackingLine, SegmentedControl, StartRoundPicker, useDemoScoreScenario } from './components/shared';
+import { DemoScenarioProvider, DemoScenarioSelect, EquipmentTable, InsufficientNote, ReportTrackingLine, SegmentedControl, StartRoundPicker, useDemoScoreScenario } from './components/shared';
 import { demoHomeSnapshot, demoReportTracking, demoRoundsFor, sessionForAudience } from './lib/ui-contract/fixtures.ts';
 import type { TodaysRound, UiSession } from './lib/ui-contract/building-health.ts';
 import { asciiInitials, displayAssetCode, displayAssetText, formatCompactMoney, formatTime, formatWeekdayDate, roundStateLabel, roundSubjectLabel, scoreFigure } from './lib/ui-contract/display.ts';
@@ -1450,6 +1450,8 @@ function DirectionWorkspace({ anomalies, equipment, escalations, onDecision, onO
 
 function FacilityManagerWorkspace({ anomalies, escalations, fieldRequests, onOpen, onNavigate }: { anomalies:Anomaly[]; equipment:EquipmentItem[]; escalations:Escalation[]; fieldRequests:FieldRequest[]; onEscalate:(request:FieldRequest)=>void; onOpen:(id:string)=>void; onNavigate:(view:View)=>void }) {
   const session = sessionForAudience('facility', 'Facility Manager Démo');
+  const { scenario } = useDemoScoreScenario();
+  const scoreNotComputable = demoHomeSnapshot(session, scenario).score.state === 'not_computable';
   const withMeta = (item: Anomaly) => ({
     ...item,
     amount: escalations.find((row) => row.anomaly === item.id)?.amount ?? item.treatment?.amount ?? null,
@@ -1500,9 +1502,11 @@ function FacilityManagerWorkspace({ anomalies, escalations, fieldRequests, onOpe
             ))}
           </div>
         </article>
-        <article className="sheet points-lost-card">
-          <div className="analytics-card-head"><div><h3>Où se perdent les points</h3><p>Poids 70 / 15 / 10 / 5, non raccordés.</p></div></div>
-          <InsufficientNote title="Poids de domaine non raccordés" detail="Équipements, sécurité, zones, continuité : aucune courbe historique n’est affichée." />
+        <article className={`sheet points-lost-card${scoreNotComputable ? ' is-compact' : ''}`}>
+          <div className="analytics-card-head"><div><h3>Où se perdent les points</h3><p>Poids 70 / 15 / 10 / 5. Points obtenus non raccordés.</p></div></div>
+          {scoreNotComputable
+            ? <p className="points-lost-compact-note">Score non calculable — la répartition par domaine restera vide tant que la formule n’est pas validée.</p>
+            : <InsufficientNote title="Poids de domaine non raccordés" detail="Équipements, sécurité, zones, continuité : aucune courbe historique n’est affichée." />}
         </article>
       </div>
     </LiveHealthCockpit>
@@ -1730,13 +1734,13 @@ const agentPerformance = [
   { name:'Agente Rondes & Assistance', score:91 },
 ];
 
-function OperationalAnalytics({ equipment, section = 'team' }: { equipment:EquipmentItem[]; section?: 'health' | 'team' }) {
+function OperationalAnalytics({ equipment, section = 'team', onNavigate }: { equipment:EquipmentItem[]; section?: 'health' | 'team'; onNavigate?: (view:View)=>void }) {
   const [period, setPeriod] = useState<'7j'|'30j'|'90j'>('30j');
-  const [equipmentFilter, setEquipmentFilter] = useState<'all'|'watch'>('all');
-  const visibleEquipment = (equipmentFilter === 'watch' ? equipment.filter((item) => item.health < 90) : equipment).slice(0,6);
   const periodLabel = period === '7j' ? '7 jours' : period === '30j' ? '30 jours' : '90 jours';
   const { scenario } = useDemoScoreScenario();
-  const homeScoreValue = scoreFigure(demoHomeSnapshot(sessionForAudience('facility', 'Facility Manager Démo'), scenario).score);
+  const snapshot = demoHomeSnapshot(sessionForAudience('facility', 'Facility Manager Démo'), scenario);
+  const homeScoreValue = scoreFigure(snapshot.score);
+  const parkEquipment = snapshot.equipment.filter((item) => item.code !== 'RND-LET');
 
   if (section === 'team') {
     return <section className="operational-analytics analytics-direction" aria-labelledby="team-analytics-title">
@@ -1766,11 +1770,11 @@ function OperationalAnalytics({ equipment, section = 'team' }: { equipment:Equip
         <div className="analytics-card-head"><div><span>SANTÉ BÂTIMENT</span><h4>Score global actuel</h4></div><span className="mockup-label">Fraîcheur à confirmer</span></div>
         <div className="building-health-content">
           {homeScoreValue == null
-            ? <div className="insufficient-chart" role="status"><BrandIcon name="activity" size={18} /><div><b>Score non calculable</b><p>La formule et les pondérations sont en attente. Aucun chiffre n’est affiché.</p></div></div>
+            ? <div className="insufficient-chart is-wide" role="status"><BrandIcon name="activity" size={18} /><div><b>Score non calculable</b><p>La formule et les pondérations sont en attente. Aucun chiffre n’est affiché.</p></div></div>
             : <ScoreRing value={homeScoreValue} />}
-          <div className="score-components" aria-label="Composition du score bâtiment">
+          {homeScoreValue == null ? null : <div className="score-components" aria-label="Composition du score bâtiment">
             <InsufficientNote title="Composition du score" detail="Les pondérations de domaine ne sont pas raccordées." />
-          </div>
+          </div>}
         </div>
         <div className="score-causes"><span><b>Facteur négatif</b> Données insuffisantes</span><span><b>Facteur positif</b> Données insuffisantes</span></div>
         <p className="analytics-note">Le score est plafonné si un équipement vital devient indisponible. La variation sera affichée après constitution de l’historique.</p>
@@ -1783,9 +1787,8 @@ function OperationalAnalytics({ equipment, section = 'team' }: { equipment:Equip
       </article>
 
       <article className="panel analytics-card equipment-chart-card">
-        <div className="analytics-card-head"><div><span>PARC TECHNIQUE</span><h4>Scores par équipement</h4></div><div className="chart-switch" aria-label="Filtre des équipements"><button type="button" aria-pressed={equipmentFilter === 'all'} onClick={() => setEquipmentFilter('all')}>Tous</button><button type="button" aria-pressed={equipmentFilter === 'watch'} onClick={() => setEquipmentFilter('watch')}>À risque</button></div></div>
-        <div className="horizontal-score-chart" aria-live="polite">{visibleEquipment.map((item) => <div className="score-bar-row" key={item.code}><span><b>{item.code}</b><small>{item.label}</small></span><div className="score-bar-track" role="progressbar" aria-label={`${item.label}, ${item.health} sur 100`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={item.health}><i className={item.health < 70 ? 'danger' : item.health < 90 ? 'warning' : 'success'} style={{width:`${item.health}%`}} /></div><strong>{item.health}</strong></div>)}</div>
-        <div className="chart-legend"><span><i className="success" /> Sain ≥ 90</span><span><i className="warning" /> À surveiller 70–89</span><span><i className="danger" /> Critique &lt; 70</span></div>
+        <div className="analytics-card-head"><div><span>PARC TECHNIQUE</span><h4>Équipements suivis</h4></div>{onNavigate ? <button type="button" className="health-link" onClick={() => onNavigate('equipment')}>Ouvrir Équipements →</button> : null}</div>
+        <EquipmentTable equipment={parkEquipment} onOpen={onNavigate ? () => onNavigate('equipment') : undefined} />
       </article>
     </div>
   </section>;
@@ -1819,9 +1822,9 @@ function Dashboard({ equipment, escalations, audience = 'facility', onNavigate, 
   return <>
     <section className="hero-row dashboard-hero"><div><p className="direction-kicker">{readOnly ? 'CONSULTATION AUTORISÉE' : audience === 'administration' ? 'PILOTAGE ADMINISTRATION' : 'PILOTAGE FACILITY MANAGER'}</p><p>{readOnly ? 'Indicateurs et registre accessibles sans action de modification.' : audience === 'administration' ? 'Synthèse décisionnelle, risques, coûts et performance.' : 'Priorités opérationnelles, santé du parc et actions attendues.'}</p></div><span className="health-pill"><i /> Disponibilité : données insuffisantes</span></section>
     <DemoScenarioSelect />
-    <nav className="dashboard-section-tabs" role="tablist" aria-label="Sections du tableau de bord">{dashboardTabs.map((item) => <button key={item.id} type="button" role="tab" aria-selected={dashboardTab === item.id} aria-controls={`dashboard-panel-${item.id}`} id={`dashboard-tab-${item.id}`} className={dashboardTab === item.id ? 'active' : ''} onClick={() => setDashboardTab(item.id)}><span className="dashboard-tab-copy"><b>{item.label}</b></span></button>)}</nav>
+    <nav className="workspace-tabs parameters-tabs" role="tablist" aria-label="Sections du tableau de bord">{dashboardTabs.map((item) => <button key={item.id} type="button" role="tab" aria-selected={dashboardTab === item.id} aria-controls={`dashboard-panel-${item.id}`} id={`dashboard-tab-${item.id}`} className={dashboardTab === item.id ? 'active' : ''} onClick={() => setDashboardTab(item.id)}><span className="dashboard-tab-copy"><b>{item.label}</b></span></button>)}</nav>
     {dashboardTab === 'overview' && <section id="dashboard-panel-overview" role="tabpanel" aria-labelledby="dashboard-tab-overview" className="dashboard-tab-panel" aria-label="Performance du site">
-      <OperationalAnalytics equipment={equipment} section="health" />
+      <OperationalAnalytics equipment={equipment} section="health" onNavigate={onNavigate} />
       <article className="panel direction-block performance-block">
         <div className="direction-head"><div><h3>Performance</h3><p>Qualité de service</p></div></div>
         <div className="performance-score"><InsufficientNote title="Délais tenus" detail="Le taux d’interventions dans les délais n’a pas de source raccordée." /></div>
@@ -1830,11 +1833,13 @@ function Dashboard({ equipment, escalations, audience = 'facility', onNavigate, 
         <button className="text-action" onClick={() => onNavigate(readOnly ? 'registry' : 'manager')}>{readOnly ? 'Consulter Dossiers →' : 'Ouvrir Dossiers →'}</button>
       </article>
     </section>}
-    {dashboardTab === 'actions' && <section id="dashboard-panel-actions" role="tabpanel" aria-labelledby="dashboard-tab-actions" className="direction-grid dashboard-tab-panel actions-view" aria-label="Coûts documentés">
+    {dashboardTab === 'actions' && <section id="dashboard-panel-actions" role="tabpanel" aria-labelledby="dashboard-tab-actions" className="direction-grid dashboard-tab-panel actions-view is-costs-wide" aria-label="Coûts documentés">
       <article className="panel direction-block costs-block">
         <div className="direction-head"><div><h3>Coûts</h3><p>Montants réellement renseignés</p></div></div>
-        <div className="cost-main"><span>Montants documentés</span><strong>{formatMoney(documentedCostTotal)}</strong></div>
-        <div className="cost-details"><div><span>Dossiers chiffrés</span><b>{documentedCosts.length}</b></div><div className="cost-gap"><span>Au-dessus du seuil</span><b>{overThresholdCosts}</b></div></div>
+        <div className="cost-grid">
+          <div className="cost-main"><span>Montants documentés</span><strong>{formatMoney(documentedCostTotal)}</strong></div>
+          <div className="cost-details"><div><span>Dossiers chiffrés</span><b>{documentedCosts.length}</b></div><div className="cost-gap"><span>Au-dessus du seuil</span><b>{overThresholdCosts}</b></div></div>
+        </div>
         <small className="cost-note">Budget, engagé et payé : données insuffisantes.</small>
         <button type="button" className="text-action" onClick={() => onNavigate('manager', { queue: 'overThreshold' })}>Ouvrir Dossiers, au-dessus du seuil →</button>
       </article>

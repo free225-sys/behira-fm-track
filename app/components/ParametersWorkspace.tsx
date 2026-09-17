@@ -49,7 +49,7 @@ export function ParametersWorkspace({ parameter, onOpenCosts, users }: {
         <p className="visually-hidden">Seuils et paramètres</p>
         <p>Consultez les règles actuellement justifiables. Une valeur sans source, historique ou autorité explicite n’est jamais présentée comme un paramètre actif.</p>
       </div>
-      <Badge tone="neutral">LECTURE SEULE</Badge>
+      {tab !== 'acces' ? <Badge tone="neutral">LECTURE SEULE</Badge> : null}
     </header>
 
     <div className="parameters-tabs workspace-tabs" role="tablist" aria-label="Sections des paramètres">
