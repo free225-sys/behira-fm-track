@@ -59,6 +59,7 @@ check('score dans le bandeau hors agent', sources.banner.includes('home-hero-sco
 check('CTA unique : pas de bas de page ni Nouvelle ronde', !page.includes('workspace-next') && !page.includes('＋ Nouvelle ronde') && !page.includes('showRoundCta'))
 check('sélecteur scénario compact', sources.scenario.includes('demo-scenario-line') && cockpit.includes('session.demo') && cockpit.includes('DemoScenarioSelect') && css.includes('.demo-scenario-line{') && !css.includes('border:1px dashed var(--border);\n  border-radius:var(--radius-md);\n  background:var(--surface-muted);'))
 check('tuile Statut inconnu', equipment.includes('STATUT INCONNU') && equipment.includes('counts.unknown'))
+check('GE-01 emplacement unique', ge01.includes("EQUIPMENT_META['GE-01']") && fixtures.EQUIPMENT_META['GE-01'].zone === 'RDC · Local groupe' && !ge01.includes('Local TGBT'))
 
 const failed = cases.filter((item) => !item.ok)
 if (failed.length) {

@@ -16,7 +16,6 @@ import {
 import {
   DEMO_LAST_CONFIRMED,
   deltaNoteForDraft,
-  displayOrDash,
   evaluateEngineHoursDelta,
   formatEngineHours,
   formatMeasureDelta,
@@ -48,7 +47,10 @@ import {
   type MeasureStatus,
 } from '../lib/ge01/thresholds';
 import { Badge, BrandIcon, Button, Card, Field } from './ui';
-import { SegmentedControl } from './shared';
+import { MetierStatusBadge, SegmentedControl, useDemoScoreScenario } from './shared';
+import type { EquipmentCard } from '../lib/ui-contract/building-health.ts';
+import { controlValidityLabel, formatDayTime } from '../lib/ui-contract/display.ts';
+import { EQUIPMENT_META, demoHomeSnapshot, sessionForAudience } from '../lib/ui-contract/fixtures.ts';
 
 
 type SubmissionState = 'editing' | 'queued' | 'server_confirmed' | 'demo';
@@ -82,31 +84,44 @@ function agentInitials(name: string) {
   return `${letter(parts[0])}${letter(parts[1])}` || '—';
 }
 
-function ContextEquipmentCard({ context }: { context: Ge01LastContext }) {
-  const hours = context.engineHours == null ? '—' : formatEngineHours(context.engineHours);
-  const date = context.performedOn ? formatShortDate(context.performedOn) : '—';
+function controlValidityMeta(equipment: EquipmentCard | null) {
+  if (!equipment) return 'Données insuffisantes';
+  const label = controlValidityLabel(equipment.controlValidity)
+    ?? (equipment.controlValidity === 'valid' ? 'Contrôle valide' : null);
+  const when = formatDayTime(equipment.lastControlAt ?? equipment.controlValidUntil);
+  if (!label) return 'Données insuffisantes';
+  return when ? `${label} · ${when}` : label;
+}
+
+function ContextEquipmentCard({ context, equipment }: { context: Ge01LastContext; equipment: EquipmentCard | null }) {
+  const hours = context.engineHours == null ? null : formatEngineHours(context.engineHours);
+  const when = formatDayTime(equipment?.lastControlAt ?? null) ?? formatDayTime(context.performedOn);
+  const zone = equipment?.zone ?? EQUIPMENT_META['GE-01'].zone;
+  const statusMissing = !equipment;
   return (
     <div className="ge-fixed-context">
       <div className="ge-fixed-identity">
         <span className="ge-monogram">GE</span>
         <div>
           <b>GE-01 · Groupe électrogène ELCOS</b>
-          <small>Contrôle quotidien · essai prévu</small>
+          <small>Contrôle quotidien · essai de démarrage prévu</small>
         </div>
       </div>
       <dl className="ge-context-markers">
         <div>
-          <dt>Dernier relevé</dt>
-          <dd>{hours}</dd>
-          <small>{date}</small>
+          <dt>Dernier relevé compteur</dt>
+          <dd>{hours ?? '—'}</dd>
+          <small>{hours && when ? when : 'Données insuffisantes'}</small>
         </div>
         <div>
-          <dt>Dernier contrôle</dt>
-          <dd>{context.controlStatus ? <Badge tone={context.controlStatus === 'ok' ? 'success' : 'orange'}>{context.controlStatus === 'ok' ? 'Disponible' : 'Dégradé'}</Badge> : '—'}</dd>
+          <dt>État au dernier contrôle</dt>
+          <dd>{statusMissing ? '—' : <MetierStatusBadge status={equipment.operationalStatus} />}</dd>
+          <small>{statusMissing ? 'Données insuffisantes' : controlValidityMeta(equipment)}</small>
         </div>
         <div>
           <dt>Emplacement</dt>
-          <dd>{displayOrDash(context.location)}</dd>
+          <dd>{zone || '—'}</dd>
+          <small>{zone ? '\u00a0' : 'Données insuffisantes'}</small>
         </div>
       </dl>
     </div>
@@ -338,6 +353,8 @@ export function Ge01AgentForm({ agentName }: { agentName: string }) {
   const [nowHint, setNowHint] = useState('Horodatage pré-rempli à l’ouverture');
   const submissionLock = useRef(false);
   const saveTimerRef = useRef<number | null>(null);
+  const { scenario } = useDemoScoreScenario();
+  const ge01Equipment = demoHomeSnapshot(sessionForAudience('electricite', agentName), scenario).equipment.find((item) => item.code === 'GE-01') ?? null;
 
   const update = <K extends keyof Ge01Draft>(key: K, value: Ge01Draft[K]) => {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -495,7 +512,7 @@ export function Ge01AgentForm({ agentName }: { agentName: string }) {
         <div className="ge-step-head"><div><span>ÉTAPE {draft.step + 1} SUR 4</span><h3>{steps[draft.step]}</h3></div><small>{draftStatus.detail}</small></div>
 
         {draft.step === 0 ? <div className="ge-fields ge-context-fields">
-          <ContextEquipmentCard context={lastContext} />
+          <ContextEquipmentCard context={lastContext} equipment={ge01Equipment} />
           <div className="ge-field-grid">
             <div className="field">
               <span>Intervenant</span>

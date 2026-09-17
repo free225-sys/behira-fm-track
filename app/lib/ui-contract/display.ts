@@ -206,6 +206,27 @@ export function formatCompactMoney(value: number): string {
   return formatMoney(value);
 }
 
+export function formatDayTime(value: string | null | undefined, timeZone = 'Africa/Abidjan'): string | null {
+  if (!value || !value.includes('T')) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const parts = new Intl.DateTimeFormat('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+    timeZone,
+  }).formatToParts(date);
+  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? '';
+  const day = get('day');
+  const month = get('month');
+  const hour = get('hour');
+  const minute = get('minute');
+  if (!day || !month || !hour || !minute) return null;
+  return `le ${day}/${month} à ${hour}:${minute}`;
+}
+
 export function formatInstant(value: string, timeZone = 'Africa/Abidjan'): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '—';

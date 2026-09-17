@@ -27,6 +27,7 @@ const {
   primaryReasonOf,
   shouldOfferControlPlanning,
   formatMoney,
+  formatDayTime,
   statusLabel,
   displayAssetCode,
 } = display
@@ -50,6 +51,8 @@ check('displayRawScore 89.5 → 90', displayRawScore(89.5) === 90)
 check('seuil 399999 < 400000 → below (FM)', thresholdPosition(399999, 400000) === 'below')
 check('seuil 400000 ≥ 400000 → at_or_above (Administration)', thresholdPosition(400000, 400000) === 'at_or_above')
 check('formatMoney 400000 = « 400 000 FCFA »', formatMoney(400000) === '400 000 FCFA')
+check('formatDayTime instant → le JJ/MM à HH:MM', formatDayTime('2026-09-15T07:30:00Z') === 'le 15/09 à 07:30')
+check('formatDayTime date seule → null (pas d’heure inventée)', formatDayTime('2026-09-15') === null)
 
 const rounded = fixtures.fixtureRoundedCases
 check('cas Codex 69,49 → final 69 critical', rounded.raw6949.score.final === 69 && palierFromScore(rounded.raw6949.score.final) === 'critical')

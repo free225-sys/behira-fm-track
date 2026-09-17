@@ -10,10 +10,11 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 ## Index
 
-Statuts : les entrées 062 à 070 sont **En vigueur** (la plus récente l’emporte). DESIGN-003 (Geist auto-hébergé) est traité (DESIGN-015). DESIGN-005 (`.gitattributes`) reste à vérifier dans le dépôt.
+Statuts : les entrées 062 à 071 sont **En vigueur** (la plus récente l’emporte). DESIGN-003 (Geist auto-hébergé) est traité (DESIGN-015). DESIGN-005 (`.gitattributes`) reste à vérifier dans le dépôt.
 
 | id | date | sujet | attendu de | bloque |
 | --- | --- | --- | --- | --- |
+| DESIGN-071 | 2026-09-17 | Offset sous barre fixe + carte Contexte GE-01 | Wilkam | livré |
 | DESIGN-070 | 2026-09-17 | Finitions clôture : Pilotage, Paramètres, Rondes, 380 px | Wilkam | livré |
 | DESIGN-069 | 2026-09-17 | Cohérence documentaire avant intégration Codex | Codex | En vigueur |
 | DESIGN-068 | 2026-09-16 | Spécimen `/design-system` aligné sur la clôture UI | Wilkam | livré |
@@ -72,6 +73,17 @@ Statuts : les entrées 062 à 070 sont **En vigueur** (la plus récente l’empo
 | DESIGN-003 | 2026-08-28 | `pnpm dev` échoue sans accès réseau à `fonts.googleapis.com` | Dev Lead | tout audit hors ligne |
 | DESIGN-002 | 2026-08-28 | Nomenclature unique des destinations — *arbitrée, voir DEC-002* | Dev Lead | routes |
 | DESIGN-001 | 2026-08-28 | Lot 1 — spécification du socle de tokens | Dev Lead | lot 2, écran pilote |
+
+---
+
+## DESIGN-071 — Offset sous barre fixe + carte Contexte GE-01
+
+- **Date :** 17 septembre 2026
+- **Statut :** Livré.
+- **Périmètre :** affichage. Pas de `data.ts`.
+
+1. **Dossiers sous la barre fixe.** `--app-nav-height` réserve l’espace réel de la navigation (64 px, 68 px dès 1366 px, 0 px si la barre est en bas). Topbar masqué : padding du contenu et bleed du bandeau navy à 0, pour que le premier élément visible commence sous la barre, jamais derrière. Contrôle d’audit : `--app-nav-height` + règles `.is-dossiers-page`.
+2. **Carte équipement GE-01, étape Contexte.** Identité à gauche (icône GE + titre, sous-titre « Contrôle quotidien · essai de démarrage prévu »). Trois repères à droite, largeur égale, filets verticaux. Statut métier via `operationalStatus` (Dégradé dans le scénario par défaut), jamais « OK ». Emplacement = `EQUIPMENT_META['GE-01'].zone` (`RDC · Local groupe`). Donnée absente : « — » et « Données insuffisantes ». Sous 640 px : identité au-dessus, repères sous un filet horizontal.
 
 ---
 
