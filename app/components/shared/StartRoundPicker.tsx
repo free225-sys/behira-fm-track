@@ -4,7 +4,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 
 import type { EquipmentCode, TodaysRound } from '../../lib/ui-contract/building-health.ts';
 import { EQUIPMENT_META } from '../../lib/ui-contract/fixtures.ts';
-import { formatTime, roundResultLabel, roundStateLabel } from '../../lib/ui-contract/display.ts';
+import { formatTime, roundResultLabel, roundStateLabel, roundSubjectLabel } from '../../lib/ui-contract/display.ts';
 
 function rank(round: TodaysRound) {
   if (round.state === 'overdue') return 0;
@@ -17,7 +17,7 @@ function roundHint(round: TodaysRound) {
   if (round.missedYesterday) return 'Contrôle quotidien, ronde d’hier manquée';
   if (round.equipmentCode === 'GE-01') return 'Contrôle quotidien, essai prévu';
   if (round.equipmentCode) return `Contrôle quotidien, ${EQUIPMENT_META[round.equipmentCode]?.name ?? ''}`.trim();
-  return 'Ronde de zone';
+  return 'Ronde de services · RND-LET';
 }
 
 function deadlinePill(round: TodaysRound) {
@@ -111,7 +111,7 @@ export function StartRoundPicker({
                     }}
                   >
                     <span className="start-round-copy">
-                      <b>{round.equipmentCode ?? 'Zone'}</b>
+                      <b>{roundSubjectLabel(round)}</b>
                       <small>{done && round.doneAt ? `Faite à ${formatTime(round.doneAt)}${result ? ` · ${result}` : ''}` : roundHint(round)}</small>
                     </span>
                     <span className={`start-round-pill is-${pill.tone}`}>{pill.label}</span>

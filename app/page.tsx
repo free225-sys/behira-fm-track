@@ -11,7 +11,7 @@ import { BuildingHealthCockpit, ScoreRing } from './components/BuildingHealthCoc
 import { DemoScenarioProvider, DemoScenarioSelect, InsufficientNote, ReportTrackingLine, SegmentedControl, StartRoundPicker, useDemoScoreScenario } from './components/shared';
 import { demoHomeSnapshot, demoReportTracking, demoRoundsFor, sessionForAudience } from './lib/ui-contract/fixtures.ts';
 import type { TodaysRound, UiSession } from './lib/ui-contract/building-health.ts';
-import { asciiInitials, displayAssetCode, displayAssetText, formatCompactMoney, formatTime, formatWeekdayDate, roundStateLabel, scoreFigure } from './lib/ui-contract/display.ts';
+import { asciiInitials, displayAssetCode, displayAssetText, formatCompactMoney, formatTime, formatWeekdayDate, roundStateLabel, roundSubjectLabel, scoreFigure } from './lib/ui-contract/display.ts';
 import { Ge01AgentForm } from './components/Ge01Pilot';
 import { CostsWorkspace } from './components/CostsWorkspace';
 import { EquipmentWorkspace } from './components/EquipmentWorkspace';
@@ -868,7 +868,7 @@ export default function Home() {
     return haystack.includes(query.toLowerCase()) && (priorityFilter === 'Toutes' || a.priority === priorityFilter) && (statusFilter === 'Tous' || a.status === statusFilter);
   }), [anomalies, query, priorityFilter, statusFilter]);
 
-  const navigate = (next: View) => {
+  const navigate = (next: View, options?: { queue?: ManagerQueue }) => {
     const permitted = allowedViewsByPersona[personaId].includes(next) || primaryNavKeysByPersona[personaId].includes(next);
     if (next !== 'detail' && !permitted) {
       setToast('Accès masqué pour ce rôle de démonstration.');
@@ -882,7 +882,10 @@ export default function Home() {
     } else if (next === 'access' && personaId === 'administration') {
       setView('settings');
     } else {
-      if (next === 'manager') setDossiersTab('atraiter');
+      if (next === 'manager') {
+        setDossiersTab('atraiter');
+        if (options?.queue) setManagerTab(options.queue);
+      }
       setView(next);
     }
     setToast('');
@@ -1143,6 +1146,7 @@ export default function Home() {
     }
   };
   const currentNavigationItem = navItems.find((item) => item.key === activeNavKey) ?? navItems[0];
+  // const pageTitle = view === 'detail' ? selected.id : currentNavigationItem.label
   const pageTitle = view === 'detail' ? selected.id : navItemLabel(currentNavigationItem, personaId);
   const pageSubtitle = view === 'detail' ? `${displayAssetCode(selected.asset)} · ${selected.title}` : currentNavigationItem.subtitle;
   const canStartRound = allowedViewsByPersona[personaId].includes('report') && personaId !== 'administration';
@@ -1311,7 +1315,7 @@ function TodayRoundsPanel({ session, title, detail, withPicker = false, onStart 
         {rounds.map((item) => (
           <li key={item.roundId}>
             <small>{item.deadline ? formatTime(item.deadline) : '—'}</small>
-            <span>{item.equipmentCode ?? 'Zone'}{item.agentName ? `, ${item.agentName}` : ''}</span>
+            <span>{roundSubjectLabel(item)}{item.agentName ? `, ${item.agentName}` : ''}</span>
             <em className={`is-${item.state}`}>{roundStateLabel(item.state)}{item.missedYesterday ? ' · manquée hier' : ''}</em>
           </li>
         ))}
@@ -1715,7 +1719,7 @@ function RoundsAssistanceWorkspace({ fieldRequests, equipment, anomalies, onNavi
   return <>
     <LiveHealthCockpit session={sessionForAudience('rondes_assistance', 'Agente Rondes & Assistance Démo')} onNavigate={onNavigate} actionCount={submitted.filter((item) => item.status === 'Complément demandé' && !complementDone).length} />
     <div className="mission-switch" role="tablist" aria-label="Fonction de Agente Rondes & Assistance"><button type="button" role="tab" aria-selected={missionTab === 'terrain'} className={missionTab === 'terrain' ? 'active' : ''} onClick={() => setMissionTab('terrain')}><BrandIcon name="mapPin" size={16} /><b>Terrain</b><small>Rondes, constats et brouillons de démonstration</small></button><button type="button" role="tab" aria-selected={missionTab === 'administration'} className={missionTab === 'administration' ? 'active' : ''} onClick={() => setMissionTab('administration')}><BrandIcon name="files" size={16} /><b>Administratif</b><small>Devis, paiements et autorisations</small></button></div>
-    {missionTab === 'terrain' && <><section className="rondes_assistance-grid"><article className="panel zone-rounds"><div className="panel-head"><div><h3>Zones du jour</h3><p>Ronde du jour · {formatWeekdayDate('2026-09-16T08:00:00Z')}</p></div><span className="panel-count">4 / 6 contrôlées</span></div>{['Hall & accueil|Terminé','Atrium restaurant|À vérifier','Jardinières RDC|En cours','Sanitaires R+2|Terminé','Terrasse R+4|À faire','Parking sous-sol|À faire'].map((item) => {const [label,status] = item.split('|'); return <button key={label}><span className={status === 'Terminé' ? 'done' : status === 'En cours' ? 'current' : ''}>{status === 'Terminé' ? '✓' : '○'}</span><div><b>{label}</b><small>Propreté · plantes · fuite · dégradation</small></div><Badge tone={status === 'Terminé' ? 'success' : status === 'À vérifier' ? 'critical' : status === 'En cours' ? 'blue' : 'neutral'}>{status}</Badge></button>})}</article><article className="panel quick-finding"><div className="panel-head"><div><h3>Saisie dans Rondes</h3><p>Un seul formulaire de constat, pour éviter une double saisie.</p></div><Badge tone="blue">RONDES</Badge></div><p className="finding-pointer-copy">Les zones du jour restent ici. La création et la photo se font dans la destination Rondes.</p><button type="button" className="primary-button" onClick={() => onNavigate('report')}>Ouvrir la ronde →</button></article></section><section className="panel signal-tracker"><div className="panel-head"><div><h3>Mes signalements</h3><p>Statuts visibles sans accès aux décisions techniques</p></div><Badge>{submitted.length} dossiers</Badge></div><div className="signal-list">{submitted.map((item,index) => <article key={`${item.title}-${index}`}><div><b>{item.title}</b><p>{item.zone} · {item.category}</p></div><Badge tone={item.status === 'Complément demandé' && !complementDone ? 'orange' : item.status === 'À qualifier' ? 'blue' : 'success'}>{item.status === 'Complément demandé' && complementDone ? 'Complément transmis' : item.status}</Badge>{item.status === 'Complément demandé' && !complementDone && <button onClick={() => {setComplementDone(true);flash('Complément photo transmis à Facility Manager — simulation locale.')}}>Ajouter la photo demandée</button>}</article>)}</div><div className="field-feed-note">{fieldRequests.filter((request) => request.from === 'Agente Rondes & Assistance Démo').length} remontée(s) visible(s) dans la file de Facility Manager.</div></section></>}
+    {missionTab === 'terrain' && <><section className="rondes_assistance-grid"><article className="panel zone-rounds"><div className="panel-head"><div><h3>Zones du jour</h3><p>Ronde du jour · {formatWeekdayDate('2026-09-16T08:00:00Z')}</p></div><span className="panel-count">4 / 6 contrôlées</span></div>{['Hall & accueil|Terminé','Atrium restaurant|À vérifier','Jardinières RDC|En cours','Sanitaires R+2|Terminé','Terrasse R+4|À faire','Parking sous-sol|À faire'].map((item) => {const [label,status] = item.split('|'); return <button key={label}><span className={status === 'Terminé' ? 'done' : status === 'En cours' ? 'current' : ''}>{status === 'Terminé' ? '✓' : '○'}</span><div><b>{label}</b><small>Propreté · plantes · fuite · dégradation</small></div><Badge tone={status === 'Terminé' ? 'success' : status === 'À vérifier' ? 'critical' : status === 'En cours' ? 'blue' : 'neutral'}>{status}</Badge></button>})}</article><article className="panel quick-finding"><div className="panel-head"><div><h3>Saisie dans Rondes</h3><p>Un seul formulaire de constat, pour éviter une double saisie.</p></div><Badge tone="blue">RONDES</Badge></div><p className="finding-pointer-copy">Les zones du jour restent ici. La création et la photo se font dans la destination Rondes.</p><button type="button" className="secondary-button" onClick={() => onNavigate('report')}>Ouvrir la ronde</button></article></section><section className="panel signal-tracker"><div className="panel-head"><div><h3>Mes signalements</h3><p>Statuts visibles sans accès aux décisions techniques</p></div><Badge>{submitted.length} dossiers</Badge></div><div className="signal-list">{submitted.map((item,index) => <article key={`${item.title}-${index}`}><div><b>{item.title}</b><p>{item.zone} · {item.category}</p></div><Badge tone={item.status === 'Complément demandé' && !complementDone ? 'orange' : item.status === 'À qualifier' ? 'blue' : 'success'}>{item.status === 'Complément demandé' && complementDone ? 'Complément transmis' : item.status}</Badge>{item.status === 'Complément demandé' && !complementDone && <button onClick={() => {setComplementDone(true);flash('Complément photo transmis à Facility Manager — simulation locale.')}}>Ajouter la photo demandée</button>}</article>)}</div><div className="field-feed-note">{fieldRequests.filter((request) => request.from === 'Agente Rondes & Assistance Démo').length} remontée(s) visible(s) dans la file de Facility Manager.</div></section></>}
     {missionTab === 'administration' && <><section className="mission-permission-note"><span>i</span><div><b>Fonction administrative, sans décision technique</b><p>Agente Rondes & Assistance prépare et suit les pièces. Facility Manager et l’Administration conservent leurs validations respectives.</p></div></section><section className="rondes_assistance-admin-grid"><article className="panel"><div className="panel-head"><div><p className="design-kicker">SUIVI ADMINISTRATIF</p><h3>Devis et autorisations</h3></div><span className="panel-count is-alert">3 à suivre</span></div>{[['DEV-031','PREST-EAU','280 000 FCFA','Validation Facility Manager'],['DEV-029','PREST-ASC','950 000 FCFA','Arbitrage Administration'],['DEV-026','PREST-ESP','190 000 FCFA','Bon à payer']].map((item) => <button className="admin-follow-row" key={item[0]}><span>{item[0]}</span><p><b>{item[1]}</b><small>{item[2]} · {item[3]}</small></p><em>Voir →</em></button>)}</article><article className="panel"><div className="panel-head"><div><p className="design-kicker">COÛTS & PAIEMENTS</p><h3>Échéances de la semaine</h3></div></div><div className="payment-summary"><strong>2,12 M</strong><span>FCFA à contrôler</span></div><div className="payment-lines"><span><i className="done" /> 3 pièces complètes</span><span><i /> 1 autorisation attendue</span><span><i className="late" /> 1 paiement en retard</span></div><button className="secondary-button">Ouvrir le suivi financier</button></article></section></>}
   </>;
 }
@@ -1726,16 +1730,35 @@ const agentPerformance = [
   { name:'Agente Rondes & Assistance', score:91 },
 ];
 
-function OperationalAnalytics({ equipment, variant = 'direction' }: { equipment:EquipmentItem[]; variant?:'direction'|'manager' }) {
+function OperationalAnalytics({ equipment, section = 'team' }: { equipment:EquipmentItem[]; section?: 'health' | 'team' }) {
   const [period, setPeriod] = useState<'7j'|'30j'|'90j'>('30j');
   const [equipmentFilter, setEquipmentFilter] = useState<'all'|'watch'>('all');
   const visibleEquipment = (equipmentFilter === 'watch' ? equipment.filter((item) => item.health < 90) : equipment).slice(0,6);
   const periodLabel = period === '7j' ? '7 jours' : period === '30j' ? '30 jours' : '90 jours';
   const { scenario } = useDemoScoreScenario();
   const homeScoreValue = scoreFigure(demoHomeSnapshot(sessionForAudience('facility', 'Facility Manager Démo'), scenario).score);
-  return <section className={`operational-analytics analytics-${variant}`} aria-labelledby={`${variant}-analytics-title`}>
+
+  if (section === 'team') {
+    return <section className="operational-analytics analytics-direction" aria-labelledby="team-analytics-title">
+      <div className="analytics-heading">
+        <div><p className="design-kicker">SCORES AGENTS</p><h3 id="team-analytics-title">Équipe</h3><p>Aide au pilotage. Un échantillon insuffisant rend le score non interprétable ; aucune sanction automatique.</p></div>
+        <span className="mockup-label">Méthode à valider</span>
+      </div>
+      <div className="analytics-grid">
+        <article className="panel analytics-card agent-chart-card">
+          <div className="analytics-card-head"><div><span>ÉQUIPE TERRAIN</span><h4>Performance des agents</h4></div><span className="mockup-label">Méthode à valider</span></div>
+          <div className="agent-score-chart" aria-label="Scores globaux de démonstration des agents">{agentPerformance.map((agent) => <div className="agent-score-row" key={agent.name}><span><b>{agent.name}</b><small>Score global</small></span><div className="agent-score-track" role="progressbar" aria-label={`${agent.name}, score global de démonstration, ${agent.score} sur 100`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={agent.score}><i style={{width:`${agent.score}%`}} /></div><strong>{agent.score}</strong></div>)}</div>
+          <div className="agent-score-method"><span><b>Période observée</b>Non disponible</span><span><b>Échantillon</b>Non raccordé</span><span><b>Méthode proposée</b>Délais · réactivité · qualité des preuves</span><span><b>Variation / fraîcheur</b>Indisponibles</span></div>
+          <p className="analytics-note">Valeurs de démonstration uniquement. Facteurs positifs et négatifs, date de mise à jour : source non raccordée. Aucune sanction automatique n’est autorisée.</p>
+          <button type="button" className="health-link" disabled>Détail explicatif — source non raccordée</button>
+        </article>
+      </div>
+    </section>;
+  }
+
+  return <section className="operational-analytics analytics-direction" aria-labelledby="health-analytics-title">
     <div className="analytics-heading">
-      <div><p className="design-kicker">SCORES & TENDANCES</p><h3 id={`${variant}-analytics-title`}>Santé et performance</h3><p>Lecture dynamique des équipements et du traitement des anomalies.</p></div>
+      <div><p className="design-kicker">SCORES & TENDANCES</p><h3 id="health-analytics-title">Santé et évolution</h3><p>Lecture du bâtiment. Les scores agents restent dans Équipe.</p></div>
       <span className="mockup-label">Données de démonstration</span>
     </div>
     <div className="analytics-grid">
@@ -1764,13 +1787,6 @@ function OperationalAnalytics({ equipment, variant = 'direction' }: { equipment:
         <div className="horizontal-score-chart" aria-live="polite">{visibleEquipment.map((item) => <div className="score-bar-row" key={item.code}><span><b>{item.code}</b><small>{item.label}</small></span><div className="score-bar-track" role="progressbar" aria-label={`${item.label}, ${item.health} sur 100`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={item.health}><i className={item.health < 70 ? 'danger' : item.health < 90 ? 'warning' : 'success'} style={{width:`${item.health}%`}} /></div><strong>{item.health}</strong></div>)}</div>
         <div className="chart-legend"><span><i className="success" /> Sain ≥ 90</span><span><i className="warning" /> À surveiller 70–89</span><span><i className="danger" /> Critique &lt; 70</span></div>
       </article>
-
-      <article className="panel analytics-card agent-chart-card">
-        <div className="analytics-card-head"><div><span>ÉQUIPE TERRAIN</span><h4>Performance des agents</h4></div><span className="mockup-label">Méthode à valider</span></div>
-        <div className="agent-score-chart" aria-label="Scores globaux de démonstration des agents">{agentPerformance.map((agent) => <div className="agent-score-row" key={agent.name}><span><b>{agent.name}</b><small>Score global</small></span><div className="agent-score-track" role="progressbar" aria-label={`${agent.name}, score global de démonstration, ${agent.score} sur 100`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={agent.score}><i style={{width:`${agent.score}%`}} /></div><strong>{agent.score}</strong></div>)}</div>
-        <div className="agent-score-method"><span><b>Période observée</b>Non disponible</span><span><b>Échantillon</b>Non raccordé</span><span><b>Méthode proposée</b>Délais · réactivité · qualité des preuves</span><span><b>Variation / fraîcheur</b>Indisponibles</span></div>
-        <p className="analytics-note">Valeurs de démonstration uniquement. Le détail explicatif devra présenter facteurs positifs et négatifs avant validation ; aucune sanction automatique n’est autorisée.</p>
-      </article>
     </div>
   </section>;
 }
@@ -1789,11 +1805,8 @@ function ManagerOperationalContext() {
   </section>;
 }
 
-function Dashboard({ anomalies, equipment, escalations, audience = 'facility', onOpen, onNavigate, readOnly = false }: { anomalies: Anomaly[]; equipment:EquipmentItem[]; escalations:Escalation[]; audience?:'administration'|'facility'; onOpen:(id:string, from?:View)=>void; onNavigate:(view:View)=>void; readOnly?:boolean }) {
+function Dashboard({ equipment, escalations, audience = 'facility', onNavigate, readOnly = false }: { anomalies?: Anomaly[]; equipment:EquipmentItem[]; escalations:Escalation[]; audience?:'administration'|'facility'; onOpen?:(id:string, from?:View)=>void; onNavigate:(view:View, options?: { queue?: ManagerQueue })=>void; readOnly?:boolean }) {
   const [dashboardTab, setDashboardTab] = useState<'overview'|'actions'|'health'|'equipment'>('overview');
-  const urgent = anomalies.filter((a) => a.priority === 'Critique' || a.priority === 'Haute').filter((a) => a.status !== 'Clôturée').slice(0,3);
-  const lateCount = anomalies.filter((a) => a.delayed && a.status !== 'Clôturée').length;
-  const openCount = anomalies.filter((a) => a.status !== 'Clôturée').length;
   const documentedCosts = escalations.filter((item) => item.amount !== undefined);
   const documentedCostTotal = documentedCosts.reduce((total,item) => total + (item.amount ?? 0),0);
   const overThresholdCosts = documentedCosts.filter((item) => (item.amount ?? 0) >= DECISION_THRESHOLD_FCFA).length;
@@ -1807,21 +1820,13 @@ function Dashboard({ anomalies, equipment, escalations, audience = 'facility', o
     <section className="hero-row dashboard-hero"><div><p className="direction-kicker">{readOnly ? 'CONSULTATION AUTORISÉE' : audience === 'administration' ? 'PILOTAGE ADMINISTRATION' : 'PILOTAGE FACILITY MANAGER'}</p><p>{readOnly ? 'Indicateurs et registre accessibles sans action de modification.' : audience === 'administration' ? 'Synthèse décisionnelle, risques, coûts et performance.' : 'Priorités opérationnelles, santé du parc et actions attendues.'}</p></div><span className="health-pill"><i /> Disponibilité : données insuffisantes</span></section>
     <DemoScenarioSelect />
     <nav className="dashboard-section-tabs" role="tablist" aria-label="Sections du tableau de bord">{dashboardTabs.map((item) => <button key={item.id} type="button" role="tab" aria-selected={dashboardTab === item.id} aria-controls={`dashboard-panel-${item.id}`} id={`dashboard-tab-${item.id}`} className={dashboardTab === item.id ? 'active' : ''} onClick={() => setDashboardTab(item.id)}><span className="dashboard-tab-copy"><b>{item.label}</b></span></button>)}</nav>
-    {dashboardTab === 'overview' && <section id="dashboard-panel-overview" role="tabpanel" aria-labelledby="dashboard-tab-overview" className="direction-grid dashboard-tab-panel" aria-label="Tableau de bord en cinq angles de décision">
-      <article className="panel direction-block todo-block">
-        <div className="direction-head"><div><h3>À faire aujourd’hui</h3><p>Actions qui débloquent le workflow</p></div><span className="panel-count is-alert">{openCount} ouvertes</span></div>
-        <div className="todo-summary"><strong>{lateCount || 5}</strong><span>actions prioritaires<br />avant 17:00</span></div>
-        <div className="compact-actions">{urgent.slice(0,2).map((a) => <button key={a.id} onClick={() => onOpen(a.id,'dashboard')}><span className={`risk-dot ${a.priority === 'Critique' ? 'critical' : ''}`} /><div><b>{displayAssetCode(a.asset)} · {a.title}</b><small>{a.status} · échéance {a.due}</small></div><span>›</span></button>)}</div>
-        <button className="text-action" onClick={() => onNavigate(readOnly ? 'registry' : 'manager')}>{readOnly ? 'Consulter le registre →' : 'Ouvrir Dossiers →'}</button>
-      </article>
+    {dashboardTab === 'overview' && <section id="dashboard-panel-overview" role="tabpanel" aria-labelledby="dashboard-tab-overview" className="dashboard-tab-panel" aria-label="Performance du site">
+      <OperationalAnalytics equipment={equipment} section="health" />
       <article className="panel direction-block performance-block">
         <div className="direction-head"><div><h3>Performance</h3><p>Qualité de service</p></div></div>
         <div className="performance-score"><InsufficientNote title="Délais tenus" detail="Le taux d’interventions dans les délais n’a pas de source raccordée." /></div>
         <div className="performance-bar"><i /></div>
         <InsufficientNote title="Clôtures du mois" detail="Le nombre de dossiers clôturés n’a pas de source raccordée." />
-      </article>
-      <article className="panel direction-block decisions-block">
-        <div className="direction-head"><div><h3>Décisions recommandées</h3><p>Les priorités se traitent dans Dossiers</p></div></div>
         <button className="text-action" onClick={() => onNavigate(readOnly ? 'registry' : 'manager')}>{readOnly ? 'Consulter Dossiers →' : 'Ouvrir Dossiers →'}</button>
       </article>
     </section>}
@@ -1831,7 +1836,7 @@ function Dashboard({ anomalies, equipment, escalations, audience = 'facility', o
         <div className="cost-main"><span>Montants documentés</span><strong>{formatMoney(documentedCostTotal)}</strong></div>
         <div className="cost-details"><div><span>Dossiers chiffrés</span><b>{documentedCosts.length}</b></div><div className="cost-gap"><span>Au-dessus du seuil</span><b>{overThresholdCosts}</b></div></div>
         <small className="cost-note">Budget, engagé et payé : données insuffisantes.</small>
-        <button type="button" className="text-action" onClick={() => onNavigate('costs')}>Consulter les coûts documentés →</button>
+        <button type="button" className="text-action" onClick={() => onNavigate('manager', { queue: 'overThreshold' })}>Ouvrir Dossiers, au-dessus du seuil →</button>
       </article>
     </section>}
     {dashboardTab === 'health' && <section id="dashboard-panel-health" role="tabpanel" aria-labelledby="dashboard-tab-health" className="dashboard-tab-panel"><OperationalAnalytics equipment={equipment} /></section>}
@@ -2189,9 +2194,9 @@ function Report({ persona, onNavigate }: { persona:Persona; onNavigate:(v:View)=
 
   if (persona.id === 'facility') {
     return <div className="rounds-page">
-      <section className="section-heading round-heading"><div><p className="design-kicker">RONDES DU JOUR</p><h2 className="visually-hidden">Rondes</h2><p>Rondes techniques de tous les agents. Démarrez une ronde ou suivez l’avancement.</p></div></section>
+      <h2 className="visually-hidden">Rondes</h2>
       <DemoScenarioSelect />
-      <TodayRoundsPanel session={session} title="Rondes du jour" detail="Tous les agents, triées par dépassement puis par heure." withPicker onStart={() => {}} />
+      <TodayRoundsPanel session={session} title="Planning du jour" detail="Tous les agents, triées par dépassement puis par heure." withPicker onStart={() => {}} />
     </div>;
   }
 

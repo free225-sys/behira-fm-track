@@ -16,6 +16,24 @@ export type AccessWorkspaceUser = {
 
 type AdminAction = 'create' | 'disable';
 
+type FmAccessRequest = {
+  id:string;
+  profile:string;
+  proposedRole:string;
+  proposedScope:string;
+  justification:string;
+};
+
+const DEMO_FM_REQUESTS: FmAccessRequest[] = [
+  {
+    id: 'ACC-014',
+    profile: 'Agent Eau & Incendie Démo',
+    proposedRole: 'Agent terrain',
+    proposedScope: 'WILO-01 · RIA-01',
+    justification: 'Étendre le périmètre incendie pendant l’absence de l’intérimaire, sans changer le rôle.',
+  },
+];
+
 export function AccessWorkspace({ users, audience, embedded = false }: {
   users:AccessWorkspaceUser[];
   audience:'administration' | 'facility';
@@ -30,8 +48,24 @@ export function AccessWorkspace({ users, audience, embedded = false }: {
   const [reason, setReason] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors<'name'|'email'|'reason'|'selectedUserId'>>({});
+  const [pendingRequests, setPendingRequests] = useState<FmAccessRequest[]>(DEMO_FM_REQUESTS);
+  const [requestMotives, setRequestMotives] = useState<Record<string, string>>({});
+  const [requestErrors, setRequestErrors] = useState<Record<string, string>>({});
   const uniqueRoles = new Set(users.map((user) => user.role)).size;
   const selectedUser = users.find((user) => user.id === selectedUserId);
+
+  const decideRequest = (request: FmAccessRequest, decision: 'approve' | 'refuse') => {
+    const motive = (requestMotives[request.id] ?? '').trim();
+    if (motive.length < 12) {
+      setRequestErrors((current) => ({ ...current, [request.id]: 'Indiquez un motif d’au moins 12 caractères.' }));
+      return;
+    }
+    setPendingRequests((items) => items.filter((item) => item.id !== request.id));
+    setRequestErrors((current) => ({ ...current, [request.id]: '' }));
+    setConfirmation(decision === 'approve'
+      ? `${request.profile} : proposition approuvée. Aucun compte réel n’a été créé.`
+      : `${request.profile} : proposition refusée. Aucun compte réel n’a été créé.`);
+  };
 
   const submit = (event:FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -63,7 +97,40 @@ export function AccessWorkspace({ users, audience, embedded = false }: {
       </div>
       <Badge tone={audience === 'administration' ? 'blue' : 'neutral'}>{audience === 'administration' ? 'GESTION ADMINISTRATION' : 'PROPOSITION UNIQUEMENT'}</Badge>
     </header>
-    {audience === 'administration' ? <div className="parameters-pending-banner" role="status"><b>Demandes du FM en attente</b><p>1 proposition de périmètre à confirmer. Aucun compte réel n’a été créé.</p></div> : null}
+    {audience === 'administration' ? <section className="access-pending-list" aria-labelledby="access-pending-title">
+      <div className="access-section-head"><div><p className="design-kicker">VALIDATION</p><h3 id="access-pending-title">Demandes du FM en attente</h3><p>Profil, rôle et périmètre proposés, justification. Approuver ou refuser avec un motif. Aucun compte réel n’a été créé.</p></div><span className="panel-count">{pendingRequests.length}</span></div>
+      {pendingRequests.length === 0
+        ? <p className="access-pending-empty">Aucune demande en attente.</p>
+        : pendingRequests.map((request) => (
+          <article key={request.id} className="access-pending-card">
+            <div className="access-pending-copy">
+              <b>{request.profile}</b>
+              <dl>
+                <div><dt>Rôle proposé</dt><dd>{request.proposedRole}</dd></div>
+                <div><dt>Périmètre proposé</dt><dd>{request.proposedScope}</dd></div>
+                <div><dt>Justification</dt><dd>{request.justification}</dd></div>
+              </dl>
+            </div>
+            <Field label="Motif" size="long" error={requestErrors[request.id]}>
+              <textarea
+                value={requestMotives[request.id] ?? ''}
+                maxLength={1000}
+                aria-invalid={Boolean(requestErrors[request.id])}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setRequestMotives((current) => ({ ...current, [request.id]: value }));
+                  setRequestErrors((current) => ({ ...current, [request.id]: '' }));
+                }}
+                placeholder="Obligatoire pour approuver ou refuser"
+              />
+            </Field>
+            <div className="access-pending-actions">
+              <Button type="button" onClick={() => decideRequest(request, 'approve')}>Approuver</Button>
+              <Button type="button" variant="secondary" onClick={() => decideRequest(request, 'refuse')}>Refuser</Button>
+            </div>
+          </article>
+        ))}
+    </section> : null}
 
     <section className="access-summary" aria-label="Synthèse des accès de démonstration">
       <Card className="access-summary-card"><span>PROFILS DE DÉMONSTRATION</span><strong>{users.length}</strong><small>Aucun compte Auth géré ici</small></Card>
@@ -104,7 +171,7 @@ export function AccessWorkspace({ users, audience, embedded = false }: {
 
           <Field label="Justification" size="long" error={fieldErrors.reason}><textarea value={reason} maxLength={1000} aria-invalid={Boolean(fieldErrors.reason)} onChange={(event) => {setReason(event.target.value);setFieldErrors((current) => ({ ...current, reason: undefined }))}} placeholder={audience === 'facility' ? 'Expliquez le besoin métier et le périmètre demandé.' : adminAction === 'create' ? 'Expliquez pourquoi cet accès doit être créé.' : 'Expliquez pourquoi cet accès doit être désactivé.'} /></Field>
 
-          <div className="access-security-note" role="note"><BrandIcon name="lock" size={18} /><p><b>Exécution sécurisée hors du navigateur</b><small>La cible réelle devra contrôler l’auteur, le rôle, le périmètre et la justification côté serveur, puis historiser le résultat. Les cartes de règles détaillées sont remplacées par cette phrase tant que le référentiel d’accès n’est pas raccordé.</small></p></div>
+          <div className="access-security-note" role="note"><BrandIcon name="lock" size={18} /><p><b>Exécution sécurisée hors du navigateur</b></p></div>
           {confirmation && <div className="access-confirmation" role="status"><span aria-hidden="true">✓</span>{confirmation}</div>}
           <Button type="submit">{audience === 'facility' ? 'Envoyer la proposition' : adminAction === 'create' ? 'Préparer la création' : 'Préparer la désactivation'}</Button>
           <small className="access-simulation-note">Simulation locale · aucun compte, rôle ou périmètre réel n’est modifié.</small>

@@ -4637,3 +4637,64 @@ small{font-size:var(--font-size-label)}
 @media (min-width:1366px){
   .content{--content-pad:clamp(32px,3.2vw,60px)}
 }
+
+/* DESIGN-070 — finitions clôture : Pilotage, Paramètres, Rondes, 380 px */
+.dashboard-tab-panel>.operational-analytics{margin-bottom:16px}
+.dashboard-tab-panel>.performance-block{
+  grid-column:auto;max-width:none;margin:0 0 8px;
+}
+.agent-chart-card{grid-column:1/-1}
+.health-link:disabled{opacity:.65;cursor:not-allowed}
+
+.today-rounds-panel>.analytics-card-head{
+  padding:16px 20px 10px;margin:0;align-items:center;
+}
+.rounds-page .today-rounds-panel{margin-top:0}
+.rounds-page>.visually-hidden+ .demo-scenario-bar,
+.rounds-page>h2.visually-hidden+.demo-scenario-bar{margin-top:0}
+
+.access-pending-list{
+  margin:0 0 18px;padding:16px 18px;border:1px solid var(--border);border-radius:var(--radius-md);
+  background:var(--surface);
+}
+.access-pending-list .access-section-head{margin:0 0 12px}
+.access-pending-empty{margin:0;color:var(--foreground-muted);font-size:var(--font-size-body)}
+.access-pending-card{
+  display:grid;gap:12px;padding:14px 0;border-top:1px solid var(--border);
+}
+.access-pending-card:first-of-type{border-top:0;padding-top:0}
+.access-pending-copy>b{display:block;font-size:var(--font-size-body)}
+.access-pending-copy dl{display:grid;gap:8px;margin:8px 0 0}
+.access-pending-copy dt{color:var(--foreground-muted);font-size:var(--font-size-label);font-weight:700}
+.access-pending-copy dd{margin:2px 0 0;font-size:var(--font-size-body)}
+.access-pending-actions{display:flex;flex-wrap:wrap;gap:8px}
+
+@media (max-width:430px){
+  .topbar>div:first-child{max-width:none}
+  .topbar h1{
+    overflow:visible;text-overflow:unset;white-space:normal;
+  }
+  .admin-home .badge,
+  .admin-home .badge .badge-label,
+  .admin-ctrl .k,
+  .admin-ctrl .s,
+  .admin-line,
+  .admin-line span,
+  .admin-home .decision-card-copy strong,
+  .admin-home .decision-card-copy .sub,
+  .admin-home .direction-focus-head,
+  .parameters-workspace .badge,
+  .parameters-workspace .badge .badge-label,
+  .access-workspace .badge,
+  .access-workspace .badge .badge-label,
+  .access-user-copy b,
+  .access-user-copy small,
+  .access-user-copy em{
+    white-space:normal;overflow:visible;text-overflow:unset;max-width:none;height:auto;
+  }
+  .admin-ctrl .k,.admin-ctrl .s{overflow-wrap:anywhere}
+  .admin-line{align-items:flex-start;flex-wrap:wrap}
+  .admin-home .direction-focus-head>div{flex-wrap:wrap}
+  .access-pending-actions .primary-button,
+  .access-pending-actions .secondary-button{min-height:44px}
+}

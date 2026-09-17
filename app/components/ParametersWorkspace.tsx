@@ -5,7 +5,6 @@ import { useState } from 'react';
 import { Badge, BrandIcon, Button, Card } from './ui';
 import { ErrorNotificationRules } from './NotificationCenter';
 import { AccessWorkspace, type AccessWorkspaceUser } from './AccessWorkspace';
-import { DemoScenarioSelect } from './shared';
 
 export type ParameterWorkspaceData = {
   code:'financial_decision_threshold';
@@ -46,13 +45,12 @@ export function ParametersWorkspace({ parameter, onOpenCosts, users }: {
     <header className="parameters-workspace-hero">
       <div>
         <p className="design-kicker">ADMINISTRATION</p>
-        <h2 id="parameters-workspace-title">Paramètres</h2>
+        <h2 id="parameters-workspace-title" className="visually-hidden">Paramètres</h2>
         <p className="visually-hidden">Seuils et paramètres</p>
         <p>Consultez les règles actuellement justifiables. Une valeur sans source, historique ou autorité explicite n’est jamais présentée comme un paramètre actif.</p>
       </div>
       <Badge tone="neutral">LECTURE SEULE</Badge>
     </header>
-    <DemoScenarioSelect />
 
     <div className="parameters-tabs workspace-tabs" role="tablist" aria-label="Sections des paramètres">
       {tabs.map((item) => (

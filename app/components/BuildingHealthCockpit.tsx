@@ -24,6 +24,7 @@ import {
   palierTone,
   pendingDecisionsLabel,
   perimeterCopy,
+  roundSubjectLabel,
   scoreFigure,
   shouldOfferControlPlanning,
 } from '../lib/ui-contract/display.ts';
@@ -193,7 +194,7 @@ export function BuildingHealthCockpit({
 
   const dueMeta = [
     firstDeadline?.deadline ? `Première échéance ${formatTime(firstDeadline.deadline, snapshot.siteTimezone)}` : null,
-    missedYesterday ? `${missedYesterday.equipmentCode ?? 'Zone'} manquée hier` : null,
+    missedYesterday ? `${roundSubjectLabel(missedYesterday)} manquée hier` : null,
   ].filter(Boolean).join(', ');
 
   const bannerTitle = admin

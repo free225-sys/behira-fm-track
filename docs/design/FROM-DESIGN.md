@@ -10,10 +10,11 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 ## Index
 
-Statuts : les entrées 062 à 069 sont **En vigueur** (la plus récente l’emporte). DESIGN-003 (Geist auto-hébergé) est traité (DESIGN-015). DESIGN-005 (`.gitattributes`) reste à vérifier dans le dépôt.
+Statuts : les entrées 062 à 070 sont **En vigueur** (la plus récente l’emporte). DESIGN-003 (Geist auto-hébergé) est traité (DESIGN-015). DESIGN-005 (`.gitattributes`) reste à vérifier dans le dépôt.
 
 | id | date | sujet | attendu de | bloque |
 | --- | --- | --- | --- | --- |
+| DESIGN-070 | 2026-09-17 | Finitions clôture : Pilotage, Paramètres, Rondes, 380 px | Wilkam | livré |
 | DESIGN-069 | 2026-09-17 | Cohérence documentaire avant intégration Codex | Codex | En vigueur |
 | DESIGN-068 | 2026-09-16 | Spécimen `/design-system` aligné sur la clôture UI | Wilkam | livré |
 | DESIGN-067 | 2026-09-16 | Passe corrective nav / Dossiers / captures 380 px | Wilkam | livré |
@@ -71,6 +72,21 @@ Statuts : les entrées 062 à 069 sont **En vigueur** (la plus récente l’empo
 | DESIGN-003 | 2026-08-28 | `pnpm dev` échoue sans accès réseau à `fonts.googleapis.com` | Dev Lead | tout audit hors ligne |
 | DESIGN-002 | 2026-08-28 | Nomenclature unique des destinations — *arbitrée, voir DEC-002* | Dev Lead | routes |
 | DESIGN-001 | 2026-08-28 | Lot 1 — spécification du socle de tokens | Dev Lead | lot 2, écran pilote |
+
+---
+
+## DESIGN-070 — Finitions clôture : Pilotage, Paramètres, Rondes, 380 px
+
+- **Date :** 17 septembre 2026
+- **Statut :** Livré. Chantier design clos.
+- **Périmètre :** affichage. Pas de `data.ts`.
+
+1. **Pilotage.** Équipe = scores agents uniquement (DESIGN.md art. 9). Santé du bâtiment et évolution du score dans Performance. « À faire aujourd’hui » et la carte vide « Décisions recommandées » retirées ; un lien « Ouvrir Dossiers » suffit.
+2. **Pilotage > Coûts.** Le lien ouvre Dossiers filtré sur « Au-dessus du seuil ».
+3. **Paramètres > Accès.** Demandes du FM en liste (profil, rôle et périmètre proposés, justification, Approuver / Refuser avec motif). Note interne retirée du bloc « Exécution sécurisée ». Un seul titre « Paramètres ». Pas de sélecteur de scénario sur cette page.
+4. **Administration 380 px.** Badges et libellés passent à la ligne au lieu de points de suspension.
+5. **Rondes (FM).** Un seul titre, marge de l’en-tête de carte, libellé `RND-LET` à la place de « Zone ».
+6. **Accueil agente rondes.** Un seul bouton principal (« Démarrer une ronde ») ; « Ouvrir la ronde » en secondaire.
 
 ---
 
