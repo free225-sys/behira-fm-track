@@ -102,7 +102,7 @@ function ContextEquipmentCard({ context }: { context: Ge01LastContext }) {
         </div>
         <div>
           <dt>Dernier contrôle</dt>
-          <dd>{context.controlStatus ? <Badge tone={context.controlStatus === 'ok' ? 'success' : 'orange'}>{context.controlStatus === 'ok' ? 'OK' : 'Anomalie'}</Badge> : '—'}</dd>
+          <dd>{context.controlStatus ? <Badge tone={context.controlStatus === 'ok' ? 'success' : 'orange'}>{context.controlStatus === 'ok' ? 'Disponible' : 'Dégradé'}</Badge> : '—'}</dd>
         </div>
         <div>
           <dt>Emplacement</dt>
@@ -515,6 +515,7 @@ export function Ge01AgentForm({ agentName }: { agentName: string }) {
                   value={draft.date}
                   aria-invalid={Boolean(errors.date)}
                   aria-label="Date du contrôle"
+                  lang="fr"
                   onChange={(event) => update('date', event.target.value)}
                 />
                 <input
@@ -524,6 +525,7 @@ export function Ge01AgentForm({ agentName }: { agentName: string }) {
                   value={draft.time}
                   aria-invalid={Boolean(errors.time)}
                   aria-label="Heure du contrôle"
+                  lang="fr"
                   onChange={(event) => update('time', event.target.value.slice(0, 5))}
                 />
                 <Button variant="secondary" className="ge-now-button" onClick={stampNow}>

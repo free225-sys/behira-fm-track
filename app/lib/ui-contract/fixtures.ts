@@ -199,7 +199,7 @@ export const fixtureScoreCapped = snapshot({
     hiddenItemCount: 0,
   },
   equipment: PARK.map((item) => item.code === 'RIA-01'
-    ? card('RIA-01', { operationalStatus: 'unavailable', score: 61, isFunctional: false, technicalState: 'unavailable' })
+    ? card('RIA-01', { operationalStatus: 'unavailable', score: 61, isFunctional: false, technicalState: 'unavailable', responsible: 'Agent Eau & Incendie Démo', dossierCount: 1 })
     : item),
   pendingDecisions: 4,
   overdueCritical: 2,
@@ -338,6 +338,8 @@ export const fixtureUnavailableAndExpired = snapshot({
       score: 61,
       controlValidity: 'expired',
       lastControlAt: '2026-08-01T07:00:00Z',
+      responsible: 'Agent Eau & Incendie Démo',
+      dossierCount: 1,
     }),
   ],
 });
@@ -401,7 +403,7 @@ export const fixtureStatusAvailable = snapshot({
 export const fixtureRiaDegraded = snapshot({
   ...fixtureScoreNormal,
   snapshotId: id('ria-degraded'),
-  equipment: [card('RIA-01', { operationalStatus: 'degraded', score: 61 })],
+  equipment: [card('RIA-01', { operationalStatus: 'degraded', score: 61, responsible: 'Agent Eau & Incendie Démo', dossierCount: 1 })],
 });
 
 export const fixtureRiaUnavailable = snapshot({
@@ -412,7 +414,7 @@ export const fixtureRiaUnavailable = snapshot({
 export const fixtureStatusUnknown = snapshot({
   ...fixtureScoreNormal,
   snapshotId: id('status-unknown'),
-  equipment: [card('RIA-01', { operationalStatus: null, score: null, technicalState: null, isFunctional: null })],
+  equipment: [card('RIA-01', { operationalStatus: null, score: null, technicalState: null, isFunctional: null, responsible: 'Agent Eau & Incendie Démo', dossierCount: 1 })],
 });
 
 export const fixtureDegradedAndExpired = snapshot({
@@ -575,6 +577,20 @@ export const demoTodaysRounds: TodaysRound[] = [
     result: null,
     missedYesterday: false,
   },
+  {
+    roundId: id('round-rnd'),
+    equipmentCode: null,
+    zoneId: id('zone-rnd'),
+    agentId: id('profile-rondes_assistance'),
+    agentName: 'Agente Rondes & Assistance Démo',
+    scheduledDate: '2026-09-16',
+    deadline: '2026-09-16T16:00:00Z',
+    deadlineStatus: 'scheduled',
+    state: 'due',
+    doneAt: null,
+    result: null,
+    missedYesterday: false,
+  },
 ];
 
 export const demoReportTracking: ReportTracking[] = [
@@ -680,5 +696,9 @@ export function demoHomeSnapshot(session: UiSession, scenario: DemoScoreScenario
 
 export function demoRoundsFor(session: UiSession): TodaysRound[] {
   if (session.perimeter.kind === 'all') return demoTodaysRounds;
-  return demoTodaysRounds.filter((item) => item.equipmentCode && inPerimeter(item.equipmentCode, session.perimeter));
+  return demoTodaysRounds.filter((item) => {
+    if (item.equipmentCode && inPerimeter(item.equipmentCode, session.perimeter)) return true;
+    if (item.zoneId && session.perimeter.zoneIds.includes(item.zoneId)) return true;
+    return false;
+  });
 }

@@ -41,7 +41,7 @@ requireAll('Droits visibles par persona', page, [
   "['workspace','dashboard','registry','equipment','costs','access','settings']",
   "['workspace','report']",
   "personaId === 'electricite' || personaId === 'eau_incendie'",
-  "Cleaning · jardinage · suivi administratif",
+  "Nettoyage · jardinage · suivi administratif",
   "primaryNavKeysByPersona",
 ])
 requireAll('Responsive', css, [

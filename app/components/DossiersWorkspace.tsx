@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 
 import { displayAssetCode, formatMoney } from '../lib/ui-contract/display.ts';
+import { DemoScenarioSelect } from './shared';
 import { Badge } from './ui';
 
 export type DossiersTab = 'atraiter' | 'tous' | 'clotures';
@@ -92,7 +93,7 @@ export function DossiersWorkspace({
       <header className="dossiers-hero is-bleed">
         <div className="dossiers-hero-row">
           <div>
-            <h2 className="home-hero-title">Dossiers</h2>
+            <h1 className="home-hero-title">Dossiers</h1>
             <p className="home-hero-meta">Constats, notifications, tickets et arbitrages au même endroit. Seuil de délégation : {formatMoney(threshold)}.</p>
           </div>
           <label className="search-box dossiers-search dossiers-search-on-navy">
@@ -111,6 +112,7 @@ export function DossiersWorkspace({
           <button type="button" role="tab" aria-selected={tab === 'clotures'} className={tab === 'clotures' ? 'active' : ''} onClick={() => onTab('clotures')}>Clôturés <span>{counts.clotures}</span></button>
         </div>
       </header>
+      <DemoScenarioSelect />
       {children}
     </section>
   );

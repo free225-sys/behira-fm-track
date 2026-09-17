@@ -1,7 +1,11 @@
 'use client';
 
+import { useState } from 'react';
+
 import { Badge, BrandIcon, Button, Card } from './ui';
 import { ErrorNotificationRules } from './NotificationCenter';
+import { AccessWorkspace, type AccessWorkspaceUser } from './AccessWorkspace';
+import { DemoScenarioSelect } from './shared';
 
 export type ParameterWorkspaceData = {
   code:'financial_decision_threshold';
@@ -19,88 +23,95 @@ const unavailableFamilies = [
   { label:'Méthodes de calcul des scores', state:'Méthode à valider', detail:'Les scores de démonstration restent séparés des paramètres métier tant que leur formule n’est pas approuvée et historisée.' },
 ];
 
+type SettingsTab = 'acces' | 'regles' | 'notifications' | 'zones' | 'journal';
+
 function formatMoney(value:number) {
   return new Intl.NumberFormat('fr-FR').format(value);
 }
 
-export function ParametersWorkspace({ parameter, onOpenCosts }: {
+export function ParametersWorkspace({ parameter, onOpenCosts, users }: {
   parameter:ParameterWorkspaceData;
   onOpenCosts:()=>void;
+  users?: AccessWorkspaceUser[];
 }) {
+  const [tab, setTab] = useState<SettingsTab>('acces');
+  const tabs: Array<{ id: SettingsTab; label: string }> = [
+    { id: 'acces', label: 'Accès' },
+    { id: 'regles', label: 'Règles' },
+    { id: 'notifications', label: 'Notifications' },
+    { id: 'zones', label: 'Zones' },
+    { id: 'journal', label: 'Journal d’audit' },
+  ];
   return <section className="parameters-workspace" aria-labelledby="parameters-workspace-title">
     <header className="parameters-workspace-hero">
       <div>
         <p className="design-kicker">ADMINISTRATION</p>
-        <h2 id="parameters-workspace-title" className="visually-hidden">Seuils et paramètres</h2>
+        <h2 id="parameters-workspace-title">Paramètres</h2>
+        <p className="visually-hidden">Seuils et paramètres</p>
         <p>Consultez les règles actuellement justifiables. Une valeur sans source, historique ou autorité explicite n’est jamais présentée comme un paramètre actif.</p>
       </div>
       <Badge tone="neutral">LECTURE SEULE</Badge>
     </header>
+    <DemoScenarioSelect />
 
-    <section className="parameters-summary" aria-label="Synthèse des paramètres disponibles">
-      <Card className="parameters-summary-card"><span>PARAMÈTRE CONFIRMÉ</span><strong>1</strong><small>Seuil de décision financière</small></Card>
-      <Card className="parameters-summary-card"><span>MODIFIABLE ICI</span><strong>0</strong><small>Aucune édition silencieuse</small></Card>
-      <Card className="parameters-summary-card"><span>FAMILLES À RACCORDER</span><strong>{unavailableFamilies.length}</strong><small>SLA, technique et scores</small></Card>
-      <Card className="parameters-summary-card is-insufficient"><span>HISTORIQUE PERSISTANT</span><strong>Indisponible</strong><small>Ancienne valeur et auteur non raccordés</small></Card>
-    </section>
+    <div className="parameters-tabs workspace-tabs" role="tablist" aria-label="Sections des paramètres">
+      {tabs.map((item) => (
+        <button key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? 'active' : ''} onClick={() => setTab(item.id)}>{item.label}</button>
+      ))}
+    </div>
 
-    <div className="parameters-layout">
-      <div className="parameters-stack">
+    {tab === 'acces' && (users
+      ? <AccessWorkspace users={users} audience="administration" embedded />
+      : <p className="parameter-rule-sentence">Les profils et périmètres se consultent dans Accès. Aucun compte, rôle ou périmètre réel n’est modifié ici.</p>)}
+
+    {tab === 'regles' && <>
+      <section className="parameters-summary" aria-label="Synthèse des paramètres disponibles">
+        <Card className="parameters-summary-card"><span>PARAMÈTRE CONFIRMÉ</span><strong>1</strong><small>Seuil de décision financière</small></Card>
+        <Card className="parameters-summary-card"><span>MODIFIABLE ICI</span><strong>0</strong><small>Aucune édition silencieuse</small></Card>
+        <Card className="parameters-summary-card"><span>FAMILLES À RACCORDER</span><strong>{unavailableFamilies.length}</strong><small>SLA, technique et scores</small></Card>
+        <Card className="parameters-summary-card is-insufficient"><span>HISTORIQUE PERSISTANT</span><strong>Indisponible</strong><small>Ancienne valeur et auteur non raccordés</small></Card>
+      </section>
+
       <Card as="section" className="parameter-detail-card">
         <div className="parameter-detail-head">
-          <div><p className="design-kicker">RÈGLE FINANCIÈRE</p><h3>{parameter.label}</h3><p>Valeur métier confirmée pour répartir la décision entre Facility Manager et Administration.</p></div>
+          <div><p className="design-kicker">RÈGLE FINANCIÈRE</p><h3>{parameter.label}</h3></div>
           <Badge tone="orange">CONFIRMÉ · À RACCORDER</Badge>
         </div>
-
-        <div className="parameter-value-panel">
-          <span>VALEUR DE RÉFÉRENCE</span>
-          <strong>{formatMoney(parameter.value)} <small>{parameter.unit}</small></strong>
-          <p>En dessous : délégation Facility Manager. À partir de cette valeur : arbitrage Administration.</p>
+        <p className="parameter-rule-sentence">En dessous de {formatMoney(parameter.value)} {parameter.unit}, la décision reste dans la délégation du Facility Manager. À partir de cette valeur, l’arbitrage revient à l’Administration. Date d’effet {parameter.effectiveDate}, autorité {parameter.authority}. Délais SLA par priorité, seuils techniques des équipements et méthodes de calcul des scores ne sont pas encore raccordés.</p>
+        <div className="parameter-impact-grid visually-hidden">
+          <span><b>Coûts</b>Classement des dossiers au-dessus du seuil</span>
+          <span><b>À traiter</b>Choix de la branche de décision</span>
         </div>
-
-        <dl className="parameter-facts">
-          <div><dt>Code fonctionnel</dt><dd>{parameter.code}</dd></div>
-          <div><dt>Portée</dt><dd>{parameter.scope}</dd></div>
-          <div><dt>Date d’effet</dt><dd>{parameter.effectiveDate}</dd></div>
-          <div><dt>Autorité métier</dt><dd>{parameter.authority}</dd></div>
-          <div><dt>Justification</dt><dd>Délégation des décisions financières opérationnelles</dd></div>
-          <div><dt>Source actuelle</dt><dd>Référence produit frontend validée</dd></div>
-        </dl>
-
-        <section className="parameter-impact" aria-labelledby="parameter-impact-title">
-          <div><p className="design-kicker">CONSOMMATEURS</p><h4 id="parameter-impact-title">Où cette valeur est appliquée</h4></div>
-          <div className="parameter-impact-grid">
-            <span><b>Coûts</b>Classement des dossiers au-dessus du seuil</span>
-            <span><b>À traiter</b>Choix de la branche de décision</span>
-            <span><b>Dossier central</b>Autorité attendue sur le montant</span>
-            <span><b>Accueil Administration</b>Arbitrages financiers à décider</span>
-          </div>
-          <Button variant="secondary" onClick={onOpenCosts}>Examiner les dossiers concernés</Button>
-        </section>
-
+        <Button variant="secondary" onClick={onOpenCosts}>Examiner les dossiers concernés</Button>
+        <details className="parameter-tech-details">
+          <summary>Détails techniques</summary>
+          <dl className="parameter-facts">
+            <div><dt>Code fonctionnel</dt><dd>{parameter.code}</dd></div>
+            <div><dt>Portée</dt><dd>{parameter.scope}</dd></div>
+            <div><dt>Date d’effet</dt><dd>{parameter.effectiveDate}</dd></div>
+            <div><dt>Autorité métier</dt><dd>{parameter.authority}</dd></div>
+            <div><dt>Justification</dt><dd>Délégation des décisions financières opérationnelles</dd></div>
+            <div><dt>Source actuelle</dt><dd>Référence produit frontend validée</dd></div>
+          </dl>
+        </details>
         <div className="parameter-history-missing" role="note">
           <BrandIcon name="info" size={18} />
           <div><b>Historique persistant indisponible</b><p>L’ancienne valeur, l’auteur technique du changement, l’horodatage détaillé et le motif enregistré ne sont pas raccordés. Toute future modification devra conserver ces éléments avant de devenir active.</p></div>
         </div>
       </Card>
+    </>}
 
-      <Card as="section" className="parameter-detail-card">
-        <ErrorNotificationRules canEdit />
-      </Card>
-      </div>
+    {tab === 'notifications' && <Card as="section" className="parameter-detail-card"><ErrorNotificationRules canEdit /></Card>}
 
-      <aside className="parameters-aside">
-        <Card as="section" className="parameter-governance">
-          <p className="design-kicker">GARDE-FOU</p>
-          <h3>Pourquoi l’édition est bloquée</h3>
-          <p>Une seule source, un historique obligatoire (ancienne et nouvelle valeur, auteur, date, justification) et une application uniquement côté serveur sécurisé.</p>
-        </Card>
+    {tab === 'zones' && <Card as="section" className="parameter-gaps">
+      <div className="parameter-gaps-head"><div><p className="design-kicker">ZONES</p><h3>Référentiel de zones</h3></div></div>
+      <p className="parameter-rule-sentence">Le plan de zones n’est pas raccordé. Aucune liste canonique n’est exposée tant que la source métier n’est pas historisée.</p>
+    </Card>}
 
-        <Card as="section" className="parameter-gaps">
-          <div className="parameter-gaps-head"><div><p className="design-kicker">DONNÉES À COMPLÉTER</p><h3>Familles non activées</h3></div></div>
-          <p>Délais SLA par priorité, seuils techniques des équipements et méthodes de calcul des scores : aucune liste canonique complète n’est exposée. Méthode à valider avant affichage.</p>
-        </Card>
-      </aside>
-    </div>
+    {tab === 'journal' && <Card as="section" className="parameter-governance">
+      <p className="design-kicker">JOURNAL D’AUDIT</p>
+      <h3>Historique des changements</h3>
+      <p className="parameter-rule-sentence">Historique persistant indisponible. L’ancienne valeur, l’auteur, la date et le motif devront être conservés côté serveur avant tout affichage.</p>
+    </Card>}
   </section>;
 }

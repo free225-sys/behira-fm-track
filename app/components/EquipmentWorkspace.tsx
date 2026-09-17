@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 
 import type { EquipmentCard, EquipmentOperationalStatus } from '../lib/ui-contract/building-health.ts';
 import { BrandIcon, Card, Field, Select } from './ui';
-import { EquipmentTable } from './shared';
+import { DemoScenarioSelect, EquipmentTable } from './shared';
 
 export type EquipmentWorkspaceItem = EquipmentCard;
 
@@ -53,6 +53,7 @@ export function EquipmentWorkspace({ equipment }: { equipment: EquipmentCard[] }
       </div>
       <span className="mockup-label">Démo</span>
     </header>
+    <DemoScenarioSelect />
 
     <section className="equipment-summary" aria-label="Synthèse du parc technique">
       <Card className="equipment-summary-card">

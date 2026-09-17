@@ -8,9 +8,9 @@ import { DossierActionBoard, DossierProofSnapshot, DossierTreatmentStrip, type T
 import { DossiersWorkspace, dossierActionLabel, type DossiersTab } from './components/DossiersWorkspace';
 import { AccessWorkspace } from './components/AccessWorkspace';
 import { BuildingHealthCockpit, ScoreRing } from './components/BuildingHealthCockpit';
-import { DemoScenarioProvider, DemoScenarioSelect, InsufficientNote, ReportTrackingLine, SegmentedControl, useDemoScoreScenario } from './components/shared';
+import { DemoScenarioProvider, DemoScenarioSelect, InsufficientNote, ReportTrackingLine, SegmentedControl, StartRoundPicker, useDemoScoreScenario } from './components/shared';
 import { demoHomeSnapshot, demoReportTracking, demoRoundsFor, sessionForAudience } from './lib/ui-contract/fixtures.ts';
-import type { UiSession } from './lib/ui-contract/building-health.ts';
+import type { TodaysRound, UiSession } from './lib/ui-contract/building-health.ts';
 import { asciiInitials, displayAssetCode, displayAssetText, formatCompactMoney, formatTime, formatWeekdayDate, roundStateLabel, scoreFigure } from './lib/ui-contract/display.ts';
 import { Ge01AgentForm } from './components/Ge01Pilot';
 import { CostsWorkspace } from './components/CostsWorkspace';
@@ -171,9 +171,9 @@ const seedAnomalies: Anomaly[] = [
 const personas: Persona[] = [
   { id:'facility', name:'Facility Manager Démo', shortName:'Facility Manager', initials:'FM', role:'Facility Manager', scope:'Pilotage opérationnel et qualification' },
   { id:'administration', name:'Administration Démo', shortName:'Administration', initials:'AD', role:'Administration · Super utilisateur métier', scope:'Arbitrages, risques et engagements' },
-  { id:'electricite', name:'Agent Électricité Démo', shortName:'Agent Électricité', initials:'AE', role:'Agent électricité', scope:'DEMO-GE · toutes zones autorisées' },
+  { id:'electricite', name:'Agent Électricité Démo', shortName:'Agent Électricité', initials:'AE', role:'Agent électricité', scope:'DEMO-GE · DEMO-ASC-1 · DEMO-ASC-2' },
   { id:'eau_incendie', name:'Agent Eau & Incendie Démo', shortName:'Agent Eau & Incendie', initials:'AI', role:'Agent eau / incendie', scope:'DEMO-EAU · DEMO-SSI · DEMO-ESP' },
-  { id:'rondes_assistance', name:'Agente Rondes & Assistance Démo', shortName:'Agente Rondes & Assistance', initials:'RA', role:'Agente & assistante de direction', scope:'Cleaning · jardinage · suivi administratif' },
+  { id:'rondes_assistance', name:'Agente Rondes & Assistance Démo', shortName:'Agente Rondes & Assistance', initials:'RA', role:'Agente & assistante de direction', scope:'Nettoyage · jardinage · suivi administratif' },
 ];
 
 // The persona switcher and browser storage below are limited to explicit demo mode.
@@ -1143,7 +1143,7 @@ export default function Home() {
     }
   };
   const currentNavigationItem = navItems.find((item) => item.key === activeNavKey) ?? navItems[0];
-  const pageTitle = view === 'detail' ? selected.id : currentNavigationItem.label;
+  const pageTitle = view === 'detail' ? selected.id : navItemLabel(currentNavigationItem, personaId);
   const pageSubtitle = view === 'detail' ? `${displayAssetCode(selected.asset)} · ${selected.title}` : currentNavigationItem.subtitle;
   const canStartRound = allowedViewsByPersona[personaId].includes('report') && personaId !== 'administration';
 
@@ -1196,7 +1196,7 @@ export default function Home() {
             query={query}
             onQuery={setQuery}
             counts={{
-              atraiter: anomalies.filter((item) => item.status !== 'Clôturée' && (item.status === 'À qualifier' || item.delayed || !canonicalResponsible(item) || item.proofPending)).length,
+              atraiter: atraiterCount(anomalies, fieldRequests),
               tous: anomalies.length,
               clotures: anomalies.filter((item) => item.status === 'Clôturée').length,
             }}
@@ -1217,10 +1217,7 @@ export default function Home() {
           {view === 'equipment' && <LiveEquipmentWorkspace session={sessionForAudience(personaId === 'administration' ? 'administration' : 'facility', persona.name)} />}
           {view === 'costs' && <CostsWorkspace items={escalations.map((item) => ({ id:item.id, anomaly:item.anomaly, asset:item.asset, title:item.title, kind:item.kind, amount:item.amount ?? null, due:item.due, state:item.state }))} audience={personaId === 'administration' ? 'administration' : 'facility'} threshold={DECISION_THRESHOLD_FCFA} onOpenDossier={(id) => openDetail(id, 'costs')} />}
           {view === 'access' && <AccessWorkspace users={personas.map((item) => ({ id:item.id, name:item.name, initials:item.initials, role:item.role, scope:item.scope }))} audience={personaId === 'administration' ? 'administration' : 'facility'} />}
-          {view === 'settings' && <>
-            <ParametersWorkspace parameter={FINANCIAL_DECISION_PARAMETER} onOpenCosts={() => navigate('costs')} />
-            {personaId === 'administration' ? <AccessWorkspace users={personas.map((item) => ({ id:item.id, name:item.name, initials:item.initials, role:item.role, scope:item.scope }))} audience="administration" /> : null}
-          </>}
+          {view === 'settings' && <ParametersWorkspace parameter={FINANCIAL_DECISION_PARAMETER} onOpenCosts={() => navigate('costs')} users={personaId === 'administration' ? personas.map((item) => ({ id:item.id, name:item.name, initials:item.initials, role:item.role, scope:item.scope })) : undefined} />}
           {view === 'report' && <>
             <Report persona={persona} onNavigate={navigate} />
             {(personaId === 'electricite' || personaId === 'eau_incendie') && <InternalVendorReportPanel anomalies={anomalies.filter((item) => (personaId === 'electricite' ? ['DEMO-GE'] : ['DEMO-EAU','DEMO-SSI','DEMO-ESP']).includes(item.asset) && item.status !== 'Clôturée')} vendors={vendorReferences} canUpload={effectiveCanUploadVendorReport} busy={mutationBusy} onSubmit={persistVendorReport} />}
@@ -1265,6 +1262,62 @@ function AnswerStrip({ todo, risk, due, proof }: { todo:string; risk:string; due
 
 function formatMoney(value:number) {
   return `${new Intl.NumberFormat('fr-FR').format(value)} FCFA`;
+}
+
+function atraiterSources(anomalies: Anomaly[], fieldRequests: FieldRequest[]) {
+  return {
+    open: anomalies.filter((item) => item.status !== 'Clôturée'),
+    hygiene: fieldRequests.filter((item) => item.status === 'À traiter par Facility Manager'),
+  };
+}
+
+function atraiterCount(anomalies: Anomaly[], fieldRequests: FieldRequest[]) {
+  const { open, hygiene } = atraiterSources(anomalies, fieldRequests);
+  return open.length + hygiene.length;
+}
+
+function kindTone(kind: Escalation['kind']): 'critical' | 'orange' | 'blue' {
+  if (kind === 'Risque') return 'critical';
+  if (kind === 'Coût' || kind === 'Clôture sensible') return 'orange';
+  return 'blue';
+}
+
+function sortTodaysRounds(rounds: TodaysRound[]) {
+  const rank = (state: TodaysRound['state']) => (state === 'overdue' ? 0 : state === 'done' ? 2 : 1);
+  return [...rounds].sort((a, b) => {
+    const delta = rank(a.state) - rank(b.state);
+    if (delta !== 0) return delta;
+    return (a.deadline ?? '9999').localeCompare(b.deadline ?? '9999');
+  });
+}
+
+function TodayRoundsPanel({ session, title, detail, withPicker = false, onStart }: {
+  session: UiSession;
+  title: string;
+  detail: string;
+  withPicker?: boolean;
+  onStart?: () => void;
+}) {
+  const rounds = sortTodaysRounds(demoRoundsFor(session));
+  const doneCount = rounds.filter((item) => item.state === 'done').length;
+  return (
+    <article className="sheet today-rounds-panel">
+      <div className="analytics-card-head">
+        <div><h3>{title}</h3><p>{detail}</p></div>
+        {withPicker ? <StartRoundPicker rounds={rounds} onSelect={onStart} onOffPlan={onStart} /> : null}
+      </div>
+      <div className="rd-prog"><span><i style={{ width: `${rounds.length ? Math.round((doneCount / rounds.length) * 100) : 0}%` }} /></span><b>{doneCount} sur {rounds.length} faites</b></div>
+      <ul className="today-rounds-list">
+        {rounds.map((item) => (
+          <li key={item.roundId}>
+            <small>{item.deadline ? formatTime(item.deadline) : '—'}</small>
+            <span>{item.equipmentCode ?? 'Zone'}{item.agentName ? `, ${item.agentName}` : ''}</span>
+            <em className={`is-${item.state}`}>{roundStateLabel(item.state)}{item.missedYesterday ? ' · manquée hier' : ''}</em>
+          </li>
+        ))}
+      </ul>
+    </article>
+  );
 }
 
 function DirectionWorkspace({ anomalies, equipment, escalations, onDecision, onOpen, onNavigate }: { anomalies:Anomaly[]; equipment:EquipmentItem[]; escalations:Escalation[]; onDecision:(id:string,state:DecisionState,motive:string)=>void; onOpen:(id:string)=>void; onNavigate:(view:View)=>void }) {
@@ -1330,10 +1383,10 @@ function DirectionWorkspace({ anomalies, equipment, escalations, onDecision, onO
         <div className="lh"><div><h2>Arbitrages</h2><p>Proposés par le Facility Manager, triés par échéance.</p></div></div>
         <div className="workspace-tabs visually-hidden"><button className={tab === 'pending' ? 'active' : ''} onClick={() => setTab('pending')}>À décider <span>{pending.length}</span></button><button className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')}>Historique <span>{decided.length}</span></button></div>
         <div className="decision-filters chips" aria-label="Filtrer par type d’arbitrage">{filters.map((item) => <button key={item} className={`chip${filter === item ? ' is-pressed' : ''}`} aria-pressed={filter === item} onClick={() => setFilter(item)}>{item} {item === 'Tous' ? pending.length : pending.filter((row) => row.kind === item).length}</button>)}</div>
-        <div className="direction-case-list">{activeItems.length === 0 ? <div className="empty-state compact"><span>✓</span><h3>Aucun dossier</h3><p>Changez de filtre ou consultez l’autre onglet.</p></div> : activeItems.map((item) => <button type="button" key={item.id} className={`direction-case-card ${focusItem?.id === item.id ? 'active' : ''}`} aria-pressed={focusItem?.id === item.id} onClick={() => { setSelectedCaseId(item.id); setMotive(''); setMotiveError(''); setDecisionMsg(''); }}><span className={`decision-kind-mark kind-${item.kind.toLowerCase().replaceAll(' ','-')}`} aria-hidden="true" /><span className="decision-card-copy"><strong>{displayAssetCode(item.asset)}, {item.title}</strong><span className="sub">{item.id}, {item.anomaly}</span><span className="tags"><Badge tone={item.kind === 'Risque' ? 'critical' : item.kind === 'Coût' || item.kind === 'Clôture sensible' ? 'orange' : 'blue'}>{item.kind === 'Risque' ? 'Critique' : item.kind === 'Coût' ? 'Moyenne' : 'Haute'}</Badge><Badge tone="neutral">{item.kind}</Badge></span></span><span className="rt">{item.amount != null ? <span className="amt">{formatMoney(item.amount)}</span> : <span className="muted">Sans montant</span>}<span className={/retard/i.test(item.due) ? 'late-text' : ''}>{item.due}</span></span></button>)}</div>
+        <div className="direction-case-list">{activeItems.length === 0 ? <div className="empty-state compact"><span>✓</span><h3>Aucun dossier</h3><p>Changez de filtre ou consultez l’autre onglet.</p></div> : activeItems.map((item) => <button type="button" key={item.id} className={`direction-case-card ${focusItem?.id === item.id ? 'active' : ''}`} aria-pressed={focusItem?.id === item.id} onClick={() => { setSelectedCaseId(item.id); setMotive(''); setMotiveError(''); setDecisionMsg(''); }}><span className={`decision-kind-mark kind-${item.kind.toLowerCase().replaceAll(' ','-')}`} aria-hidden="true" /><span className="decision-card-copy"><strong>{displayAssetCode(item.asset)}, {item.title}</strong><span className="sub">{item.id}, {item.anomaly}</span><span className="tags"><Badge tone={item.kind === 'Risque' ? 'critical' : item.kind === 'Coût' || item.kind === 'Clôture sensible' ? 'orange' : 'blue'}>{item.kind === 'Risque' ? 'Critique' : item.kind === 'Coût' ? 'Moyenne' : 'Haute'}</Badge><Badge tone={kindTone(item.kind)}>{item.kind}</Badge></span></span><span className="rt">{item.amount != null ? <span className="amt">{formatMoney(item.amount)}</span> : <span className="muted">Sans montant</span>}<span className={/retard/i.test(item.due) ? 'late-text' : ''}>{item.due}</span></span></button>)}</div>
       </article>
       <aside className="panel direction-focus" aria-live="polite">{focusItem ? <>
-        <div className="direction-focus-head"><div><Badge tone={focusItem.kind === 'Risque' ? 'critical' : focusItem.kind === 'Coût' || focusItem.kind === 'Clôture sensible' ? 'orange' : 'blue'}>{focusItem.kind === 'Risque' ? 'Critique' : focusItem.kind === 'Coût' ? 'Moyenne' : 'Haute'}</Badge><span>{focusItem.id}, {focusItem.anomaly}</span><Badge tone="neutral">{focusItem.kind}</Badge></div></div>
+        <div className="direction-focus-head"><div><Badge tone={focusItem.kind === 'Risque' ? 'critical' : focusItem.kind === 'Coût' || focusItem.kind === 'Clôture sensible' ? 'orange' : 'blue'}>{focusItem.kind === 'Risque' ? 'Critique' : focusItem.kind === 'Coût' ? 'Moyenne' : 'Haute'}</Badge><span>{focusItem.id}, {focusItem.anomaly}</span><Badge tone={kindTone(focusItem.kind)}>{focusItem.kind}</Badge></div></div>
         <h3>{displayAssetCode(focusItem.asset)}, {focusItem.title}</h3>
         <p className={/retard/i.test(focusItem.due) ? 'late-text' : 'muted'}>{focusItem.due}</p>
         <div className="blk admin-money-blk">
@@ -1393,8 +1446,6 @@ function DirectionWorkspace({ anomalies, equipment, escalations, onDecision, onO
 
 function FacilityManagerWorkspace({ anomalies, escalations, fieldRequests, onOpen, onNavigate }: { anomalies:Anomaly[]; equipment:EquipmentItem[]; escalations:Escalation[]; fieldRequests:FieldRequest[]; onEscalate:(request:FieldRequest)=>void; onOpen:(id:string)=>void; onNavigate:(view:View)=>void }) {
   const session = sessionForAudience('facility', 'Facility Manager Démo');
-  const rounds = demoRoundsFor(session);
-  const doneCount = rounds.filter((item) => item.state === 'done').length;
   const withMeta = (item: Anomaly) => ({
     ...item,
     amount: escalations.find((row) => row.anomaly === item.id)?.amount ?? item.treatment?.amount ?? null,
@@ -1445,26 +1496,14 @@ function FacilityManagerWorkspace({ anomalies, escalations, fieldRequests, onOpe
             ))}
           </div>
         </article>
-        <article className="sheet">
-          <div className="analytics-card-head"><div><h3>Où se perdent les points</h3><p>Score brut, par domaine.</p></div></div>
-          <InsufficientNote title="Poids de domaine non raccordés" detail="La formule et les pondérations d’équipement sont en attente de validation. Aucune courbe historique n’est affichée." />
+        <article className="sheet points-lost-card">
+          <div className="analytics-card-head"><div><h3>Où se perdent les points</h3><p>Poids 70 / 15 / 10 / 5, non raccordés.</p></div></div>
+          <InsufficientNote title="Poids de domaine non raccordés" detail="Équipements, sécurité, zones, continuité : aucune courbe historique n’est affichée." />
         </article>
       </div>
     </LiveHealthCockpit>
     <div className="facility-home-grid">
-      <article className="sheet">
-        <div className="analytics-card-head"><div><h3>Rondes du jour</h3><p>Rondes techniques quotidiennes de tous les agents.</p></div></div>
-        <div className="rd-prog"><span><i style={{ width: `${rounds.length ? Math.round((doneCount / rounds.length) * 100) : 0}%` }} /></span><b>{doneCount} sur {rounds.length} faites</b></div>
-        <ul className="today-rounds-list">
-          {rounds.map((item) => (
-            <li key={item.roundId}>
-              <small>{item.deadline ? formatTime(item.deadline) : '—'}</small>
-              <span>{item.equipmentCode ?? 'Zone'}, {item.agentName}</span>
-              <em>{roundStateLabel(item.state)}{item.missedYesterday ? ' · manquée hier' : ''}</em>
-            </li>
-          ))}
-        </ul>
-      </article>
+      <TodayRoundsPanel session={session} title="Rondes du jour" detail="Rondes techniques quotidiennes de tous les agents." />
       <article className="sheet">
         <div className="analytics-card-head"><div><h3>Hygiène et paysage</h3><p>Notifications de l’agente rondes. Hors score tant qu’elles ne sont pas qualifiées.</p></div></div>
         <div className="hygiene-list">
@@ -1529,7 +1568,7 @@ function AgentWorkspace({ persona, anomalies, equipment, vendors, canUploadVendo
         <button type="button" role="tab" aria-selected={tab === 'hist'} className={tab === 'hist' ? 'active' : ''} onClick={() => setTab('hist')}>Historique des rondes</button>
       </div>
       {tab !== 'hist' ? (
-        <div className="agent-task-list">{visible.length === 0 ? <div className="empty-state compact"><span>✓</span><h3>Tout est terminé</h3><p>Aucune action dans cette file.</p></div> : visible.map((task) => <article key={task.id} className={`act-row${task.delayed ? ' late' : ''}`}><span className={`act-bar ${task.delayed ? 'is-bad' : task.status === 'Terminé' ? 'is-ok' : 'is-sig'}`} /><div className="task-copy"><div className="task-status"><Badge tone={task.delayed ? 'critical' : task.status === 'Terminé' ? 'success' : task.status === 'Rétabli provisoirement' ? 'orange' : 'blue'}>{task.delayed ? 'En retard' : tab === 'todo' && task.status === 'À faire' ? 'À faire' : task.status}</Badge><span className="task-ref">{task.id}</span></div><h3>{displayAssetCode(task.asset)}, {task.title}</h3><p>{task.detail}</p><div className="facts"><span>Risque : <b>{task.risk}</b></span><span>Échéance : <b>{task.due}</b></span><span>Preuve : <b>{task.proof ? 'Jointe' : 'Manquante'}</b></span></div></div>{tab === 'todo' && <div className="task-actions"><button type="button" onClick={() => {setAction({type:'measure',id:task.id});setNote('')}}>Saisie rapide</button>{agentKey === 'eau_incendie' && task.asset === 'DEMO-EAU' && <button type="button" className="reset-action" onClick={() => {setAction({type:'reset',id:task.id});setNote('')}}>↻ Réarmement provisoire</button>}<button type="button" onClick={() => {setAction({type:'proof',id:task.id});setNote('')}}>Ajouter une preuve</button><button type="button" onClick={() => {setAction({type:'escalate',id:task.id});setNote('')}}>{task.escalated ? '✓ Escalade envoyée' : 'Escalader au FM'}</button></div>}</article>)}</div>
+        <div className="agent-task-list">{visible.length === 0 ? <div className="empty-state compact"><span>✓</span><h3>Tout est terminé</h3><p>Aucune action dans cette file.</p></div> : visible.map((task) => <article key={task.id} className={`act-row${task.delayed ? ' late' : ''}`}><span className={`act-bar ${task.delayed ? 'is-bad' : task.status === 'Terminé' ? 'is-ok' : 'is-sig'}`} /><div className="task-copy"><div className="task-status"><Badge tone={task.delayed ? 'critical' : task.status === 'Terminé' ? 'success' : task.status === 'Rétabli provisoirement' ? 'orange' : 'blue'}>{task.delayed ? 'En retard' : tab === 'todo' && task.status === 'À faire' ? 'À faire' : task.status}</Badge><span className="task-ref">{task.id}</span></div><h3>{displayAssetCode(task.asset)}, {task.title}</h3><p>{task.detail}</p><div className="facts"><span>Risque : <b>{task.risk}</b></span><span>Échéance : <b className={task.delayed ? 'late-text' : undefined}>{task.due}</b></span><span>Preuve : <b>{task.proof ? 'Jointe' : 'Manquante'}</b></span></div></div>{tab === 'todo' && <div className="task-actions"><button type="button" onClick={() => {setAction({type:'measure',id:task.id});setNote('')}}>Saisie rapide</button>{agentKey === 'eau_incendie' && task.asset === 'DEMO-EAU' && <button type="button" className="reset-action" onClick={() => {setAction({type:'reset',id:task.id});setNote('')}}>↻ Réarmement provisoire</button>}<button type="button" onClick={() => {setAction({type:'proof',id:task.id});setNote('')}}>Ajouter une preuve</button><button type="button" onClick={() => {setAction({type:'escalate',id:task.id});setNote('')}}>{task.escalated ? '✓ Escalade envoyée' : 'Escalader au FM'}</button></div>}</article>)}</div>
       ) : (
         <div className="agent-round-history">
           {history.length === 0 ? <p className="empty">Aucun rapport dans cet historique.</p> : history.map((item) => <ReportTrackingLine key={item.clientMutationId} item={item} onView={() => onNavigate('report')} />)}
@@ -1674,9 +1713,9 @@ function RoundsAssistanceWorkspace({ fieldRequests, equipment, anomalies, onNavi
   ]);
   const [complementDone, setComplementDone] = useState(false);
   return <>
-    <LiveHealthCockpit session={sessionForAudience('rondes_assistance', 'Agente Rondes & Assistance Démo')} onNavigate={onNavigate} />
+    <LiveHealthCockpit session={sessionForAudience('rondes_assistance', 'Agente Rondes & Assistance Démo')} onNavigate={onNavigate} actionCount={submitted.filter((item) => item.status === 'Complément demandé' && !complementDone).length} />
     <div className="mission-switch" role="tablist" aria-label="Fonction de Agente Rondes & Assistance"><button type="button" role="tab" aria-selected={missionTab === 'terrain'} className={missionTab === 'terrain' ? 'active' : ''} onClick={() => setMissionTab('terrain')}><BrandIcon name="mapPin" size={16} /><b>Terrain</b><small>Rondes, constats et brouillons de démonstration</small></button><button type="button" role="tab" aria-selected={missionTab === 'administration'} className={missionTab === 'administration' ? 'active' : ''} onClick={() => setMissionTab('administration')}><BrandIcon name="files" size={16} /><b>Administratif</b><small>Devis, paiements et autorisations</small></button></div>
-    {missionTab === 'terrain' && <><section className="rondes_assistance-grid"><article className="panel zone-rounds"><div className="panel-head"><div><h3>Zones du jour</h3><p>Ronde {displayAssetCode('DEMO-RND')} · 24 août</p></div><span className="panel-count">4 / 6 contrôlées</span></div>{['Hall & accueil|Terminé','Atrium restaurant|À vérifier','Jardinières RDC|En cours','Sanitaires R+2|Terminé','Terrasse R+4|À faire','Parking sous-sol|À faire'].map((item) => {const [label,status] = item.split('|'); return <button key={label}><span className={status === 'Terminé' ? 'done' : status === 'En cours' ? 'current' : ''}>{status === 'Terminé' ? '✓' : '○'}</span><div><b>{label}</b><small>Propreté · plantes · fuite · dégradation</small></div><Badge tone={status === 'Terminé' ? 'success' : status === 'À vérifier' ? 'critical' : status === 'En cours' ? 'blue' : 'neutral'}>{status}</Badge></button>})}</article><article className="panel quick-finding"><div className="panel-head"><div><h3>Saisie dans Rondes</h3><p>Un seul formulaire de constat, pour éviter une double saisie.</p></div><Badge tone="blue">RONDES</Badge></div><p className="finding-pointer-copy">Les zones du jour restent ici. La création et la photo se font dans la destination Rondes.</p><button type="button" className="primary-button" onClick={() => onNavigate('report')}>Ouvrir la ronde →</button></article></section><section className="panel signal-tracker"><div className="panel-head"><div><h3>Mes signalements</h3><p>Statuts visibles sans accès aux décisions techniques</p></div><Badge>{submitted.length} dossiers</Badge></div><div className="signal-list">{submitted.map((item,index) => <article key={`${item.title}-${index}`}><div><b>{item.title}</b><p>{item.zone} · {item.category}</p></div><Badge tone={item.status === 'Complément demandé' && !complementDone ? 'orange' : item.status === 'À qualifier' ? 'blue' : 'success'}>{item.status === 'Complément demandé' && complementDone ? 'Complément transmis' : item.status}</Badge>{item.status === 'Complément demandé' && !complementDone && <button onClick={() => {setComplementDone(true);flash('Complément photo transmis à Facility Manager — simulation locale.')}}>Ajouter la photo demandée</button>}</article>)}</div><div className="field-feed-note">{fieldRequests.filter((request) => request.from === 'Agente Rondes & Assistance Démo').length} remontée(s) visible(s) dans la file de Facility Manager.</div></section></>}
+    {missionTab === 'terrain' && <><section className="rondes_assistance-grid"><article className="panel zone-rounds"><div className="panel-head"><div><h3>Zones du jour</h3><p>Ronde du jour · {formatWeekdayDate('2026-09-16T08:00:00Z')}</p></div><span className="panel-count">4 / 6 contrôlées</span></div>{['Hall & accueil|Terminé','Atrium restaurant|À vérifier','Jardinières RDC|En cours','Sanitaires R+2|Terminé','Terrasse R+4|À faire','Parking sous-sol|À faire'].map((item) => {const [label,status] = item.split('|'); return <button key={label}><span className={status === 'Terminé' ? 'done' : status === 'En cours' ? 'current' : ''}>{status === 'Terminé' ? '✓' : '○'}</span><div><b>{label}</b><small>Propreté · plantes · fuite · dégradation</small></div><Badge tone={status === 'Terminé' ? 'success' : status === 'À vérifier' ? 'critical' : status === 'En cours' ? 'blue' : 'neutral'}>{status}</Badge></button>})}</article><article className="panel quick-finding"><div className="panel-head"><div><h3>Saisie dans Rondes</h3><p>Un seul formulaire de constat, pour éviter une double saisie.</p></div><Badge tone="blue">RONDES</Badge></div><p className="finding-pointer-copy">Les zones du jour restent ici. La création et la photo se font dans la destination Rondes.</p><button type="button" className="primary-button" onClick={() => onNavigate('report')}>Ouvrir la ronde →</button></article></section><section className="panel signal-tracker"><div className="panel-head"><div><h3>Mes signalements</h3><p>Statuts visibles sans accès aux décisions techniques</p></div><Badge>{submitted.length} dossiers</Badge></div><div className="signal-list">{submitted.map((item,index) => <article key={`${item.title}-${index}`}><div><b>{item.title}</b><p>{item.zone} · {item.category}</p></div><Badge tone={item.status === 'Complément demandé' && !complementDone ? 'orange' : item.status === 'À qualifier' ? 'blue' : 'success'}>{item.status === 'Complément demandé' && complementDone ? 'Complément transmis' : item.status}</Badge>{item.status === 'Complément demandé' && !complementDone && <button onClick={() => {setComplementDone(true);flash('Complément photo transmis à Facility Manager — simulation locale.')}}>Ajouter la photo demandée</button>}</article>)}</div><div className="field-feed-note">{fieldRequests.filter((request) => request.from === 'Agente Rondes & Assistance Démo').length} remontée(s) visible(s) dans la file de Facility Manager.</div></section></>}
     {missionTab === 'administration' && <><section className="mission-permission-note"><span>i</span><div><b>Fonction administrative, sans décision technique</b><p>Agente Rondes & Assistance prépare et suit les pièces. Facility Manager et l’Administration conservent leurs validations respectives.</p></div></section><section className="rondes_assistance-admin-grid"><article className="panel"><div className="panel-head"><div><p className="design-kicker">SUIVI ADMINISTRATIF</p><h3>Devis et autorisations</h3></div><span className="panel-count is-alert">3 à suivre</span></div>{[['DEV-031','PREST-EAU','280 000 FCFA','Validation Facility Manager'],['DEV-029','PREST-ASC','950 000 FCFA','Arbitrage Administration'],['DEV-026','PREST-ESP','190 000 FCFA','Bon à payer']].map((item) => <button className="admin-follow-row" key={item[0]}><span>{item[0]}</span><p><b>{item[1]}</b><small>{item[2]} · {item[3]}</small></p><em>Voir →</em></button>)}</article><article className="panel"><div className="panel-head"><div><p className="design-kicker">COÛTS & PAIEMENTS</p><h3>Échéances de la semaine</h3></div></div><div className="payment-summary"><strong>2,12 M</strong><span>FCFA à contrôler</span></div><div className="payment-lines"><span><i className="done" /> 3 pièces complètes</span><span><i /> 1 autorisation attendue</span><span><i className="late" /> 1 paiement en retard</span></div><button className="secondary-button">Ouvrir le suivi financier</button></article></section></>}
   </>;
 }
@@ -1723,7 +1762,7 @@ function OperationalAnalytics({ equipment, variant = 'direction' }: { equipment:
       <article className="panel analytics-card equipment-chart-card">
         <div className="analytics-card-head"><div><span>PARC TECHNIQUE</span><h4>Scores par équipement</h4></div><div className="chart-switch" aria-label="Filtre des équipements"><button type="button" aria-pressed={equipmentFilter === 'all'} onClick={() => setEquipmentFilter('all')}>Tous</button><button type="button" aria-pressed={equipmentFilter === 'watch'} onClick={() => setEquipmentFilter('watch')}>À risque</button></div></div>
         <div className="horizontal-score-chart" aria-live="polite">{visibleEquipment.map((item) => <div className="score-bar-row" key={item.code}><span><b>{item.code}</b><small>{item.label}</small></span><div className="score-bar-track" role="progressbar" aria-label={`${item.label}, ${item.health} sur 100`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={item.health}><i className={item.health < 70 ? 'danger' : item.health < 90 ? 'warning' : 'success'} style={{width:`${item.health}%`}} /></div><strong>{item.health}</strong></div>)}</div>
-        <div className="chart-legend"><span><i className="success" /> Sain ≥ 90</span><span><i className="warning" /> Surveillance 70–89</span><span><i className="danger" /> Critique &lt; 70</span></div>
+        <div className="chart-legend"><span><i className="success" /> Sain ≥ 90</span><span><i className="warning" /> À surveiller 70–89</span><span><i className="danger" /> Critique &lt; 70</span></div>
       </article>
 
       <article className="panel analytics-card agent-chart-card">
@@ -1759,52 +1798,40 @@ function Dashboard({ anomalies, equipment, escalations, audience = 'facility', o
   const documentedCostTotal = documentedCosts.reduce((total,item) => total + (item.amount ?? 0),0);
   const overThresholdCosts = documentedCosts.filter((item) => (item.amount ?? 0) >= DECISION_THRESHOLD_FCFA).length;
   const dashboardTabs = [
-    { id:'overview' as const, icon:'', label:'Vue d’ensemble', detail:'5 angles du jour', count:'Synthèse' },
-    { id:'actions' as const, icon:'', label:'Actions & risques', detail:`${openCount} ouverts · ${lateCount} retards`, count:'À traiter' },
-    { id:'health' as const, icon:'', label:'Santé & scores', detail:'Bâtiment · équipements · agents', count:'Score' },
-    { id:'equipment' as const, icon:'', label:'Parc technique', detail:`${equipment.length} modules suivis`, count:'Équipements' },
+    { id:'overview' as const, label:'Performance' },
+    { id:'actions' as const, label:'Coûts' },
+    { id:'health' as const, label:'Équipe' },
   ];
+  /* Vue d’ensemble · Actions & risques · Santé & scores · Parc technique */
   return <>
     <section className="hero-row dashboard-hero"><div><p className="direction-kicker">{readOnly ? 'CONSULTATION AUTORISÉE' : audience === 'administration' ? 'PILOTAGE ADMINISTRATION' : 'PILOTAGE FACILITY MANAGER'}</p><p>{readOnly ? 'Indicateurs et registre accessibles sans action de modification.' : audience === 'administration' ? 'Synthèse décisionnelle, risques, coûts et performance.' : 'Priorités opérationnelles, santé du parc et actions attendues.'}</p></div><span className="health-pill"><i /> Disponibilité : données insuffisantes</span></section>
-    <nav className="dashboard-section-tabs" role="tablist" aria-label="Sections du tableau de bord">{dashboardTabs.map((item) => <button key={item.id} type="button" role="tab" aria-selected={dashboardTab === item.id} aria-controls={`dashboard-panel-${item.id}`} id={`dashboard-tab-${item.id}`} className={dashboardTab === item.id ? 'active' : ''} onClick={() => setDashboardTab(item.id)}>{item.icon ? <span className="dashboard-tab-index">{item.icon}</span> : null}<span className="dashboard-tab-copy"><b>{item.label}</b><small>{item.detail}</small></span><em>{item.count}</em></button>)}</nav>
-    {(dashboardTab === 'overview' || dashboardTab === 'actions') && <section id={`dashboard-panel-${dashboardTab}`} role="tabpanel" aria-labelledby={`dashboard-tab-${dashboardTab}`} className={`direction-grid dashboard-tab-panel ${dashboardTab === 'actions' ? 'actions-view' : ''}`} aria-label="Tableau de bord en cinq angles de décision">
+    <DemoScenarioSelect />
+    <nav className="dashboard-section-tabs" role="tablist" aria-label="Sections du tableau de bord">{dashboardTabs.map((item) => <button key={item.id} type="button" role="tab" aria-selected={dashboardTab === item.id} aria-controls={`dashboard-panel-${item.id}`} id={`dashboard-tab-${item.id}`} className={dashboardTab === item.id ? 'active' : ''} onClick={() => setDashboardTab(item.id)}><span className="dashboard-tab-copy"><b>{item.label}</b></span></button>)}</nav>
+    {dashboardTab === 'overview' && <section id="dashboard-panel-overview" role="tabpanel" aria-labelledby="dashboard-tab-overview" className="direction-grid dashboard-tab-panel" aria-label="Tableau de bord en cinq angles de décision">
       <article className="panel direction-block todo-block">
         <div className="direction-head"><div><h3>À faire aujourd’hui</h3><p>Actions qui débloquent le workflow</p></div><span className="panel-count is-alert">{openCount} ouvertes</span></div>
-        <div className="todo-summary"><strong>5</strong><span>actions prioritaires<br />avant 17:00</span></div>
+        <div className="todo-summary"><strong>{lateCount || 5}</strong><span>actions prioritaires<br />avant 17:00</span></div>
         <div className="compact-actions">{urgent.slice(0,2).map((a) => <button key={a.id} onClick={() => onOpen(a.id,'dashboard')}><span className={`risk-dot ${a.priority === 'Critique' ? 'critical' : ''}`} /><div><b>{displayAssetCode(a.asset)} · {a.title}</b><small>{a.status} · échéance {a.due}</small></div><span>›</span></button>)}</div>
-        <button className="text-action" onClick={() => onNavigate(readOnly ? 'registry' : 'manager')}>{readOnly ? 'Consulter le registre →' : 'Ouvrir la file de Facility Manager →'}</button>
+        <button className="text-action" onClick={() => onNavigate(readOnly ? 'registry' : 'manager')}>{readOnly ? 'Consulter le registre →' : 'Ouvrir Dossiers →'}</button>
       </article>
-
-      <article className="panel direction-block risks-block">
-        <div className="direction-head"><div><h3>Risques</h3><p>Sécurité et continuité</p></div></div>
-        <div className="risk-metrics"><button onClick={() => onOpen('ANO-0241','dashboard')}><strong>2</strong><span>critiques</span></button><button onClick={() => onNavigate(readOnly ? 'registry' : 'manager')}><strong>{lateCount}</strong><span>en retard</span></button></div>
-        <div className="risk-focus"><span>!</span><div><b>{displayAssetCode('DEMO-SSI')} sous surveillance</b><small>Pression incendie instable</small></div></div>
-        <button className="text-action" onClick={() => onNavigate('registry')}>Voir la cartographie des risques →</button>
+      <article className="panel direction-block performance-block">
+        <div className="direction-head"><div><h3>Performance</h3><p>Qualité de service</p></div></div>
+        <div className="performance-score"><InsufficientNote title="Délais tenus" detail="Le taux d’interventions dans les délais n’a pas de source raccordée." /></div>
+        <div className="performance-bar"><i /></div>
+        <InsufficientNote title="Clôtures du mois" detail="Le nombre de dossiers clôturés n’a pas de source raccordée." />
       </article>
-
-      {dashboardTab === 'overview' && <article className="panel direction-block costs-block">
+      <article className="panel direction-block decisions-block">
+        <div className="direction-head"><div><h3>Décisions recommandées</h3><p>Les priorités se traitent dans Dossiers</p></div></div>
+        <button className="text-action" onClick={() => onNavigate(readOnly ? 'registry' : 'manager')}>{readOnly ? 'Consulter Dossiers →' : 'Ouvrir Dossiers →'}</button>
+      </article>
+    </section>}
+    {dashboardTab === 'actions' && <section id="dashboard-panel-actions" role="tabpanel" aria-labelledby="dashboard-tab-actions" className="direction-grid dashboard-tab-panel actions-view" aria-label="Coûts documentés">
+      <article className="panel direction-block costs-block">
         <div className="direction-head"><div><h3>Coûts</h3><p>Montants réellement renseignés</p></div></div>
         <div className="cost-main"><span>Montants documentés</span><strong>{formatMoney(documentedCostTotal)}</strong></div>
         <div className="cost-details"><div><span>Dossiers chiffrés</span><b>{documentedCosts.length}</b></div><div className="cost-gap"><span>Au-dessus du seuil</span><b>{overThresholdCosts}</b></div></div>
         <small className="cost-note">Budget, engagé et payé : données insuffisantes.</small>
         <button type="button" className="text-action" onClick={() => onNavigate('costs')}>Consulter les coûts documentés →</button>
-      </article>}
-
-      {dashboardTab === 'overview' && <article className="panel direction-block performance-block">
-        <div className="direction-head"><div><h3>Performance</h3><p>Qualité de service</p></div></div>
-        <div className="performance-score"><InsufficientNote title="Délais tenus" detail="Le taux d’interventions dans les délais n’a pas de source raccordée." /></div>
-        <div className="performance-bar"><i /></div>
-        <InsufficientNote title="Clôtures du mois" detail="Le nombre de dossiers clôturés n’a pas de source raccordée." />
-      </article>}
-
-      <article className="panel direction-block decisions-block">
-        <div className="direction-head"><div><h3>Décisions recommandées</h3><p>Les priorités se traitent dans Dossiers</p></div></div>
-        <button className="text-action" onClick={() => onNavigate(readOnly ? 'registry' : 'manager')}>{readOnly ? 'Consulter Dossiers →' : 'Ouvrir Dossiers →'}</button>
-        <div className="decision-list">
-          <button onClick={() => onOpen('ANO-0241','dashboard')}><span className="decision-priority critical">1</span><div><b>Qualifier {displayAssetCode('DEMO-SSI')} en priorité critique</b><small>Sécurité incendie · décision requise avant 10:30</small></div><span>{readOnly ? 'Consulter →' : 'Décider →'}</span></button>
-          <button onClick={() => onOpen('ANO-0238','dashboard')}><span className="decision-priority warning">2</span><div><b>Relancer le prestataire {displayAssetCode('DEMO-ASC-2')}</b><small>Intervention en retard · impact usagers</small></div><span>{readOnly ? 'Consulter →' : 'Relancer →'}</span></button>
-          <button onClick={() => onOpen('ANO-0231','dashboard')}><span className="decision-priority blue">3</span><div><b>Valider la preuve {displayAssetCode('DEMO-GE')}</b><small>Test de démarrage concluant · clôture possible</small></div><span>{readOnly ? 'Consulter →' : 'Valider →'}</span></button>
-        </div>
       </article>
     </section>}
     {dashboardTab === 'health' && <section id="dashboard-panel-health" role="tabpanel" aria-labelledby="dashboard-tab-health" className="dashboard-tab-panel"><OperationalAnalytics equipment={equipment} /></section>}
@@ -1824,7 +1851,8 @@ function Registry({ anomalies, query, setQuery, priority, setPriority, status, s
 function Manager({ anomalies, tab, setTab, onOpen }: { anomalies:Anomaly[]; tab:ManagerQueue; setTab:(v:ManagerQueue)=>void; onOpen:(id:string)=>void; escalations?:Escalation[]; fieldRequests?:FieldRequest[] }) {
   const escalations = (arguments[0] as { escalations?: Escalation[] }).escalations ?? [];
   const fieldRequests = (arguments[0] as { fieldRequests?: FieldRequest[] }).fieldRequests ?? [];
-  const hygieneItems: Anomaly[] = fieldRequests.filter((item) => item.status === 'À traiter par Facility Manager').map((request) => ({
+  const { open: openAnomalies, hygiene: hygieneRequests } = atraiterSources(anomalies, fieldRequests);
+  const hygieneItems: Anomaly[] = hygieneRequests.map((request) => ({
     id: request.id,
     asset: request.subject.includes('DEMO-EAU') ? 'DEMO-EAU' : 'DEMO-RND',
     title: displayAssetText(request.subject),
@@ -1840,7 +1868,7 @@ function Manager({ anomalies, tab, setTab, onOpen }: { anomalies:Anomaly[]; tab:
     origin: 'Rondes et services',
     horsScore: true,
   }));
-  const openItems = [...anomalies.filter((item) => item.status !== 'Clôturée'), ...hygieneItems];
+  const openItems = [...openAnomalies, ...hygieneItems];
   const amountOf = (item: Anomaly) => item.treatment?.amount ?? escalations.find((row) => row.anomaly === item.id)?.amount ?? null;
   const originOf = (item: Anomaly) => item.origin ?? (item.asset === 'DEMO-RND' || item.id.startsWith('REQ-') ? 'Rondes et services' : item.owner === 'Non affectée' ? 'Agent terrain' : item.owner);
   const groups:Record<ManagerQueue,Anomaly[]> = {
@@ -1939,7 +1967,7 @@ function Manager({ anomalies, tab, setTab, onOpen }: { anomalies:Anomaly[]; tab:
                 <span className={item.delayed ? 'late-text' : ''}>{item.delayed ? 'En retard, ' : ''}{item.due}</span>
                 {rowAmount != null ? <span className="amt">{formatMoney(rowAmount)}</span> : null}
                 {rowAmount != null && rowAmount >= DECISION_THRESHOLD_FCFA ? <Badge tone="orange">Administration</Badge> : null}
-                <span className={canonicalResponsible(item) ? 'muted' : 'late-text'}>{canonicalResponsible(item) ?? 'Sans responsable'}</span>
+                <span className={canonicalResponsible(item) ? 'muted' : 'unassigned-text'}>{canonicalResponsible(item) ?? 'Sans responsable'}</span>
               </span>
             </button>;
           }) : <div className="empty-state compact"><span>{['reception','reservations','reopened'].includes(tab) ? '⌁' : '✓'}</span><h3>{['reception','reservations','reopened'].includes(tab) ? 'Donnée non raccordée' : 'File à jour'}</h3><p>{['reception','reservations','reopened'].includes(tab) ? 'La source métier canonique de cette file doit encore être raccordée.' : 'Aucune action dans cette catégorie.'}</p></div>}
@@ -1984,7 +2012,7 @@ function Manager({ anomalies, tab, setTab, onOpen }: { anomalies:Anomaly[]; tab:
             </div>
             <div className="fm-decision-fields">
               <label className="field proposed-field">Responsable<Select value={qualifyOwner} onChange={(event) => setQualifyOwner(event.target.value)}><option value="">Choisir</option><option>Agent Eau & Incendie Démo</option><option>Agent Électricité Démo</option><option>Agente Rondes & Assistance Démo</option></Select></label>
-              <label className="field proposed-field">Échéance<input type="datetime-local" value={dueValue} onChange={(event) => setDueValue(event.target.value)} /></label>
+              <label className="field proposed-field">Échéance<input type="datetime-local" lang="fr" value={dueValue} onChange={(event) => setDueValue(event.target.value)} /></label>
             </div>
             <label className="field proposed-field">Coût estimé<input type="number" min="0" step="1000" inputMode="numeric" placeholder="Montant en FCFA" value={amount} onChange={(event) => setAmount(event.target.value)} /></label>
             {!amount ? <p className="hint">Facultatif à ce stade. À partir de {formatMoney(DECISION_THRESHOLD_FCFA)}, la décision revient à l’Administration.</p> : amountValue < 0 || Number.isNaN(amountValue) ? <p className="hint is-bad">Saisissez un montant en chiffres.</p> : overThreshold ? <p className="hint is-warn">Au-dessus du seuil : la décision sera soumise à l’Administration.</p> : <p className="hint is-ok">Sous le seuil : vous pourrez valider vous-même.</p>}
@@ -2148,7 +2176,7 @@ function MeasureRange({ label, value, min, max, unit }: { label:string; value:nu
 }
 
 function Report({ persona, onNavigate }: { persona:Persona; onNavigate:(v:View)=>void }) {
-  const surpresseurAccess = persona.id === 'eau_incendie' || persona.id === 'facility';
+  const surpresseurAccess = persona.id === 'eau_incendie';
   const [step, setStep] = useState(0);
   const [submitted, setSubmitted] = useState(false);
   const [pressure, setPressure] = useState('2.8');
@@ -2156,18 +2184,32 @@ function Report({ persona, onNavigate }: { persona:Persona; onNavigate:(v:View)=
   const [observation, setObservation] = useState('Vibration légère sur la pompe P1 au démarrage.');
   const [checks, setChecks] = useState<Record<string,boolean>>({ auto:true, p1:false, p2:true, leak:true, valves:true, alarm:true });
   const setCheck = (key:string) => setChecks((items) => ({ ...items, [key]:!items[key] }));
+  const session = sessionForAudience(persona.id as UiSession['audience'], persona.name);
+  const roundsLead = <div className="rounds-page"><DemoScenarioSelect /><TodayRoundsPanel session={session} title="Rondes du jour" detail="Votre périmètre, aujourd’hui." withPicker onStart={() => {}} /></div>;
+
+  if (persona.id === 'facility') {
+    return <div className="rounds-page">
+      <section className="section-heading round-heading"><div><p className="design-kicker">RONDES DU JOUR</p><h2 className="visually-hidden">Rondes</h2><p>Rondes techniques de tous les agents. Démarrez une ronde ou suivez l’avancement.</p></div></section>
+      <DemoScenarioSelect />
+      <TodayRoundsPanel session={session} title="Rondes du jour" detail="Tous les agents, triées par dépassement puis par heure." withPicker onStart={() => {}} />
+    </div>;
+  }
 
   if (persona.id === 'electricite') {
-    return <Ge01AgentForm agentName={persona.name} />;
+    return <>
+      {roundsLead}
+      <Ge01AgentForm agentName={persona.name} />
+    </>;
   }
 
   if (!surpresseurAccess) {
     const isRoundsAssistance = persona.id === 'rondes_assistance';
     return <>
-      <section className="section-heading round-heading"><div><p className="design-kicker">{persona.id === 'electricite' ? 'SAISIE DIRECTE · GE-01' : 'SAISIE DIRECTE · MAQUETTE CIBLE'}</p><h2 className="visually-hidden">Rondes</h2><p>{isRoundsAssistance ? 'Ronde cleaning & jardinage' : persona.id === 'electricite' ? 'Ronde GE-01 · groupe électrogène ELCOS, saisie directe' : 'Ronde technique'} : un constat terrain est enregistré dans l’application puis transmis à Facility Manager pour qualification.</p></div><span className="mockup-label">Aucun import</span></section>
+      {roundsLead}
+      <section className="section-heading round-heading"><div><p className="design-kicker">{persona.id === 'electricite' ? 'SAISIE DIRECTE · GE-01' : 'SAISIE DIRECTE · MAQUETTE CIBLE'}</p><h2 className="visually-hidden">Rondes</h2><p>{isRoundsAssistance ? 'Ronde nettoyage & jardinage' : persona.id === 'electricite' ? 'Ronde GE-01 · groupe électrogène ELCOS, saisie directe' : 'Ronde technique'} : un constat terrain est enregistré dans l’application puis transmis à Facility Manager pour qualification.</p></div><span className="mockup-label">Aucun import</span></section>
       <section className="quick-round-layout">
         <form className="panel quick-round-card" onSubmit={(event) => { event.preventDefault(); setSubmitted(true); }}>
-          <div className="round-card-head"><span className="round-icon">{isRoundsAssistance ? 'R' : 'GE'}</span><div><b>{isRoundsAssistance ? displayAssetCode('DEMO-RND') : displayAssetCode('DEMO-GE')}</b><small>{isRoundsAssistance ? 'Périmètre cleaning et jardinage' : 'Périmètre électrique autorisé'}</small></div><span className="mockup-label">MAQUETTE</span></div>
+          <div className="round-card-head"><span className="round-icon">{isRoundsAssistance ? 'R' : 'GE'}</span><div><b>{isRoundsAssistance ? 'Zones du jour' : displayAssetCode('DEMO-GE')}</b><small>{isRoundsAssistance ? 'Périmètre nettoyage et jardinage' : 'Périmètre électrique autorisé'}</small></div><span className="mockup-label">MAQUETTE</span></div>
           <div className="two-fields"><label className="field">Zone<Select defaultValue={isRoundsAssistance ? 'Jardin nord' : 'Local groupe électrogène'}><option>{isRoundsAssistance ? 'Jardin nord' : 'Local groupe électrogène'}</option><option>{isRoundsAssistance ? 'Atrium restaurant' : 'Local TGBT'}</option></Select></label><label className="field">Type de contrôle<Select><option>{isRoundsAssistance ? 'Propreté & état' : 'Ronde préventive'}</option><option>{isRoundsAssistance ? 'Jardinage' : 'Constat incident'}</option></Select></label></div>
           <label className="field">Constat<textarea defaultValue={isRoundsAssistance ? 'Présence d’eau stagnante près de l’accès jardin nord.' : 'Mode AUTO confirmé. Tension batterie à contrôler au prochain démarrage.'} /></label>
           <div className="evidence-drop"><BrandIcon name="camera" size={20} /><div><b>Ajouter une photo</b><small>La pièce reste attachée au constat, jamais importée comme reporting.</small></div></div>
@@ -2186,6 +2228,7 @@ function Report({ persona, onNavigate }: { persona:Persona; onNavigate:(v:View)=
   const completedChecks = Object.values(checks).filter(Boolean).length;
 
   return <>
+    {roundsLead}
     <section className="surpresseur-hero">
       <div className="surpresseur-identity"><span className="surpresseur-monogram">WI</span><div><p className="design-kicker">MODULE PILOTE · SURPRESSEUR</p><h2 className="visually-hidden">Rondes</h2><p>Ronde Surpresseur · {displayAssetCode('DEMO-EAU')} · Sous-sol · Local surpresseur · Fréquence quotidienne</p></div></div>
     </section>
@@ -2215,7 +2258,7 @@ function Report({ persona, onNavigate }: { persona:Persona; onNavigate:(v:View)=
 
       <aside className="surpresseur-aside">
         <article className="panel next-action-card"><p className="design-kicker">À SURVEILLER</p><span className="next-action-icon">!</span><h3>Pompe P1 indisponible</h3><p>Deuxième défaut en sept jours. Le réarmement provisoire ne permet pas la clôture.</p><div><span>Responsable pressenti</span><b>Agent Eau & Incendie Démo</b></div></article>
-        <article className="panel score-explain-card"><div><span>SCORE WILO</span><b>78/100</b></div><div className="score-freshness"><span><b>État</b>Surveillance</span><span><b>Variation</b>Indisponible</span><span><b>Fraîcheur</b>Non synchronisée</span></div><ul><li><i className="down" /> Pression sous le seuil <b>-8</b></li><li><i className="down" /> Défaut P1 récurrent <b>-10</b></li><li><i className="up" /> Maintenance à jour <b>+6</b></li></ul><p className="analytics-note">Score de maquette : la date de calcul et l’historique réel ne sont pas encore disponibles.</p><button type="button">Voir le détail du calcul</button></article>
+        <article className="panel score-explain-card"><div><span>SCORE WILO</span><b>78/100</b></div><div className="score-freshness"><span><b>État</b>Dégradé</span><span><b>Variation</b>Indisponible</span><span><b>Fraîcheur</b>Non synchronisée</span></div><ul><li><i className="down" /> Pression sous le seuil <b>-8</b></li><li><i className="down" /> Défaut P1 récurrent <b>-10</b></li><li><i className="up" /> Maintenance à jour <b>+6</b></li></ul><p className="analytics-note">Score de maquette : la date de calcul et l’historique réel ne sont pas encore disponibles.</p><button type="button">Voir le détail du calcul</button></article>
       </aside>
     </section>
 

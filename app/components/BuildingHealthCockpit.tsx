@@ -187,7 +187,7 @@ export function BuildingHealthCockpit({
       ? { id: 'cov', label: 'Couverture', value: '—', detail: `Données insuffisantes. ${insufficientCopy(snapshot.coverage)}`, insufficient: true }
       : { id: 'cov', label: 'Couverture', value: <>{snapshot.coverage.percent}<small>%</small></>, detail: coverageLabel(snapshot.coverage.currentCount, snapshot.coverage.totalCount) },
     { id: 'pending', label: facility ? 'Dossiers à traiter' : pendingDecisionsLabel(session.audience), value: snapshot.pendingDecisions ?? '—', detail: snapshot.pendingDecisions == null ? 'Données insuffisantes. Source non raccordée.' : undefined, insufficient: snapshot.pendingDecisions == null, hidden: reasons.pendingDecisions === 'not_authorized', onClick: snapshot.pendingDecisions != null && canOpenEquipment ? () => onNavigate('manager') : undefined },
-    { id: 'overdue', label: 'Critiques hors délai', value: snapshot.overdueCritical ?? '—', detail: snapshot.overdueCritical == null ? 'Données insuffisantes. Source non raccordée.' : undefined, insufficient: snapshot.overdueCritical == null, hidden: reasons.overdueCritical === 'not_authorized', onClick: snapshot.overdueCritical != null && canOpenEquipment ? () => onNavigate('manager') : undefined },
+    { id: 'overdue', label: 'Critiques hors délai', value: snapshot.overdueCritical ?? '—', detail: snapshot.overdueCritical == null ? 'Données insuffisantes. Source non raccordée.' : undefined, insufficient: snapshot.overdueCritical == null, hidden: reasons.overdueCritical === 'not_authorized' },
     { id: 'reserves', label: 'Réserves ouvertes', value: snapshot.openReserves ?? '—', detail: snapshot.openReserves == null ? 'Données insuffisantes. Source non raccordée.' : undefined, insufficient: snapshot.openReserves == null, hidden: reasons.openReserves === 'not_authorized' },
   ];
 
@@ -197,13 +197,13 @@ export function BuildingHealthCockpit({
   ].filter(Boolean).join(', ');
 
   const bannerTitle = admin
-    ? adminHello(actionCount)
+    ? 'Arbitrages'
     : agent
       ? agentHello(actionCount)
       : undefined;
-  const bannerKicker = agent || admin ? undefined : `${copy.kicker}, ${weekday}`;
+  const bannerKicker = admin ? weekday : agent ? undefined : `${copy.kicker}, ${weekday}`;
   const bannerMeta = admin
-    ? `${weekday}. Seuil d’approbation en vigueur : ${formatMoney(snapshot.threshold.value)}.`
+    ? `${adminHello(actionCount)}. Seuil d’approbation en vigueur : ${formatMoney(snapshot.threshold.value)}.`
     : agent
       ? `${weekday}. ${perimeterCopy(session)}.`
       : undefined;
@@ -244,7 +244,7 @@ export function BuildingHealthCockpit({
       <p className="home-hero-kicker">Santé du bâtiment</p>
       {figure == null ? (
         <>
-          <p className="health-admin-mini-value">—<small> /100</small></p>
+          <p className="health-admin-mini-value">—</p>
           <p className="home-hero-meta">Non calculable. {insufficientCopy({ status: 'insufficient', reasonCode: snapshot.score.missingReasons[0] ?? 'formula_pending', detail: null })}</p>
         </>
       ) : (
@@ -308,6 +308,7 @@ export function BuildingHealthCockpit({
       >
         {bannerExtras}
       </HomeHeroBanner>
+      {session.demo ? <DemoScenarioSelect /> : null}
 
       {agent ? (
         <article className={`sheet health-agent-band${notComputable ? ' is-not-computable' : ''}`}>
@@ -356,7 +357,6 @@ export function BuildingHealthCockpit({
           )}
         </>
       )}
-      {session.demo ? <DemoScenarioSelect /> : null}
     </section>
   );
 }

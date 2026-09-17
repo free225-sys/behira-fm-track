@@ -16,9 +16,10 @@ export type AccessWorkspaceUser = {
 
 type AdminAction = 'create' | 'disable';
 
-export function AccessWorkspace({ users, audience }: {
+export function AccessWorkspace({ users, audience, embedded = false }: {
   users:AccessWorkspaceUser[];
   audience:'administration' | 'facility';
+  embedded?: boolean;
 }) {
   const [adminAction, setAdminAction] = useState<AdminAction>('create');
   const [selectedUserId, setSelectedUserId] = useState(users.find((user) => user.id !== 'administration')?.id ?? users[0]?.id ?? '');
@@ -53,7 +54,7 @@ export function AccessWorkspace({ users, audience }: {
     setReason('');
   };
 
-  return <section className="access-workspace" aria-labelledby="access-workspace-title">
+  return <section className={`access-workspace${embedded ? ' is-embedded' : ''}`} aria-labelledby="access-workspace-title">
     <header className="access-workspace-hero">
       <div>
         <p className="design-kicker">ADMINISTRATION</p>
@@ -62,6 +63,7 @@ export function AccessWorkspace({ users, audience }: {
       </div>
       <Badge tone={audience === 'administration' ? 'blue' : 'neutral'}>{audience === 'administration' ? 'GESTION ADMINISTRATION' : 'PROPOSITION UNIQUEMENT'}</Badge>
     </header>
+    {audience === 'administration' ? <div className="parameters-pending-banner" role="status"><b>Demandes du FM en attente</b><p>1 proposition de périmètre à confirmer. Aucun compte réel n’a été créé.</p></div> : null}
 
     <section className="access-summary" aria-label="Synthèse des accès de démonstration">
       <Card className="access-summary-card"><span>PROFILS DE DÉMONSTRATION</span><strong>{users.length}</strong><small>Aucun compte Auth géré ici</small></Card>
@@ -97,7 +99,7 @@ export function AccessWorkspace({ users, audience }: {
 
           {(audience === 'facility' || adminAction === 'create') && <div className="access-form-grid">
             <Field label={audience === 'facility' ? 'Rôle proposé' : 'Rôle'} size="select"><Select value={role} onChange={(event) => setRole(event.target.value)}><option>Agent terrain</option><option>Facility Manager</option><option>Agente & assistante</option>{audience === 'administration' && <option>Administration</option>}</Select></Field>
-            <Field label={audience === 'facility' ? 'Périmètre proposé' : 'Périmètre'} size="select"><Select value={scope} onChange={(event) => setScope(event.target.value)}><option>Périmètre à confirmer</option><option value="DEMO-GE">{displayAssetCode('DEMO-GE')}</option><option value="DEMO-EAU · DEMO-SSI · DEMO-ESP">{displayAssetText('DEMO-EAU · DEMO-SSI · DEMO-ESP')}</option><option value="DEMO-RND">{displayAssetCode('DEMO-RND')}</option><option>Tous périmètres</option></Select></Field>
+            <Field label={audience === 'facility' ? 'Périmètre proposé' : 'Périmètre'} size="select"><Select value={scope} onChange={(event) => setScope(event.target.value)}><option>Périmètre à confirmer</option><option value="DEMO-GE · DEMO-ASC-1 · DEMO-ASC-2">{displayAssetText('DEMO-GE · DEMO-ASC-1 · DEMO-ASC-2')}</option><option value="DEMO-GE">{displayAssetCode('DEMO-GE')}</option><option value="DEMO-EAU · DEMO-SSI · DEMO-ESP">{displayAssetText('DEMO-EAU · DEMO-SSI · DEMO-ESP')}</option><option value="DEMO-RND">{displayAssetCode('DEMO-RND')}</option><option>Tous périmètres</option></Select></Field>
           </div>}
 
           <Field label="Justification" size="long" error={fieldErrors.reason}><textarea value={reason} maxLength={1000} aria-invalid={Boolean(fieldErrors.reason)} onChange={(event) => {setReason(event.target.value);setFieldErrors((current) => ({ ...current, reason: undefined }))}} placeholder={audience === 'facility' ? 'Expliquez le besoin métier et le périmètre demandé.' : adminAction === 'create' ? 'Expliquez pourquoi cet accès doit être créé.' : 'Expliquez pourquoi cet accès doit être désactivé.'} /></Field>

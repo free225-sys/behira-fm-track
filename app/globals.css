@@ -617,7 +617,7 @@ button:focus,input:focus,select:focus,textarea:focus{outline:none}
   .icon-button,.auth-signout-top{width:40px;height:40px}.auth-signout-top{display:none}
   .top-create{min-height:48px;padding-inline:20px}
 
-  .content{padding-inline:clamp(32px,3.2vw,60px)}
+  .content{--content-pad:clamp(32px,3.2vw,60px)}
   .surpresseur-hero{margin-inline:calc(clamp(32px,3.2vw,60px)*-1);padding-inline:clamp(32px,3.2vw,60px)}
   .manager-health-overview{margin-inline:calc(clamp(32px,3.2vw,60px)*-1);padding-inline:clamp(32px,3.2vw,60px)}
   .manager-pilot .manager-command-hero{gap:28px;padding:14px 18px}
@@ -3840,7 +3840,7 @@ button.executive-metric.is-link:hover{
 }
 .workspace-tabs button.active,.workspace-tabs button[aria-selected="true"]{color:var(--brand);border-color:var(--brand)}
 .workspace-tabs button span{
-  display:inline-block;min-width:20px;text-align:center;font-size:11px;
+  display:inline-block;min-width:20px;text-align:center;font-size:var(--font-size-label);
   background:var(--surface-muted);color:var(--foreground-muted);border-radius:999px;padding:1px 6px;margin-left:4px;
 }
 .agent-task-list .act-row:last-child{border-bottom:0}
@@ -4216,7 +4216,7 @@ button.executive-metric.is-link:hover{
 .dossiers-workspace .fm-inbox-list .sub{display:block;margin-top:2px;font-size:13px;color:var(--foreground-muted)}
 .dossiers-workspace .fm-inbox-list .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .dossiers-workspace .fm-inbox-list .origin{
-  font-size:11px;font-weight:700;color:var(--foreground-muted);border:1px solid var(--border);border-radius:6px;padding:1px 6px;
+  font-size:var(--font-size-label);font-weight:700;color:var(--foreground-muted);border:1px solid var(--border);border-radius:6px;padding:1px 6px;
 }
 .dossiers-workspace .fm-inbox-list .rt{display:flex;flex-direction:column;gap:4px;align-items:flex-end;text-align:right;font-size:13px}
 .dossiers-workspace .manager-pilot .manager-kpis.manager-kpis-target.dashboard-section-tabs{
@@ -4260,7 +4260,7 @@ button.executive-metric.is-link:hover{
 .dossier-treatment-details .anti-zombie-summary{margin:0;border:0;border-top:1px solid var(--border);border-radius:0 0 10px 10px}
 
 .agent-equip-shortlist .status-stack .badge:last-child,
-.agent-equip-shortlist .control-validity{opacity:.72;font-size:11px}
+.agent-equip-shortlist .control-validity{opacity:.72;font-size:var(--font-size-label)}
 
 .main-column.is-dossiers-page>.topbar{display:none}
 .main-column.is-dossiers-page .content{padding-top:0}
@@ -4387,7 +4387,7 @@ button.executive-metric.is-link:hover{
   }
   .app-navigation .nav-item-label{
     overflow:visible;text-overflow:unset;white-space:normal;max-width:none;
-    font-size:10px;line-height:1.15;letter-spacing:-.02em;
+    font-size:var(--font-size-label);line-height:1.15;letter-spacing:0;
   }
   .app-navigation .nav-item{padding-inline:2px;gap:1px}
 }
@@ -4399,7 +4399,7 @@ button.executive-metric.is-link:hover{
 .dossier-next .due{font-size:13px;font-weight:700;margin-top:2px}
 .dossier-next .due.is-late{color:var(--danger-text)}
 .dossier-steps{display:flex;margin:14px 20px 0;gap:4px}
-.dossier-steps>div{flex:1;font-size:11px;color:var(--foreground-muted);text-align:center}
+.dossier-steps>div{flex:1;font-size:var(--font-size-label);color:var(--foreground-muted);text-align:center}
 .dossier-steps>div i{display:block;height:4px;border-radius:2px;background:var(--border);margin-bottom:4px}
 .dossier-steps>div.done i,.dossier-steps>div.now i{background:var(--brand)}
 .dossier-steps>div.now{color:var(--brand);font-weight:700}
@@ -4428,7 +4428,7 @@ button.executive-metric.is-link:hover{
 }
 
 .dossiers-workspace .fm-decision-head .origin{
-  font-size:11px;font-weight:700;color:var(--foreground-muted);border:1px solid var(--border);border-radius:6px;padding:1px 6px;margin-left:8px;
+  font-size:var(--font-size-label);font-weight:700;color:var(--foreground-muted);border:1px solid var(--border);border-radius:6px;padding:1px 6px;margin-left:8px;
 }
 
 .performance-bar{display:none}
@@ -4452,4 +4452,188 @@ button.executive-metric.is-link:hover{
   .report-tracking-line{grid-template-columns:auto auto 1fr;row-gap:4px}
 }
 
+.ds-matrix{width:100%;border-collapse:collapse;font-size:var(--font-size-body)}
+.ds-matrix th,.ds-matrix td{padding:8px 10px;border:1px solid var(--border);text-align:left;vertical-align:top}
+.ds-matrix th{background:var(--surface-muted);font-size:var(--font-size-label);letter-spacing:.04em;text-transform:uppercase}
 
+/* DESIGN-070 — audit visuel 015c253 : 380 px, contrastes, plancher 12 px, bandeaux */
+.content{
+  --content-pad:clamp(24px,4vw,54px);
+  --content-pad-y:30px;
+  padding:var(--content-pad-y) var(--content-pad) 45px;
+  min-width:0;
+  max-width:100%;
+}
+.app-shell,.main-column,.building-health-cockpit,.equipment-workspace,.equipment-catalogue,.health-equipment-panel,.sheet,.dossiers-workspace,.parameters-workspace{
+  min-width:0;
+  max-width:100%;
+}
+.home-hero-banner.is-bleed,
+.dossiers-hero.is-bleed{
+  margin-top:calc(var(--content-pad-y, 30px) * -1);
+  margin-inline:calc(var(--content-pad, clamp(24px,4vw,54px)) * -1);
+  padding-inline:var(--content-pad, clamp(24px,4vw,54px));
+}
+.equipment-filters{min-width:0;grid-template-columns:minmax(0,1.7fr) minmax(0,.7fr)}
+.field.is-search,.equipment-filters .field{min-width:0;max-width:100%}
+.equipment-filters .field input,.equipment-filters .field .app-select,.equipment-filters .field .app-select>button{min-width:0;max-width:100%;width:100%}
+.equipment-table-wrap{display:block;overflow-x:auto;max-width:100%;min-width:0;width:100%;-webkit-overflow-scrolling:touch}
+.equipment-table{min-width:640px;width:max(100%,640px)}
+.equipment-table-score.is-danger .equipment-table-bar{background:var(--danger)}
+.equipment-table-score.is-warning .equipment-table-bar{background:var(--warning)}
+.equipment-table-score.is-success .equipment-table-bar{background:var(--success)}
+.health-equip-hint{margin:12px 20px 18px;color:var(--foreground-muted);font-size:var(--font-size-label);line-height:1.45}
+
+@media (max-width:640px){
+  .dec-row{
+    grid-template-columns:4px minmax(0,1fr);
+    align-items:start;
+  }
+  .dec-row>.queue-mark{order:0}
+  .dec-row>div{order:1;min-width:0}
+  .dec-row>button{
+    order:2;
+    grid-column:2;
+    justify-self:start;
+    white-space:normal;
+    margin-top:8px;
+  }
+  .dec-row h3,.dec-row p{overflow-wrap:anywhere}
+  .dec-row>.qualify-action{order:2}
+}
+
+.start-round-pill{white-space:nowrap;overflow:visible;font-size:var(--font-size-label)}
+.start-round-copy b,.start-round-copy small{overflow:visible;text-overflow:unset;white-space:normal}
+@media (max-width:700px){
+  .content{--content-pad:16px;--content-pad-y:22px}
+  .equipment-filters{grid-template-columns:minmax(0,1fr)}
+  .start-round-picker{position:static}
+  .start-round-panel{
+    position:fixed;left:0;right:0;bottom:calc(72px + env(safe-area-inset-bottom,0px));top:auto;
+    width:100%;max-width:none;max-height:min(70vh,calc(100dvh - 80px));
+    overflow:auto;z-index:var(--z-overlay);
+    border-radius:16px 16px 0 0;padding:12px 16px 16px;
+    box-shadow:var(--shadow-float);
+  }
+  .start-round-item{align-items:flex-start}
+  .app-navigation .nav-item-label{
+    font-size:var(--font-size-label);line-height:1.2;letter-spacing:0;
+    overflow:visible;text-overflow:unset;white-space:normal;
+  }
+}
+
+.direction-focus-head>div>.badge-neutral{color:var(--neutral-text)!important}
+.admin-home .lh{margin:0;padding:18px 18px 8px}
+.admin-home .decision-filters.chips{padding:0 18px 14px}
+.admin-home .direction-inbox{padding-top:0}
+
+.workspace-tabs button span,
+.dossiers-workspace .fm-inbox-list .origin,
+.dossiers-workspace .fm-decision-head .origin,
+.dossier-steps>div,
+.agent-equip-shortlist .control-validity{
+  font-size:var(--font-size-label);
+}
+.start-round-heading,.start-round-copy small,.start-round-pill{font-size:var(--font-size-label)}
+.ge-hours-hint,.ge-threshold-line,.ge-auto-warning{font-size:var(--font-size-label)}
+.home-hero-sync{font-size:var(--font-size-label)}
+
+.search-box span{color:var(--foreground)}
+.unassigned-text{color:var(--warning-text)!important}
+.dossiers-search-on-navy span{color:#e8eef5}
+.late-text{color:var(--danger-text)!important}
+
+.hist li{grid-template-columns:minmax(11rem,max-content) minmax(0,1fr);align-items:baseline}
+.hist li span{white-space:nowrap}
+
+.dossier-qualify .fm-decision-fields{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px;padding:0;
+}
+.dossier-qualify .fm-decision-fields .field,
+.dossier-qualify .proposed-field{
+  margin:0;display:flex;flex-direction:column;gap:6px;
+}
+.dossier-qualify .fm-decision-fields input,
+.dossier-qualify .fm-decision-fields .app-select,
+.dossier-qualify .fm-decision-fields .app-select>button{width:100%}
+
+.points-lost-card{padding:12px 16px}
+.points-lost-card .analytics-card-head{padding:0 0 8px;margin:0}
+.points-lost-card .insufficient-note{margin:0;padding:8px 0;border:0;background:transparent}
+.facility-home-grid .points-lost-card{align-self:start}
+.health-kpi.is-overdue{
+  background:transparent;box-shadow:none;
+}
+.building-health-cockpit.is-facility .kpi-strip .health-kpi.is-overdue>strong{color:var(--foreground)}
+
+.dashboard-section-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}
+.dashboard-section-tabs button{min-height:48px;grid-template-columns:minmax(0,1fr);padding:10px 12px}
+.dashboard-tab-copy small,.dashboard-section-tabs em{display:none}
+.dashboard-tab-copy b{overflow:visible;text-overflow:unset;white-space:normal;font-size:var(--font-size-body)}
+@media (max-width:800px){
+  .dashboard-section-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:visible;scroll-snap-type:none}
+  .dashboard-section-tabs button{flex:none;min-width:0;scroll-snap-align:none}
+}
+@media (max-width:430px){
+  .dashboard-section-tabs button{flex-basis:auto;min-width:0;grid-template-columns:minmax(0,1fr)}
+}
+
+.ge-datetime-row{flex-wrap:nowrap;overflow-x:auto;align-items:center;min-height:40px}
+.ge-datetime-row input[type="date"],.ge-datetime-row input[type="time"]{height:40px;flex:0 0 auto;width:auto}
+.ge-now-button{flex:0 0 auto;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;height:40px}
+.ge-stepper{width:128px;flex:0 0 128px;display:inline-flex}
+.ge-stepper-btn{flex:0 0 40px;width:40px;height:40px}
+.ge-stepper-value{flex:1 1 auto;width:48px;min-width:48px}
+.ge-actions .secondary-button:disabled{opacity:.45;cursor:not-allowed}
+
+.today-rounds-list em.is-overdue{color:var(--danger-text);font-style:normal;font-weight:700}
+.today-rounds-list em.is-draft{color:var(--warning-text);font-style:normal;font-weight:700}
+.today-rounds-list em.is-due{color:var(--info-text);font-style:normal;font-weight:700}
+.today-rounds-list em.is-done{color:var(--success-text);font-style:normal;font-weight:700}
+.today-rounds-list small{font-size:var(--font-size-label);font-variant-numeric:tabular-nums}
+
+.building-health-cockpit>.demo-scenario-bar,
+.dossiers-workspace>.demo-scenario-bar,
+.equipment-workspace>.demo-scenario-bar,
+.parameters-workspace>.demo-scenario-bar,
+.rounds-page>.demo-scenario-bar,
+.content>.demo-scenario-bar{
+  position:static;display:flex;justify-content:flex-end;
+  margin:10px 0 12px;padding:0 4px;
+}
+
+.parameters-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 16px}
+.parameters-tabs button{
+  min-height:36px;padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius-round);
+  background:var(--surface);color:var(--foreground-muted);font-weight:650;cursor:pointer;
+}
+.parameters-tabs button.active,.parameters-tabs button[aria-selected="true"]{
+  background:var(--foreground);color:var(--surface);border-color:var(--foreground);
+}
+.parameters-pending-banner{
+  margin:0 0 16px;padding:12px 14px;border-radius:10px;
+  background:var(--info-surface);color:var(--info-text);font-size:var(--font-size-body);
+}
+.parameters-pending-banner b{display:block;margin-bottom:2px}
+.parameter-rule-sentence{margin:0;font-size:var(--font-size-body);line-height:1.55;color:var(--foreground)}
+.parameter-tech-details{
+  margin-top:14px;border:1px solid var(--border);border-radius:10px;background:var(--surface);
+}
+.parameter-tech-details>summary{
+  cursor:pointer;list-style:none;padding:10px 14px;font-size:var(--font-size-body);font-weight:700;
+}
+.parameter-tech-details>summary::-webkit-details-marker{display:none}
+.parameter-tech-details>summary::after{content:" +";font-weight:700;color:var(--foreground-muted)}
+.parameter-tech-details[open]>summary::after{content:" −"}
+.access-workspace.is-embedded>.access-workspace-hero{display:none}
+.access-workspace.is-embedded>.access-summary{display:none}
+
+.decisions-block .decision-list{display:none}
+.health-admin-mini-value small{font-size:var(--font-size-label);color:var(--on-chrome-muted)}
+small{font-size:var(--font-size-label)}
+.dossiers-filters .chip{color:var(--foreground)}
+.dossiers-filters .chip.is-pressed,.dossiers-filters .chip[aria-pressed="true"]{color:var(--surface)}
+.dashboard-hero+.demo-scenario-bar{margin-top:4px}
+@media (min-width:1366px){
+  .content{--content-pad:clamp(32px,3.2vw,60px)}
+}
