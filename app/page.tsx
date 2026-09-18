@@ -11,7 +11,7 @@ import { BuildingHealthCockpit, ScoreRing } from './components/BuildingHealthCoc
 import { DemoScenarioProvider, DemoScenarioSelect, EquipmentTable, InsufficientNote, ReportTrackingLine, RoundPilotHeader, SegmentedControl, StartRoundPicker, useDemoScoreScenario } from './components/shared';
 import { demoHomeSnapshot, demoReportTracking, demoRoundsFor, sessionForAudience } from './lib/ui-contract/fixtures.ts';
 import type { TodaysRound, UiSession } from './lib/ui-contract/building-health.ts';
-import { asciiInitials, displayAssetCode, displayAssetText, formatCompactMoney, formatTime, formatWeekdayDate, roundStateLabel, roundSubjectLabel, scoreFigure, thresholdPosition } from './lib/ui-contract/display.ts';
+import { asciiInitials, displayAssetCode, displayAssetText, formatCompactMoney, formatTime, formatWeekdayDate, palierFromScore, roundStateLabel, roundSubjectLabel, scoreFigure, statusBadgeTone, statusLabel, thresholdPosition } from './lib/ui-contract/display.ts';
 import { Ge01AgentForm } from './components/Ge01Pilot';
 import { CostsWorkspace } from './components/CostsWorkspace';
 import { EquipmentWorkspace } from './components/EquipmentWorkspace';
@@ -1766,6 +1766,7 @@ function OperationalAnalytics({ equipment, section = 'team', onNavigate }: { equ
   const snapshot = demoHomeSnapshot(sessionForAudience('facility', 'Facility Manager Démo'), scenario);
   const homeScoreValue = scoreFigure(snapshot.score);
   const parkEquipment = snapshot.equipment.filter((item) => item.code !== 'RND-LET');
+  const watchlist = parkEquipment.filter((item) => item.operationalStatus !== 'available').slice(0, 5);
 
   if (section === 'team') {
     return <section className="operational-analytics analytics-direction" aria-labelledby="team-analytics-title">
@@ -1812,8 +1813,11 @@ function OperationalAnalytics({ equipment, section = 'team', onNavigate }: { equ
       </article>
 
       <article className="panel analytics-card equipment-chart-card">
-        <div className="analytics-card-head"><div><span>PARC TECHNIQUE</span><h4>Équipements suivis</h4></div>{onNavigate ? <button type="button" className="health-link" onClick={() => onNavigate('equipment')}>Ouvrir Équipements →</button> : null}</div>
-        <EquipmentTable equipment={parkEquipment} onOpen={onNavigate ? () => onNavigate('equipment') : undefined} />
+        <div className="analytics-card-head"><div><span>PARC TECHNIQUE</span><h4>Équipements à surveiller</h4></div>{onNavigate ? <button type="button" className="health-link" onClick={() => onNavigate('equipment')}>Ouvrir Équipements →</button> : null}</div>
+        {watchlist.length === 0
+          ? <div className="insufficient-chart is-wide" role="status"><BrandIcon name="activity" size={18} /><div><b>Aucun équipement à surveiller</b><p>Les {parkEquipment.length} équipements suivis sont disponibles avec un contrôle valide.</p></div></div>
+          : <ul className="watchlist">{watchlist.map((item) => <li key={item.code}><span className="watchlist-identity"><b>{item.code}</b><small>{item.name}</small></span>{item.operationalStatus == null ? <Badge tone="neutral">Statut inconnu</Badge> : <Badge tone={statusBadgeTone(item.operationalStatus)}>{statusLabel(item.operationalStatus)}</Badge>}<span className="watchlist-score">{item.score == null ? <em>—</em> : <><b className={`palier-${palierFromScore(item.score)}`}>{item.score}</b><small>provisoire</small></>}</span></li>)}</ul>}
+        <p className="analytics-note">{watchlist.length ? `${watchlist.length} équipement${watchlist.length > 1 ? 's' : ''} sur ${parkEquipment.length} demande${watchlist.length > 1 ? 'nt' : ''} une attention. Le parc complet et ses colonnes détaillées restent dans Équipements.` : 'Le parc complet et ses colonnes détaillées restent dans Équipements.'}</p>
       </article>
     </div>
   </section>;

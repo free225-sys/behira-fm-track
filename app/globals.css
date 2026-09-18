@@ -5059,3 +5059,21 @@ h1{
 .vendor-report-action-note{margin:0 0 4px}
   .choice-button{flex:1 1 auto}
 }
+
+/* DESIGN-077 — Pilotage : liste d'attention et carte d'évolution */
+.watchlist{list-style:none;display:grid;gap:2px;margin:0;padding:0}
+.watchlist li{display:grid;grid-template-columns:minmax(0,1fr) auto 84px;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--border)}
+.watchlist li:first-child{border-top:0}
+.watchlist-identity b{display:block;font-size:var(--font-size-body)}
+.watchlist-identity small{display:block;color:var(--foreground-muted);font-size:var(--font-size-label)}
+.watchlist-score{display:flex;align-items:baseline;justify-content:flex-end;gap:6px}
+.watchlist-score b{font-size:var(--font-size-title)}
+.watchlist-score small,.watchlist-score em{color:var(--foreground-muted);font-size:var(--font-size-label);font-style:normal}
+.palier-critical{color:var(--danger-text)}
+.palier-watch{color:var(--warning-text)}
+.palier-ok{color:var(--success-text)}
+.trend-card .insufficient-chart{min-height:120px}
+@media (max-width:700px){
+  .watchlist li{grid-template-columns:minmax(0,1fr) auto;row-gap:6px}
+  .watchlist-score{grid-column:1/-1;justify-content:flex-start}
+}

@@ -14,6 +14,7 @@ Statuts : les entrées 062 à 075 sont **En vigueur** (la plus récente l’empo
 
 | id | date | sujet | attendu de | bloque |
 | --- | --- | --- | --- | --- |
+| DESIGN-077 | 2026-09-18 | Pilotage : liste d’attention et carte d’évolution | Codex | En vigueur |
 | DESIGN-076 | 2026-09-18 | Formulaire de rapport prestataire | Codex | En vigueur |
 | DESIGN-075 | 2026-09-18 | En-tête ronde deux niveaux | Wilkam | livré |
 | DESIGN-074 | 2026-09-18 | Compteur d’entiers compact GE-01 | Wilkam | livré |
@@ -78,6 +79,19 @@ Statuts : les entrées 062 à 075 sont **En vigueur** (la plus récente l’empo
 | DESIGN-003 | 2026-08-28 | `pnpm dev` échoue sans accès réseau à `fonts.googleapis.com` | Dev Lead | tout audit hors ligne |
 | DESIGN-002 | 2026-08-28 | Nomenclature unique des destinations — *arbitrée, voir DEC-002* | Dev Lead | routes |
 | DESIGN-001 | 2026-08-28 | Lot 1 — spécification du socle de tokens | Dev Lead | lot 2, écran pilote |
+
+---
+
+## DESIGN-077 — Pilotage : liste d’attention et carte d’évolution
+
+- **Date :** 18 septembre 2026
+- **Statut :** En vigueur
+- **Périmètre :** affichage de l’onglet Performance (`app/page.tsx`, `app/globals.css`). Aucun changement de calcul ni de données.
+
+1. **Parc technique** : le tableau complet, identique à la page Équipements, est remplacé par « Équipements à surveiller » — les équipements dont le statut n’est pas Disponible (5 au maximum), avec code, nom, statut métier et score provisoire coloré par palier. Le lien « Ouvrir Équipements » conduit au parc complet et à ses colonnes détaillées.
+2. **Aucun équipement à risque** : message explicite rappelant le nombre d’équipements suivis, au lieu d’une liste vide.
+3. **Carte Évolution** : hauteur minimale du bloc « Données historiques insuffisantes » ajustée pour réduire la zone vide à côté de la santé du bâtiment.
+4. **Contrôles** : `verify-lot1-ui.mjs` et `audit-visual-styles.mjs` mis à jour sur la nouvelle structure (liste d’attention, lien Équipements, absence de légende « Sain ≥ 90 »). Tests au vert : lot 0 89, lot 1 35, audit visuel 119, personas 38.
 
 ---
 

@@ -63,7 +63,7 @@ check('sélecteur scénario compact', sources.scenario.includes('demo-scenario-l
 check('tuile Statut inconnu', equipment.includes('STATUT INCONNU') && equipment.includes('counts.unknown'))
 check('GE-01 emplacement unique', ge01.includes("EQUIPMENT_META['GE-01']") && fixtures.EQUIPMENT_META['GE-01'].zone === 'RDC · Local groupe' && !ge01.includes('Local TGBT'))
 check('ronde sans équipement = Rondes de services · zones', display.roundSubjectLabel({ equipmentCode: null }) === 'Rondes de services · zones' && display.roundSubjectLabel({ equipmentCode: 'GE-01' }) === 'GE-01')
-check('Pilotage Performance reprend le tableau parc', page.includes('<EquipmentTable equipment={parkEquipment}') && !page.includes('Sain ≥ 90'))
+check('Pilotage Performance = liste d’attention', page.includes('Équipements à surveiller') && page.includes('className="watchlist"') && page.includes('Ouvrir Équipements') && !page.includes('<EquipmentTable equipment={parkEquipment}') && !page.includes('Sain ≥ 90'))
 check('onglets Dossiers en pastilles', page.includes('workspace-tabs parameters-tabs agent-action-tabs') && css.includes('.dossiers-hero .workspace-tabs.dossiers-tabs button.active'))
 check('rayon secondaire unique md', css.includes('.manager-pilot .secondary-button,\n.dossiers-workspace .secondary-button{\n  border-radius:var(--radius-md)'))
 check('compteur entier compact partagé', sources.stepper.includes('role="group"') && sources.stepper.includes('ArrowUp') && ge01.includes('<CountStepper') && ge01.includes('Nombre de démarrages') && ge01.includes('Hors essai de ce jour') && css.includes('width:146px;height:44px') && !ge01.includes('function CountStepper'))
