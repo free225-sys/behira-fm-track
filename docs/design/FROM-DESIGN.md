@@ -10,10 +10,11 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 ## Index
 
-Statuts : les entrées 062 à 073 sont **En vigueur** (la plus récente l’emporte). DESIGN-003 (Geist auto-hébergé) est traité (DESIGN-015). DESIGN-005 (`.gitattributes`) reste à vérifier dans le dépôt.
+Statuts : les entrées 062 à 074 sont **En vigueur** (la plus récente l’emporte). DESIGN-003 (Geist auto-hébergé) est traité (DESIGN-015). DESIGN-005 (`.gitattributes`) reste à vérifier dans le dépôt.
 
 | id | date | sujet | attendu de | bloque |
 | --- | --- | --- | --- | --- |
+| DESIGN-074 | 2026-09-18 | Compteur d’entiers compact GE-01 | Wilkam | livré |
 | DESIGN-073 | 2026-09-17 | Onglets uniques + rayon secondaire unique | Wilkam | livré |
 | DESIGN-072 | 2026-09-17 | Conformité design : parc, typo, boutons, onglets, densité | Wilkam | livré |
 | DESIGN-071 | 2026-09-17 | Offset sous barre fixe + carte Contexte GE-01 | Wilkam | livré |
@@ -75,6 +76,16 @@ Statuts : les entrées 062 à 073 sont **En vigueur** (la plus récente l’empo
 | DESIGN-003 | 2026-08-28 | `pnpm dev` échoue sans accès réseau à `fonts.googleapis.com` | Dev Lead | tout audit hors ligne |
 | DESIGN-002 | 2026-08-28 | Nomenclature unique des destinations — *arbitrée, voir DEC-002* | Dev Lead | routes |
 | DESIGN-001 | 2026-08-28 | Lot 1 — spécification du socle de tokens | Dev Lead | lot 2, écran pilote |
+
+---
+
+## DESIGN-074 — Compteur d’entiers compact GE-01
+
+- **Date :** 18 septembre 2026
+- **Statut :** Livré.
+- **Périmètre :** affichage. Pas de `data.ts`.
+
+Le stepper « Démarrages dernières 24 h » (étape Contexte) n’occupe plus un cadre vide. `CountStepper` partagé : un seul bloc en ligne (−, valeur, +), bordure unique rayon 10 px, hauteur 44 px alignée sur « Heures compteur moteur », boutons 44 × 44, valeur 18 px tabulaires (min 56 px), largeur fixe 146 px. Bouton − désactivé à 0. `role="group"` + `aria-live` + flèches. Aide « Hors essai de ce jour » inchangée. Même composant pour « Tentatives ». Sous 640 px : aligné à gauche, hauteur inchangée.
 
 ---
 

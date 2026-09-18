@@ -4937,4 +4937,52 @@ h1{
   border-radius:var(--radius-sm);
 }
 
+/* DESIGN-074 — compteur d’entiers compact (démarrages GE-01) */
+.ge-field-grid{align-items:start}
+.ge-hours-field .ge-measure-input{
+  height:44px;min-height:44px;box-sizing:border-box;
+}
+.ge-hours-field .ge-measure-input input{
+  height:44px;min-height:44px;padding:0 11px;
+}
+.count-stepper-field{
+  align-self:start;min-width:0;
+}
+.count-stepper.ge-stepper{
+  display:inline-flex;flex:0 0 auto;align-items:stretch;
+  width:146px;height:44px;box-sizing:border-box;
+  margin:0;padding:0;gap:0;
+  border:1px solid var(--border-strong);border-radius:10px;
+  overflow:hidden;background:var(--surface);
+}
+.count-stepper-btn.ge-stepper-btn{
+  flex:0 0 44px;width:44px;height:44px;margin:0;padding:0;
+  border:0;border-radius:0;
+  background:var(--surface-muted);color:var(--foreground);
+  font-size:var(--font-size-title);font-weight:var(--font-weight-medium);
+  line-height:1;cursor:pointer;
+}
+.count-stepper-btn.ge-stepper-btn:first-child{border-right:1px solid var(--border)}
+.count-stepper-btn.ge-stepper-btn:last-child{border-left:1px solid var(--border)}
+.count-stepper-btn.ge-stepper-btn:disabled{
+  opacity:.4;cursor:not-allowed;
+}
+.count-stepper-value.ge-stepper-value{
+  flex:1 0 56px;min-width:56px;height:44px;margin:0;padding:0;
+  display:grid;place-items:center;
+  border:0;background:var(--surface);color:var(--foreground);
+  font-size:18px;font-weight:var(--font-weight-bold);
+  font-variant-numeric:tabular-nums;line-height:1;text-align:center;
+}
+.keyboard-nav .count-stepper:focus-within,
+.keyboard-nav .count-stepper-value:focus-visible{
+  outline:2px solid var(--focus-ring);outline-offset:2px;
+}
+@media (max-width:640px){
+  .count-stepper-field{justify-self:start}
+  .count-stepper.ge-stepper{width:146px;height:44px;margin:0}
+  .count-stepper-btn.ge-stepper-btn{width:44px;height:44px}
+}
+
+
 

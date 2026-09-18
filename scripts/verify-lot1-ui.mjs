@@ -15,6 +15,7 @@ const files = {
   split: 'app/components/shared/ListDetailSplit.tsx',
   badges: 'app/components/shared/StatusBadge.tsx',
   scenario: 'app/components/shared/DemoScenarioSelect.tsx',
+  stepper: 'app/components/shared/CountStepper.tsx',
 }
 const sources = Object.fromEntries(await Promise.all(Object.entries(files).map(async ([key, rel]) => [key, await readFile(path.join(root, rel), 'utf8')])))
 const cockpit = await readFile(path.join(root, 'app/components/BuildingHealthCockpit.tsx'), 'utf8')
@@ -64,6 +65,7 @@ check('ronde sans équipement = Rondes de services · zones', display.roundSubje
 check('Pilotage Performance reprend le tableau parc', page.includes('<EquipmentTable equipment={parkEquipment}') && !page.includes('Sain ≥ 90'))
 check('onglets Dossiers en pastilles', page.includes('workspace-tabs parameters-tabs agent-action-tabs') && css.includes('.dossiers-hero .workspace-tabs.dossiers-tabs button.active'))
 check('rayon secondaire unique md', css.includes('.manager-pilot .secondary-button,\n.dossiers-workspace .secondary-button{\n  border-radius:var(--radius-md)'))
+check('compteur entier compact partagé', sources.stepper.includes('role="group"') && sources.stepper.includes('ArrowUp') && ge01.includes('<CountStepper') && ge01.includes('Nombre de démarrages') && ge01.includes('Hors essai de ce jour') && css.includes('width:146px;height:44px') && !ge01.includes('function CountStepper'))
 
 const failed = cases.filter((item) => !item.ok)
 if (failed.length) {

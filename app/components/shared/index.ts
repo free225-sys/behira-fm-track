@@ -1,3 +1,4 @@
+export { CountStepper } from './CountStepper';
 export { ControlValidityBadge, DelayBadge, MetierStatusBadge, PalierBadge } from './StatusBadge';
 export { DemoScenarioProvider, DemoScenarioSelect, useDemoScoreScenario } from './DemoScenarioSelect';
 export { EquipmentTable } from './EquipmentTable';

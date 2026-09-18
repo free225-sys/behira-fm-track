@@ -47,7 +47,7 @@ import {
   type MeasureStatus,
 } from '../lib/ge01/thresholds';
 import { Badge, BrandIcon, Button, Card, Field } from './ui';
-import { MetierStatusBadge, SegmentedControl, useDemoScoreScenario } from './shared';
+import { CountStepper, MetierStatusBadge, SegmentedControl, useDemoScoreScenario } from './shared';
 import type { EquipmentCard } from '../lib/ui-contract/building-health.ts';
 import { controlValidityLabel, formatDayTime } from '../lib/ui-contract/display.ts';
 import { EQUIPMENT_META, demoHomeSnapshot, sessionForAudience } from '../lib/ui-contract/fixtures.ts';
@@ -128,40 +128,6 @@ function ContextEquipmentCard({ context, equipment }: { context: Ge01LastContext
   );
 }
 
-function CountStepper({
-  label,
-  value,
-  error,
-  hint,
-  min = 0,
-  ariaMinus,
-  ariaPlus,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  error?: string;
-  hint?: string;
-  min?: number;
-  ariaMinus: string;
-  ariaPlus: string;
-  onChange: (value: string) => void;
-}) {
-  const count = Math.max(min, Math.trunc(Number(value) || 0));
-  return (
-    <div className={`field ${error ? 'is-invalid' : ''}`}>
-      <span>{label}</span>
-      <div className="ge-stepper">
-        <button type="button" className="ge-stepper-btn" aria-label={ariaMinus} onClick={() => onChange(String(Math.max(min, count - 1)))}>−</button>
-        <span className="ge-stepper-value" aria-live="polite">{value === '' ? 0 : count}</span>
-        <button type="button" className="ge-stepper-btn" aria-label={ariaPlus} onClick={() => onChange(String(count + 1))}>+</button>
-      </div>
-      {error ? <small className="ge-field-error" role="alert">{error}</small> : null}
-      {hint ? <small>{hint}</small> : null}
-    </div>
-  );
-}
-
 function StartsStepper({
   value,
   error,
@@ -173,7 +139,9 @@ function StartsStepper({
 }) {
   return (
     <CountStepper
+      className="ge-stepper-field"
       label="Démarrages dernières 24 h"
+      groupLabel="Nombre de démarrages"
       value={value}
       error={error}
       hint="Hors essai de ce jour"
@@ -644,7 +612,7 @@ export function Ge01AgentForm({ agentName }: { agentName: string }) {
           {draft.startOutcome === 'failed' ? <>
             <p className="ge-emergency-note" role="status">Remonté au FM comme urgence potentielle. Aucune durée fictive n’est enregistrée.</p>
             <div className="ge-field-grid">
-              <CountStepper label="Tentatives" value={draft.startAttempts} error={errors.startAttempts} min={0} ariaMinus="Retirer une tentative" ariaPlus="Ajouter une tentative" onChange={(value) => update('startAttempts', value)} />
+              <CountStepper label="Tentatives" groupLabel="Nombre de tentatives" value={draft.startAttempts} error={errors.startAttempts} min={0} ariaMinus="Retirer une tentative" ariaPlus="Ajouter une tentative" onChange={(value) => update('startAttempts', value)} />
               <Field label="Symptôme constaté" size="standard">
                 <input value={draft.startSymptom} aria-invalid={Boolean(errors.startSymptom)} onChange={(event) => update('startSymptom', event.target.value)} placeholder="Décrivez uniquement ce qui a été observé" />
                 {errorFor(errors, 'startSymptom')}
