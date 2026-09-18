@@ -11,7 +11,7 @@ import { BuildingHealthCockpit, ScoreRing } from './components/BuildingHealthCoc
 import { DemoScenarioProvider, DemoScenarioSelect, EquipmentTable, InsufficientNote, ReportTrackingLine, RoundPilotHeader, SegmentedControl, StartRoundPicker, useDemoScoreScenario } from './components/shared';
 import { demoHomeSnapshot, demoReportTracking, demoRoundsFor, sessionForAudience } from './lib/ui-contract/fixtures.ts';
 import type { TodaysRound, UiSession } from './lib/ui-contract/building-health.ts';
-import { asciiInitials, displayAssetCode, displayAssetText, formatCompactMoney, formatTime, formatWeekdayDate, roundStateLabel, roundSubjectLabel, scoreFigure } from './lib/ui-contract/display.ts';
+import { asciiInitials, displayAssetCode, displayAssetText, formatCompactMoney, formatTime, formatWeekdayDate, roundStateLabel, roundSubjectLabel, scoreFigure, thresholdPosition } from './lib/ui-contract/display.ts';
 import { Ge01AgentForm } from './components/Ge01Pilot';
 import { CostsWorkspace } from './components/CostsWorkspace';
 import { EquipmentWorkspace } from './components/EquipmentWorkspace';
@@ -1591,6 +1591,7 @@ function AgentWorkspace({ persona, anomalies, equipment, vendors, canUploadVendo
 
 function InternalVendorReportPanel({ anomalies, vendors, canUpload, busy, onSubmit }: { anomalies:Anomaly[]; vendors:OperationalVendor[]; canUpload:boolean; busy:boolean; onSubmit:(input:VendorReportInput)=>Promise<void> }) {
   const formId = useId();
+  const fileInputRef = useRef<HTMLInputElement|null>(null);
   const [open, setOpen] = useState(false);
   const [anomalyReference, setAnomalyReference] = useState(anomalies[0]?.id ?? '');
   const [vendorCode, setVendorCode] = useState(vendors[0]?.code ?? '');
@@ -1598,6 +1599,8 @@ function InternalVendorReportPanel({ anomalies, vendors, canUpload, busy, onSubm
   const [reportDate, setReportDate] = useState(new Date().toISOString().slice(0,10));
   const [summary, setSummary] = useState('');
   const [reserveNotes, setReserveNotes] = useState('');
+  const [hasReserves, setHasReserves] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const [cost, setCost] = useState('');
   const [file, setFile] = useState<File|null>(null);
   const [localBusy, setLocalBusy] = useState(false);
@@ -1624,6 +1627,13 @@ function InternalVendorReportPanel({ anomalies, vendors, canUpload, busy, onSubm
     file,
   };
 
+  const thresholdLabel = formatMoney(DECISION_THRESHOLD_FCFA);
+  const costPosition = thresholdPosition(cost.trim() ? Number(cost) : null, DECISION_THRESHOLD_FCFA);
+  const acceptFile = (nextFile:File|null) => {
+    setFile(nextFile);
+    setFieldErrors((current) => ({ ...current, file: validateVendorReportFields({ ...currentValues, file: nextFile }).file }));
+  };
+
   const applyFieldErrors = (nextFile:File|null = file) => {
     const next = validateVendorReportFields({ ...currentValues, file: nextFile });
     setFieldErrors(next);
@@ -1631,7 +1641,7 @@ function InternalVendorReportPanel({ anomalies, vendors, canUpload, busy, onSubm
   };
 
   const resetForm = () => {
-    setSummary(''); setReserveNotes(''); setCost(''); setFile(null); setError(''); setFieldErrors({});
+    setSummary(''); setReserveNotes(''); setHasReserves(false); setDragging(false); setCost(''); setFile(null); setError(''); setFieldErrors({});
     setReportType('intervention_report');
     setReportDate(new Date().toISOString().slice(0,10));
   };
@@ -1686,28 +1696,43 @@ function InternalVendorReportPanel({ anomalies, vendors, canUpload, busy, onSubm
   }
 
   return <section id={formId} className={`panel internal-vendor-report ${canUpload ? 'is-authorized' : ''}`}>
-    <div className="panel-head"><div><h3>Rapport d’intervention d’une entreprise</h3><p>Dépôt interne au nom d’un prestataire référencé</p></div><div className="vendor-report-head-actions"><Badge tone={canUpload ? 'success' : 'neutral'}>{canUpload ? 'Droit nominatif actif' : 'Droit non attribué'}</Badge><button type="button" className="health-link" aria-expanded={true} onClick={() => setOpen(false)}>Réduire</button></div></div>
-    <div className="internal-access-rule"><BrandIcon name="lock" size={18} /><div><b>Aucun accès direct pour les prestataires</b><p>Un agent interne autorisé rattache le rapport, le fichier et les métadonnées au dossier. Facility Manager contrôle ensuite la preuve.</p></div></div>
+    <div className="panel-head"><div><h3>Rapport d’intervention d’une entreprise</h3><p>Dépôt interne au nom d’un prestataire référencé</p><p className="vendor-access-note">Les prestataires n’ont pas d’accès direct : un agent autorisé dépose le rapport, Facility Manager contrôle la preuve.</p></div><div className="vendor-report-head-actions">{canUpload ? null : <Badge tone="neutral">Droit non attribué</Badge>}<button type="button" className="health-link" aria-expanded={true} onClick={() => setOpen(false)}>Réduire</button></div></div>
     {!canUpload ? <div className="permission-empty"><p>Ce profil ne dispose pas du droit nominatif de dépôt. Agent Électricité et Agent Eau & Incendie sont les seuls agents internes habilités.</p><button className="secondary-button" type="button" disabled>Déposer un rapport prestataire</button></div> :
     <form className="internal-vendor-form" onSubmit={submit} noValidate>
       <div className="two-fields">
         <label className={`field ${fieldErrors.anomalyReference ? 'is-invalid' : ''}`}>Anomalie<Select value={anomalyReference} aria-invalid={Boolean(fieldErrors.anomalyReference)} aria-describedby={fieldErrors.anomalyReference ? `${formId}-anomaly` : undefined} onChange={(event) => { setAnomalyReference(event.target.value); if (fieldErrors.anomalyReference) setFieldErrors((current) => ({ ...current, anomalyReference: undefined })); }}>{anomalies.length ? anomalies.map((item) => <option key={item.id} value={item.id}>{item.id} · {displayAssetCode(item.asset)} · {item.title}</option>) : <option value="">Aucune anomalie ouverte</option>}</Select><FieldError id={`${formId}-anomaly`} message={fieldErrors.anomalyReference} /></label>
-        <label className={`field ${fieldErrors.vendorCode ? 'is-invalid' : ''}`}>Entreprise concernée<Select value={vendorCode} aria-invalid={Boolean(fieldErrors.vendorCode)} aria-describedby={fieldErrors.vendorCode ? `${formId}-vendor` : undefined} onChange={(event) => { setVendorCode(event.target.value); if (fieldErrors.vendorCode) setFieldErrors((current) => ({ ...current, vendorCode: undefined })); }}>{vendors.length ? vendors.map((vendor) => <option key={vendor.code} value={vendor.code}>{vendor.code} · {vendor.label}</option>) : <option value="">Aucun prestataire</option>}</Select><FieldError id={`${formId}-vendor`} message={fieldErrors.vendorCode} /></label>
+        <label className={`field ${fieldErrors.vendorCode ? 'is-invalid' : ''}`}>Entreprise concernée<Select value={vendorCode} aria-invalid={Boolean(fieldErrors.vendorCode)} aria-describedby={fieldErrors.vendorCode ? `${formId}-vendor` : undefined} onChange={(event) => { setVendorCode(event.target.value); if (fieldErrors.vendorCode) setFieldErrors((current) => ({ ...current, vendorCode: undefined })); }}>{vendors.length ? vendors.map((vendor) => <option key={vendor.code} value={vendor.code}>{vendor.label && vendor.label !== vendor.code ? `${vendor.label} · ${vendor.code}` : vendor.code}</option>) : <option value="">Aucun prestataire</option>}</Select><FieldError id={`${formId}-vendor`} message={fieldErrors.vendorCode} /></label>
       </div>
       <div className="two-fields">
         <label className="field">Nature du document<Select value={reportType} onChange={(event) => setReportType(event.target.value as VendorReportInput['reportType'])}><option value="intervention_report">Rapport d’intervention</option><option value="pv">Procès-verbal</option><option value="quote">Devis</option><option value="photo_bundle">Dossier photos</option></Select></label>
-        <label className={`field ${fieldErrors.reportDate ? 'is-invalid' : ''}`}>Date du rapport<DateInput max={new Date().toISOString().slice(0,10)} value={reportDate} aria-invalid={Boolean(fieldErrors.reportDate)} aria-describedby={fieldErrors.reportDate ? `${formId}-date` : undefined} onChange={(event) => { setReportDate(event.target.value); if (fieldErrors.reportDate) setFieldErrors((current) => ({ ...current, reportDate: undefined })); }} /><FieldError id={`${formId}-date`} message={fieldErrors.reportDate} /></label>
+        <label className={`field ${fieldErrors.reportDate ? 'is-invalid' : ''}`}>Date du rapport<input type="date" className="native-date-input" max={new Date().toISOString().slice(0,10)} value={reportDate} aria-invalid={Boolean(fieldErrors.reportDate)} aria-describedby={fieldErrors.reportDate ? `${formId}-date` : undefined} onChange={(event) => { setReportDate(event.target.value); if (fieldErrors.reportDate) setFieldErrors((current) => ({ ...current, reportDate: undefined })); }} /><FieldError id={`${formId}-date`} message={fieldErrors.reportDate} /></label>
       </div>
       <label className={`field ${fieldErrors.summary ? 'is-invalid' : ''}`}>Résumé de l’intervention<textarea value={summary} maxLength={2000} aria-invalid={Boolean(fieldErrors.summary)} aria-describedby={fieldErrors.summary ? `${formId}-summary` : undefined} onChange={(event) => { setSummary(event.target.value); if (fieldErrors.summary) setFieldErrors((current) => ({ ...current, summary: undefined })); }} placeholder="Diagnostic, action réalisée, essais et résultat…" /><FieldError id={`${formId}-summary`} message={fieldErrors.summary} /></label>
       <div className="two-fields">
-        <label className={`field ${fieldErrors.reserveNotes ? 'is-invalid' : ''}`}>Réserves éventuelles<input value={reserveNotes} maxLength={500} aria-invalid={Boolean(fieldErrors.reserveNotes)} aria-describedby={fieldErrors.reserveNotes ? `${formId}-reserves` : undefined} onChange={(event) => { setReserveNotes(event.target.value); if (fieldErrors.reserveNotes) setFieldErrors((current) => ({ ...current, reserveNotes: undefined })); }} placeholder="Aucune ou détail à lever" /><FieldError id={`${formId}-reserves`} message={fieldErrors.reserveNotes} /></label>
-        <label className={`field ${fieldErrors.cost ? 'is-invalid' : ''}`}>Coût indiqué (FCFA)<input type="number" min="0" step="1" inputMode="numeric" value={cost} aria-invalid={Boolean(fieldErrors.cost)} aria-describedby={fieldErrors.cost ? `${formId}-cost` : undefined} onChange={(event) => { setCost(event.target.value); if (fieldErrors.cost) setFieldErrors((current) => ({ ...current, cost: undefined })); }} placeholder="0" /><FieldError id={`${formId}-cost`} message={fieldErrors.cost} /></label>
+        <div className={`field ${fieldErrors.reserveNotes ? 'is-invalid' : ''}`}>
+          <span className="field-label" id={`${formId}-reserves-label`}>Réserves éventuelles</span>
+          <div className="choice-row" role="group" aria-labelledby={`${formId}-reserves-label`}>
+            <button type="button" className={`choice-button ${hasReserves ? '' : 'is-selected'}`} aria-pressed={!hasReserves} onClick={() => { setHasReserves(false); setReserveNotes(''); setFieldErrors((current) => ({ ...current, reserveNotes: undefined })); }}>Aucune réserve</button>
+            <button type="button" className={`choice-button ${hasReserves ? 'is-selected' : ''}`} aria-pressed={hasReserves} onClick={() => setHasReserves(true)}>Réserves à lever</button>
+          </div>
+          {hasReserves ? <><input value={reserveNotes} maxLength={500} aria-invalid={Boolean(fieldErrors.reserveNotes)} aria-describedby={fieldErrors.reserveNotes ? `${formId}-reserves` : undefined} onChange={(event) => { setReserveNotes(event.target.value); if (fieldErrors.reserveNotes) setFieldErrors((current) => ({ ...current, reserveNotes: undefined })); }} placeholder="Détail de la réserve à lever" /><FieldError id={`${formId}-reserves`} message={fieldErrors.reserveNotes} /></> : <small className="field-hint">Aucune réserve ne sera enregistrée pour ce rapport.</small>}
+        </div>
+        <label className={`field ${fieldErrors.cost ? 'is-invalid' : ''}`}>Coût indiqué<input type="number" min="0" step="1" inputMode="numeric" value={cost} aria-invalid={Boolean(fieldErrors.cost)} aria-describedby={fieldErrors.cost ? `${formId}-cost` : `${formId}-cost-hint`} onChange={(event) => { setCost(event.target.value); if (fieldErrors.cost) setFieldErrors((current) => ({ ...current, cost: undefined })); }} /><small id={`${formId}-cost-hint`} className={`field-hint ${costPosition === 'at_or_above' ? 'is-warning' : costPosition === 'below' ? 'is-ok' : ''}`}>{costPosition === 'at_or_above' ? `Au-dessus du seuil de ${thresholdLabel} : la décision revient à l’Administration.` : costPosition === 'below' ? `Sous le seuil de ${thresholdLabel} : la décision reste au Facility Manager.` : `Montant en FCFA, si le rapport en mentionne un. Seuil : ${thresholdLabel}.`}</small><FieldError id={`${formId}-cost`} message={fieldErrors.cost} /></label>
       </div>
-      <label className={`field report-file ${fieldErrors.file ? 'is-invalid' : ''}`}>Rapport, PV ou photo<input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" aria-invalid={Boolean(fieldErrors.file)} aria-describedby={fieldErrors.file ? `${formId}-file` : `${formId}-file-hint`} onChange={(event) => { const nextFile = event.target.files?.[0] ?? null; setFile(nextFile); setFieldErrors((current) => ({ ...current, file: validateVendorReportFields({ ...currentValues, file: nextFile }).file })); }} /><small id={`${formId}-file-hint`}>{file ? `${file.name} · ${Math.max(1, Math.round(file.size / 1024))} Ko` : 'PDF, JPG, PNG ou WebP · 10 Mo maximum'}</small><FieldError id={`${formId}-file`} message={fieldErrors.file} /></label>
+      <div className={`field vendor-dropzone-field ${fieldErrors.file ? 'is-invalid' : ''}`}>
+        <span className="field-label" id={`${formId}-file-label`}>Rapport, PV ou photo</span>
+        <div className={`vendor-dropzone ${dragging ? 'is-dragging' : ''} ${file ? 'has-file' : ''}`} onDragOver={(event) => { event.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={(event) => { event.preventDefault(); setDragging(false); const dropped = event.dataTransfer.files?.[0] ?? null; if (dropped) acceptFile(dropped); }}>
+          {file ? <div className="vendor-dropzone-file"><BrandIcon name="files" size={18} /><div><b>{file.name}</b><small>{Math.max(1, Math.round(file.size / 1024))} Ko</small></div><button type="button" className="health-link" onClick={() => acceptFile(null)}>Retirer</button></div>
+            : <div className="vendor-dropzone-empty"><b>Déposer le rapport, le PV ou la photo</b><small id={`${formId}-file-hint`}>PDF, JPG, PNG ou WebP · 10 Mo maximum</small><button type="button" className="secondary-button" onClick={() => fileInputRef.current?.click()}>Choisir un fichier</button></div>}
+          <input ref={fileInputRef} className="visually-hidden-input" type="file" aria-labelledby={`${formId}-file-label`} accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" aria-invalid={Boolean(fieldErrors.file)} aria-describedby={fieldErrors.file ? `${formId}-file` : `${formId}-file-hint`} onChange={(event) => acceptFile(event.target.files?.[0] ?? null)} />
+        </div>
+        <FieldError id={`${formId}-file`} message={fieldErrors.file} />
+      </div>
       {error ? <p className="vendor-report-error" role="alert">{error}</p> : null}
       <div className="vendor-report-form-actions">
+        <small className="vendor-report-action-note">Facility Manager validera la preuve après dépôt.</small>
         <button type="button" className="secondary-button" disabled={busy || localBusy} onClick={cancel}>Annuler</button>
-        <button className="primary-button" disabled={busy || localBusy}>{busy || localBusy ? 'Dépôt en cours…' : 'Déposer pour validation de Facility Manager'}</button>
+        <button className="primary-button" disabled={busy || localBusy}>{busy || localBusy ? 'Dépôt en cours…' : 'Déposer le rapport'}</button>
       </div>
     </form>}
   </section>;

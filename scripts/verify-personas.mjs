@@ -29,10 +29,10 @@ requireAll('Espaces personnalisés', page, [
 requireAll('Modules initiaux', page, [
   'DEMO-GE', 'DEMO-EAU', 'DEMO-SSI', 'DEMO-ASC-1', 'DEMO-ASC-2', 'DEMO-ESP', 'DEMO-RND',
 ])
-requireAll('Référentiel prestataires sans accès direct', page, ['PREST-GE', 'PREST-ASC', 'PREST-SSI', 'PREST-ESP', 'Aucun accès direct pour les prestataires'])
+requireAll('Référentiel prestataires sans accès direct', page, ['PREST-GE', 'PREST-ASC', 'PREST-SSI', 'PREST-ESP', 'Les prestataires n’ont pas d’accès direct'])
 requireAll('Décisions Administration', page, ['Approuver', 'Refuser', 'Renvoyer à Facility Manager', 'CAPEX', 'OPEX'])
 requireAll('Parcours terrain et preuve', page, [
-  'Soumettre à l’Administration', 'Réarmement provisoire', 'Ajouter une preuve', 'Déposer pour validation de Facility Manager',
+  'Soumettre à l’Administration', 'Réarmement provisoire', 'Ajouter une preuve', 'Déposer le rapport', 'Facility Manager validera la preuve après dépôt.',
 ])
 requireAll('Cycle métier', page, ['Constat', 'Qualification', 'Décision', 'Intervention', 'Preuve', 'Clôture'])
 requireAll('États opérationnels', page, ['Critique', 'En retard', 'PREUVE MANQUANTE', 'Terminées'])

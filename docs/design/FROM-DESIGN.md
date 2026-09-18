@@ -14,6 +14,7 @@ Statuts : les entrées 062 à 075 sont **En vigueur** (la plus récente l’empo
 
 | id | date | sujet | attendu de | bloque |
 | --- | --- | --- | --- | --- |
+| DESIGN-076 | 2026-09-18 | Formulaire de rapport prestataire | Codex | En vigueur |
 | DESIGN-075 | 2026-09-18 | En-tête ronde deux niveaux | Wilkam | livré |
 | DESIGN-074 | 2026-09-18 | Compteur d’entiers compact GE-01 | Wilkam | livré |
 | DESIGN-073 | 2026-09-17 | Onglets uniques + rayon secondaire unique | Wilkam | livré |
@@ -77,6 +78,23 @@ Statuts : les entrées 062 à 075 sont **En vigueur** (la plus récente l’empo
 | DESIGN-003 | 2026-08-28 | `pnpm dev` échoue sans accès réseau à `fonts.googleapis.com` | Dev Lead | tout audit hors ligne |
 | DESIGN-002 | 2026-08-28 | Nomenclature unique des destinations — *arbitrée, voir DEC-002* | Dev Lead | routes |
 | DESIGN-001 | 2026-08-28 | Lot 1 — spécification du socle de tokens | Dev Lead | lot 2, écran pilote |
+
+---
+
+## DESIGN-076 — Formulaire de rapport prestataire
+
+- **Date :** 18 septembre 2026
+- **Statut :** En vigueur
+- **Périmètre :** affichage du panneau « Rapport d’intervention d’une entreprise » (`app/page.tsx`, `app/globals.css`). Aucun changement de flux métier : mêmes champs transmis, même validation, même persistance.
+
+1. **Règle d’accès** en une phrase sous le sous-titre ; suppression du bandeau de six lignes et du badge « Droit nominatif actif » (le badge « Droit non attribué » subsiste quand le profil n’a pas le droit).
+2. **Entreprise concernée** : le code n’est plus affiché deux fois ; le nom précède le code lorsqu’ils diffèrent.
+3. **Date du rapport** : champ date unique, aligné sur l’étape Contexte de la ronde, à la place des trois listes déroulantes.
+4. **Coût indiqué** : plus de `0` pré-rempli ; aide rappelant le seuil et contrôle en direct (sous le seuil, au-dessus du seuil) repris de Dossiers.
+5. **Réserves** : choix « Aucune réserve » / « Réserves à lever », le détail n’apparaissant qu’au second choix ; une absence de réserve devient explicite.
+6. **Dépôt de fichier** : zone de dépôt (glisser-déposer et bouton « Choisir un fichier »), formats et taille en aide, fichier retenu affiché avec nom, taille et bouton « Retirer » ; l’`input` natif reste dans le DOM pour le clavier et les lecteurs d’écran.
+7. **Actions** : bouton principal « Déposer le rapport », note « Facility Manager validera la preuve après dépôt. », « Annuler » en secondaire.
+8. **Contrôles** : `verify-personas.mjs` mis à jour sur les nouveaux libellés. Tests au vert : lot 0 89, lot 1 35, audit visuel 119, personas 38.
 
 ---
 

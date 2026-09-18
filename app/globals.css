@@ -5025,6 +5025,37 @@ h1{
   }
 }
 
-
-
-
+/* DESIGN-076 — formulaire de rapport prestataire */
+.vendor-access-note{margin:6px 0 0;max-width:62ch;color:var(--foreground-muted);font-size:var(--font-size-label);line-height:1.5}
+.internal-vendor-form .field-label{color:#5c6875;font-size:var(--font-size-label);font-weight:700}
+.internal-vendor-form .field-hint{color:var(--foreground-muted);font-size:var(--font-size-label);font-weight:400;line-height:1.45}
+.internal-vendor-form .field-hint.is-warning{color:var(--warning-text)}
+.internal-vendor-form .field-hint.is-ok{color:var(--success-text)}
+.choice-row{display:flex;gap:8px;flex-wrap:wrap}
+.choice-button{min-height:44px;padding:0 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--foreground-muted);font-size:var(--font-size-label);font-weight:600;cursor:pointer}
+.choice-button:hover{border-color:var(--border-strong,#c7d2dd)}
+.choice-button.is-selected{border-color:var(--brand);background:#edf4fb;color:var(--brand)}
+.vendor-dropzone{position:relative;display:flex;align-items:center;min-height:96px;padding:14px 16px;border:1px dashed #bdc9d4;border-radius:var(--radius-md);background:#fafcfd}
+.vendor-dropzone.is-dragging{border-color:var(--brand);background:#edf4fb}
+.vendor-dropzone.has-file{border-style:solid;border-color:#cdd9e4;background:var(--surface)}
+.vendor-dropzone-empty{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;width:100%}
+.vendor-dropzone-empty b{font-size:var(--font-size-body)}
+.vendor-dropzone-empty small{flex:1 1 220px;color:var(--foreground-muted);font-size:var(--font-size-label);font-weight:400}
+.vendor-dropzone-empty .secondary-button{margin-left:auto}
+.vendor-dropzone-file{display:flex;align-items:center;gap:12px;width:100%}
+.vendor-dropzone-file>div{flex:1;min-width:0}
+.vendor-dropzone-file b{display:block;font-size:var(--font-size-body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vendor-dropzone-file small{color:var(--foreground-muted);font-size:var(--font-size-label);font-weight:400}
+.visually-hidden-input{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.visually-hidden-input:focus-visible{position:static;width:auto;height:auto;clip:auto;margin:0}
+.internal-vendor-form .native-date-input{min-height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 11px;color:#334256;font-size:var(--font-size-label);background:var(--surface)}
+.internal-vendor-form .native-date-input:focus-visible{border-color:#73a1cf;box-shadow:0 0 0 3px #eaf2fa;outline:none}
+.vendor-report-action-note{margin-right:auto;color:var(--foreground-muted);font-size:var(--font-size-label);line-height:1.45}
+@media (max-width:700px){
+  .vendor-dropzone{align-items:flex-start}
+  .vendor-dropzone-empty .secondary-button{margin-left:0;width:100%}
+  .internal-vendor-form .native-date-input{min-height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 11px;color:#334256;font-size:var(--font-size-label);background:var(--surface)}
+.internal-vendor-form .native-date-input:focus-visible{border-color:#73a1cf;box-shadow:0 0 0 3px #eaf2fa;outline:none}
+.vendor-report-action-note{margin:0 0 4px}
+  .choice-button{flex:1 1 auto}
+}
