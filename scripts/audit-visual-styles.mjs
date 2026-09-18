@@ -13,6 +13,7 @@ const equipmentWorkspace = await readFile(path.join(root, 'app', 'components', '
 const costsWorkspace = await readFile(path.join(root, 'app', 'components', 'CostsWorkspace.tsx'), 'utf8')
 const accessWorkspace = await readFile(path.join(root, 'app', 'components', 'AccessWorkspace.tsx'), 'utf8')
 const parametersWorkspace = await readFile(path.join(root, 'app', 'components', 'ParametersWorkspace.tsx'), 'utf8')
+const dossiersWorkspace = await readFile(path.join(root, 'app', 'components', 'DossiersWorkspace.tsx'), 'utf8')
 const notificationCenter = await readFile(path.join(root, 'app', 'components', 'NotificationCenter.tsx'), 'utf8')
 const ge01Pilot = await readFile(path.join(root, 'app', 'components', 'Ge01Pilot.tsx'), 'utf8')
 const ge01Thresholds = await readFile(path.join(root, 'app', 'lib', 'ge01', 'thresholds.ts'), 'utf8')
@@ -148,6 +149,8 @@ const checks = [
   ['Hiérarchie titre de page > carte', css.includes('.topbar h1,\nh1{\n  font-size:var(--font-size-display)') && css.includes('.panel h3,\n.direction-head h3,\n.analytics-heading h3') && css.includes('font-size:var(--font-size-title)')],
   ['Bouton discret + pastille', css.includes('.ghost-button') && css.includes('.chip,\n.decision-filters button')],
   ['Onglets Pilotage = Paramètres', page.includes('workspace-tabs parameters-tabs') && parametersWorkspace.includes('parameters-tabs workspace-tabs') && css.includes('.workspace-tabs.parameters-tabs button.active')],
+  ['Onglets Dossiers = pastilles', dossiersWorkspace.includes('dossiers-tabs workspace-tabs parameters-tabs') && page.includes('workspace-tabs parameters-tabs agent-action-tabs') && css.includes('.dossiers-hero .workspace-tabs.dossiers-tabs button.active')],
+  ['Rayon unique du bouton secondaire', css.includes('.manager-pilot .secondary-button,\n.dossiers-workspace .secondary-button{\n  border-radius:var(--radius-md)') && finalDeclaration('.secondary-button', 'border-radius') === 'var(--radius-md)'],
   ['Score non calculable élargi', page.includes('insufficient-chart is-wide') && css.includes('.building-health-card:has(.insufficient-chart.is-wide)')],
   ['Coûts pleine largeur et points perdus compact', page.includes('is-costs-wide') && page.includes('points-lost-card${scoreNotComputable') && css.includes('.dashboard-tab-panel.actions-view.is-costs-wide .costs-block')],
 ]

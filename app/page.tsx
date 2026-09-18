@@ -1570,7 +1570,7 @@ function AgentWorkspace({ persona, anomalies, equipment, vendors, canUploadVendo
     {agentKey === 'eau_incendie' && <section className="provisional-rule"><span>↻</span><div><b>Réarmement = rétablissement provisoire</b><p>L’anomalie reste ouverte jusqu’au diagnostic, à l’intervention corrective et à la preuve validée par Facility Manager.</p></div></section>}
     <section className="sheet agent-actions-sheet" aria-labelledby="h-actions">
       <div className="analytics-card-head"><div><h2 id="h-actions">Mes actions</h2><p>Ce qui vous a été affecté, et ce que sont devenus vos rapports.</p></div></div>
-      <div className="workspace-tabs agent-action-tabs" role="tablist">
+      <div className="workspace-tabs parameters-tabs agent-action-tabs" role="tablist">
         <button type="button" role="tab" aria-selected={tab === 'todo'} className={tab === 'todo' ? 'active' : ''} onClick={() => setTab('todo')}>À faire <span>{tasks.filter((task) => task.status !== 'Terminé').length}</span></button>
         <button type="button" role="tab" aria-selected={tab === 'done'} className={tab === 'done' ? 'active' : ''} onClick={() => setTab('done')}>Terminées <span>{tasks.filter((task) => task.status === 'Terminé').length}</span></button>
         <button type="button" role="tab" aria-selected={tab === 'hist'} className={tab === 'hist' ? 'active' : ''} onClick={() => setTab('hist')}>Historique des rondes</button>

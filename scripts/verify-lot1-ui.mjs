@@ -62,6 +62,8 @@ check('tuile Statut inconnu', equipment.includes('STATUT INCONNU') && equipment.
 check('GE-01 emplacement unique', ge01.includes("EQUIPMENT_META['GE-01']") && fixtures.EQUIPMENT_META['GE-01'].zone === 'RDC · Local groupe' && !ge01.includes('Local TGBT'))
 check('ronde sans équipement = Rondes de services · zones', display.roundSubjectLabel({ equipmentCode: null }) === 'Rondes de services · zones' && display.roundSubjectLabel({ equipmentCode: 'GE-01' }) === 'GE-01')
 check('Pilotage Performance reprend le tableau parc', page.includes('<EquipmentTable equipment={parkEquipment}') && !page.includes('Sain ≥ 90'))
+check('onglets Dossiers en pastilles', page.includes('workspace-tabs parameters-tabs agent-action-tabs') && css.includes('.dossiers-hero .workspace-tabs.dossiers-tabs button.active'))
+check('rayon secondaire unique md', css.includes('.manager-pilot .secondary-button,\n.dossiers-workspace .secondary-button{\n  border-radius:var(--radius-md)'))
 
 const failed = cases.filter((item) => !item.ok)
 if (failed.length) {

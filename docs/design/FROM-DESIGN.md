@@ -10,10 +10,11 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 ## Index
 
-Statuts : les entrées 062 à 072 sont **En vigueur** (la plus récente l’emporte). DESIGN-003 (Geist auto-hébergé) est traité (DESIGN-015). DESIGN-005 (`.gitattributes`) reste à vérifier dans le dépôt.
+Statuts : les entrées 062 à 073 sont **En vigueur** (la plus récente l’emporte). DESIGN-003 (Geist auto-hébergé) est traité (DESIGN-015). DESIGN-005 (`.gitattributes`) reste à vérifier dans le dépôt.
 
 | id | date | sujet | attendu de | bloque |
 | --- | --- | --- | --- | --- |
+| DESIGN-073 | 2026-09-17 | Onglets uniques + rayon secondaire unique | Wilkam | livré |
 | DESIGN-072 | 2026-09-17 | Conformité design : parc, typo, boutons, onglets, densité | Wilkam | livré |
 | DESIGN-071 | 2026-09-17 | Offset sous barre fixe + carte Contexte GE-01 | Wilkam | livré |
 | DESIGN-070 | 2026-09-17 | Finitions clôture : Pilotage, Paramètres, Rondes, 380 px | Wilkam | livré |
@@ -74,6 +75,17 @@ Statuts : les entrées 062 à 072 sont **En vigueur** (la plus récente l’empo
 | DESIGN-003 | 2026-08-28 | `pnpm dev` échoue sans accès réseau à `fonts.googleapis.com` | Dev Lead | tout audit hors ligne |
 | DESIGN-002 | 2026-08-28 | Nomenclature unique des destinations — *arbitrée, voir DEC-002* | Dev Lead | routes |
 | DESIGN-001 | 2026-08-28 | Lot 1 — spécification du socle de tokens | Dev Lead | lot 2, écran pilote |
+
+---
+
+## DESIGN-073 — Onglets uniques + rayon secondaire unique
+
+- **Date :** 17 septembre 2026
+- **Statut :** Livré.
+- **Périmètre :** affichage. Pas de `data.ts`.
+
+1. **Onglets.** Un seul modèle : pastille (`workspace-tabs parameters-tabs`), actif plein. Dossiers (À traiter / Tous / Clôturés) et Mes actions agent quittent le soulignement. Pilotage et Paramètres inchangés. Le ruban KPI des files (AQ / SLA / PV) n’est pas un onglet de destination.
+2. **Bouton secondaire.** Rayon unique `--radius-md` (12 px), y compris dans Dossiers (`.manager-pilot`). Principal reste `--radius-sm` (8 px). Pastilles de filtre restent `--radius-round`.
 
 ---
 

@@ -106,7 +106,7 @@ export function DossiersWorkspace({
             />
           </label>
         </div>
-        <div className="dossiers-tabs workspace-tabs" role="tablist" aria-label="Onglets des dossiers">
+        <div className="dossiers-tabs workspace-tabs parameters-tabs" role="tablist" aria-label="Onglets des dossiers">
           <button type="button" role="tab" aria-selected={tab === 'atraiter'} className={tab === 'atraiter' ? 'active' : ''} onClick={() => onTab('atraiter')}>À traiter <span>{counts.atraiter}</span></button>
           <button type="button" role="tab" aria-selected={tab === 'tous'} className={tab === 'tous' ? 'active' : ''} onClick={() => onTab('tous')}>Tous <span>{counts.tous}</span></button>
           <button type="button" role="tab" aria-selected={tab === 'clotures'} className={tab === 'clotures' ? 'active' : ''} onClick={() => onTab('clotures')}>Clôturés <span>{counts.clotures}</span></button>

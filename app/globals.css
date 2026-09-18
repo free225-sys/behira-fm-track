@@ -4874,4 +4874,67 @@ h1{
   margin:0;color:var(--foreground-muted);font-size:var(--font-size-label);line-height:1.45;
 }
 
+/* DESIGN-073 — un modèle d’onglets, un rayon secondaire */
+.workspace-tabs.parameters-tabs,
+.workspace-tabs.dossiers-tabs,
+.workspace-tabs.agent-action-tabs{
+  display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px;padding:0;border:0;
+}
+.workspace-tabs.parameters-tabs button,
+.workspace-tabs.dossiers-tabs button,
+.workspace-tabs.agent-action-tabs button{
+  min-height:36px;padding:6px 14px;border:1px solid var(--border);border-radius:var(--radius-round);
+  background:var(--surface);color:var(--foreground-muted);font-weight:var(--font-weight-medium);
+  margin:0;
+}
+.workspace-tabs.parameters-tabs button.active,
+.workspace-tabs.parameters-tabs button[aria-selected="true"],
+.workspace-tabs.dossiers-tabs button.active,
+.workspace-tabs.dossiers-tabs button[aria-selected="true"],
+.workspace-tabs.agent-action-tabs button.active,
+.workspace-tabs.agent-action-tabs button[aria-selected="true"]{
+  background:var(--foreground);color:var(--surface);border-color:var(--foreground);
+}
+.workspace-tabs.parameters-tabs button span,
+.workspace-tabs.dossiers-tabs button span,
+.workspace-tabs.agent-action-tabs button span{
+  background:var(--surface-muted);color:var(--foreground-muted);
+}
+.workspace-tabs.parameters-tabs button.active span,
+.workspace-tabs.parameters-tabs button[aria-selected="true"] span,
+.workspace-tabs.dossiers-tabs button.active span,
+.workspace-tabs.dossiers-tabs button[aria-selected="true"] span,
+.workspace-tabs.agent-action-tabs button.active span,
+.workspace-tabs.agent-action-tabs button[aria-selected="true"] span{
+  background:rgba(255,255,255,.18);color:inherit;
+}
+
+.dossiers-hero.is-bleed{
+  padding-bottom:14px;
+}
+.dossiers-hero .workspace-tabs.dossiers-tabs{
+  margin:14px 0 0;padding:0;gap:6px;
+}
+.dossiers-hero .workspace-tabs.dossiers-tabs button{
+  background:var(--surface);
+  border:1px solid var(--surface);
+  color:var(--foreground-muted);
+}
+.dossiers-hero .workspace-tabs.dossiers-tabs button.active,
+.dossiers-hero .workspace-tabs.dossiers-tabs button[aria-selected="true"]{
+  background:var(--foreground);
+  color:var(--surface);
+  border-color:var(--foreground);
+}
+
+.secondary-button,
+.manager-pilot .secondary-button,
+.dossiers-workspace .secondary-button{
+  border-radius:var(--radius-md);
+}
+.primary-button,
+.manager-pilot .primary-button{
+  border-radius:var(--radius-sm);
+}
+
 
