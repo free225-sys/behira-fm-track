@@ -4984,5 +4984,47 @@ h1{
   .count-stepper-btn.ge-stepper-btn{width:44px;height:44px}
 }
 
+/* DESIGN-075 — en-tête ronde deux niveaux */
+.round-pilot-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:var(--space-4);
+  margin:var(--space-6) 0 22px;
+  min-width:0;
+}
+.round-pilot-header > div{
+  flex:1 1 auto;
+  min-width:0;
+}
+.round-pilot-header h2{
+  margin:0 0 4px;
+  color:var(--foreground);
+  font-size:var(--font-size-title);
+  font-weight:var(--font-weight-bold);
+  line-height:var(--line-height-tight);
+}
+.round-pilot-header p{
+  margin:0;
+  color:var(--foreground-muted);
+  font-size:var(--font-size-body);
+  line-height:var(--line-height-normal);
+}
+.round-pilot-header > .badge,
+.round-pilot-header > .mockup-label{
+  flex:0 0 auto;
+}
+@media (max-width:640px){
+  .round-pilot-header{
+    flex-wrap:wrap;
+    align-items:flex-start;
+  }
+  .round-pilot-header > .badge,
+  .round-pilot-header > .mockup-label{
+    flex-basis:100%;
+  }
+}
+
+
 
 

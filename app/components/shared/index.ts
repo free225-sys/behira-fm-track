@@ -8,6 +8,7 @@ export { InsufficientNote } from './InsufficientNote';
 export { KpiStrip, type KpiStripItem } from './KpiStrip';
 export { ListDetailSplit } from './ListDetailSplit';
 export { ReportTrackingLine } from './ReportTrackingLine';
+export { RoundPilotHeader } from './RoundPilotHeader';
 export { ScoreScale } from './ScoreScale';
 export { SegmentedControl } from './SegmentedControl';
 export { StartRoundPicker } from './StartRoundPicker';

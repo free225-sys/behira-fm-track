@@ -47,7 +47,7 @@ import {
   type MeasureStatus,
 } from '../lib/ge01/thresholds';
 import { Badge, BrandIcon, Button, Card, Field } from './ui';
-import { CountStepper, MetierStatusBadge, SegmentedControl, useDemoScoreScenario } from './shared';
+import { CountStepper, MetierStatusBadge, RoundPilotHeader, SegmentedControl, useDemoScoreScenario } from './shared';
 import type { EquipmentCard } from '../lib/ui-contract/building-health.ts';
 import { controlValidityLabel, formatDayTime } from '../lib/ui-contract/display.ts';
 import { EQUIPMENT_META, demoHomeSnapshot, sessionForAudience } from '../lib/ui-contract/fixtures.ts';
@@ -459,15 +459,20 @@ export function Ge01AgentForm({ agentName }: { agentName: string }) {
   };
 
   if (submissionState !== 'editing') return <>
-    <section className="section-heading ge-heading"><div><p className="design-kicker">RONDE QUOTIDIENNE · GE-01</p><h2 className="visually-hidden">Rapport du groupe électrogène</h2><p>Rapport conservé sans création automatique d’anomalie.</p></div><Badge tone="blue">FILE D’ENVOI</Badge></section>
+    <RoundPilotHeader
+      title="GE-01 · Rapport du groupe électrogène"
+      subtitle="Rapport conservé sans création automatique d’anomalie."
+      badge={<Badge tone="blue">FILE D’ENVOI</Badge>}
+    />
     <Card className="ge-submit-result" role="status"><span>i</span><div><h3>Placé dans la file d’envoi · en attente de confirmation serveur</h3><p>Le rapport reste disponible hors ligne sur cet appareil.</p></div><Button variant="secondary" onClick={startAnother}>Nouvelle ronde</Button></Card>
   </>;
 
   return <>
-    <section className="section-heading ge-heading">
-      <div><p className="design-kicker">PILOTE TERRAIN · GE-01</p><h2 className="visually-hidden">Ronde quotidienne du groupe électrogène</h2><p>Contrôle quotidien en quatre étapes. L’essai de démarrage est prévu ; aucune réponse n’est présélectionnée.</p></div>
-      <Badge tone={draftStatus.tone}>{draftStatus.badge}</Badge>
-    </section>
+    <RoundPilotHeader
+      title="GE-01 · Ronde quotidienne du groupe électrogène"
+      subtitle="Quatre étapes · essai de démarrage prévu"
+      badge={<Badge tone={draftStatus.tone}>{draftStatus.badge}</Badge>}
+    />
     <section className="sync-banner is-online" role="status">
       <span className="status-dot online" />
       <div><b>Toutes les saisies sont synchronisées</b><small>File de cet appareil · aucune donnée terrain en attente sur cette session.</small></div>

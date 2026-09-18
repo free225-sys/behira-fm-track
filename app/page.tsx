@@ -8,7 +8,7 @@ import { DossierActionBoard, DossierProofSnapshot, DossierTreatmentStrip, type T
 import { DossiersWorkspace, dossierActionLabel, type DossiersTab } from './components/DossiersWorkspace';
 import { AccessWorkspace } from './components/AccessWorkspace';
 import { BuildingHealthCockpit, ScoreRing } from './components/BuildingHealthCockpit';
-import { DemoScenarioProvider, DemoScenarioSelect, EquipmentTable, InsufficientNote, ReportTrackingLine, SegmentedControl, StartRoundPicker, useDemoScoreScenario } from './components/shared';
+import { DemoScenarioProvider, DemoScenarioSelect, EquipmentTable, InsufficientNote, ReportTrackingLine, RoundPilotHeader, SegmentedControl, StartRoundPicker, useDemoScoreScenario } from './components/shared';
 import { demoHomeSnapshot, demoReportTracking, demoRoundsFor, sessionForAudience } from './lib/ui-contract/fixtures.ts';
 import type { TodaysRound, UiSession } from './lib/ui-contract/building-health.ts';
 import { asciiInitials, displayAssetCode, displayAssetText, formatCompactMoney, formatTime, formatWeekdayDate, roundStateLabel, roundSubjectLabel, scoreFigure } from './lib/ui-contract/display.ts';
@@ -2195,7 +2195,10 @@ function Report({ persona, onNavigate }: { persona:Persona; onNavigate:(v:View)=
   const [checks, setChecks] = useState<Record<string,boolean>>({ auto:true, p1:false, p2:true, leak:true, valves:true, alarm:true });
   const setCheck = (key:string) => setChecks((items) => ({ ...items, [key]:!items[key] }));
   const session = sessionForAudience(persona.id as UiSession['audience'], persona.name);
-  const roundsLead = <div className="rounds-page"><DemoScenarioSelect /><TodayRoundsPanel session={session} title="Rondes du jour" detail="Votre périmètre, aujourd’hui." withPicker onStart={() => {}} /></div>;
+  const roundsLead = <>
+    <DemoScenarioSelect />
+    <TodayRoundsPanel session={session} title="Rondes du jour" detail="Votre périmètre, aujourd’hui." withPicker onStart={() => {}} />
+  </>;
 
   if (persona.id === 'facility') {
     return <div className="rounds-page">
@@ -2206,17 +2209,21 @@ function Report({ persona, onNavigate }: { persona:Persona; onNavigate:(v:View)=
   }
 
   if (persona.id === 'electricite') {
-    return <>
+    return <div className="rounds-page">
       {roundsLead}
       <Ge01AgentForm agentName={persona.name} />
-    </>;
+    </div>;
   }
 
   if (!surpresseurAccess) {
     const isRoundsAssistance = persona.id === 'rondes_assistance';
-    return <>
+    return <div className="rounds-page">
       {roundsLead}
-      <section className="section-heading round-heading"><div><p className="design-kicker">{persona.id === 'electricite' ? 'SAISIE DIRECTE · GE-01' : 'SAISIE DIRECTE · MAQUETTE CIBLE'}</p><h2 className="visually-hidden">Rondes</h2><p>{isRoundsAssistance ? 'Ronde nettoyage & jardinage' : persona.id === 'electricite' ? 'Ronde GE-01 · groupe électrogène ELCOS, saisie directe' : 'Ronde technique'} : un constat terrain est enregistré dans l’application puis transmis à Facility Manager pour qualification.</p></div><span className="mockup-label">Aucun import</span></section>
+      <RoundPilotHeader
+        title={isRoundsAssistance ? 'RND-LET · Rondes de services · zones' : 'Ronde technique'}
+        subtitle="Constat terrain · transmission à Facility Manager"
+        badge={<span className="mockup-label">Aucun import</span>}
+      />
       <section className="quick-round-layout">
         <form className="panel quick-round-card" onSubmit={(event) => { event.preventDefault(); setSubmitted(true); }}>
           <div className="round-card-head"><span className="round-icon">{isRoundsAssistance ? 'R' : 'GE'}</span><div><b>{isRoundsAssistance ? 'Zones du jour' : displayAssetCode('DEMO-GE')}</b><small>{isRoundsAssistance ? 'Périmètre nettoyage et jardinage' : 'Périmètre électrique autorisé'}</small></div><span className="mockup-label">MAQUETTE</span></div>
@@ -2229,7 +2236,7 @@ function Report({ persona, onNavigate }: { persona:Persona; onNavigate:(v:View)=
         <aside className="panel direct-flow-card"><p className="design-kicker">APRÈS L’ENVOI</p><h3>Un circuit court et lisible</h3>{['Constat enregistré','Qualification par Facility Manager','Affectation et échéance','Traitement avec preuve'].map((item,index) => <div key={item}><span>{index+1}</span><p><b>{item}</b><small>{index === 0 ? 'Vous gardez une trace immédiate' : 'Le dossier avance dans le même outil'}</small></p></div>)}</aside>
       </section>
       {submitted && <div className="prototype-success" role="status"><span>✓</span><div><b>Simulation de constat terminée</b><small>Aucune donnée n’a été enregistrée ou transmise.</small></div><button onClick={() => onNavigate('workspace')}>Retour à mon espace</button></div>}
-    </>;
+    </div>;
   }
 
   const steps = ['Contexte','Pression','Pompes','Sécurité','Synthèse'];
@@ -2237,11 +2244,14 @@ function Report({ persona, onNavigate }: { persona:Persona; onNavigate:(v:View)=
   const hasPressureAlert = Number.isFinite(pressureValue) && pressureValue < 3;
   const completedChecks = Object.values(checks).filter(Boolean).length;
 
-  return <>
+  return <div className="rounds-page">
     {roundsLead}
-    <section className="surpresseur-hero">
-      <div className="surpresseur-identity"><span className="surpresseur-monogram">WI</span><div><p className="design-kicker">MODULE PILOTE · SURPRESSEUR</p><h2 className="visually-hidden">Rondes</h2><p>Ronde Surpresseur · {displayAssetCode('DEMO-EAU')} · Sous-sol · Local surpresseur · Fréquence quotidienne</p></div></div>
-    </section>
+    <p className="visually-hidden">MODULE PILOTE · SURPRESSEUR</p>
+    <RoundPilotHeader
+      title={`${displayAssetCode('DEMO-EAU')} · Ronde quotidienne du surpresseur`}
+      subtitle="Cinq étapes · fréquence quotidienne"
+      badge={<span className="mockup-label">Maquette</span>}
+    />
 
     <SyncStatusNotice state="demo-volatile" label="État de la ronde Surpresseur" />
 
@@ -2273,5 +2283,5 @@ function Report({ persona, onNavigate }: { persona:Persona; onNavigate:(v:View)=
     </section>
 
     {submitted && <div className="prototype-success" role="status"><span>✓</span><div><b>Simulation de ronde terminée</b><small>Aucune donnée n’a été enregistrée dans Supabase ni mise en file hors ligne.</small></div><button onClick={() => setSubmitted(false)}>Continuer la revue</button></div>}
-  </>;
+  </div>;
 }

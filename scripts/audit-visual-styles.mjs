@@ -20,6 +20,7 @@ const ge01Thresholds = await readFile(path.join(root, 'app', 'lib', 'ge01', 'thr
 const scoreScale = await readFile(path.join(root, 'app', 'components', 'shared', 'ScoreScale.tsx'), 'utf8')
 const homeBanner = await readFile(path.join(root, 'app', 'components', 'shared', 'HomeHeroBanner.tsx'), 'utf8')
 const countStepper = await readFile(path.join(root, 'app', 'components', 'shared', 'CountStepper.tsx'), 'utf8')
+const roundPilotHeader = await readFile(path.join(root, 'app', 'components', 'shared', 'RoundPilotHeader.tsx'), 'utf8')
 const equipmentTable = await readFile(path.join(root, 'app', 'components', 'shared', 'EquipmentTable.tsx'), 'utf8')
 const healthScoreBlock = await readFile(path.join(root, 'app', 'components', 'shared', 'HealthScoreBlock.tsx'), 'utf8')
 
@@ -153,6 +154,7 @@ const checks = [
   ['Onglets Dossiers = pastilles', dossiersWorkspace.includes('dossiers-tabs workspace-tabs parameters-tabs') && page.includes('workspace-tabs parameters-tabs agent-action-tabs') && css.includes('.dossiers-hero .workspace-tabs.dossiers-tabs button.active')],
   ['Rayon unique du bouton secondaire', css.includes('.manager-pilot .secondary-button,\n.dossiers-workspace .secondary-button{\n  border-radius:var(--radius-md)') && finalDeclaration('.secondary-button', 'border-radius') === 'var(--radius-md)'],
   ['Compteur entier compact 44 px', countStepper.includes('role="group"') && countStepper.includes('aria-live="polite"') && ge01Pilot.includes('Nombre de démarrages') && ge01Pilot.includes('Hors essai de ce jour') && css.includes('.count-stepper.ge-stepper{') && css.includes('width:146px;height:44px') && css.includes('.count-stepper-btn.ge-stepper-btn:disabled')],
+  ['En-tête ronde deux niveaux', roundPilotHeader.includes('round-pilot-header') && ge01Pilot.includes('GE-01 · Ronde quotidienne du groupe électrogène') && ge01Pilot.includes('Quatre étapes · essai de démarrage prévu') && !ge01Pilot.includes('PILOTE TERRAIN') && !/aucune réponse n[’']est présélectionnée/.test(ge01Pilot) && page.includes('Ronde quotidienne du surpresseur') && page.includes('MODULE PILOTE · SURPRESSEUR') && page.includes('className="visually-hidden">Rondes') && page.includes('Aucun import') && css.includes('.round-pilot-header{') && css.includes('margin:var(--space-6) 0 22px') && css.includes('.round-pilot-header > .badge')],
   ['Score non calculable élargi', page.includes('insufficient-chart is-wide') && css.includes('.building-health-card:has(.insufficient-chart.is-wide)')],
   ['Coûts pleine largeur et points perdus compact', page.includes('is-costs-wide') && page.includes('points-lost-card${scoreNotComputable') && css.includes('.dashboard-tab-panel.actions-view.is-costs-wide .costs-block')],
 ]

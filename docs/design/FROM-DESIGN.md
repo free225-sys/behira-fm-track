@@ -10,10 +10,11 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 ## Index
 
-Statuts : les entrées 062 à 074 sont **En vigueur** (la plus récente l’emporte). DESIGN-003 (Geist auto-hébergé) est traité (DESIGN-015). DESIGN-005 (`.gitattributes`) reste à vérifier dans le dépôt.
+Statuts : les entrées 062 à 075 sont **En vigueur** (la plus récente l’emporte). DESIGN-003 (Geist auto-hébergé) est traité (DESIGN-015). DESIGN-005 (`.gitattributes`) reste à vérifier dans le dépôt.
 
 | id | date | sujet | attendu de | bloque |
 | --- | --- | --- | --- | --- |
+| DESIGN-075 | 2026-09-18 | En-tête ronde deux niveaux | Wilkam | livré |
 | DESIGN-074 | 2026-09-18 | Compteur d’entiers compact GE-01 | Wilkam | livré |
 | DESIGN-073 | 2026-09-17 | Onglets uniques + rayon secondaire unique | Wilkam | livré |
 | DESIGN-072 | 2026-09-17 | Conformité design : parc, typo, boutons, onglets, densité | Wilkam | livré |
@@ -76,6 +77,16 @@ Statuts : les entrées 062 à 074 sont **En vigueur** (la plus récente l’empo
 | DESIGN-003 | 2026-08-28 | `pnpm dev` échoue sans accès réseau à `fonts.googleapis.com` | Dev Lead | tout audit hors ligne |
 | DESIGN-002 | 2026-08-28 | Nomenclature unique des destinations — *arbitrée, voir DEC-002* | Dev Lead | routes |
 | DESIGN-001 | 2026-08-28 | Lot 1 — spécification du socle de tokens | Dev Lead | lot 2, écran pilote |
+
+---
+
+## DESIGN-075 — En-tête ronde deux niveaux
+
+- **Date :** 18 septembre 2026
+- **Statut :** Livré.
+- **Périmètre :** affichage. Pas de `data.ts`.
+
+L’en-tête du parcours GE-01 (sous « Rondes du jour ») n’est plus collé au panneau et n’empile plus trois niveaux redondants. `RoundPilotHeader` partagé : titre h2 20 px (« GE-01 · Ronde quotidienne du groupe électrogène »), sous-titre 14 px secondaire (« Quatre étapes · essai de démarrage prévu »), badge à droite centré verticalement (écart 16 px). Surtitre « PILOTE TERRAIN · GE-01 » retiré. La règle « aucune réponse n’est présélectionnée » quitte l’en-tête (déjà visible dans les étapes). Marge haute `--space-6` (24 px). Sous 640 px, le badge passe sous le sous-titre. Même traitement Surpresseur (`WILO-01 · Ronde quotidienne du surpresseur`) et maquette RA (`RND-LET · Rondes de services · zones`).
 
 ---
 
