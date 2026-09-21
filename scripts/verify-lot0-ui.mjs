@@ -1,8 +1,8 @@
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
-import { pathToFileURL } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
-const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const display = await import(pathToFileURL(path.join(root, 'app/lib/ui-contract/display.ts')).href)
 const fixtures = await import(pathToFileURL(path.join(root, 'app/lib/ui-contract/fixtures.ts')).href)
 const typesSource = await readFile(path.join(root, 'app/lib/ui-contract/building-health.ts'), 'utf8')
