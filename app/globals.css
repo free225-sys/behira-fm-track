@@ -5137,3 +5137,11 @@ h1{
 @media (min-width:701px){
   .start-round-panel{max-height:min(70vh,480px);overflow:auto}
 }
+
+/* Date + heure + Maintenant restent dans la carte sur petit écran. */
+@media (max-width:640px){
+  .ge-datetime-row{flex-wrap:wrap;overflow:visible;max-width:100%}
+  .ge-datetime-row input[type="date"],
+  .ge-datetime-row input[type="time"]{flex:1 1 140px;width:auto;min-width:0;max-width:100%}
+  .ge-now-button{flex:1 0 auto}
+}
