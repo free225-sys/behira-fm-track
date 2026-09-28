@@ -519,3 +519,7 @@ Le contrôle statique peut protéger la présence de ces deux contrats, mais il 
 - **Impacts attendus :** Les maquettes et composants doivent rester compatibles avec les cinq profils.
 - **Contrôles attendus :** `pnpm verify:personas`, desktop, tablette, mobile et clavier.
 - **Suite proposée :** Lot 1 — consolidation des tokens sémantiques sur `design/lot-1-tokens`.
+
+## Revue publique WILO/RIA — 28/09/2026
+
+Transposition frontend du correctif privé a3bd818 sur le miroir public. Contrôles WILO, motifs de non-relevé, horodatage de confirmation de pression et tests ; aucun backend importé. [Passation Grok](REVUE_WILO_RIA.md). Aucun déploiement.

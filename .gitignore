@@ -44,3 +44,5 @@ next-env.d.ts
 # Supabase local runtime
 /supabase/.branches/
 /supabase/.temp/
+
+/tests/browser/node_modules/

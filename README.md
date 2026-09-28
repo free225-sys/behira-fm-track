@@ -47,3 +47,7 @@ pnpm audit:visual
 - Décisions partagées : [`docs/design/DECISIONS.md`](docs/design/DECISIONS.md)
 
 La branche de travail design est `design/lot-1-tokens`. Les contributions du designer sont remises sous forme de patch ou de pull request ; aucun accès en écriture au dépôt n'est requis.
+
+## Revue WILO/RIA — source a3bd818
+
+Consulter [la passation et les commandes de lancement](docs/design/REVUE_WILO_RIA.md). `pnpm preview:water:ui` ouvre les formulaires connectés avec transport simulé, sans accès Supabase.

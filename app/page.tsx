@@ -26,6 +26,8 @@ import { DemoScenarioProvider, DemoScenarioSelect, EquipmentTable, InsufficientN
 import { DEMO_THRESHOLD, demoHomeSnapshot, demoReportTracking, demoRoundsFor, sessionForAudience } from './lib/ui-contract/fixtures.ts';
 import type { TodaysRound, UiSession } from './lib/ui-contract/building-health.ts';
 import { asciiInitials, displayAssetCode, displayAssetText, formatCompactMoney, formatTime, formatWeekdayDate, palierFromScore, roundStateLabel, roundSubjectLabel, scoreFigure, statusBadgeTone, statusLabel, thresholdPosition } from './lib/ui-contract/display.ts';
+import { WiloSupplement } from './components/WiloSupplement';
+import { activeWiloFields, buildWiloChecks, measuredNumber, wiloPressureState, wiloSupplementFindings, type WiloAnswers } from './lib/wilo/report';
 import { EauRounds } from './components/EauRounds';
 import { Ge01AgentForm, Ge01ReportInbox } from './components/Ge01Pilot';
 import { RiaRoundNavigation, RiaRoundSpace } from './components/RiaRound';
@@ -2857,7 +2859,7 @@ function Report({ isTest = false, persona, agentName, reports, connected, onNavi
   const ria = <RiaRoundSpace manager={persona.id==='facility'} enabled={connected&&!isTest} offlineSync={offlineSync} onRefresh={onRefresh} onOpenAnomaly={onOpenAnomaly}/>;
   if (persona.id === 'facility') return <RiaRoundNavigation ria={ria}><Ge01ReportInbox reports={reports.filter(r=>r.equipmentCode==='GE-01')} connected={connected} onReview={onReview} onRead={onRead} onLoadProof={onLoadProof} planning={planning} onAssign={onAssign} onOpenAnomaly={onOpenAnomaly} onRefresh={onRefresh} /></RiaRoundNavigation>;
   if (persona.id === 'electricite') return <Ge01AgentForm equipment={current.health?.equipment.find(item => item.code === 'GE-01')} isTest={isTest} agentName={agentName} persistenceEnabled={persistenceEnabled} offlineSync={offlineSync} flash={flash} />;
-  if (isTest) return <Card role="status">La saisie de recette est réservée au pilote GE-01.</Card>;
+  if (isTest) return <Card role="status">La saisie des rondes de votre périmètre n’est pas encore disponible dans l’espace Recette. Aucune donnée de test ne sera envoyée en Exploitation.</Card>;
   if (persona.id === 'eau_incendie' && !connected) return <DesignEauReport />;
   if (persona.id === 'eau_incendie') return <RiaRoundNavigation existingLabel="WILO-01 · Eau" ria={ria}><LegacyReport persona={persona} onNavigate={onNavigate} persistenceEnabled={persistenceEnabled} offlineSync={offlineSync} flash={flash}/></RiaRoundNavigation>;
   return <LegacyReport persona={persona} onNavigate={onNavigate} persistenceEnabled={persistenceEnabled} offlineSync={offlineSync} flash={flash} />;
@@ -2951,6 +2953,8 @@ function formatHistoryMoment(value:string) {
 }
 
 type RoundDraft = {
+  wiloAnswers?:WiloAnswers;
+  wiloReasons?:WiloAnswers;
   submissionId?:string;
   performedAt?:string;
   startedAfterReceiptId?:string;
@@ -2975,6 +2979,9 @@ function LegacyReport({ persona, onNavigate, persistenceEnabled, offlineSync, fl
   flash:(message:string)=>void;
 }) {
   const { deleteDraft, enqueueRound, loadDraft, saveDraft } = offlineSync;
+  const [confirmedSnapshot,setConfirmedSnapshot] = useState('');
+  const [wiloAnswers,setWiloAnswers] = useState<WiloAnswers>({});
+  const [wiloReasons,setWiloReasons] = useState<WiloAnswers>({});
   const surpresseurAccess = persona.id === 'eau_incendie' || persona.id === 'facility';
   const isRoundsAssistance = persona.id === 'rondes_assistance';
   const draftId = `round:${persona.id}:${surpresseurAccess ? 'WILO-01' : isRoundsAssistance ? 'RND-LET' : 'GE-01'}`;
@@ -3021,9 +3028,10 @@ function LegacyReport({ persona, onNavigate, persistenceEnabled, offlineSync, fl
       setPerformedAt(value?.performedAt || new Date().toISOString());
       setStartedAfterReceiptId(value?.startedAfterReceiptId);
       if (!value) return;
+      setWiloAnswers(value.wiloAnswers??{}); setWiloReasons(value.wiloReasons??{});
       setPhotoExceptionReason(value.photoExceptionReason??''); setStep(value.step); setPressure(value.pressure); setTankLevel(value.tankLevel); setObservation(value.observation);
       setChecks(value.checks); setQuickTitle(value.quickTitle); setQuickPriority(value.quickPriority); setQuickZone(value.quickZone);
-      setQuickControlType(value.quickControlType); setConfirmed(value.confirmed);
+      setQuickControlType(value.quickControlType); setConfirmed(false);
     }).catch(() => {
       if (cancelled) return;
       setSubmissionId(crypto.randomUUID());
@@ -3036,10 +3044,10 @@ function LegacyReport({ persona, onNavigate, persistenceEnabled, offlineSync, fl
     if (!persistenceEnabled || !draftReady || roundSubmitted || !submissionId || !performedAt) return;
     const timer = window.setTimeout(() => {
       if (submissionLockRef.current) return;
-      void saveDraft<RoundDraft>(draftId, { submissionId, performedAt, startedAfterReceiptId, step, pressure, tankLevel, observation, checks, quickTitle, quickPriority, quickZone, quickControlType, confirmed, photoExceptionReason });
+      void saveDraft<RoundDraft>(draftId, { submissionId, performedAt, startedAfterReceiptId, step, pressure, tankLevel, observation, checks, quickTitle, quickPriority, quickZone, quickControlType, confirmed, photoExceptionReason, wiloAnswers, wiloReasons });
     }, 450);
     return () => window.clearTimeout(timer);
-  }, [photoExceptionReason, checks, confirmed, draftId, draftReady, observation, performedAt, persistenceEnabled, pressure, quickControlType, quickPriority, quickTitle, quickZone, roundSubmitted, saveDraft, startedAfterReceiptId, step, submissionId, tankLevel]);
+  }, [wiloAnswers, wiloReasons, photoExceptionReason, checks, confirmed, draftId, draftReady, observation, performedAt, persistenceEnabled, pressure, quickControlType, quickPriority, quickTitle, quickZone, roundSubmitted, saveDraft, startedAfterReceiptId, step, submissionId, tankLevel]);
 
   const syncedReferences = useMemo(() => {
     if (!submissionId || !offlineSync.lastRun) return null;
@@ -3099,20 +3107,27 @@ function LegacyReport({ persona, onNavigate, persistenceEnabled, offlineSync, fl
   };
 
   const steps = ['Contexte','Pression','Pompes','Sécurité','Synthèse'];
-  const pressureValue = Number(pressure.replace(',','.'));
-  const tankValue = Number(tankLevel.replace(',','.'));
-  const hasPressureAlert = pressure.trim() !== '' && Number.isFinite(pressureValue) && pressureValue < 3;
+  const pressureValue = measuredNumber(pressure) ?? Number.NaN;
+  const pressureState = wiloPressureState(pressure);
+  const tankValue = measuredNumber(tankLevel) ?? Number.NaN;
+  const hasPressureAlert = pressureState === 'alert' || pressureState === 'critical';
+  const supplementFindings = wiloSupplementFindings(wiloAnswers, pressure);
+  let supplementError = '';
+  try { if (persistenceEnabled) buildWiloChecks(pressure,tankLevel,checks,wiloAnswers,wiloReasons,photoExceptionReason,performedAt); } catch (e) { supplementError = e instanceof Error ? e.message : 'Contrôles complémentaires à renseigner.'; }
   const completedChecks = Object.values(checks).filter((value) => value === true).length;
   const reviewedChecks = Object.values(checks).filter((value) => value !== null).length;
-  const hasTankAlert=tankLevel.trim()!==''&&Number.isFinite(tankValue)&&(tankValue<40||tankValue>100);
+  const hasTankAlert = ['Bas','Très bas / manque d’eau'].includes(wiloAnswers.ETAT_BACHE);
   const hasCheckAlert = Object.values(checks).some((value) => value === false);
-  const incompleteRound = pressure.trim() === '' || tankLevel.trim() === '' || !Number.isFinite(pressureValue) || !Number.isFinite(tankValue) || reviewedChecks < 6;
+  const incompleteRound = (pressure.trim() === '' ? !wiloReasons.PRESSION_RESEAU?.trim() : !Number.isFinite(pressureValue)) || (tankLevel.trim() === '' ? !wiloReasons.NIVEAU_BACHE?.trim() : !Number.isFinite(tankValue) || tankValue > 100) || reviewedChecks < 6 || Boolean(supplementError);
+  const hasWiloFinding = hasPressureAlert || hasCheckAlert || hasTankAlert || supplementFindings.length > 0;
+  const confirmationSignature = JSON.stringify([pressure,tankLevel,checks,wiloAnswers,wiloReasons,performedAt,observation,photoExceptionReason]);
+  const roundConfirmed = confirmed && confirmedSnapshot === confirmationSignature;
 
   const submitSurpresseurRound = async () => {
     if (submissionLockRef.current || roundSubmitted) return;
-    if((hasPressureAlert||hasCheckAlert||hasTankAlert)&&!photoExceptionReason.trim()){flash('Indiquez le motif d’absence de photo ; vous pourrez joindre une preuve au dossier après synchronisation.');return;}
-    if (incompleteRound || !confirmed) {
-      flash('Complétez les deux mesures, les six contrôles et la confirmation avant l’envoi.');
+    if(hasWiloFinding&&!photoExceptionReason.trim()){flash('Indiquez le motif d’absence de photo ; vous pourrez joindre une preuve au dossier après synchronisation.');return;}
+    if (incompleteRound || !roundConfirmed) {
+      flash(supplementError || 'Complétez les mesures, les contrôles et la confirmation avant l’envoi.');
       return;
     }
     submissionLockRef.current = true;
@@ -3124,19 +3139,14 @@ function LegacyReport({ persona, onNavigate, persistenceEnabled, offlineSync, fl
       flash('La ronde n’est pas encore prête. Patientez un instant puis réessayez.');
       return;
     }
-    const anomalyTitle = hasPressureAlert ? 'Pression Wilo sous le seuil attendu' : hasCheckAlert||hasTankAlert ? 'Écart constaté pendant la ronde WILO-01' : undefined;
+    const anomalyTitle = hasPressureAlert ? 'Pression WILO hors plage attendue' : hasWiloFinding ? 'Écart constaté pendant la ronde WILO-01' : undefined;
     try {
       await enqueueRound({
         equipmentCode:'WILO-01',
         reportType:'wilo_round',
         performedAt,
         summary:observation.trim(),
-        checks:[
-          ...(photoExceptionReason.trim()?[{code:'PHOTO_EXCEPTION',label:'Motif d’impossibilité de photo',status:'ok' as const,valueText:photoExceptionReason.trim()}]:[]),
-          { code:'PRESSION_RESEAU', label:'Pression réseau', status:hasPressureAlert ? 'alert' : 'ok', valueNumeric:pressureValue, unit:'bar' },
-          { code:'NIVEAU_BACHE', label:'Niveau de bâche', status:tankValue >= 40 && tankValue <= 100 ? 'ok' : 'alert', valueNumeric:tankValue, unit:'%' },
-          ...[['auto','Mode automatique actif'],['p1','Pompe P1 disponible'],['p2','Pompe P2 disponible'],['leak','Absence de fuite active'],['valves','Vannes en position normale'],['alarm','Aucune alarme active']].map(([code,label]) => ({ code:code.toUpperCase(), label, status:checks[code] ? 'ok' as const : 'alert' as const, valueBoolean:Boolean(checks[code]) })),
-        ],
+        checks:buildWiloChecks(pressure,tankLevel,checks,wiloAnswers,wiloReasons,photoExceptionReason,performedAt),
         ...(anomalyTitle ? { anomaly:{ title:anomalyTitle, description:observation.trim() || 'Écart relevé pendant la ronde WILO-01.', priority:hasPressureAlert || checks.p1 === false ? 'Haute' as const : 'Moyenne' as const } } : {}),
       }, submissionId);
       await finalizeQueuedRound();
@@ -3159,6 +3169,7 @@ function LegacyReport({ persona, onNavigate, persistenceEnabled, offlineSync, fl
     setPerformedAt(nextPerformedAt);
     setStartedAfterReceiptId(nextStartedAfterReceiptId);
     setStep(0); setFurthestStep(0);
+    setWiloAnswers({}); setWiloReasons({});
     setPressure('');
     setTankLevel('');
     setObservation(''); setPhotoExceptionReason('');
@@ -3215,11 +3226,14 @@ function LegacyReport({ persona, onNavigate, persistenceEnabled, offlineSync, fl
     <section className="surpresseur-layout">
       <Card as="article" className="surpresseur-form-card">
         <div className="surpresseur-section-head"><div><span>ÉTAPE {step+1} SUR 5</span><h3>{steps[step]}</h3></div><span className="mockup-label">{persistenceEnabled ? 'SAISIE RÉELLE' : 'DÉMO INTERACTIVE'}</span></div>
-        {step === 0 && <div className="surpresseur-fields"><div className="context-grid"><div><span>Agent</span><b>{persona.name}</b><small>{persona.role}</small></div><div><span>Horodatage</span><b>Heure d’Abidjan</b><small>Date et heure conservées</small></div><div><span>Synchronisation</span><b>{offlineSync.online ? 'Réseau disponible' : 'Hors ligne'}</b><small>{persistenceEnabled ? 'File idempotente active' : 'Démonstration'}</small></div></div><RoundDateTimeFields value={performedAt} onChange={setPerformedAt}/><Field label={null}>Type de ronde<Select defaultValue=""><option value="">À renseigner</option><option>Quotidienne</option><option>Après intervention</option><option>Contrôle exceptionnel</option></Select></Field><div className="surpresseur-callout"><span><BrandIcon name="info" /></span><p><b>{persistenceEnabled ? 'Contrôle terrain' : 'Point d’attention transmis'}</b><small>{persistenceEnabled ? 'Vérifiez les pompes et relevez la pression observée. Ne déclarez que les écarts constatés.' : 'Vérifier la récidive du défaut pompe P1 et la pression de refoulement.'}</small></p></div></div>}
-        {step === 1 && <div className="surpresseur-fields"><div className="measure-grid"><label><span>Pression réseau</span><div><input required value={pressure} inputMode="decimal" onChange={(event) => setPressure(event.target.value)} /><b>bar</b></div><small>Plage attendue : 3,0 à 4,5 bar</small></label><label><span>Niveau bâche</span><div><input required value={tankLevel} inputMode="numeric" onChange={(event) => setTankLevel(event.target.value)} /><b>%</b></div><small>Plage de contrôle : 40 à 100 %</small></label></div><div className="measure-range-grid"><MeasureRange label="Pression réseau" value={pressure.trim() === '' ? Number.NaN : pressureValue} min={3} max={4.5} unit="bar" /><MeasureRange label="Niveau de bâche" value={tankLevel.trim() === '' ? Number.NaN : tankValue} min={40} max={100} unit="%" /></div>{hasPressureAlert && <div className="measure-alert"><span><BrandIcon name="circleAlert" /></span><div><b>Écart détecté automatiquement</b><small>La pression saisie est inférieure au seuil. Un constat sera proposé à Facility Manager.</small></div></div>}<Field label={null}>Stabilité du manomètre<Select defaultValue=""><option value="">À contrôler</option><option>Stable</option><option>Oscillation légère</option><option>Oscillation importante</option></Select></Field></div>}
+        {step === 0 && <div className="surpresseur-fields"><div className="context-grid"><div><span>Agent</span><b>{persona.name}</b><small>{persona.role}</small></div><div><span>Horodatage</span><b>Heure d’Abidjan</b><small>Date et heure conservées</small></div><div><span>Synchronisation</span><b>{offlineSync.online ? 'Réseau disponible' : 'Hors ligne'}</b><small>{persistenceEnabled ? 'File idempotente active' : 'Démonstration'}</small></div></div><RoundDateTimeFields value={performedAt} onChange={setPerformedAt}/><div className="surpresseur-callout"><span><BrandIcon name="info" /></span><p><b>{persistenceEnabled ? 'Contrôle terrain' : 'Point d’attention transmis'}</b><small>{persistenceEnabled ? 'Vérifiez les pompes et relevez la pression observée. Ne déclarez que les écarts constatés.' : 'Vérifier la récidive du défaut pompe P1 et la pression de refoulement.'}</small></p></div></div>}
+        {step === 1 && <div className="surpresseur-fields"><div className="measure-grid"><label><span>Pression réseau</span><div><input required value={pressure} inputMode="decimal" onChange={(event) => setPressure(event.target.value)} /><b>bar</b></div><small>Plage normale : 4,5 à 5,5 bar, bornes incluses.</small></label><label><span>Niveau bâche</span><div><input required value={tankLevel} inputMode="numeric" onChange={(event) => setTankLevel(event.target.value)} /><b>%</b></div><small>Pourcentage réellement mesuré, de 0 à 100 %. Ne pas le déduire du niveau visuel.</small></label></div><div className="measure-range-grid"><MeasureRange label="Pression réseau" value={pressure.trim() === '' ? Number.NaN : pressureValue} min={4.5} max={5.5} unit="bar" /><MeasureRange label="Niveau de bâche" value={tankLevel.trim() === '' ? Number.NaN : tankValue} min={0} max={100} unit="%" /></div>{hasPressureAlert && <div className="measure-alert"><span><BrandIcon name="circleAlert" /></span><div><b>Écart détecté automatiquement</b><small>La pression saisie est hors de la plage métier. Un constat sera proposé à Facility Manager.</small></div></div>}</div>}
         {step === 2 && <div className="surpresseur-fields"><div className="check-grid">{[['auto','Mode automatique actif','Commande générale'],['p1','Pompe P1 disponible','Pompe prioritaire'],['p2','Pompe P2 disponible','Pompe de secours'],['leak','Absence de fuite active','Collecteur et raccords']].map(([key,title,detail]) => <button type="button" key={key} className={checks[key] === null ? 'unreviewed' : checks[key] ? 'checked' : 'unchecked'} onClick={() => setCheck(key)}><span>{checks[key] === null ? <BrandIcon name="circleAlert" /> : checks[key] ? <BrandIcon name="check" /> : <BrandIcon name="circleAlert" />}</span><p><b>{title}</b><small>{detail}</small></p><em>{checks[key] === null ? 'À contrôler' : checks[key] ? 'Conforme' : 'À signaler'}</em></button>)}</div></div>}
-        {step === 3 && <div className="surpresseur-fields"><div className="check-grid compact">{[['valves','Vannes en position normale','Aspiration et refoulement'],['alarm','Aucune alarme active','Coffret et supervision']].map(([key,title,detail]) => <button type="button" key={key} className={checks[key] === null ? 'unreviewed' : checks[key] ? 'checked' : 'unchecked'} onClick={() => setCheck(key)}><span>{checks[key] === null ? <BrandIcon name="circleAlert" /> : checks[key] ? <BrandIcon name="check" /> : <BrandIcon name="circleAlert" />}</span><p><b>{title}</b><small>{detail}</small></p><em>{checks[key] === null ? 'À contrôler' : checks[key] ? 'Conforme' : 'À signaler'}</em></button>)}</div><Field label={null}>Observation terrain<textarea value={observation} onChange={(event) => setObservation(event.target.value)} placeholder="Observation factuelle ou précision sur un écart." /></Field>{(hasPressureAlert||hasCheckAlert||hasTankAlert)?<><p>La photo du constat peut être jointe au dossier après synchronisation.</p><Field label="Photo non jointe — motif obligatoire"><textarea maxLength={2000} value={photoExceptionReason} onChange={e=>setPhotoExceptionReason(e.target.value)}/></Field></>:<p>Aucune photo requise sans anomalie.</p>}</div>}
-        {step === 4 && <div className="surpresseur-fields"><div className="round-summary"><div><span>MESURES</span><b className={hasPressureAlert ? 'warning' : ''}>{pressure.trim() ? `${pressure} bar` : 'Valeur non renseignée'}</b><small>{pressure.trim() ? 'Pression réseau' : 'À COMPLÉTER'}</small></div><div><span>NIVEAU</span><b>{tankLevel.trim() ? `${tankLevel} %` : 'Valeur non renseignée'}</b><small>{tankLevel.trim() ? 'Bâche de stockage' : 'À COMPLÉTER'}</small></div><div><span>CONTRÔLES</span><b>{completedChecks}/6</b><small>{reviewedChecks}/6 vérifiés</small></div></div>{incompleteRound ? <div className="surpresseur-callout"><span><BrandIcon name="info" /></span><p><b>Contrôle incomplet</b><small>Renseignez les deux mesures et les six contrôles avant de conclure.</small></p></div> : (hasPressureAlert || hasCheckAlert) ? <div className="proposed-finding"><span><BrandIcon name="circleAlert" /></span><div><p>CONSTAT PROPOSÉ</p><h4>{hasPressureAlert ? 'Pression Wilo sous le seuil attendu' : 'Écart constaté pendant la ronde'}</h4><small>Priorité proposée : {hasPressureAlert || checks.p1 === false ? 'Haute' : 'Moyenne'} · Transmission à Facility Manager.</small></div><Badge tone="orange">À QUALIFIER</Badge></div> : <div className="surpresseur-callout"><span><BrandIcon name="check" /></span><p><b>Aucun écart déclaré</b><small>La ronde sera conservée sans créer d’anomalie.</small></p></div>}<label className="confirmation-line"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} /><span>Je confirme que les valeurs correspondent à la ronde réalisée sur WILO-01.</span></label></div>}
+        {step === 3 && <div className="surpresseur-fields"><div className="check-grid compact">{[['valves','Vannes en position normale','Aspiration et refoulement'],['alarm','Aucune alarme active','Coffret et supervision']].map(([key,title,detail]) => <button type="button" key={key} className={checks[key] === null ? 'unreviewed' : checks[key] ? 'checked' : 'unchecked'} onClick={() => setCheck(key)}><span>{checks[key] === null ? <BrandIcon name="circleAlert" /> : checks[key] ? <BrandIcon name="check" /> : <BrandIcon name="circleAlert" />}</span><p><b>{title}</b><small>{detail}</small></p><em>{checks[key] === null ? 'À contrôler' : checks[key] ? 'Conforme' : 'À signaler'}</em></button>)}</div><Field label={null}>Observation terrain<textarea value={observation} onChange={(event) => setObservation(event.target.value)} placeholder="Observation factuelle ou précision sur un écart." /></Field>{hasWiloFinding?<><p>La photo du constat peut être jointe au dossier après synchronisation.</p><Field label="Photo non jointe — motif obligatoire"><textarea maxLength={2000} value={photoExceptionReason} onChange={e=>setPhotoExceptionReason(e.target.value)}/></Field></>:<p>Aucune photo requise sans anomalie.</p>}</div>}
+        {step === 4 && <div className="surpresseur-fields"><div className="round-summary"><div><span>MESURES</span><b className={hasPressureAlert ? 'warning' : ''}>{pressure.trim() ? `${pressure} bar` : 'Valeur non renseignée'}</b><small>{pressure.trim() ? 'Pression réseau' : 'À COMPLÉTER'}</small></div><div><span>NIVEAU</span><b>{tankLevel.trim() ? `${tankLevel} %` : 'Valeur non renseignée'}</b><small>{tankLevel.trim() ? 'Bâche de stockage' : 'À COMPLÉTER'}</small></div><div><span>CONTRÔLES</span><b>{completedChecks}/6</b><small>{reviewedChecks}/6 vérifiés</small></div></div>{incompleteRound ? <div className="surpresseur-callout"><span><BrandIcon name="info" /></span><p><b>Contrôle incomplet</b><small>{supplementError || 'Renseignez les mesures et les contrôles avant de conclure.'}</small></p></div> : hasWiloFinding ? <div className="proposed-finding"><span><BrandIcon name="circleAlert" /></span><div><p>CONSTAT PROPOSÉ</p><h4>{hasPressureAlert ? 'Pression WILO hors plage attendue' : 'Écart constaté pendant la ronde'}</h4><small>Priorité proposée : {hasPressureAlert || checks.p1 === false ? 'Haute' : 'Moyenne'} · Transmission à Facility Manager.</small></div><Badge tone="orange">À QUALIFIER</Badge></div> : <div className="surpresseur-callout"><span><BrandIcon name="check" /></span><p><b>Aucun écart déclaré</b><small>La ronde sera conservée sans créer d’anomalie.</small></p></div>}<label className="confirmation-line"><input type="checkbox" checked={roundConfirmed} onChange={(event) => {setConfirmed(event.target.checked);setConfirmedSnapshot(confirmationSignature);}} /><span>Je confirme que les valeurs correspondent à la ronde réalisée sur WILO-01.</span></label></div>}
+        {step === 1 && <details><summary>Une mesure ne peut pas être relevée</summary><p>Ne déduisez pas un pourcentage du niveau visuel. Une mesure absente reste absente et peut empêcher le calcul de santé.</p>{[['PRESSION_RESEAU','Pression coffret'],['NIVEAU_BACHE','Niveau de bâche en %']].map(([code,label])=><Field key={code} label={`Motif de non-relevé — ${label}`}><input value={wiloReasons[code]??''} onChange={e=>setWiloReasons(a=>({...a,[code]:e.target.value}))}/></Field>)}</details>}
+        {step < 4 && <WiloSupplement pressure={pressure} step={step} answers={wiloAnswers} reasons={wiloReasons} onChange={(code,value)=>{setWiloAnswers(a=>({...a,[code]:value}));if(code==='ETAT_P1'||code==='ETAT_P2')setChecks(a=>({...a,[code==='ETAT_P1'?'p1':'p2']:!value||value==='unknown'?null:['Marche','Arrêt disponible'].includes(value)}));}} onReason={(code,value)=>setWiloReasons(a=>({...a,[code]:value}))}/>}
+        {step === 4 && <details><summary>Contrôles complémentaires enregistrés</summary>{activeWiloFields(wiloAnswers,pressure).map(([code,label])=><p key={code}>{label} : {wiloAnswers[code]==='unknown'?`Non vérifié — ${wiloReasons[code]??''}`:wiloAnswers[code]==='yes'?'Oui':wiloAnswers[code]==='no'?'Non':wiloAnswers[code]||'Valeur non renseignée · À COMPLÉTER'}</p>)}</details>}
         <div className="surpresseur-actions"><Button variant="secondary" type="submit" className="" disabled={step === 0 || submitting || roundSubmitted} onClick={() => setStep((value) => Math.max(0,value-1))}>← Précédent</Button><p><span className={`status-dot ${persistenceEnabled && offlineSync.online ? 'online' : 'local'}`} /> {persistenceEnabled ? draftReady ? 'Brouillon local automatique' : 'Chargement du brouillon…' : 'Simulation locale'}</p>{step < 4 ? <Button type="submit" className="" disabled={submitting || roundSubmitted} onClick={() => setStep((value) => Math.min(4,value+1))}>Continuer →</Button> : <Button type="submit" className="" disabled={!draftReady || submitting || roundSubmitted} aria-busy={submitting} onClick={() => void submitSurpresseurRound()}>{submitting ? 'Transmission…' : roundSubmitted ? 'Ronde transmise' : 'Terminer la ronde'}</Button>}</div>
       </Card>
       <aside className="surpresseur-aside">

@@ -21,7 +21,8 @@
     "verify:lot1": "node scripts/verify-lot1-ui.mjs",
     "verify:release": "pnpm audit:visual && pnpm verify:personas && pnpm verify:resilience && pnpm verify:fonts && pnpm verify:lot0",
     "verify:water:ui": "node scripts/verify-connected-water-ui.mjs",
-    "preview:water:ui": "node scripts/verify-connected-water-ui.mjs --serve"
+    "preview:water:ui": "node scripts/verify-connected-water-ui.mjs --serve",
+    "verify:wilo": "node scripts/verify-wilo-observations.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",
