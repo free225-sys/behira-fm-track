@@ -62,9 +62,9 @@ try{
  assert.equal(await page.getByRole('checkbox').isChecked(),false);assert.equal(await page.locator('.proposed-finding').count(),0);
  assert.equal(await page.evaluate(()=>window.calls),0);assert.deepEqual(errors,[]);
  await page.goto('http://127.0.0.1:4187/?wilo&restored');await page.locator('input[type=date]').first().waitFor();
- await page.locator('label.field').filter({hasText:'Type de ronde'}).getByRole('combobox').click();await page.getByRole('option',{name:'Après intervention',exact:true}).click();
+ await page.locator('.wilo-field').filter({hasText:'Type de ronde'}).getByRole('button',{name:'Après intervention',exact:true}).click();
  await page.waitForFunction(()=>window.saved?.wiloAnswers?.TYPE_RONDE==='Après intervention');
- await page.reload();await page.getByRole('combobox').filter({hasText:'Après intervention'}).waitFor();
+ await page.reload();await page.locator('.choice-chip.is-selected').filter({hasText:'Après intervention'}).waitFor();
  for(let i=0;i<4;i++)await page.getByRole('button',{name:'Continuer'}).click();
  assert.equal(await page.getByRole('checkbox').isChecked(),false,'restoring a draft must not restore confirmation');
  assert.equal(await page.locator('.proposed-finding').count(),1,'tank-only finding must be included in summary');

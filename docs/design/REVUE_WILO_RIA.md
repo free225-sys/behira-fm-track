@@ -53,3 +53,13 @@ Le test navigateur utilise Chrome installé sur le poste. Le serveur de revue se
 - WILO synthèse : « Contrôles de base · X sur 6 », observations complémentaires dépliées par défaut et encadrées.
 - Dépliants (mesure non relevable, observations complémentaires) encadrés et lisibles.
 - Tests : 89 lot 0, 36 lot 1, 120 visuels, 38 personas, 34 WILO, banc navigateur 1440/380 (assertions adaptées aux contrôles segmentés et au libellé « Continuer »).
+
+## DESIGN-081 — observations WILO en choix explicites
+
+- Les listes déroulantes des observations complémentaires deviennent des boutons de choix, un par réponse possible, sans réponse présélectionnée.
+- L’invite vague « À contrôler » disparaît. Tant qu’aucun choix n’est fait, le champ affiche « À renseigner pendant la ronde ».
+- La couleur suit la gravité de l’option : état attendu en vert une fois choisi, état intermédiaire en orange, état le plus grave en rouge. Aucune couleur avant le choix.
+- « Non vérifié » n’est plus une option parmi les autres : un lien « Je ne peux pas vérifier » bascule le champ en non vérifié, colore la carte et demande le motif. Le lien inverse permet de revenir en arrière.
+- Les mesures numériques gardent leur champ, avec la case « Mesure impossible à relever » à la place de l’ancien « Non relevé ».
+- Boutons de 44 px minimum, deux par ligne sous 760 px ; chaque groupe est une carte distincte pour éviter la pile de champs.
+- Contrôles du banc adaptés aux boutons ; tests : 89 lot 0, 36 lot 1, 120 visuels, 38 personas, 34 WILO, navigateur 1440 et 380 px.

@@ -5382,3 +5382,21 @@ h1{
 @media (max-width:760px){
   .wilo-supplement-grid{grid-template-columns:1fr}
 }
+
+/* DESIGN-081 — observations WILO en choix explicites */
+.wilo-field{display:flex;flex-direction:column;gap:6px;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface)}
+.wilo-field.is-unverified{border-color:#e4d3b4;background:#fffaf1}
+.wilo-field > .field-label{color:#4f6072;font-size:var(--font-size-label);font-weight:700}
+.wilo-field fieldset{margin:0;padding:0;border:0}
+.wilo-field legend{padding:0;color:#4f6072;font-size:var(--font-size-label);font-weight:700}
+.choice-set{display:flex;flex-wrap:wrap;gap:6px}
+.choice-chip{min-height:44px;padding:0 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--foreground);font-size:var(--font-size-label);font-weight:600;text-align:left;cursor:pointer}
+.choice-chip:hover{border-color:#b9c6d3}
+.choice-chip.is-selected.tone-normal{border-color:#2f6d51;background:#e8f5ee;color:#245c43}
+.choice-chip.is-selected.tone-watch{border-color:#b26a13;background:#fdf1e2;color:#8a5210}
+.choice-chip.is-selected.tone-critical{border-color:#b8352a;background:#fbe8e6;color:#94271e}
+.wilo-field-foot{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.wilo-field-foot .field-hint{color:var(--foreground-muted);font-size:var(--font-size-label)}
+.wilo-unverified-link{border:0;background:none;padding:0;color:var(--brand);font-size:var(--font-size-label);font-weight:600;cursor:pointer}
+.wilo-unverified-toggle{display:flex;align-items:center;gap:8px;color:var(--foreground-muted);font-size:var(--font-size-label)}
+@media (max-width:760px){.choice-chip{flex:1 1 calc(50% - 6px)}}
