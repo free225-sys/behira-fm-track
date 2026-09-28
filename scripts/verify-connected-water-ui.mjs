@@ -29,7 +29,7 @@ try{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('http://127.0.0.1:4187');await page.locator('input[type=date]').waitFor();
  assert.equal(await page.locator('input[type=time]').inputValue(),'14:20');
- assert.equal(await page.locator('select').first().inputValue(),'');
+ assert.equal(await page.locator('.choice-button[aria-pressed="true"]').count(),0);
  const rail=page.locator('.connected-round-progress button');assert.equal(await rail.nth(1).isDisabled(),true);
  await page.locator('input[type=time]').fill('10:35');
  await page.waitForFunction(()=>window.saved?.performedAt==='2026-09-28T10:35:00.000Z');
@@ -38,13 +38,13 @@ try{
  }
  await page.getByRole('button',{name:'Maintenant',exact:true}).click();
  assert.ok(Math.abs(Date.now()-Date.parse(await page.evaluate(()=>window.saved.performedAt)))<5000);
- await page.getByRole('button',{name:'Suivant',exact:true}).click();
- await page.getByRole('button',{name:'Suivant',exact:true}).click();
+ await page.getByRole('button',{name:'Continuer',exact:true}).click();
+ await page.getByRole('button',{name:'Continuer',exact:true}).click();
  assert.equal(await page.getByText('Valeur non renseignée',{exact:true}).count(),2);
  await page.locator('input[inputmode=decimal]').first().fill('5');
  assert.equal(await page.getByText('Valeur non renseignée',{exact:true}).count(),1);
  await page.getByRole('button',{name:'Précédent',exact:true}).click();assert.equal(await rail.nth(2).isEnabled(),true);assert.equal(await rail.nth(3).isDisabled(),true);
- await rail.nth(2).click();await page.getByRole('button',{name:'Suivant',exact:true}).click();await page.getByRole('button',{name:'Suivant',exact:true}).click();
+ await rail.nth(2).click();await page.getByRole('button',{name:'Continuer',exact:true}).click();await page.getByRole('button',{name:'Continuer',exact:true}).click();
  assert.equal(await page.getByRole('checkbox').isChecked(),false);assert.equal(await page.getByRole('button',{name:'Transmettre le rapport RIA'}).isDisabled(),true);
  assert.equal(await page.evaluate(()=>window.calls),0);assert.deepEqual(errors,[]);
  await page.goto('http://127.0.0.1:4187/?wilo');await page.locator('input[type=date]').waitFor();

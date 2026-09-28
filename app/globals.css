@@ -5360,3 +5360,25 @@ h1{
 /* Connected rounds retain the shared design rail, including readable long labels. */
 .connected-round-progress button b{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
 .connected-round-progress button{align-items:flex-start}
+
+/* DESIGN-080 — formulaires connectés WILO et RIA */
+.measure-grid > label > .measure-range.is-embedded{margin-top:10px;padding:10px 0 0;border:0;border-top:1px solid var(--border);border-radius:0;background:transparent}
+.measure-range.is-embedded > div:first-child{grid-template-columns:1fr auto}
+.measure-range.is-embedded > div:first-child > b{grid-column:1;font-size:var(--font-size-label);font-weight:700}
+.wilo-supplement{padding-top:0}
+.wilo-supplement-title{margin:18px 0 10px;padding-top:16px;border-top:1px solid var(--border);font-size:var(--font-size-body)}
+.wilo-supplement-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 18px}
+.wilo-supplement-grid > div{min-width:0}
+.round-details{margin-top:16px;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface-muted,#f5f8fa)}
+.round-details > summary{font-size:var(--font-size-label);font-weight:700;cursor:pointer}
+.round-details > summary::marker{color:var(--foreground-muted)}
+.round-details p{margin:8px 0 0;color:var(--foreground-muted);font-size:var(--font-size-label)}
+.score-explain-card.is-compact{display:block;padding:16px 18px;border:0;border-radius:var(--radius-md);background:#112d4d;color:#ffffff}
+.score-explain-card.is-compact > div{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.score-explain-card.is-compact > div > span{color:#d3e2f0;font-size:var(--font-size-label);font-weight:700}
+.score-explain-card.is-compact > div > b{color:#ffffff;font-size:var(--font-size-title)}
+.score-explain-card.is-compact .analytics-note{margin:10px 0 0;color:#e2ecf6;font-size:var(--font-size-label);line-height:1.5}
+.connected-round-progress .choice-row{gap:6px}
+@media (max-width:760px){
+  .wilo-supplement-grid{grid-template-columns:1fr}
+}

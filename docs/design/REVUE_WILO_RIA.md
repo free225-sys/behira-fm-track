@@ -42,3 +42,14 @@ pnpm verify:water:ui
 ```
 
 Le test navigateur utilise Chrome installé sur le poste. Le serveur de revue seul ne nécessite pas Playwright. Référence attendue : 120 visuels, 38 personas, 89 lot0, 36 lot1, 34 cas WILO, navigateur 1440/380. Ces contrôles ne remplacent pas la revue ergonomique.
+
+## DESIGN-080 — corrections appliquées (revue)
+
+- RIA : réponses en contrôles segmentés (Oui / Non / Non vérifié, valeurs d’énumération), plus aucune valeur présélectionnée ; en-tête de carte à deux niveaux ; bouton « Continuer » ; état de brouillon en texte discret.
+- RIA et WILO : panneau de score au format validé (`RIA-01 · Indisponible`, `WILO-01 · Indisponible`) avec la phrase d’explication, sans les libellés État / Variation / Fraîcheur.
+- RIA : cadence et pression de référence présentées comme à confirmer.
+- WILO étape Pression : une carte par mesure (saisie, plage, verdict), sans le rappel dupliqué.
+- WILO étapes Pompes et Sécurité : observations complémentaires regroupées sous un intertitre, en deux colonnes.
+- WILO synthèse : « Contrôles de base · X sur 6 », observations complémentaires dépliées par défaut et encadrées.
+- Dépliants (mesure non relevable, observations complémentaires) encadrés et lisibles.
+- Tests : 89 lot 0, 36 lot 1, 120 visuels, 38 personas, 34 WILO, banc navigateur 1440/380 (assertions adaptées aux contrôles segmentés et au libellé « Continuer »).

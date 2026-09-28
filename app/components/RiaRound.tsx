@@ -27,7 +27,7 @@ export function RiaRoundSpace({manager,enabled,offlineSync,onRefresh,onOpenAnoma
  if(!enabled)return <Card role="status">La ronde RIA-01 nécessite une connexion avec le compte réel habilité. Aucun contrôle n’est simulé.</Card>;
  const report=rounds.find(r=>r.id===selected);
  return <section aria-label="Ronde RIA-01">
-  <RoundPilotHeader title="RIA-01 · Réseau incendie" subtitle="Cinq étapes · contrôle quotidien" badge={<span className="mockup-label">Saisie terrain</span>}/><Card><p>Contrôle quotidien, lundi à samedi · échéance 23:59 · heure d’Abidjan. Les réglages des pressostats et les essais spécialisés relèvent de SECURISYS.</p><p>Pression de référence retenue : 5 bar, confirmation SECURISYS attendue.</p></Card>
+  <RoundPilotHeader title="RIA-01 · Réseau incendie" subtitle="Cinq étapes · contrôle quotidien" badge={<span className="mockup-label">Saisie terrain</span>}/><Card><p>Cadence à confirmer · heure d’Abidjan. Les réglages des pressostats et les essais spécialisés relèvent de SECURISYS.</p><p>Valeur de pression de référence à confirmer par SECURISYS.</p></Card>
   {!manager&&<RiaForm offlineSync={offlineSync} rounds={rounds}/>}
   <Card><h3>{manager?'Rapports RIA à examiner':'Historique RIA-01'}</h3><Button variant="secondary" disabled={loading} onClick={()=>void refresh()}>Actualiser les rapports RIA</Button>
    {error&&<p role="alert">{error}</p>}{loading&&<p role="status">Chargement…</p>}{!loading&&!error&&rounds.length===0&&<p>Aucun rapport RIA-01 reçu.</p>}
@@ -61,13 +61,13 @@ export function RiaForm({offlineSync:s,rounds=[]}:{offlineSync:ReturnType<typeof
   if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size<1||file.size>10485760){setError('Photo : JPG, PNG ou WebP, 10 Mo maximum.');return;}
   change({...draft,photos:[...draft.photos.filter(p=>p.purpose!==purpose),{id:crypto.randomUUID(),purpose,file}]});
  };
- return <Card><h3>{draft.queued?'Ronde transmise':'Saisir le contrôle RIA-01'}</h3><p>Réalisation : {stamp(draft.performedAt)}</p>
+ return <Card><div className="panel-head"><div><h3>{draft.queued?'Ronde transmise':'Contrôle quotidien du réseau incendie'}</h3><p>Réalisation : {stamp(draft.performedAt)}</p></div></div>
   <OfflineSyncStatus enabled online={s.online} running={s.running} counts={s.counts} latestIssue={s.latestIssue} latestRoundReceipt={receipt} onRetry={()=>void s.retryFailed().then(()=>s.synchronize())}/>
   {draft.queued?<><p role="status">{confirmedReference?`${confirmedReference} — rapport et photos confirmés par le serveur.`:'Rapport protégé dans la file d’envoi. Attendez la confirmation serveur.'}</p><Button variant="secondary" disabled={!confirmedReference} onClick={()=>{const next=emptyRiaDraft();change(next);setStep(0);setFurthestStep(0);}}>Nouvelle ronde hors planning</Button></>:<>
    <div className="surpresseur-progress connected-round-progress" aria-label="Étapes RIA">{labels.map((label,i)=><button type="button" key={label} className={i===step?'active':i<step?'done':''} disabled={i>Math.max(step,furthestStep)} aria-current={i===step?'step':undefined} onClick={()=>setStep(i)}><span>{i<step?'✓':i+1}</span><b>{label}</b></button>)}</div>
   <fieldset disabled={busy}><legend>{labels[step]}</legend><div className="two-fields">
     {step===0&&<RoundDateTimeFields value={draft.performedAt} onChange={performedAt=>change({...draft,performedAt})}/>}
-    {sections[step].map(([code,label,type])=><div key={code}><Field label={label}>{type==='number'?<input inputMode="decimal" value={draft.answers[code]==='unknown'?'':draft.answers[code]??''} disabled={draft.answers[code]==='unknown'} onChange={e=>change({...draft,answers:{...draft.answers,[code]:e.target.value}})}/>:<Select value={draft.answers[code]??''} onChange={e=>change({...draft,answers:{...draft.answers,[code]:e.target.value}})}><option value="">À contrôler</option>{(type==='bool'?[['yes','Oui'],['no','Non']]:type.split('|').map(v=>[v,v])).map(([value,text])=><option key={value} value={value}>{text}</option>)}<option value="unknown">Non vérifié</option></Select>}</Field>
+    {sections[step].map(([code,label,type])=><div key={code}><Field label={label}>{type==='number'?<input inputMode="decimal" value={draft.answers[code]==='unknown'?'':draft.answers[code]??''} disabled={draft.answers[code]==='unknown'} onChange={e=>change({...draft,answers:{...draft.answers,[code]:e.target.value}})}/>:<div className="choice-row" role="group" aria-label={label}>{[...(type==='bool'?[['yes','Oui'],['no','Non']]:type.split('|').map(v=>[v,v])),['unknown','Non vérifié']].map(([value,text])=><button type="button" key={value} className={`choice-button ${draft.answers[code]===value?'is-selected':''}`} aria-pressed={draft.answers[code]===value} onClick={()=>change({...draft,answers:{...draft.answers,[code]:value}})}>{text}</button>)}</div>}</Field>
      {type==='number'&&(!draft.answers[code]?.trim()||draft.answers[code]==='unknown')&&<p className="measure-empty"><span>Valeur non renseignée</span> · <b>À COMPLÉTER</b></p>}
      {type==='number'&&<label><input type="checkbox" checked={draft.answers[code]==='unknown'} onChange={e=>change({...draft,answers:{...draft.answers,[code]:e.target.checked?'unknown':''}})}/> Non relevé</label>}
      {draft.answers[code]==='unknown'&&<Field label="Motif de non-vérification"><input value={draft.reasons[code]??''} onChange={e=>change({...draft,reasons:{...draft.reasons,[code]:e.target.value}})}/></Field>}
@@ -81,9 +81,9 @@ export function RiaForm({offlineSync:s,rounds=[]}:{offlineSync:ReturnType<typeof
     <label><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/> Je confirme que ces observations correspondent au contrôle réalisé.</label>
    </>}
    </fieldset>
-   <p role="status">{saveState}</p>{step>0&&<Button variant="secondary" onClick={()=>setStep(step-1)}>Précédent</Button>}{step<4?<Button onClick={()=>setStep(step+1)}>Suivant</Button>:<Button disabled={busy||!confirmed} onClick={()=>void submit()}>{busy?'Mise en file…':'Transmettre le rapport RIA'}</Button>}
+   <p role="status" className="field-hint">{saveState}</p>{step>0&&<Button variant="secondary" onClick={()=>setStep(step-1)}>Précédent</Button>}{step<4?<Button onClick={()=>setStep(step+1)}>Continuer</Button>:<Button disabled={busy||!confirmed} onClick={()=>void submit()}>{busy?'Mise en file…':'Transmettre le rapport RIA'}</Button>}
   </>}{error&&<p role="alert">{error}</p>}
- <p className="analytics-note">Score RIA-01 : <strong>Indisponible</strong></p>
+ <aside className="score-explain-card is-compact"><div><span>RIA-01</span><b>Indisponible</b></div><p className="analytics-note">Aucune valeur de score n’est affichée avant validation de la méthode et de ses données sources.</p></aside>
  </Card>;
 }
 export function RiaReview({report:r,manager,onDone,onOpenAnomaly}:{report:Round;manager:boolean;onDone:()=>void;onOpenAnomaly:(id:string)=>void}) {

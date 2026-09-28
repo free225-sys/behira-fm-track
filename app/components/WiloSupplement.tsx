@@ -6,7 +6,9 @@ export function WiloSupplement({ step, answers, reasons, pressure, onChange, onR
   step:number; answers:WiloAnswers; reasons:WiloAnswers; pressure:string;
   onChange:(code:string,value:string)=>void; onReason:(code:string,value:string)=>void;
 }) {
-  return <div className="surpresseur-fields">{activeWiloFields(answers,pressure).filter(field=>field[3]===step).map(([code,label,type])=>{
+  const fields = activeWiloFields(answers,pressure).filter(field=>field[3]===step);
+  if (fields.length === 0) return null;
+  return <div className="surpresseur-fields wilo-supplement"><h4 className="wilo-supplement-title">Observations complémentaires</h4><div className="wilo-supplement-grid">{activeWiloFields(answers,pressure).filter(field=>field[3]===step).map(([code,label,type])=>{
     const numeric = type === 'bar' || type === '%';
     return <div key={code}>
       {type==='datetime' ? <fieldset disabled={answers[code]==='unknown'}><legend>{label}</legend><RoundDateTimeFields value={answers[code]==='unknown'?'':answers[code]??''} onChange={v=>onChange(code,v)}/><p>Au moins 10 minutes après le premier relevé. Ce contrôle ne demande aucun réglage du coffret.</p></fieldset> : <Field label={label}>{numeric || type==='time' ? <input inputMode={numeric?'decimal':'text'} placeholder={type==='time'?'HH:MM':undefined} disabled={answers[code]==='unknown'} value={answers[code]==='unknown'?'':answers[code]??''} onChange={e=>onChange(code,e.target.value)}/>
@@ -14,5 +16,5 @@ export function WiloSupplement({ step, answers, reasons, pressure, onChange, onR
       {(numeric || type==='time' || type==='datetime') && <><p className="measure-empty">{!answers[code]||answers[code]==='unknown'?'Valeur non renseignée · À COMPLÉTER':null}</p><label><input type="checkbox" checked={answers[code]==='unknown'} onChange={e=>onChange(code,e.target.checked?'unknown':'')}/> Non relevé</label></>}
       {answers[code]==='unknown'&&<Field label={`Motif — ${label}`}><input value={reasons[code]??''} onChange={e=>onReason(code,e.target.value)} placeholder="Précisez pourquoi le contrôle n’a pas pu être effectué"/></Field>}
     </div>;
-  })}</div>;
+  })}</div></div>;
 }
