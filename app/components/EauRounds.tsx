@@ -37,43 +37,55 @@ function initials(name: string) {
   return `${letter(parts[0])}${letter(parts[1])}` || '—';
 }
 
-function MeasureRange({ label, value, min, max, unit }: { label: string; value: number; min: number; max: number; unit: string }) {
+function MeasureRange({ label, value, min, max, unit, pending = false }: { label: string; value: number; min: number; max: number; unit: string; pending?: boolean }) {
   const valid = Number.isFinite(value);
-  const inRange = valid && value >= min && value <= max;
+  const inRange = valid && !pending && value >= min && value <= max;
   const span = max - min;
-  const position = !valid ? 0 : span === 0 ? (value === min ? 50 : value < min ? 0 : 100) : Math.max(0, Math.min(100, ((value - min) / span) * 100));
+  const position = !valid || pending ? 0 : span === 0 ? (value === min ? 50 : value < min ? 0 : 100) : Math.max(0, Math.min(100, ((value - min) / span) * 100));
+  const tone = !valid ? 'unknown' : pending ? 'pending' : inRange ? 'in-range' : 'out-range';
+  const status = !valid ? 'À COMPLÉTER' : pending ? 'VALEUR SAISIE' : inRange ? 'DANS LA PLAGE' : 'HORS PLAGE';
+  const described = pending
+    ? `${label} : ${valid ? value : 'valeur absente'} ${unit}. Valeur à confirmer par SECURISYS.`
+    : `${label} : ${valid ? value : 'valeur absente'} ${unit}, plage attendue ${min} à ${max} ${unit}`;
   return (
-    <article className={`measure-range ${!valid ? 'unknown' : inRange ? 'in-range' : 'out-range'}`}>
+    <article className={`measure-range ${tone}`}>
       <div>
         <span>{label}</span>
         <b>{valid ? `${value.toLocaleString('fr-FR')} ${unit}` : 'Valeur non renseignée'}</b>
-        <em>{valid ? (inRange ? 'DANS LA PLAGE' : 'HORS PLAGE') : 'À COMPLÉTER'}</em>
+        <em>{status}</em>
       </div>
-      <div className="measure-range-track" aria-label={`${label} : ${valid ? value : 'valeur absente'} ${unit}, plage attendue ${min} à ${max} ${unit}`}>
+      <div className="measure-range-track" aria-label={described}>
         <i style={{ '--measure-position': `${position}%` } as CSSProperties} />
       </div>
-      <small><span>Minimum {min} {unit}</span><span>Maximum {max} {unit}</span></small>
+      <small>{pending ? <span>Valeur à confirmer par SECURISYS</span> : <><span>Minimum {min} {unit}</span><span>Maximum {max} {unit}</span></>}</small>
     </article>
   );
 }
 
 function StepRail({ labels, step, onStep }: { labels: string[]; step: number; onStep: (index: number) => void }) {
   return (
-    <nav className={`surpresseur-progress${labels.length === 2 ? ' is-two' : ''}`} aria-label="Progression de la ronde">
-      {labels.map((item, index) => (
-        <button
-          key={item}
-          type="button"
-          className={index === step ? 'active' : index < step ? 'done' : ''}
-          aria-current={index === step ? 'step' : undefined}
-          disabled={index > step}
-          onClick={() => index <= step && onStep(index)}
-        >
-          <span>{index < step ? '✓' : index + 1}</span>
-          <b>{item}</b>
-        </button>
-      ))}
-    </nav>
+    <div className="round-step-rail">
+      <nav className={`surpresseur-progress${labels.length === 2 ? ' is-two' : ''}`} aria-label="Progression de la ronde">
+        {labels.map((item, index) => {
+          const reached = index < step;
+          return (
+            <button
+              key={item}
+              type="button"
+              className={index === step ? 'active' : reached ? 'done' : 'locked'}
+              aria-current={index === step ? 'step' : undefined}
+              disabled={index > step}
+              aria-label={reached ? `Revenir à ${item}` : index > step ? `${item}, pas encore atteinte` : item}
+              onClick={() => index <= step && onStep(index)}
+            >
+              <span>{reached ? '✓' : index + 1}</span>
+              <b>{item}</b>
+            </button>
+          );
+        })}
+      </nav>
+      <p className="round-step-hint">Une étape déjà franchie reste accessible pour revenir en arrière. Les suivantes s’ouvrent une à une.</p>
+    </div>
   );
 }
 
@@ -237,7 +249,7 @@ export function EauRounds({ agentName, draftNote, onSubmit }: { agentName: strin
             </article>
             <aside className="surpresseur-aside">
               <article className="panel next-action-card"><p className="design-kicker">À SURVEILLER</p><span className="next-action-icon">!</span><h3>Réarmement provisoire</h3><p>Un réarmement ne suffit pas à clôturer une anomalie. Le diagnostic et la preuve restent nécessaires.</p><div><span>Responsable pressenti</span><b>{agentName}</b></div></article>
-              <article className="panel score-explain-card"><div><span>SCORE WILO</span><b>Indisponible</b></div><div className="score-freshness"><span><b>État</b>À confirmer</span><span><b>Variation</b>Indisponible</span><span><b>Fraîcheur</b>Indisponible</span></div><p className="analytics-note">Aucune valeur de score n’est affichée avant validation de la méthode et de ses données sources.</p></article>
+              <article className="panel score-explain-card"><div><span>{wiloCode}</span><b>Indisponible</b></div><p className="analytics-note">Aucune valeur de score n’est affichée avant validation de la méthode et de ses données sources.</p></article>
             </aside>
           </section>
         </>
@@ -248,7 +260,7 @@ export function EauRounds({ agentName, draftNote, onSubmit }: { agentName: strin
             subtitle="Deux étapes · local et coffret"
             badge={<Badge tone="neutral">BROUILLON LOCAL</Badge>}
           />
-          <p className="ria-round-note">Contrôle quotidien, lundi à samedi · échéance 23:59 · heure d’Abidjan. Les réglages des pressostats et les essais spécialisés relèvent de SECURISYS. Pression de référence retenue : 5 bar, confirmation SECURISYS attendue.</p>
+          <p className="ria-round-note">Cadence à confirmer · heure d’Abidjan. Les réglages des pressostats et les essais spécialisés relèvent de SECURISYS. Valeur de pression à confirmer par SECURISYS.</p>
           <SyncStatusNotice state="demo-volatile" label="État de la ronde incendie" />
           <StepRail labels={riaSteps} step={riaStep} onStep={setRiaStep} />
           <section className="surpresseur-layout">
@@ -295,10 +307,10 @@ export function EauRounds({ agentName, draftNote, onSubmit }: { agentName: strin
                     <label>
                       <span>Pression manomètre</span>
                       <div><input value={riaPressure} inputMode="decimal" placeholder="—" aria-label="Pression manomètre" onChange={(event) => setRiaPressure(event.target.value)} /><b>bar</b></div>
-                      <small>Référence affichée : 5 bar. Une case vide n’est pas un zéro.</small>
+                      <small>Valeur à confirmer par SECURISYS. Une case vide n’est pas un zéro.</small>
                     </label>
                   </div>
-                  <MeasureRange label="Pression manomètre" value={riaPressureValue} min={5} max={5} unit="bar" />
+                  <MeasureRange label="Pression manomètre" value={riaPressureValue} min={5} max={5} unit="bar" pending />
                 </div>
               )}
               <div className="surpresseur-actions">
@@ -308,7 +320,7 @@ export function EauRounds({ agentName, draftNote, onSubmit }: { agentName: strin
               </div>
             </article>
             <aside className="surpresseur-aside">
-              <article className="panel score-explain-card"><div><span>SCORE RIA</span><b>Indisponible</b></div><p className="analytics-note">RIA-01 n’est pas tranché. Aucun score n’est inventé pour cette ronde.</p></article>
+              <article className="panel score-explain-card"><div><span>{riaCode}</span><b>Indisponible</b></div><p className="analytics-note">RIA-01 n’est pas tranché. Aucun score n’est inventé pour cette ronde.</p></article>
             </aside>
           </section>
         </>

@@ -119,9 +119,19 @@ requireAll('Résilience terrain sans promesse hors ligne fictive', appSource, [
   'SyncStatusNotice', 'Démonstration locale — non enregistrée', 'Connexion requise pour enregistrer',
   'Aucun mode hors ligne ni reprise automatique', 'Échec de l’enregistrement', 'Réessayer',
 ])
-requireAll('Mesures Surpresseur explicables', eauRounds, [
-  'MeasureRange', 'DANS LA PLAGE', 'HORS PLAGE', 'Variation</b>Indisponible', 'Fraîcheur</b>Indisponible',
-])
+{
+  const values = [
+    'MeasureRange', 'DANS LA PLAGE', 'HORS PLAGE', 'Indisponible',
+    'Cadence à confirmer', 'Valeur à confirmer par SECURISYS', 'Revenir à ',
+  ]
+  const missing = values.filter((value) => !eauRounds.includes(value))
+  const forbidden = ['score-freshness', 'lundi à samedi', 'Pression de référence retenue', '>État</b>'].filter((value) => eauRounds.includes(value))
+  checks.push({
+    label: 'Mesures Surpresseur explicables',
+    ok: missing.length === 0 && forbidden.length === 0,
+    missing: [...missing, ...forbidden.map((value) => `encore présent : ${value}`)],
+  })
+}
 requireAll('Verrou critique et retour Direction', page, [
   "selected.priority === 'Critique' && !selected.proof", 'retour envoyé à Facility Manager', 'Confirmer et notifier Facility Manager',
 ])

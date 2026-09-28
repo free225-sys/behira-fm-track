@@ -10,10 +10,11 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 ## Index
 
-Statuts : les entrées 062 à 078 sont **En vigueur** (la plus récente l’emporte). DESIGN-003 (Geist auto-hébergé) est traité (DESIGN-015). DESIGN-005 (`.gitattributes`) reste à vérifier dans le dépôt.
+Statuts : les entrées 062 à 079 sont **En vigueur** (la plus récente l’emporte). DESIGN-003 (Geist auto-hébergé) est traité (DESIGN-015). DESIGN-005 (`.gitattributes`) reste à vérifier dans le dépôt.
 
 | id | date | sujet | attendu de | bloque |
 | --- | --- | --- | --- | --- |
+| DESIGN-079 | 2026-09-28 | Panneau WILO, retour d’étape, cadences provisoires | Wilkam | livré |
 | DESIGN-078 | 2026-09-28 | Parcours Eau & Incendie aligné sur GE-01 | Wilkam | livré |
 | DESIGN-077 | 2026-09-18 | Pilotage : liste d’attention et carte d’évolution | Codex | En vigueur |
 | DESIGN-076 | 2026-09-18 | Formulaire de rapport prestataire | Codex | En vigueur |
@@ -80,6 +81,18 @@ Statuts : les entrées 062 à 078 sont **En vigueur** (la plus récente l’empo
 | DESIGN-003 | 2026-08-28 | `pnpm dev` échoue sans accès réseau à `fonts.googleapis.com` | Dev Lead | tout audit hors ligne |
 | DESIGN-002 | 2026-08-28 | Nomenclature unique des destinations — *arbitrée, voir DEC-002* | Dev Lead | routes |
 | DESIGN-001 | 2026-08-28 | Lot 1 — spécification du socle de tokens | Dev Lead | lot 2, écran pilote |
+
+---
+
+## DESIGN-079 — Panneau WILO, retour d’étape, textes provisoires
+
+- **Date :** 28 septembre 2026
+- **Statut :** Livré.
+- **Périmètre :** affichage du parcours Eau & Incendie. Pas de `data.ts`, pas de score, pas de règle métier tranchée.
+
+1. **Panneau latéral WILO-01** : même modèle que RIA-01. Ligne `WILO-01 · Indisponible` et une phrase d’explication. Les libellés État, Variation et Fraîcheur sont retirés.
+2. **Rail d’étapes** : une étape non encore atteinte reste inaccessible. C’est voulu, comme sur GE-01. Une étape déjà franchie reste cliquable pour revenir en arrière : pastille cochée, libellé « Revenir à … », phrase sous le rail.
+3. **Textes non tranchés** : « lundi à samedi · échéance 23:59 » et « pression de référence retenue : 5 bar » ne sont plus présentés comme décidés. Affichage provisoire : « Cadence à confirmer » et « Valeur à confirmer par SECURISYS ». La comparaison à 5 bar n’est pas faite tant que la séance n’a pas eu lieu.
 
 ---
 
