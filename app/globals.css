@@ -5060,6 +5060,60 @@ h1{
   .choice-button{flex:1 1 auto}
 }
 
+/* DESIGN-078 — parcours Eau & Incendie aligné sur GE-01 */
+@media (min-width:761px){
+  .surpresseur-progress{
+    display:grid;
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    overflow:visible;
+  }
+  .surpresseur-progress.is-two{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  .surpresseur-progress button{
+    min-width:0;
+    width:auto;
+    flex:none;
+  }
+  .surpresseur-progress button b{
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+}
+.check-grid button.unset,
+.check-grid .unset{
+  border-color:var(--border);
+  background:var(--surface);
+}
+.check-grid .unset>span{
+  background:var(--surface-muted);
+  color:var(--foreground-muted);
+}
+.check-grid .unset em{
+  color:var(--foreground-muted);
+}
+.round-asset-tabs{
+  margin:var(--space-6) 0 0;
+}
+.ria-round-note{
+  margin:0 0 16px;
+  padding:12px 14px;
+  border:1px solid var(--border);
+  border-radius:var(--radius-md);
+  background:var(--surface);
+  color:var(--foreground-muted);
+  font-size:var(--font-size-body);
+  line-height:var(--line-height-normal);
+}
+.surpresseur-progress button:disabled{
+  cursor:default;
+  opacity:.72;
+}
+.measure-range.unknown .measure-range-track i{visibility:hidden}
+.measure-range.unknown .measure-range-track:before{opacity:.12}
+
 /* DESIGN-077 — Pilotage : liste d'attention et carte d'évolution */
 .watchlist{list-style:none;display:grid;gap:2px;margin:0;padding:0}
 .watchlist li{display:grid;grid-template-columns:minmax(0,1fr) auto 84px;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--border)}

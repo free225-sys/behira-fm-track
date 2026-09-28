@@ -4,6 +4,7 @@ import path from 'node:path'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const page = await readFile(path.join(root, 'app', 'page.tsx'), 'utf8')
+const eauRounds = await readFile(path.join(root, 'app', 'components', 'EauRounds.tsx'), 'utf8')
 const css = await readFile(path.join(root, 'app', 'globals.css'), 'utf8')
 const badge = await readFile(path.join(root, 'app', 'components', 'ui', 'badge.tsx'), 'utf8')
 const equipmentWorkspace = await readFile(path.join(root, 'app', 'components', 'EquipmentWorkspace.tsx'), 'utf8')
@@ -118,8 +119,8 @@ requireAll('Résilience terrain sans promesse hors ligne fictive', appSource, [
   'SyncStatusNotice', 'Démonstration locale — non enregistrée', 'Connexion requise pour enregistrer',
   'Aucun mode hors ligne ni reprise automatique', 'Échec de l’enregistrement', 'Réessayer',
 ])
-requireAll('Mesures Surpresseur explicables', page, [
-  'MeasureRange', 'DANS LA PLAGE', 'HORS PLAGE', 'Variation</b>Indisponible', 'Fraîcheur</b>Non synchronisée',
+requireAll('Mesures Surpresseur explicables', eauRounds, [
+  'MeasureRange', 'DANS LA PLAGE', 'HORS PLAGE', 'Variation</b>Indisponible', 'Fraîcheur</b>Indisponible',
 ])
 requireAll('Verrou critique et retour Direction', page, [
   "selected.priority === 'Critique' && !selected.proof", 'retour envoyé à Facility Manager', 'Confirmer et notifier Facility Manager',

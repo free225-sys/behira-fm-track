@@ -23,6 +23,7 @@ const cockpit = await readFile(path.join(root, 'app/components/BuildingHealthCoc
 const ge01 = await readFile(path.join(root, 'app/components/Ge01Pilot.tsx'), 'utf8')
 const equipment = await readFile(path.join(root, 'app/components/EquipmentWorkspace.tsx'), 'utf8')
 const page = await readFile(path.join(root, 'app/page.tsx'), 'utf8')
+const eauRounds = await readFile(path.join(root, 'app/components/EauRounds.tsx'), 'utf8')
 const css = await readFile(path.join(root, 'app/globals.css'), 'utf8')
 const display = await import(pathToFileURL(path.join(root, 'app/lib/ui-contract/display.ts')).href)
 const fixtures = await import(pathToFileURL(path.join(root, 'app/lib/ui-contract/fixtures.ts')).href)
@@ -67,7 +68,8 @@ check('Pilotage Performance = liste d’attention', page.includes('Équipements 
 check('onglets Dossiers en pastilles', page.includes('workspace-tabs parameters-tabs agent-action-tabs') && css.includes('.dossiers-hero .workspace-tabs.dossiers-tabs button.active'))
 check('rayon secondaire unique md', css.includes('.manager-pilot .secondary-button,\n.dossiers-workspace .secondary-button{\n  border-radius:var(--radius-md)'))
 check('compteur entier compact partagé', sources.stepper.includes('role="group"') && sources.stepper.includes('ArrowUp') && ge01.includes('<CountStepper') && ge01.includes('Nombre de démarrages') && ge01.includes('Hors essai de ce jour') && css.includes('width:146px;height:44px') && !ge01.includes('function CountStepper'))
-check('en-tête ronde deux niveaux partagé', sources.header.includes('round-pilot-header') && ge01.includes('<RoundPilotHeader') && ge01.includes('GE-01 · Ronde quotidienne du groupe électrogène') && !ge01.includes('PILOTE TERRAIN') && page.includes('<RoundPilotHeader') && page.includes('Ronde quotidienne du surpresseur') && css.includes('margin:var(--space-6) 0 22px') && css.includes('@media (max-width:640px){\n  .round-pilot-header{'))
+check('en-tête ronde deux niveaux partagé', sources.header.includes('round-pilot-header') && ge01.includes('<RoundPilotHeader') && ge01.includes('GE-01 · Ronde quotidienne du groupe électrogène') && !ge01.includes('PILOTE TERRAIN') && page.includes('<RoundPilotHeader') && eauRounds.includes('<RoundPilotHeader') && eauRounds.includes('Ronde quotidienne du surpresseur') && css.includes('margin:var(--space-6) 0 22px') && css.includes('@media (max-width:640px){\n  .round-pilot-header{'))
+check('parcours eau incendie aligné GE-01', eauRounds.includes('type="date"') && eauRounds.includes('type="time"') && eauRounds.includes('Maintenant') && eauRounds.includes('Valeur non renseignée') && eauRounds.includes('Indisponible') && eauRounds.includes('Ronde quotidienne du réseau incendie') && !eauRounds.includes('78/100') && !page.includes('78/100') && css.includes('.surpresseur-progress.is-two{'))
 
 const failed = cases.filter((item) => !item.ok)
 if (failed.length) {

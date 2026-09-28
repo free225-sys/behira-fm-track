@@ -13,6 +13,7 @@ import { demoHomeSnapshot, demoReportTracking, demoRoundsFor, sessionForAudience
 import type { TodaysRound, UiSession } from './lib/ui-contract/building-health.ts';
 import { asciiInitials, displayAssetCode, displayAssetText, formatCompactMoney, formatTime, formatWeekdayDate, palierFromScore, roundStateLabel, roundSubjectLabel, scoreFigure, statusBadgeTone, statusLabel, thresholdPosition } from './lib/ui-contract/display.ts';
 import { Ge01AgentForm } from './components/Ge01Pilot';
+import { EauRounds } from './components/EauRounds';
 import { CostsWorkspace } from './components/CostsWorkspace';
 import { EquipmentWorkspace } from './components/EquipmentWorkspace';
 import { NotificationBell } from './components/NotificationCenter';
@@ -2203,26 +2204,9 @@ function Detail({ anomaly, decisionAmount, persistenceMode, onBack, onStatus, on
   </>;
 }
 
-function MeasureRange({ label, value, min, max, unit }: { label:string; value:number; min:number; max:number; unit:string }) {
-  const valid = Number.isFinite(value);
-  const inRange = valid && value >= min && value <= max;
-  const position = valid ? Math.max(0,Math.min(100,((value - min) / Math.max(.01,max - min)) * 100)) : 0;
-  return <article className={`measure-range ${!valid ? 'unknown' : inRange ? 'in-range' : 'out-range'}`}>
-    <div><span>{label}</span><b>{valid ? `${value.toLocaleString('fr-FR')} ${unit}` : 'Valeur non renseignée'}</b><em>{valid ? inRange ? 'DANS LA PLAGE' : 'HORS PLAGE' : 'À COMPLÉTER'}</em></div>
-    <div className="measure-range-track" aria-label={`${label} : ${valid ? value : 'valeur absente'} ${unit}, plage attendue ${min} à ${max} ${unit}`}><i style={{'--measure-position':`${position}%`} as React.CSSProperties} /></div>
-    <small><span>Minimum {min} {unit}</span><span>Maximum {max} {unit}</span></small>
-  </article>;
-}
-
 function Report({ persona, onNavigate }: { persona:Persona; onNavigate:(v:View)=>void }) {
   const surpresseurAccess = persona.id === 'eau_incendie';
-  const [step, setStep] = useState(0);
   const [submitted, setSubmitted] = useState(false);
-  const [pressure, setPressure] = useState('2.8');
-  const [tankLevel, setTankLevel] = useState('72');
-  const [observation, setObservation] = useState('Vibration légère sur la pompe P1 au démarrage.');
-  const [checks, setChecks] = useState<Record<string,boolean>>({ auto:true, p1:false, p2:true, leak:true, valves:true, alarm:true });
-  const setCheck = (key:string) => setChecks((items) => ({ ...items, [key]:!items[key] }));
   const session = sessionForAudience(persona.id as UiSession['audience'], persona.name);
   const roundsLead = <>
     <DemoScenarioSelect />
@@ -2268,49 +2252,10 @@ function Report({ persona, onNavigate }: { persona:Persona; onNavigate:(v:View)=
     </div>;
   }
 
-  const steps = ['Contexte','Pression','Pompes','Sécurité','Synthèse'];
-  const pressureValue = Number(pressure.replace(',','.'));
-  const hasPressureAlert = Number.isFinite(pressureValue) && pressureValue < 3;
-  const completedChecks = Object.values(checks).filter(Boolean).length;
-
   return <div className="rounds-page">
     {roundsLead}
     <p className="visually-hidden">MODULE PILOTE · SURPRESSEUR</p>
-    <RoundPilotHeader
-      title={`${displayAssetCode('DEMO-EAU')} · Ronde quotidienne du surpresseur`}
-      subtitle="Cinq étapes · fréquence quotidienne"
-      badge={<span className="mockup-label">Maquette</span>}
-    />
-
-    <SyncStatusNotice state="demo-volatile" label="État de la ronde Surpresseur" />
-
-    <section className="surpresseur-progress" aria-label="Progression de la ronde">
-      {steps.map((item,index) => <button key={item} className={index === step ? 'active' : index < step ? 'done' : ''} onClick={() => setStep(index)}><span>{index < step ? '✓' : index+1}</span><b>{item}</b></button>)}
-    </section>
-
-    <section className="surpresseur-layout">
-      <article className="panel surpresseur-form-card">
-        <div className="surpresseur-section-head"><div><span>ÉTAPE {step+1} SUR 5</span><h3>{steps[step]}</h3></div><span className="mockup-label">MAQUETTE INTERACTIVE</span></div>
-
-        {step === 0 && <div className="surpresseur-fields"><div className="context-grid"><div><span>Agent</span><b>{persona.name}</b><small>{persona.role}</small></div><div><span>Début</span><b>09:42</b><small>27 août 2026</small></div><div><span>Dernière ronde</span><b>Hier · 08:11</b><small>1 anomalie ouverte</small></div></div><label className="field">Type de ronde<Select defaultValue="Quotidienne"><option>Quotidienne</option><option>Après intervention</option><option>Contrôle exceptionnel</option></Select></label><div className="surpresseur-callout"><span>i</span><p><b>Point d’attention transmis</b><small>Vérifier la récidive du défaut pompe P1 et la pression de refoulement.</small></p></div></div>}
-
-        {step === 1 && <div className="surpresseur-fields"><div className="measure-grid"><label><span>Pression réseau</span><div><input value={pressure} inputMode="decimal" onChange={(event) => setPressure(event.target.value)} /><b>bar</b></div><small>Plage attendue : 3,0 à 4,5 bar</small></label><label><span>Niveau bâche</span><div><input value={tankLevel} inputMode="numeric" onChange={(event) => setTankLevel(event.target.value)} /><b>%</b></div><small>Plage de contrôle : 40 à 100 %</small></label></div><div className="measure-range-grid"><MeasureRange label="Pression réseau" value={pressureValue} min={3} max={4.5} unit="bar" /><MeasureRange label="Niveau de bâche" value={Number(tankLevel)} min={40} max={100} unit="%" /></div>{hasPressureAlert && <div className="measure-alert"><span>!</span><div><b>Écart détecté automatiquement</b><small>La pression saisie est inférieure au seuil. Un constat sera proposé à Facility Manager.</small></div></div>}<label className="field">Stabilité du manomètre<Select><option>Stable</option><option>Oscillation légère</option><option>Oscillation importante</option></Select></label></div>}
-
-        {step === 2 && <div className="surpresseur-fields"><div className="check-grid">{[['auto','Mode automatique actif','Commande générale'],['p1','Pompe P1 disponible','Pompe prioritaire'],['p2','Pompe P2 disponible','Pompe de secours'],['leak','Absence de fuite active','Collecteur et raccords']].map(([key,title,detail]) => <button type="button" key={key} className={checks[key] ? 'checked' : 'unchecked'} onClick={() => setCheck(key)}><span>{checks[key] ? '✓' : '!'}</span><p><b>{title}</b><small>{detail}</small></p><em>{checks[key] ? 'Conforme' : 'À signaler'}</em></button>)}</div></div>}
-
-        {step === 3 && <div className="surpresseur-fields"><div className="check-grid compact">{[['valves','Vannes en position normale','Aspiration et refoulement'],['alarm','Aucune alarme active','Coffret et supervision']].map(([key,title,detail]) => <button type="button" key={key} className={checks[key] ? 'checked' : 'unchecked'} onClick={() => setCheck(key)}><span>{checks[key] ? '✓' : '!'}</span><p><b>{title}</b><small>{detail}</small></p><em>{checks[key] ? 'Conforme' : 'À signaler'}</em></button>)}</div><label className="field">Observation terrain<textarea value={observation} onChange={(event) => setObservation(event.target.value)} /></label><div className="evidence-drop"><BrandIcon name="camera" size={20} /><div><b>Photo du manomètre ou du coffret</b><small>Illustration de maquette · compression et synchronisation non implémentées</small></div><button type="button">Choisir</button></div></div>}
-
-        {step === 4 && <div className="surpresseur-fields"><div className="round-summary"><div><span>MESURES</span><b className={hasPressureAlert ? 'warning' : ''}>{pressure} bar</b><small>Pression réseau</small></div><div><span>NIVEAU</span><b>{tankLevel} %</b><small>Bâche de stockage</small></div><div><span>CONTRÔLES</span><b>{completedChecks}/6</b><small>Points conformes</small></div></div><div className="proposed-finding"><span>!</span><div><p>CONSTAT PROPOSÉ</p><h4>Pression Surpresseur sous le seuil attendu</h4><small>Priorité proposée : Haute · Transmission à la file de qualification de Facility Manager.</small></div><Badge tone="orange">À QUALIFIER</Badge></div><label className="confirmation-line"><input type="checkbox" defaultChecked /><span>Je confirme que les valeurs correspondent à la ronde réalisée sur {displayAssetCode('DEMO-EAU')}.</span></label></div>}
-
-        <div className="surpresseur-actions"><button className="secondary-button" disabled={step === 0} onClick={() => setStep((value) => Math.max(0,value-1))}>← Précédent</button><p>Brouillon temporaire dans cette page</p>{step < 4 ? <button className="primary-button" onClick={() => setStep((value) => Math.min(4,value+1))}>Continuer →</button> : <button className="primary-button" onClick={() => setSubmitted(true)}>Valider la maquette</button>}</div>
-      </article>
-
-      <aside className="surpresseur-aside">
-        <article className="panel next-action-card"><p className="design-kicker">À SURVEILLER</p><span className="next-action-icon">!</span><h3>Pompe P1 indisponible</h3><p>Deuxième défaut en sept jours. Le réarmement provisoire ne permet pas la clôture.</p><div><span>Responsable pressenti</span><b>Agent Eau & Incendie Démo</b></div></article>
-        <article className="panel score-explain-card"><div><span>SCORE WILO</span><b>78/100</b></div><div className="score-freshness"><span><b>État</b>Dégradé</span><span><b>Variation</b>Indisponible</span><span><b>Fraîcheur</b>Non synchronisée</span></div><ul><li><i className="down" /> Pression sous le seuil <b>-8</b></li><li><i className="down" /> Défaut P1 récurrent <b>-10</b></li><li><i className="up" /> Maintenance à jour <b>+6</b></li></ul><p className="analytics-note">Score de maquette : la date de calcul et l’historique réel ne sont pas encore disponibles.</p><button type="button">Voir le détail du calcul</button></article>
-      </aside>
-    </section>
-
+    <EauRounds agentName={persona.name} draftNote="Brouillon temporaire dans cette page" onSubmit={() => setSubmitted(true)} />
     {submitted && <div className="prototype-success" role="status"><span>✓</span><div><b>Simulation de ronde terminée</b><small>Aucune donnée n’a été enregistrée dans Supabase ni mise en file hors ligne.</small></div><button onClick={() => setSubmitted(false)}>Continuer la revue</button></div>}
   </div>;
 }

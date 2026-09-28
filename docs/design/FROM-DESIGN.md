@@ -10,10 +10,11 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 ## Index
 
-Statuts : les entrées 062 à 075 sont **En vigueur** (la plus récente l’emporte). DESIGN-003 (Geist auto-hébergé) est traité (DESIGN-015). DESIGN-005 (`.gitattributes`) reste à vérifier dans le dépôt.
+Statuts : les entrées 062 à 078 sont **En vigueur** (la plus récente l’emporte). DESIGN-003 (Geist auto-hébergé) est traité (DESIGN-015). DESIGN-005 (`.gitattributes`) reste à vérifier dans le dépôt.
 
 | id | date | sujet | attendu de | bloque |
 | --- | --- | --- | --- | --- |
+| DESIGN-078 | 2026-09-28 | Parcours Eau & Incendie aligné sur GE-01 | Wilkam | livré |
 | DESIGN-077 | 2026-09-18 | Pilotage : liste d’attention et carte d’évolution | Codex | En vigueur |
 | DESIGN-076 | 2026-09-18 | Formulaire de rapport prestataire | Codex | En vigueur |
 | DESIGN-075 | 2026-09-18 | En-tête ronde deux niveaux | Wilkam | livré |
@@ -79,6 +80,16 @@ Statuts : les entrées 062 à 075 sont **En vigueur** (la plus récente l’empo
 | DESIGN-003 | 2026-08-28 | `pnpm dev` échoue sans accès réseau à `fonts.googleapis.com` | Dev Lead | tout audit hors ligne |
 | DESIGN-002 | 2026-08-28 | Nomenclature unique des destinations — *arbitrée, voir DEC-002* | Dev Lead | routes |
 | DESIGN-001 | 2026-08-28 | Lot 1 — spécification du socle de tokens | Dev Lead | lot 2, écran pilote |
+
+---
+
+## DESIGN-078 — Parcours Eau & Incendie aligné sur GE-01
+
+- **Date :** 28 septembre 2026
+- **Statut :** Livré.
+- **Périmètre :** affichage. Pas de `data.ts`, pas de score, pas de règle métier.
+
+Le parcours de l’agent Eau & Incendie reprend les propriétés du parcours électricien. WILO-01 et RIA-01 sont deux rondes distinctes (onglets). Rien n’est présélectionné : mesures vides, contrôles « À renseigner », confirmation décochée. Une case vide n’est ni 0 ni un écart — le repère affiche « Valeur non renseignée » et « À COMPLÉTER », et la synthèse ne propose un constat que si une pression saisie est sous le seuil. Date et heure : champs date + heure + « Maintenant » (Abidjan), y compris sur RIA-01 (plus de listes jour / mois / année). Les étapes suivantes du rail sont inaccessibles tant qu’elles ne sont pas atteintes. En-tête deux niveaux (`RoundPilotHeader`). Score WILO et score RIA : « Indisponible », aucun 78/100 inventé. Sur grand écran le rail est une grille (5 colonnes, 2 pour RIA) pour que l’étape active ne recouvre plus la suivante et que « Coffret » reste lisible.
 
 ---
 
