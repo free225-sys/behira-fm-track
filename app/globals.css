@@ -5131,3 +5131,9 @@ h1{
   .watchlist li{grid-template-columns:minmax(0,1fr) auto;row-gap:6px}
   .watchlist-score{grid-column:1/-1;justify-content:flex-start}
 }
+
+/* Le menu « Démarrer une ronde » dépasse la carte ; overflow de .sheet le coupait. */
+.sheet.today-rounds-panel{overflow:visible}
+@media (min-width:701px){
+  .start-round-panel{max-height:min(70vh,480px);overflow:auto}
+}
