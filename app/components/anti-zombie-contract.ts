@@ -53,7 +53,7 @@ export function normalizeAntiZombieSummary(data: AntiZombieSummaryData): Normali
   const dossierState = clean(data.dossierState) ?? 'Ouvert';
   const status = clean(data.status) ?? 'Étape non renseignée';
   const responsible = clean(data.responsible) ?? 'Responsable non attribué';
-  const expectedActor = clean(data.nextActionAssignee) ?? clean(data.expectedActor) ?? 'Acteur attendu non renseigné';
+  const expectedActor = clean(data.nextActionAssignee) ?? clean(data.expectedActor) ?? (status === 'Clôturée' || dossierState === 'Clôturé' ? 'Aucun acteur attendu' : 'Acteur attendu non renseigné');
   const nextAction = clean(data.nextAction) ?? 'Prochaine action non renseignée';
   const nextActionDetail = clean(data.nextActionDetail);
   const deadline = clean(data.deadline);

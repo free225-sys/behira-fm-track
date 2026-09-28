@@ -1,17 +1,18 @@
 'use client';
 
-import { BrandIcon, Button, type BrandIconName } from './ui';
+import { Button, BrandIcon, type BrandIconName } from './ui';
 
 export type SyncStatusState =
   | 'demo-volatile'
   | 'online-required'
+  | 'queued-local'
   | 'transmitting'
   | 'server-confirmed'
   | 'error';
 
 const syncStatusContract: Record<SyncStatusState, { icon: BrandIconName; title: string; description: string }> = {
   'demo-volatile': {
-    icon: 'cloudOff',
+    icon: 'circleAlert',
     title: 'Démonstration locale — non enregistrée',
     description: 'Les saisies restent dans cette page et peuvent être perdues en la quittant. Aucun envoi automatique.',
   },
@@ -19,6 +20,11 @@ const syncStatusContract: Record<SyncStatusState, { icon: BrandIconName; title: 
     icon: 'wifiOff',
     title: 'Connexion requise pour enregistrer',
     description: 'Cette action écrit directement sur le serveur. Aucun mode hors ligne ni reprise automatique dans cette version.',
+  },
+  'queued-local': {
+    icon: 'cloudOff',
+    title: 'Protégée sur cet appareil',
+    description: 'La saisie est conservée dans une file locale et sera envoyée automatiquement dès que le réseau sera disponible.',
   },
   transmitting: {
     icon: 'loader',
@@ -57,7 +63,7 @@ export function SyncStatusNotice({
       aria-label={label}
       aria-live="polite"
     >
-      <span className="sync-status-icon" aria-hidden="true"><BrandIcon name={content.icon} size={18} /></span>
+      <span className="sync-status-icon" aria-hidden="true"><BrandIcon name={content.icon} /></span>
       <span className="sync-status-copy">
         <b>{content.title}</b>
         <small>{content.description}</small>

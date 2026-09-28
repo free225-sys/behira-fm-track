@@ -18,6 +18,46 @@ export type AuthProfileGate = {
   passwordChangedAt: string | null;
 };
 
+export const SESSION_CHANGED_MESSAGE =
+  "Votre session a changé, veuillez reprendre l’action.";
+
+export class AuthSessionChangedError extends Error {
+  constructor() {
+    super(SESSION_CHANGED_MESSAGE);
+    this.name = "AuthSessionChangedError";
+  }
+}
+
+export async function assertAuthenticatedUser(
+  client: SupabaseClient<Database>,
+  expectedUserId: string,
+  options: { allowOffline?: boolean } = {},
+) {
+  const { data: sessionData, error: sessionError } =
+    await client.auth.getSession();
+  const sessionUser = sessionData.session?.user;
+
+  if (sessionError || !sessionUser || sessionUser.id !== expectedUserId) {
+    throw new AuthSessionChangedError();
+  }
+
+  if (options.allowOffline) return sessionUser;
+
+  const { data, error } = await client.auth.getUser();
+  if (error || !data.user || data.user.id !== expectedUserId) {
+    throw new AuthSessionChangedError();
+  }
+
+  return data.user;
+}
+
+export function isAuthSessionChangedError(error: unknown) {
+  return (
+    error instanceof AuthSessionChangedError ||
+    (error instanceof Error && error.message === SESSION_CHANGED_MESSAGE)
+  );
+}
+
 type AuthGatePayload = {
   profile_id?: string;
   employee_code?: string;

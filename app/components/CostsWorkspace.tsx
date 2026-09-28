@@ -127,3 +127,19 @@ export function CostsWorkspace({ items, audience, threshold, onOpenDossier }: {
     </Card>
   </section>;
 }
+
+export type CostSubmissionInput = {
+  replacesCostReference?:string;
+  anomalyReference:string;
+  amount:number;
+  budgetType:'opex' | 'capex';
+  description:string;
+  idempotencyKey:string;
+};
+
+export type CostReviewInput = {
+  costReference:string;
+  decision:'approved' | 'rejected' | 'returned';
+  comment:string;
+  idempotencyKey:string;
+};

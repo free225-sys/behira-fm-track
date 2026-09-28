@@ -147,8 +147,8 @@ for (const token of banned) {
 }
 check('cockpit ne mélange pas Sain/Surveillance comme statut', !cockpit.includes("'Sain'") && !cockpit.includes("'Surveillance'") && !cockpit.includes('statusWord'))
 check('Accueil démo = not_computable', page.includes('demoHomeSnapshot') && fixtures.demoHomeSnapshot(fixtures.sessionForAudience('facility', 'FM')).score.state === 'not_computable')
-check('seuil unique 400_000 dans page.tsx', (page.match(/400_000/g) ?? []).length === 1)
-check('data.ts non modifié par ce lot (pas de contrat UI)', !dataTs.includes('behira.lot0.v1') && !dataTs.includes('BuildingHealthSnapshot'))
+check('seuil démo importé, aucun montant financier codé dans page.tsx', page.includes('const DECISION_THRESHOLD_FCFA = DEMO_THRESHOLD.value') && !/DECISION_THRESHOLD_FCFA\s*=\s*400_?000/.test(page) && page.includes('setDecisionThreshold(snapshot.financialDecisionParameter.value)'))
+check('santé raccordée au contrat serveur sans fixture de remplacement', dataTs.includes("client.rpc('get_building_health_snapshot')") && dataTs.includes('readHealthSnapshot(') && dataTs.includes('healthSnapshot: BuildingHealthSnapshot') && !dataTs.includes('demoHomeSnapshot'))
 check('CTA Planifier seulement via helper', scoreBlock.includes('shouldOfferControlPlanning') && !fixturesSource.includes('actionLabel'))
 check('final affiché tel quel, sans Math.round UI', !displaySource.includes('Math.round') && displaySource.includes('displayRawScore') && displaySource.includes('Math.floor') && !displaySource.includes('export function displayScore') && scoreBlock.includes('score.final'))
 check('mapping DEMO-GE → GE-01', displayAssetCode('DEMO-GE') === 'GE-01')

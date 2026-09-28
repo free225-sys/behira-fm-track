@@ -1,4 +1,5 @@
 'use client';
+import type { HealthPresentation } from '../../lib/ui-contract/presentation';
 
 import type { BuildingHealthSnapshot } from '../../lib/ui-contract/building-health.ts';
 import {
@@ -7,6 +8,7 @@ import {
   formatInstant,
   insufficientCopy,
   insufficientReasonLabel,
+  missingControlLabel,
   palierFromScore,
   palierSituationLabel,
   palierTone,
@@ -19,7 +21,7 @@ export function HealthScoreBlock({
   variant = 'full',
   onPlan,
 }: {
-  snapshot: BuildingHealthSnapshot;
+  snapshot: HealthPresentation;
   variant?: 'full' | 'compact' | 'banner';
   onPlan?: () => void;
 }) {
@@ -30,7 +32,7 @@ export function HealthScoreBlock({
       <ul className="health-missing-list">
         {score.missingReasons.map((reason) => <li key={reason}>{insufficientReasonLabel(reason)}</li>)}
         {score.missingControls.map((item) => (
-          <li key={`${item.equipmentCode}-${item.missingItem}`}>{item.equipmentCode} · {item.missingItem}{item.equipmentName ? ` · ${item.equipmentName}` : ''}</li>
+          <li key={`${item.equipmentCode}-${item.missingItem}`}>{item.equipmentCode} · {missingControlLabel(item.missingItem)}{item.equipmentName ? ` · ${item.equipmentName}` : ''}</li>
         ))}
         {score.hiddenMissingControlCount > 0 ? <li>{score.hiddenMissingControlCount} contrôle{score.hiddenMissingControlCount > 1 ? 's' : ''} hors périmètre</li> : null}
       </ul>

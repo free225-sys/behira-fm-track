@@ -1,9 +1,16 @@
 'use client';
 
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { Ge01Planning, type Ge01AssignmentHandler } from './Ge01Planning';
+import type { Ge01Operations } from '../lib/ge01/operations';
+import { Ge01EvidencePicker, Ge01EvidenceGallery, type Ge01ProofLoader } from './Ge01Evidence';
+import { useCallback, useMemo, useEffect, useRef, useState, type FormEvent } from 'react';
 
 import {
   createEmptyGe01Draft,
+  ge01HasAnomaly,
+  queueGe01Draft,
+  GE01_FIELD_DEFINITIONS,
+  formatGe01CheckValue,
   ge01NowStamp,
   restoreGe01Draft,
   validateCompleteGe01Draft,
@@ -15,6 +22,7 @@ import {
 } from '../lib/ge01/report';
 import {
   DEMO_LAST_CONFIRMED,
+  EMPTY_LAST_CONTEXT,
   deltaNoteForDraft,
   evaluateEngineHoursDelta,
   formatEngineHours,
@@ -51,6 +59,11 @@ import { CountStepper, MetierStatusBadge, RoundPilotHeader, SegmentedControl, us
 import type { EquipmentCard } from '../lib/ui-contract/building-health.ts';
 import { controlValidityLabel, formatDayTime } from '../lib/ui-contract/display.ts';
 import { EQUIPMENT_META, demoHomeSnapshot, sessionForAudience } from '../lib/ui-contract/fixtures.ts';
+import type { OperationalReport } from '../lib/supabase/data';
+import type { useOfflineSync } from '../lib/offline/useOfflineSync';
+import { OfflineSyncStatus } from './OfflineSyncStatus';
+import { Ge01ReviewPanel, type Ge01ReviewHandler } from './Ge01ReviewPanel';
+type OfflineSyncApi = ReturnType<typeof useOfflineSync>;
 
 
 type SubmissionState = 'editing' | 'queued' | 'server_confirmed' | 'demo';
@@ -308,22 +321,40 @@ function MeasureField({
   </div>;
 }
 
-export function Ge01AgentForm({ agentName }: { agentName: string }) {
-  const draftId = 'ge01:daily:v1';
-  const drafts = useRef(new Map<string, Ge01Draft>());
-  const [draft, setDraft] = useState<Ge01Draft>(() => createEmptyGe01Draft(new Date(), crypto.randomUUID()));
-  const [draftReady, setDraftReady] = useState(false);
-  const [draftSaveState, setDraftSaveState] = useState<DraftSaveState>('loading');
+export function Ge01AgentForm({
+  isTest = false,
+  agentName,
+  equipment,
+  persistenceEnabled,
+  offlineSync,
+  flash,
+}: {
+  isTest?: boolean;
+  agentName: string;
+  equipment?: EquipmentCard | null;
+  persistenceEnabled: boolean;
+  offlineSync: OfflineSyncApi;
+  flash: (message: string) => void;
+}) {
+  const draftId = isTest ? "ge01:daily:recette:v1" : "ge01:daily:v1";
+  const emptyDraft = useCallback(() => ({ ...createEmptyGe01Draft(new Date(), crypto.randomUUID()), isTest }), [isTest]);
+  const [draft, setDraft] = useState<Ge01Draft>(() => ({ ...createEmptyGe01Draft(), isTest }));
+  const [draftReady, setDraftReady] = useState(!persistenceEnabled);
+  const [draftSaveState, setDraftSaveState] = useState<DraftSaveState>(persistenceEnabled ? "loading" : "disabled");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [submissionState, setSubmissionState] = useState<SubmissionState>('editing');
-  const [lastContext, setLastContext] = useState<Ge01LastContext>(DEMO_LAST_CONFIRMED);
-  const [nowHint, setNowHint] = useState('Horodatage pré-rempli à l’ouverture');
+  const [submissionState, setSubmissionState] = useState<SubmissionState>("editing");
   const submissionLock = useRef(false);
   const saveTimerRef = useRef<number | null>(null);
   const { scenario } = useDemoScoreScenario();
-  const ge01Equipment = demoHomeSnapshot(sessionForAudience('electricite', agentName), scenario).equipment.find((item) => item.code === 'GE-01') ?? null;
+  const ge01Equipment = persistenceEnabled ? equipment ?? null : demoHomeSnapshot(sessionForAudience('electricite', agentName), scenario).equipment.find((item) => item.code === 'GE-01') ?? null;
+  const pendingDraftSaveRef = useRef<Promise<unknown> | null>(null);
+  const { deleteDraft, enqueueRound, loadDraft, saveDraft } = offlineSync;
+  const pendingCurrentRound = offlineSync.ge01Pending?.find(item => item.isTest === isTest && item.date === draft.date);
+  const hasPendingCurrentRound = Boolean(pendingCurrentRound);
 
+  const [lastContext] = useState<Ge01LastContext>(persistenceEnabled ? EMPTY_LAST_CONTEXT : DEMO_LAST_CONFIRMED);
+  const [nowHint, setNowHint] = useState('Horodatage pré-rempli à l’ouverture');
   const update = <K extends keyof Ge01Draft>(key: K, value: Ge01Draft[K]) => {
     setDraft((current) => ({ ...current, [key]: value }));
     setErrors((current) => {
@@ -333,7 +364,7 @@ export function Ge01AgentForm({ agentName }: { agentName: string }) {
       return next;
     });
   };
-  const updateMeasure = (key: 'fuelLevel' | 'oilLevel' | 'waterTemperature' | 'batteryVoltage', value: Ge01Measure) => {
+  const updateMeasure = (key: "fuelLevel" | "oilLevel" | "waterTemperature" | "batteryVoltage", value: Ge01Measure) => {
     setDraft((current) => ({ ...current, [key]: value }));
     setErrors((current) => {
       const next = { ...current };
@@ -344,68 +375,103 @@ export function Ge01AgentForm({ agentName }: { agentName: string }) {
   };
 
   useEffect(() => {
-    const stored = drafts.current.get(draftId);
-    setDraft(restoreGe01Draft(stored, new Date(), () => crypto.randomUUID()));
-    setDraftSaveState(stored ? 'saved' : 'idle');
-    setDraftReady(true);
-    setLastContext(readLastConfirmedGe01(window.localStorage));
-  }, []);
+    if (!persistenceEnabled) return;
+    let cancelled = false;
+    loadDraft<Ge01Draft>(draftId).then((stored) => {
+      if (cancelled) return;
+      const restored = restoreGe01Draft(stored?.value);
+      setDraft({ ...restored, isTest, confirmed: false });
+      setDraftSaveState(stored ? "saved" : "idle");
+    }).catch(() => {
+      if (!cancelled) {
+        setDraft(emptyDraft());
+        setDraftSaveState("error");
+      }
+    }).finally(() => {
+      if (!cancelled) setDraftReady(true);
+    });
+    return () => { cancelled = true; };
+  }, [loadDraft, persistenceEnabled, draftId, isTest, emptyDraft]);
 
   useEffect(() => {
-    if (!draftReady || submissionState !== 'editing' || !draft.submissionId) return;
+    if (!persistenceEnabled || !draftReady || hasPendingCurrentRound || submissionState !== "editing" || !draft.submissionId) return;
     const timer = window.setTimeout(() => {
-      drafts.current.set(draftId, draft);
-      setDraftSaveState('saved');
+      saveTimerRef.current = null;
+      setDraftSaveState("saving");
+      const operation = saveDraft(draftId, draft)
+        .then(() => setDraftSaveState("saved"))
+        .catch(() => setDraftSaveState("error"));
+      pendingDraftSaveRef.current = operation;
     }, 450);
     saveTimerRef.current = timer;
-    return () => window.clearTimeout(timer);
-  }, [draft, draftReady, submissionState]);
+    return () => {
+      window.clearTimeout(timer);
+      if (saveTimerRef.current === timer) saveTimerRef.current = null;
+    };
+  }, [draft, draftReady, persistenceEnabled, saveDraft, submissionState, draftId, hasPendingCurrentRound]);
+
+  const visibleSubmissionState: SubmissionState = offlineSync.latestRoundReceipt?.queueId === draft.submissionId
+    ? "server_confirmed"
+    : submissionState;
 
   const goNext = () => {
-    const prepared = draft.step === 0 && draft.starts24h === ''
-      ? { ...draft, starts24h: '0' }
-      : draft;
-    if (prepared !== draft) setDraft(prepared);
-    const nextErrors = validateGe01Step(prepared, prepared.step);
+    const nextErrors = validateGe01Step(draft, draft.step);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
-    update('step', Math.min(3, prepared.step + 1));
+    update("step", Math.min(3, draft.step + 1));
   };
 
-  const submit = () => {
-    if (submissionLock.current || submitting || submissionState !== 'editing') return;
+  const submit = async () => {
+    if (submissionLock.current || submitting || submissionState !== "editing") return;
     const nextErrors = validateCompleteGe01Draft(draft);
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length) return;
+    if (Object.keys(nextErrors).length) {
+      const firstError = Object.keys(nextErrors)[0];
+      const fieldStep = GE01_FIELD_DEFINITIONS.find((field) => field.code === firstError)?.step;
+      if (fieldStep !== undefined) update("step", fieldStep);
+      flash("Le rapport contient encore des informations à compléter.");
+      return;
+    }
     submissionLock.current = true;
     setSubmitting(true);
-    const hours = parseMeasure(draft.engineHours);
-    writeLastConfirmedGe01({
-      engineHours: hours,
-      performedOn: draft.date,
-      controlStatus: draft.finalStatus === 'Opérationnel' ? 'ok' : draft.finalStatus ? 'anomalie' : lastContext.controlStatus,
-      location: lastContext.location,
-      building: lastContext.building,
-      fuelLevel: draft.fuelLevel.unavailable ? lastContext.fuelLevel : parseMeasure(draft.fuelLevel.value),
-      oilLevel: draft.oilLevel.unavailable ? lastContext.oilLevel : parseMeasure(draft.oilLevel.value),
-      waterTemperature: draft.waterTemperature.unavailable ? lastContext.waterTemperature : parseMeasure(draft.waterTemperature.value),
-      batteryVoltage: draft.batteryVoltage.unavailable ? lastContext.batteryVoltage : parseMeasure(draft.batteryVoltage.value),
-      lastStartOutcome: draft.startOutcome || lastContext.lastStartOutcome,
-      dmcNextDate: lastContext.dmcNextDate,
-    }, window.localStorage);
-    setLastContext(readLastConfirmedGe01(window.localStorage));
-    setSubmissionState('queued');
-    setSubmitting(false);
+    try {
+      if (!persistenceEnabled) {
+        setSubmissionState("demo");
+        setSubmitting(false);
+        return;
+      }
+      if (saveTimerRef.current !== null) {
+        window.clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+      }
+      await pendingDraftSaveRef.current?.catch(() => undefined);
+      await queueGe01Draft(draft, agentName, draftId, { enqueueRound, deleteDraft });
+      setSubmissionState("queued");
+      setSubmitting(false);
+      flash(offlineSync.online ? "Rapport placé dans la file ; transmission en cours." : "Rapport protégé localement ; envoi automatique au retour du réseau.");
+    } catch (error) {
+      submissionLock.current = false;
+      setSubmitting(false);
+      flash(`Rapport non mis en file : ${error instanceof Error ? error.message : "stockage local indisponible"}.`);
+    }
   };
 
   const startAnother = () => {
     submissionLock.current = false;
     setSubmitting(false);
     setErrors({});
-    setSubmissionState('editing');
-    setDraft(createEmptyGe01Draft(new Date(), crypto.randomUUID()));
-    setDraftSaveState('idle');
-    setNowHint('Horodatage pré-rempli à l’ouverture');
+    setSubmissionState("editing");
+    setDraft(emptyDraft());
+    setDraftSaveState(persistenceEnabled ? "idle" : "disabled");
+  };
+
+  const copyRealDraft = async () => {
+    const stored = await loadDraft<Ge01Draft>("ge01:daily:v1");
+    if (!stored) { flash("Aucun brouillon réel à copier."); return; }
+    const copy = { ...restoreGe01Draft(stored.value), submissionId: crypto.randomUUID(), isTest: true, confirmed: false };
+    await saveDraft(draftId, copy);
+    setDraft(copy);
+    flash("Copie de recette créée. Le brouillon réel est conservé. Vérifiez les réponses puis confirmez leur caractère fictif.");
   };
 
   const reviewItems = buildReviewItems(draft, agentName);
@@ -417,11 +483,17 @@ export function Ge01AgentForm({ agentName }: { agentName: string }) {
     ['failed', 'Démarrage échoué', 'Une tentative a réellement eu lieu'],
     ['not_performed', 'Essai impossible', 'Prévu, mais non réalisé ou interrompu'],
   ];
-  const draftStatus = draftSaveState === 'loading'
-    ? { tone: 'blue' as const, badge: 'CHARGEMENT DU BROUILLON', detail: 'Chargement du brouillon…' }
-    : draftSaveState === 'saved'
-      ? { tone: 'success' as const, badge: 'BROUILLON SAUVEGARDÉ', detail: 'Brouillon local sauvegardé' }
-      : { tone: 'neutral' as const, badge: 'BROUILLON LOCAL', detail: 'Brouillon prêt à être sauvegardé' };
+  const draftStatus = !persistenceEnabled
+    ? { tone: "neutral", badge: "DÉMO SANS SAUVEGARDE", detail: "Démonstration sans persistance" }
+    : draftSaveState === "loading"
+      ? { tone: "blue", badge: "CHARGEMENT DU BROUILLON", detail: "Chargement du brouillon…" }
+      : draftSaveState === "saving"
+        ? { tone: "blue", badge: "SAUVEGARDE EN COURS", detail: "Enregistrement du brouillon…" }
+        : draftSaveState === "saved"
+          ? { tone: "success", badge: "BROUILLON SAUVEGARDÉ", detail: "Brouillon local sauvegardé" }
+          : draftSaveState === "error"
+            ? { tone: "critical", badge: "ÉCHEC SAUVEGARDE", detail: "Brouillon local non sauvegardé" }
+            : { tone: "neutral", badge: "BROUILLON LOCAL", detail: "Brouillon prêt à être sauvegardé" };
 
   const fuelStatus = draft.fuelLevel.unavailable ? null : statusFromValue(draft.fuelLevel.value, evaluateFuel);
   const oilStatus = draft.oilLevel.unavailable ? null : statusFromValue(draft.oilLevel.value, evaluateOil);
@@ -458,25 +530,22 @@ export function Ge01AgentForm({ agentName }: { agentName: string }) {
     });
   };
 
-  if (submissionState !== 'editing') return <>
-    <RoundPilotHeader
-      title="GE-01 · Rapport du groupe électrogène"
-      subtitle="Rapport conservé sans création automatique d’anomalie."
-      badge={<Badge tone="blue">FILE D’ENVOI</Badge>}
-    />
-    <Card className="ge-submit-result" role="status"><span>i</span><div><h3>Placé dans la file d’envoi · en attente de confirmation serveur</h3><p>Le rapport reste disponible hors ligne sur cet appareil.</p></div><Button variant="secondary" onClick={startAnother}>Nouvelle ronde</Button></Card>
+  if (persistenceEnabled && draftReady && visibleSubmissionState === 'editing' && pendingCurrentRound && pendingCurrentRound.id !== draft.submissionId) return <>
+    <Card role="status"><h3>Ronde GE-01 déjà enregistrée sur cet appareil</h3><p>Son envoi attend la confirmation du serveur. Le rapport et ses photos sont conservés ; attendez cette confirmation avant de saisir une nouvelle ronde du jour.</p></Card>
+    <OfflineSyncStatus enabled online={offlineSync.online} running={offlineSync.running} counts={offlineSync.counts} latestIssue={offlineSync.latestIssue} latestRoundReceipt={null} onRetry={() => void offlineSync.retryFailed().then(() => offlineSync.synchronize())} />
+  </>;
+
+  if (visibleSubmissionState !== "editing") return <>
+    <RoundPilotHeader title="GE-01 · Rapport du groupe électrogène" subtitle="Rapport conservé sans création automatique d’anomalie." badge={<Badge tone="blue">AUCUN IMPORT</Badge>} />
+    <OfflineSyncStatus enabled={persistenceEnabled} online={offlineSync.online} running={offlineSync.running} counts={offlineSync.counts} latestIssue={offlineSync.latestIssue} latestRoundReceipt={Boolean(offlineSync.latestRoundReceipt?.isTest) === isTest ? offlineSync.latestRoundReceipt : null} onRetry={() => void offlineSync.retryFailed().then(() => offlineSync.synchronize())} />
+    {isTest && <Badge tone="orange">RECETTE — DONNÉES FICTIVES</Badge>}
+    <Card className="ge-submit-result" role="status"><span>{visibleSubmissionState === "server_confirmed" ? <BrandIcon name="check" /> : visibleSubmissionState === "queued" ? <BrandIcon name="refresh" /> : <BrandIcon name="info" />}</span><div><h3>{visibleSubmissionState === "server_confirmed" ? `Rapport ${offlineSync.latestRoundReceipt?.reportReference ?? ""} confirmé par le serveur` : visibleSubmissionState === "queued" ? "Rapport enregistré sur cet appareil" : "Simulation locale terminée"}</h3><p>{visibleSubmissionState === "server_confirmed" ? "Facility Manager peut désormais le consulter. Cette confirmation ne signifie pas qu’il l’a lu ou validé." : visibleSubmissionState === "queued" ? "Il sera transmis une seule fois dès que la connexion le permet." : "Aucune donnée n’a été envoyée ni présentée comme reçue par Facility Manager."}</p></div>{visibleSubmissionState !== "queued" ? <Button variant="secondary" onClick={startAnother}>Nouvelle ronde</Button> : null}</Card>
   </>;
 
   return <>
-    <RoundPilotHeader
-      title="GE-01 · Ronde quotidienne du groupe électrogène"
-      subtitle="Quatre étapes · essai de démarrage prévu"
-      badge={<Badge tone={draftStatus.tone}>{draftStatus.badge}</Badge>}
-    />
-    <section className="sync-banner is-online" role="status">
-      <span className="status-dot online" />
-      <div><b>Toutes les saisies sont synchronisées</b><small>File de cet appareil · aucune donnée terrain en attente sur cette session.</small></div>
-    </section>
+    <RoundPilotHeader title="GE-01 · Ronde quotidienne du groupe électrogène" subtitle="Quatre étapes · essai de démarrage prévu" badge={<Badge tone={draftStatus.tone}>{draftStatus.badge}</Badge>} />
+    <OfflineSyncStatus enabled={persistenceEnabled} online={offlineSync.online} running={offlineSync.running} counts={offlineSync.counts} latestIssue={offlineSync.latestIssue} latestRoundReceipt={Boolean(offlineSync.latestRoundReceipt?.isTest) === isTest ? offlineSync.latestRoundReceipt : null} onRetry={() => void offlineSync.retryFailed().then(() => offlineSync.synchronize())} />
+    {isTest && <Card role="status"><Badge tone="orange">RECETTE — DONNÉES FICTIVES</Badge><p>Aucun contrôle matériel réel n’est attesté.</p></Card>}
     <nav className="ge-progress" aria-label="Étapes du rapport GE-01">
       {steps.map((label, index) => <button key={label} className={index === draft.step ? 'active' : index < draft.step ? 'done' : ''} aria-current={index === draft.step ? 'step' : undefined} onClick={() => index <= draft.step && update('step', index)}><span>{index < draft.step ? '✓' : index + 1}</span><b>{label}</b></button>)}
     </nav>
@@ -525,7 +594,7 @@ export function Ge01AgentForm({ agentName }: { agentName: string }) {
               </div>
               {errorFor(errors, 'date')}
               {errorFor(errors, 'time')}
-              <small>{nowHint}</small>
+              <small>{nowHint} · heure d’Abidjan (UTC+0). Vérifiez l’heure des anciens brouillons.</small>
             </div>
             <Field label="Heures compteur moteur" size="measure" className="ge-hours-field">
               <NumericShell
@@ -584,14 +653,7 @@ export function Ge01AgentForm({ agentName }: { agentName: string }) {
                 <b>Photo recommandée</b>
                 <p>Un bruit présent ou une fumée noire/blanche gagne à être documenté.</p>
               </div>
-              <label className="secondary-button ge-photo-button">
-                Ajouter une photo
-                <input className="visually-hidden" type="file" accept="image/*" onChange={(event) => {
-                  const files = Array.from(event.target.files ?? []).map((file) => file.name);
-                  if (files.length) update('photos', [...draft.photos, ...files]);
-                  event.target.value = '';
-                }} />
-              </label>
+<small>Joignez la photo à l’étape de vérification.</small>
             </div>
           ) : null}
         </div> : null}
@@ -625,6 +687,11 @@ export function Ge01AgentForm({ agentName }: { agentName: string }) {
             </div>
           </> : null}
           {draft.startOutcome === 'not_performed' ? <Field label="Motif de l’essai impossible" size="long"><textarea value={draft.testExceptionReason} aria-invalid={Boolean(errors.testExceptionReason)} onChange={(event) => update('testExceptionReason', event.target.value)} placeholder="Décrivez la situation sans inventer de procédure" />{errorFor(errors, 'testExceptionReason')}<small>Aucune durée ni échec ne sera enregistré.</small></Field> : null}
+          {draft.startOutcome === 'success' && <Field label="Durée réelle de l’essai (min)"><input inputMode="decimal" value={draft.testDuration} onChange={event=>update('testDuration',event.target.value)} />{errorFor(errors,'testDuration')}</Field>}
+          {draft.startOutcome && draft.startOutcome !== 'not_performed' && <>
+            <BooleanObservation label="Fonctionnement correct pendant l’essai" value={draft.functioningCorrect} onChange={value=>update('functioningCorrect',value)} error={errors.functioningCorrect} />
+            {draft.startOutcome === 'failed' && <BooleanObservation label="Retour AUTO après essai" value={draft.returnAuto} onChange={value=>update('returnAuto',value)} error={errors.returnAuto} />}
+          </>}
           <div className="ge-auto-divider"><b>État actuel des automatismes</b><small>Distinct du retour AUTO après l’essai.</small></div>
           <div className="ge-field-grid">
             <BooleanObservation label="Groupe actuellement en AUTO" value={draft.geAuto} onChange={(value) => update('geAuto', value)} error={errors.geAuto} warning="Le groupe n’est pas en AUTO. Signalez-le au Facility Manager." />
@@ -687,25 +754,102 @@ export function Ge01AgentForm({ agentName }: { agentName: string }) {
           </div>
           <div className="ge-comment-photo">
             <Field label="Commentaire facultatif" size="long"><textarea value={draft.comment} onChange={(event) => update('comment', event.target.value)} placeholder="Ajoutez une précision utile, sans recopier toutes les réponses" /></Field>
-            <label className="secondary-button ge-photo-button">
-              <BrandIcon name="camera" />
-              Ajouter une photo
-              <input className="visually-hidden" type="file" accept="image/*" onChange={(event) => {
-                const files = Array.from(event.target.files ?? []).map((file) => file.name);
-                if (files.length) update('photos', [...draft.photos, ...files]);
-                event.target.value = '';
-              }} />
-            </label>
           </div>
-          {draft.photos.length ? <small className="ge-photo-list">{draft.photos.length} photo{draft.photos.length > 1 ? 's' : ''} jointe{draft.photos.length > 1 ? 's' : ''} localement : {draft.photos.join(', ')}</small> : null}
-          <label className="ge-confirmation"><input type="checkbox" checked={draft.confirmed} onChange={(event) => update('confirmed', event.target.checked)} /><span>Je confirme que ces informations correspondent au contrôle réellement effectué.</span></label>
+          {(ge01HasAnomaly(draft)||(draft.evidence?.length??0)>0)&&<><Ge01EvidencePicker persistent={persistenceEnabled} value={draft.evidence ?? []} onChange={value => update('evidence', value)} />{ge01HasAnomaly(draft)&&!draft.evidence?.some(p=>p.purpose==='defect')&&<Field label="Photo impossible — motif obligatoire"><textarea maxLength={2000} value={draft.photoExceptionReason??''} onChange={e=>update('photoExceptionReason',e.target.value)}/></Field>}</>}
+          {!ge01HasAnomaly(draft)&&<p>Aucune photo requise pour un contrôle sans anomalie.</p>}
+          {draft.photos.length > 0 && <p role="status">Ancien brouillon : les noms {draft.photos.join(', ')} ne contiennent aucun fichier. Sélectionnez à nouveau ces photos.</p>}
+          <label className="ge-confirmation"><input type="checkbox" checked={draft.confirmed} onChange={(event) => update('confirmed', event.target.checked)} /><span>{isTest ? 'Je confirme que ces données sont fictives et servent uniquement à la recette de l’application.' : 'Je confirme que ces informations correspondent au contrôle réellement effectué.'}</span></label>
           {errorFor(errors, 'confirmed')}
           {Object.keys(errors).length ? <p className="ge-missing-summary" role="alert">{Object.keys(errors).length} erreur{Object.keys(errors).length > 1 ? 's' : ''} à corriger avant l’envoi.</p> : null}
         </div> : null}
 
-        <div className="ge-actions"><Button variant="secondary" disabled={draft.step === 0 || submitting} onClick={() => update('step', Math.max(0, draft.step - 1))}>Précédent</Button><p><span className="status-dot online" /> Enregistrement local · réseau disponible</p>{draft.step < 3 ? <Button disabled={submitting} onClick={goNext}>Continuer</Button> : <Button disabled={submitting} aria-busy={submitting} onClick={submit}>{submitting ? 'Transmission…' : 'Transmettre à Facility Manager'}</Button>}</div>
+        <div className="ge-actions"><Button variant="secondary" disabled={draft.step === 0 || submitting} onClick={() => update('step', Math.max(0, draft.step - 1))}>Précédent</Button><p><span className={`status-dot ${persistenceEnabled && offlineSync.online ? "online" : "local"}`} /> {persistenceEnabled ? offlineSync.online ? "Enregistrement local · réseau disponible" : "Enregistrement local · hors connexion" : "Simulation locale sans sauvegarde"}</p>{draft.step < 3 ? <Button disabled={!draftReady || submitting} onClick={goNext}>Continuer</Button> : <Button disabled={!draftReady || submitting} aria-busy={submitting} onClick={submit}>{submitting ? 'Transmission…' : 'Transmettre à Facility Manager'}</Button>}</div>
       </Card>
       <aside className="ge-form-aside"><Card><p className="design-kicker">CONTRÔLE QUOTIDIEN</p><h3>Essai de démarrage prévu</h3><p>Une tentative échouée et un essai impossible ne produisent jamais la même réponse.</p></Card><Card><p className="design-kicker">APRÈS L’ENVOI</p><ol><li><span>1</span>Rapport confirmé par le serveur</li><li><span>2</span>Lecture de toutes les réponses par Facility Manager</li><li><span>3</span>Qualification ultérieure si nécessaire</li></ol><small>Aucune intervention n’est créée automatiquement.</small></Card></aside>
     </section>
   </>;
+}
+
+function formatMoment(value: string | null) {
+  if (!value) return "Non disponible";
+  return new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeStyle: "short", timeZone: "Africa/Abidjan" }).format(new Date(value));
+}
+
+function reviewStatusLabel(report: OperationalReport) {
+  if (report.review) return report.review.decision === "conform" ? "Examiné — conforme" : "Examiné — anomalie ouverte";
+  return report.reportStatus === "submitted" ? "Transmis — en attente d’examen" : "Rapport déjà traité";
+}
+
+export function Ge01ReportInbox({ reports, connected, onReview, onRead, onLoadProof, planning, onAssign, onOpenAnomaly, onRefresh }: {
+  reports: OperationalReport[]; connected: boolean; onReview?: Ge01ReviewHandler;
+  planning?: Ge01Operations; onAssign?: Ge01AssignmentHandler;
+  onRead?: (report: OperationalReport) => Promise<void>; onLoadProof?: Ge01ProofLoader;
+  onOpenAnomaly?: (reference: string) => void; onRefresh?: () => void;
+}) {
+  const geReports = useMemo(() => reports.filter((report) => report.equipmentCode === "GE-01"), [reports]);
+  const [readError, setReadError] = useState('');
+  const [reading, setReading] = useState(false);
+  const [filter, setFilter] = useState<"all" | "issues" | "clear">("all");
+  const filtered = geReports.filter((report) => {
+    const hasIssues = report.checks.some((check) => check.status === "alert" || check.status === "critical");
+    return filter === "all" || (filter === "issues" ? hasIssues : !hasIssues);
+  });
+  const [selectedId, setSelectedId] = useState(geReports[0]?.id ?? "");
+  const selected = filtered.find((report) => report.id === selectedId) ?? filtered[0];
+  const detailHeading = useRef<HTMLHeadingElement>(null);
+  const [openRequest, setOpenRequest] = useState(0);
+  useEffect(() => {
+    if (!openRequest) return;
+    detailHeading.current?.focus({ preventScroll: true });
+    detailHeading.current?.scrollIntoView({ block: 'center', behavior: 'instant' });
+  }, [openRequest]);
+
+  return <>
+    <section className="section-heading ge-heading">
+      <div><p className="design-kicker">RAPPORTS GE-01 · RÉCEPTION FAUSTIN</p><h2 className="visually-hidden">Rapports du groupe électrogène</h2><p>Tous les contrôles transmis sont consultables, avec leurs valeurs brutes. La consultation ne vaut pas validation.</p></div>
+      {onRefresh ? <Button variant="secondary" onClick={onRefresh}>Actualiser la file</Button> : null}
+    </section>
+    {connected && planning && <Ge01Planning planning={planning} onAssign={onAssign} />}
+    <div className="ge-inbox-filters" role="group" aria-label="Filtrer les rapports">
+      {([['all', `Tous (${geReports.length})`], ['issues', 'Avec écart'], ['clear', 'Sans écart']] as const).map(([key, label]) => <button key={key} className={filter === key ? "active" : ""} onClick={() => setFilter(key)}>{label}</button>)}
+    </div>
+    {!connected ? <Card className="ge-empty-state"><span><BrandIcon name="info" /></span><div><h3>Rapports serveur indisponibles</h3><p>La consultation nécessite une session autorisée et le chargement des données serveur. Aucun rapport fictif n’est présenté comme reçu.</p></div></Card> : geReports.length === 0 ? <Card className="ge-empty-state"><span><BrandIcon name="check" /></span><div><h3>Aucun rapport GE-01 transmis</h3><p>La file affichera ici les contrôles conformes comme ceux qui comportent un écart.</p></div></Card> : filtered.length === 0 ? <Card className="ge-empty-state"><span><BrandIcon name="activity" /></span><div><h3>Aucun résultat pour ce filtre</h3><p>Les autres rapports restent disponibles dans la file complète.</p></div></Card> : <section className="ge-inbox-layout">
+      <Card className="ge-report-list" aria-label="Rapports GE-01 transmis">
+        {filtered.map((report) => <button key={report.id} className={selected?.id === report.id ? "active" : ""} aria-controls="ge01-report-detail" onClick={() => { setSelectedId(report.id); setOpenRequest(value => value + 1); }}>
+          <span className="ge-report-mark">GE</span>
+          <div><b>{report.reference}</b>{report.isTest && <Badge tone="orange">RECETTE — DONNÉES FICTIVES</Badge>}<small>{formatMoment(report.performedAt)} · {report.reportedBy}</small><em>{reportStatusLabel(report)}</em><small>{reviewStatusLabel(report)}</small></div>
+          <span aria-hidden="true"><BrandIcon name="chevronRight" /></span>
+        </button>)}
+      </Card>
+      {selected ? <Card className="ge-report-detail" id="ge01-report-detail" aria-labelledby="ge01-report-detail-title">
+        <div className="ge-report-detail-head"><div><p className="design-kicker">CONFIRMÉ PAR LE SERVEUR</p><h3 id="ge01-report-detail-title" ref={detailHeading} tabIndex={-1}>{selected.reference}</h3>{selected.isTest && <Badge tone="orange">RECETTE — DONNÉES FICTIVES</Badge>}<p>Contrôle : {formatMoment(selected.performedAt)} · Envoi : {formatMoment(selected.submittedAt)}</p></div><Badge tone={selected.checks.some((check) => check.status === "alert" || check.status === "critical") ? "orange" : "success"}>{reportStatusLabel(selected)}</Badge></div>
+        <dl className="ge-report-meta"><div><dt>Agent</dt><dd>{selected.reportedBy}</dd></div><div><dt>Équipement</dt><dd>GE-01 · {selected.equipmentLabel}</dd></div><div><dt>Statut serveur</dt><dd>{reviewStatusLabel(selected)}</dd></div></dl>
+        <div className="ge-report-checks">
+          {GE01_FIELD_DEFINITIONS.map((field) => {
+            const check = selected.checks.find((item) => item.code === field.code);
+            return <div key={field.code} className={check?.status === "alert" || check?.status === "critical" ? "has-issue" : check?.status === "not_applicable" || check?.status === "not_checked" ? "is-neutral" : ""}>
+              <dt>{field.label}</dt>
+              <dd>{check ? formatGe01CheckValue(check) : "Réponse absente"}</dd>
+              <small>{check?.status === "alert" || check?.status === "critical" ? "Écart déclaré par l’agent" : check?.status === "not_applicable" ? "Non applicable au quotidien" : check?.status === "not_checked" ? "Non observé ou non qualifié" : "Valeur déclarée par l’agent"}</small>
+            </div>;
+          })}
+        </div>
+        {selected.checks.find(c=>c.code==='PHOTO_EXCEPTION')?.valueText&&<p><strong>Photo impossible :</strong> {selected.checks.find(c=>c.code==='PHOTO_EXCEPTION')?.valueText}</p>}
+        {selected.analysis ? <div className="ge-report-comment"><b>Commentaire facultatif</b><p>{selected.analysis}</p></div> : null}
+        {selected.ge01Status && <Ge01EvidenceGallery key={selected.id} status={selected.ge01Status} onLoad={onLoadProof} />}
+        {selected.ge01Status?.readAt ? <p>Lu par le FM le {formatMoment(selected.ge01Status.readAt)} (Abidjan).</p> : onRead && <Button variant="secondary" disabled={reading} onClick={async () => {
+          setReading(true); setReadError('');
+          try { await onRead(selected); } catch (error) { setReadError(error instanceof Error ? error.message : 'Lecture non enregistrée.'); } finally { setReading(false); }
+        }}>J’ai lu ce rapport</Button>}
+        {readError && <p role="alert">{readError}</p>}
+        <Ge01ReviewPanel key={`${selected.id}:${selected.updatedAt}`} report={selected} onReview={onReview} onOpenAnomaly={onOpenAnomaly} />
+      </Card> : null}
+    </section>}
+  </>;
+}
+
+
+function reportStatusLabel(report: OperationalReport) {
+  const issueCount = report.checks.filter((check) => check.status === "alert" || check.status === "critical").length;
+  return issueCount ? `${issueCount} écart${issueCount > 1 ? "s" : ""} déclaré${issueCount > 1 ? "s" : ""}` : "Sans écart déclaré";
 }

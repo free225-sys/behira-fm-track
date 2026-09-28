@@ -121,7 +121,7 @@ export function AccessWorkspace({ users, audience, embedded = false }: {
                   setRequestMotives((current) => ({ ...current, [request.id]: value }));
                   setRequestErrors((current) => ({ ...current, [request.id]: '' }));
                 }}
-                placeholder="Obligatoire pour approuver ou refuser"
+                placeholder="Motif obligatoire — 12 caractères minimum pour approuver ou refuser."
               />
             </Field>
             <div className="access-pending-actions">
@@ -157,10 +157,10 @@ export function AccessWorkspace({ users, audience, embedded = false }: {
         {audience === 'administration' ? <div className="access-action-tabs" role="tablist" aria-label="Actions de gestion des accès"><button type="button" role="tab" aria-selected={adminAction === 'create'} className={adminAction === 'create' ? 'active' : ''} onClick={() => {setAdminAction('create');setConfirmation('');setFieldErrors({})}}>Préparer un compte</button><button type="button" role="tab" aria-selected={adminAction === 'disable'} className={adminAction === 'disable' ? 'active' : ''} onClick={() => {setAdminAction('disable');setConfirmation('');setFieldErrors({})}}>Préparer une désactivation</button></div> : null}
 
         <form className="access-form" onSubmit={submit} noValidate>
-          <div className="access-form-heading"><p className="design-kicker">{audience === 'administration' ? adminAction === 'create' ? 'CRÉATION' : 'DÉSACTIVATION' : 'PROPOSITION FACILITY MANAGER'}</p><h3>{audience === 'administration' ? adminAction === 'create' ? 'Préparer un nouvel accès' : 'Préparer une désactivation' : 'Proposer un rôle ou un périmètre'}</h3><p>Aucune action de ce formulaire ne modifie Supabase Auth, les RLS ou les utilisateurs réels.</p></div>
+          <div className="access-form-heading"><p className="design-kicker">{audience === 'administration' ? adminAction === 'create' ? 'CRÉATION' : 'DÉSACTIVATION' : 'PROPOSITION FACILITY MANAGER'}</p><h3>{audience === 'administration' ? adminAction === 'create' ? 'Préparer un nouvel accès' : 'Préparer une désactivation' : 'Proposer un rôle ou un périmètre'}</h3><p>Ce formulaire prépare une demande ; les comptes et les droits ne sont pas encore modifiés.</p></div>
 
           {audience === 'administration' && adminAction === 'create' ? <>
-            <Field label="Nom complet" size="standard" error={fieldErrors.name}><input value={name} aria-invalid={Boolean(fieldErrors.name)} onChange={(event) => {setName(event.target.value);setFieldErrors((current) => ({ ...current, name: undefined }))}} placeholder="Prénom et nom" /></Field>
+            <Field label="Nom complet" size="standard" error={fieldErrors.name}><input value={name} aria-invalid={Boolean(fieldErrors.name)} onChange={(event) => {setName(event.target.value);setFieldErrors((current) => ({ ...current, name: undefined }))}} placeholder="Prénom et nom — 3 caractères minimum" /></Field>
             <Field label="Email professionnel" size="standard" error={fieldErrors.email}><input type="email" value={email} aria-invalid={Boolean(fieldErrors.email)} onChange={(event) => {setEmail(event.target.value);setFieldErrors((current) => ({ ...current, email: undefined }))}} placeholder="nom@entreprise.com" /></Field>
           </> : <Field label="Profil concerné" size="select" error={fieldErrors.selectedUserId}><Select value={selectedUserId} onChange={(event) => {setSelectedUserId(event.target.value);setFieldErrors((current) => ({ ...current, selectedUserId: undefined }))}}>{users.filter((user) => user.id !== 'administration').map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}</Select></Field>}
 
@@ -169,7 +169,7 @@ export function AccessWorkspace({ users, audience, embedded = false }: {
             <Field label={audience === 'facility' ? 'Périmètre proposé' : 'Périmètre'} size="select"><Select value={scope} onChange={(event) => setScope(event.target.value)}><option>Périmètre à confirmer</option><option value="DEMO-GE · DEMO-ASC-1 · DEMO-ASC-2">{displayAssetText('DEMO-GE · DEMO-ASC-1 · DEMO-ASC-2')}</option><option value="DEMO-GE">{displayAssetCode('DEMO-GE')}</option><option value="DEMO-EAU · DEMO-SSI · DEMO-ESP">{displayAssetText('DEMO-EAU · DEMO-SSI · DEMO-ESP')}</option><option value="DEMO-RND">{displayAssetCode('DEMO-RND')}</option><option>Tous périmètres</option></Select></Field>
           </div>}
 
-          <Field label="Justification" size="long" error={fieldErrors.reason}><textarea value={reason} maxLength={1000} aria-invalid={Boolean(fieldErrors.reason)} onChange={(event) => {setReason(event.target.value);setFieldErrors((current) => ({ ...current, reason: undefined }))}} placeholder={audience === 'facility' ? 'Expliquez le besoin métier et le périmètre demandé.' : adminAction === 'create' ? 'Expliquez pourquoi cet accès doit être créé.' : 'Expliquez pourquoi cet accès doit être désactivé.'} /></Field>
+          <Field label="Justification" size="long" error={fieldErrors.reason}><textarea value={reason} maxLength={1000} aria-invalid={Boolean(fieldErrors.reason)} onChange={(event) => {setReason(event.target.value);setFieldErrors((current) => ({ ...current, reason: undefined }))}} placeholder={audience === 'facility' ? 'Expliquez le besoin métier et le périmètre demandé — 20 caractères minimum.' : adminAction === 'create' ? 'Expliquez pourquoi cet accès doit être créé — 20 caractères minimum.' : 'Expliquez pourquoi cet accès doit être désactivé — 20 caractères minimum.'} /></Field>
 
           <div className="access-security-note" role="note"><BrandIcon name="lock" size={18} /><p><b>Exécution sécurisée hors du navigateur</b></p></div>
           {confirmation && <div className="access-confirmation" role="status"><span aria-hidden="true">✓</span>{confirmation}</div>}

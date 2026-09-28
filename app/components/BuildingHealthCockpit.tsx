@@ -1,4 +1,5 @@
 'use client';
+import type { HealthPresentation } from '../lib/ui-contract/presentation';
 
 import { useId, useState, type ReactNode } from 'react';
 
@@ -20,6 +21,7 @@ import {
   formatWeekdayDate,
   insufficientCopy,
   insufficientReasonLabel,
+  missingControlLabel,
   palierFromScore,
   palierTone,
   pendingDecisionsLabel,
@@ -147,8 +149,10 @@ export function BuildingHealthCockpit({
   causeActions,
   bannerExtras,
   children,
+  syncContent,
+  roundsConfigured = true,
 }: {
-  snapshot: BuildingHealthSnapshot;
+  snapshot: HealthPresentation;
   session: UiSession;
   onNavigate: (view: HealthView) => void;
   rounds?: TodaysRound[];
@@ -156,6 +160,8 @@ export function BuildingHealthCockpit({
   causeActions?: ReactNode;
   bannerExtras?: ReactNode;
   children?: ReactNode;
+  syncContent?: ReactNode;
+  roundsConfigured?: boolean;
 }) {
   const copy = COPY[session.audience];
   const agent = session.audience === 'electricite' || session.audience === 'eau_incendie' || session.audience === 'rondes_assistance';
@@ -226,13 +232,13 @@ export function BuildingHealthCockpit({
     </div>
   ) : null;
 
-  const missingAside = facility && notComputable ? (
+  const missingAside = facility && snapshot.score.state === 'not_computable' ? (
     <div className="health-missing-column">
       <p className="home-hero-kicker">Ce qui manque pour calculer</p>
       <ul className="health-missing-list">
         {snapshot.score.missingReasons.map((reason) => <li key={reason}>{insufficientReasonLabel(reason)}</li>)}
         {snapshot.score.missingControls.map((item) => (
-          <li key={`${item.equipmentCode}-${item.missingItem}`}>{item.equipmentCode} · {item.missingItem}{item.equipmentName ? ` · ${item.equipmentName}` : ''}</li>
+          <li key={`${item.equipmentCode}-${item.missingItem}`}>{item.equipmentCode} · {missingControlLabel(item.missingItem)}{item.equipmentName ? ` · ${item.equipmentName}` : ''}</li>
         ))}
         {snapshot.score.hiddenMissingControlCount > 0 ? <li>{snapshot.score.hiddenMissingControlCount} contrôle{snapshot.score.hiddenMissingControlCount > 1 ? 's' : ''} hors périmètre</li> : null}
       </ul>
@@ -243,7 +249,7 @@ export function BuildingHealthCockpit({
   const adminMini = admin ? (
     <div className="health-admin-mini">
       <p className="home-hero-kicker">Santé du bâtiment</p>
-      {figure == null ? (
+      {snapshot.score.state === 'not_computable' ? (
         <>
           <p className="health-admin-mini-value">—</p>
           <p className="home-hero-meta">Non calculable. {insufficientCopy({ status: 'insufficient', reasonCode: snapshot.score.missingReasons[0] ?? 'formula_pending', detail: null })}</p>
@@ -252,7 +258,7 @@ export function BuildingHealthCockpit({
         <>
           <p className={`health-admin-mini-value is-${palier ? palierTone(palier) : 'muted'}`}>{figure}<small> /100{snapshot.score.state === 'capped' ? ', plafonné' : ''}</small></p>
           <p className="home-hero-meta">
-            {snapshot.score.cause ? `${snapshot.score.cause.equipmentCode} indisponible. ` : null}
+            {snapshot.score.state === 'capped' && snapshot.score.cause ? `${snapshot.score.cause.equipmentCode} indisponible. ` : null}
             Score brut {displayRawScore(snapshot.score.raw)}
             {snapshot.coverage.status === 'ok' ? `, couverture ${snapshot.coverage.percent} %` : ''}.
             <button type="button" className="health-link" onClick={() => onNavigate('dashboard')}>Voir l’accueil du FM</button>
@@ -282,10 +288,10 @@ export function BuildingHealthCockpit({
         meta={bannerMeta}
         demo={false}
         bleed
-        sync={agent ? <span className="home-hero-sync"><i aria-hidden="true" />Tout est synchronisé</span> : undefined}
+        sync={agent ? (syncContent ?? (session.demo ? <span className="home-hero-sync">Synchronisation simulée</span> : undefined)) : undefined}
         due={agent ? (
           <div>
-            <p className="home-hero-due-value">{dueCount} ronde{dueCount > 1 ? 's' : ''} aujourd’hui</p>
+            <p className="home-hero-due-value">{roundsConfigured ? `${dueCount} ronde${dueCount > 1 ? 's' : ''} aujourd’hui` : 'Planning à confirmer'}</p>
             <p className="home-hero-due-meta">{dueMeta || 'Aucune échéance renseignée'}</p>
           </div>
         ) : undefined}

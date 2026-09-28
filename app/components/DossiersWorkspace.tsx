@@ -13,7 +13,7 @@ export type DossierQueueItem = {
   asset: string;
   title: string;
   location?: string;
-  priority: 'Critique' | 'Haute' | 'Moyenne' | 'Faible';
+  priority: 'Critique' | 'Haute' | 'Moyenne' | 'Normale' | 'Faible';
   status: string;
   due: string;
   delayed?: boolean;

@@ -189,6 +189,28 @@ export function insufficientCopy(value: Insufficient): string {
   return value.detail?.trim() || insufficientReasonLabel(value.reasonCode);
 }
 
+// Server diagnostics carry codes; interface copy stays in the UI.
+// Unknown strings preserve existing demo fixture compatibility.
+export function missingControlLabel(code: string): string {
+  const labels: Record<string, string> = {
+    control_missing: 'Contrôle manquant',
+    control_expired: 'Contrôle périmé',
+    prior_policy: 'Rapport antérieur aux règles de contrôle en vigueur',
+    evidence_manifest_missing: 'Pièces justificatives non enregistrées',
+    transmission_unconfirmed: 'Réception du rapport et des pièces à terminer',
+    fm_review_pending: 'Examen du rapport par le FM en attente',
+    mc4_photo_missing: 'Photo du tableau MC4 manquante',
+    counter_photo_missing: 'Photo du compteur moteur manquante',
+    defect_photo_missing: 'Photo de l’anomalie manquante',
+    checks_incomplete: 'Réponses de contrôle incomplètes',
+    critical_data_missing: 'Donnée nécessaire au calcul manquante',
+    no_valid_controls: 'Aucun contrôle admissible',
+    conflicting_evidence: 'Classement ou regroupement des anomalies à préciser',
+    source_missing: 'Source de contrôle à raccorder',
+  };
+  return labels[code] ?? code;
+}
+
 export function formatMoney(value: number): string {
   const grouped = new Intl.NumberFormat('fr-FR').format(value).replace(/[\u00a0\u202f]/g, ' ');
   return `${grouped} FCFA`;

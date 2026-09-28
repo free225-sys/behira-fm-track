@@ -1,46 +1,83 @@
 'use client';
+import type { Ge01AssignmentHandler } from './components/Ge01Planning';
+import type { Ge01Operations } from './lib/ge01/operations';
+import { ConnectedCostsWorkspace } from './components/ConnectedCostsWorkspace';
+const DECISION_THRESHOLD_FCFA = DEMO_THRESHOLD.value;
+import { requiresFmDecision, pendingFmDossierIds, managerActionQueueIds } from './lib/connected-presentation';
+import type { HealthPresentation } from './lib/ui-contract/presentation';
+import type { OperationalSnapshot } from './lib/supabase/data';
+import type { EquipmentCode } from './lib/ui-contract/building-health';
+const ConnectedPresentation = createContext<{ live: boolean; session: UiSession | null; health: HealthPresentation | null; source: OperationalSnapshot | null; threshold: number; sync?: ReactNode; costs?: ReactNode; pendingRounds?: {id:string;sentAt:string}[] }>({ live:false, session:null, health:null, source:null, threshold:DECISION_THRESHOLD_FCFA });
+function useUiSession(audience: UiSession['audience'], name: string) {
+  const current = useContext(ConnectedPresentation);
+  return current.live && current.session ? current.session : sessionForAudience(audience, name);
+}
 
-import { FormEvent, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
-
+import { createContext, useContext, FormEvent, useEffect, useId, useMemo, useRef, useState, type ReactNode, useCallback } from 'react';
 import { AntiZombieSummary } from './components/AntiZombieSummary';
-import type { AntiZombieSummaryData } from './components/anti-zombie-contract';
+import { type AntiZombieSummaryData } from './components/anti-zombie-contract';
 import { DossierActionBoard, DossierProofSnapshot, DossierTreatmentStrip, type TreatmentBranch } from './components/DossierContinuity';
 import { DossiersWorkspace, dossierActionLabel, type DossiersTab } from './components/DossiersWorkspace';
 import { AccessWorkspace } from './components/AccessWorkspace';
 import { BuildingHealthCockpit, ScoreRing } from './components/BuildingHealthCockpit';
+import { DomainPointsSummary } from './components/DomainPointsSummary';
+import { RoundDateTimeFields } from './components/shared/RoundDateTimeFields';
 import { DemoScenarioProvider, DemoScenarioSelect, EquipmentTable, InsufficientNote, ReportTrackingLine, RoundPilotHeader, SegmentedControl, StartRoundPicker, useDemoScoreScenario } from './components/shared';
-import { demoHomeSnapshot, demoReportTracking, demoRoundsFor, sessionForAudience } from './lib/ui-contract/fixtures.ts';
+import { DEMO_THRESHOLD, demoHomeSnapshot, demoReportTracking, demoRoundsFor, sessionForAudience } from './lib/ui-contract/fixtures.ts';
 import type { TodaysRound, UiSession } from './lib/ui-contract/building-health.ts';
 import { asciiInitials, displayAssetCode, displayAssetText, formatCompactMoney, formatTime, formatWeekdayDate, palierFromScore, roundStateLabel, roundSubjectLabel, scoreFigure, statusBadgeTone, statusLabel, thresholdPosition } from './lib/ui-contract/display.ts';
-import { Ge01AgentForm } from './components/Ge01Pilot';
 import { EauRounds } from './components/EauRounds';
-import { CostsWorkspace } from './components/CostsWorkspace';
+import { Ge01AgentForm, Ge01ReportInbox } from './components/Ge01Pilot';
+import { RiaRoundNavigation, RiaRoundSpace } from './components/RiaRound';
+import { CostsWorkspace, type CostReviewInput, type CostSubmissionInput } from './components/CostsWorkspace';
 import { EquipmentWorkspace } from './components/EquipmentWorkspace';
 import { NotificationBell } from './components/NotificationCenter';
 import { ParametersWorkspace, type ParameterWorkspaceData } from './components/ParametersWorkspace';
 import { SyncStatusNotice, type SyncStatusState } from './components/SyncStatusNotice';
-import { Badge, BrandIcon, Button, Card, DateInput, Field, FieldError, Select } from './components/ui';
+import { Badge, BrandIcon, Button, Card, DateInput, Field, FieldError, Select, DateTimeInput } from './components/ui';
 import { WorkflowAnalytics } from './components/WorkflowAnalytics';
-import {
-  hasFieldErrors,
-  passwordRules as passwordStrength,
-  validateEmailOnly,
-  validateInvite,
-  validateLogin,
-  validatePasswordChange,
-  validateVendorReportFields,
-  validateZoneName,
-  type FieldErrors,
-  type VendorReportField,
-} from './lib/client-validation';
-import { getAuthenticatedProfileGate, resolveAuthenticatedPersona } from './lib/supabase/auth';
+import { hasFieldErrors, passwordRules as passwordStrength, validateEmailOnly, validateInvite, validateLogin, validatePasswordChange, validateVendorReportFields, validateZoneName, type FieldErrors, type VendorReportField } from './lib/client-validation';
+import { getAuthenticatedProfileGate, resolveAuthenticatedPersona, AuthSessionChangedError, SESSION_CHANGED_MESSAGE, assertAuthenticatedUser, isAuthSessionChangedError } from './lib/supabase/auth';
 import { getBrowserSupabaseClient, setSupabaseRememberPreference } from './lib/supabase/client';
 import { getSupabaseIntegrationState, isSupabaseIntegrationEnabled } from './lib/supabase/config';
-import { loadOperationalSnapshot, type OperationalVendor } from './lib/supabase/data';
-import { advanceAnomalyWorkflow, uploadAnomalyProof, uploadVendorInterventionReport, verifyLatestAnomalyProof } from './lib/supabase/mutations';
+import { loadOperationalSnapshot, type OperationalVendor, type OperationalAnomaly, type OperationalCostDecision, type OperationalHistoryEvent, type OperationalProof, type OperationalReport, type OperationalWorkOrder } from './lib/supabase/data';
+import { advanceAnomalyWorkflow, uploadAnomalyProof, uploadVendorInterventionReport, verifyLatestAnomalyProof, createAnomalyProofConsultationUrl, reviewAnomalyCostDecision, reviewGe01Report, submitAnomalyCostDecision } from './lib/supabase/mutations';
+import Image from 'next/image';
+import { type Ge01ReviewHandler } from './components/Ge01ReviewPanel';
+import { Ge01WorkflowPanel, type Ge01WorkflowHandler } from './components/Ge01WorkflowPanel';
+import { InterventionReceptionPanel, type ReceptionHandler } from './components/InterventionReceptionPanel';
+import { ReopenDossierPanel } from './components/ReopenDossierPanel';
+import { OfflineSyncStatus } from './components/OfflineSyncStatus';
+import { acceptConnectedSnapshot, rejectConnectedSnapshot, type OperationalDataState } from './lib/connected-data-policy';
+import { useOfflineSync } from './lib/offline/useOfflineSync';
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 type View = 'workspace' | 'dashboard' | 'registry' | 'equipment' | 'costs' | 'access' | 'settings' | 'manager' | 'report' | 'detail';
-type Priority = 'Critique' | 'Haute' | 'Moyenne' | 'Faible';
+type Priority = OperationalAnomaly['priority'];
 type Status = 'À qualifier' | 'Affectée' | 'En intervention' | 'En validation' | 'Clôturée';
 type ManagerQueue = 'all'|'qualify'|'decide'|'late'|'unassigned'|'overThreshold'|'proof'|'reception'|'reservations'|'reopened';
 type PersonaId = 'facility' | 'administration' | 'electricite' | 'eau_incendie' | 'rondes_assistance';
@@ -61,6 +98,7 @@ type DemoSession = {
   mode: 'demo' | 'supabase';
   userId?: string;
   email?: string;
+  displayName?: string;
 };
 
 type PasswordChangeRequirement = {
@@ -90,6 +128,14 @@ type Escalation = {
   recommendation: string;
   state: DecisionState;
   motive?: string;
+  costReference?:string;
+  replacesCostReference?:string|null;
+  replacedByCostReference?:string|null;
+  decisionScope?:'facility_manager'|'administration';
+  thresholdAmount?:number;
+  budgetType?:'opex'|'capex';
+  submittedBy?:string|null;
+  reviewedBy?:string|null;
 };
 
 type FieldRequest = {
@@ -118,7 +164,18 @@ type MirrorTreatment = {
 };
 
 type Anomaly = {
+  eligibleDiagnosisAssignees?: OperationalAnomaly['eligibleDiagnosisAssignees'];
+  origin?: string;
+  horsScore?: boolean;
+  isTest?: boolean;
+  financialOptions?: OperationalAnomaly['financialOptions'];
+  eligibleVendors?: OperationalAnomaly['eligibleVendors'];
+  treatment?: OperationalAnomaly['treatment'];
+  diagnosis?: string | null;
+  interventionResult?: OperationalAnomaly['interventionResult'];
+  workflow?: OperationalAnomaly['workflow'];
   id: string;
+  databaseId?: string;
   asset: string;
   title: string;
   location: string;
@@ -130,11 +187,11 @@ type Anomaly = {
   delayed: boolean;
   proof: boolean;
   proofPending?: boolean;
+  proofQueued?: boolean;
+  proofs?: OperationalProof[];
+  history?: OperationalHistoryEvent[];
   description: string;
-  origin?: string;
-  horsScore?: boolean;
-  proofs?: MirrorProof[];
-  treatment?: MirrorTreatment;
+  antiZombieSummary?: AntiZombieSummaryData;
 };
 
 type VendorReportInput = {
@@ -151,7 +208,7 @@ type VendorReportInput = {
 type EquipmentItem = {
   code:string;
   label:string;
-  health:number;
+  health:number|null;
   state:string;
 };
 
@@ -159,9 +216,9 @@ const seedAnomalies: Anomaly[] = [
   { id:'ANO-0241', asset:'DEMO-SSI', title:'Pression réseau incendie instable', location:'Sous-sol · Local incendie', priority:'Critique', status:'À qualifier', reported:'24 août · 07:36', due:'Aujourd’hui · 12:00', owner:'Non affectée', delayed:false, proof:false, description:'Variations de pression constatées pendant le test matinal. Le manomètre oscille entre 5,8 et 7,2 bars sans sollicitation du réseau.' },
   { id:'ANO-0238', asset:'DEMO-ASC-2', title:'Arrêts intermittents au niveau R+7', location:'Tour A · Ascenseur 2', priority:'Haute', status:'Affectée', reported:'23 août · 08:15', due:'23 août · 18:00', owner:'PREST-ASC', delayed:true, proof:false, description:'Deux arrêts non programmés signalés au niveau R+7. Redémarrage automatique après environ trente secondes.' },
   { id:'ANO-0234', asset:'DEMO-EAU', title:'Fuite légère au collecteur', location:'Sous-sol · Local surpresseur', priority:'Moyenne', status:'En intervention', reported:'21 août · 16:42', due:'22 août · 15:00', owner:'PREST-EAU', delayed:true, proof:false, description:'Suintement visible au raccord du collecteur principal. Bac de rétention en place, sans impact sur la distribution.' },
-  { id:'ANO-0231', asset:'DEMO-GE', title:'Batterie de démarrage sous tension nominale', location:'RDC · Local groupe', priority:'Critique', status:'En validation', reported:'20 août · 11:20', due:'21 août · 10:00', owner:'PREST-GE', delayed:true, proof:true, description:'La batterie mesurée à 11,6 V a été remplacée. Le test de démarrage est concluant, preuve en attente de validation FM.', treatment:{ workOrderReference:'OT-DEMO-0231', branch:'vendor', costReference:'CST-DEMO-0231', amount:400000, vendorLabel:'Prestataire Démo' }, proofs:[
-    { id:'prv-0231-a', reference:'PRV-DEMO-0231-A', capturedAt:'20 août · 18:10', verificationStatus:'rejected', rejectionReason:'Photo illisible — reprise demandée', mimeType:'image/jpeg' },
-    { id:'prv-0231-b', reference:'PRV-DEMO-0231-B', capturedAt:'21 août · 09:02', verificationStatus:'accepted', rejectionReason:null, mimeType:'application/pdf' },
+  { id:'ANO-0231', asset:'DEMO-GE', title:'Batterie de démarrage sous tension nominale', location:'RDC · Local groupe', priority:'Critique', status:'En validation', reported:'20 août · 11:20', due:'21 août · 10:00', owner:'PREST-GE', delayed:true, proof:true, description:'La batterie mesurée à 11,6 V a été remplacée. Le test de démarrage est concluant, preuve en attente de validation FM.', treatment:{ workOrderReference:'OT-DEMO-0231', branch:'vendor', costReference:'CST-DEMO-0231', amount:400000, vendorLabel:'Prestataire Démo', comment:'' }, proofs:[
+    { id:'prv-0231-a', reference:'PRV-DEMO-0231-A', capturedAt:'20 août · 18:10', verificationStatus:'rejected', rejectionReason:'Photo illisible — reprise demandée', mimeType:'image/jpeg', proofType:'photo', storagePath:null, reviewComment:null },
+    { id:'prv-0231-b', reference:'PRV-DEMO-0231-B', capturedAt:'21 août · 09:02', verificationStatus:'accepted', rejectionReason:null, mimeType:'application/pdf', proofType:'report', storagePath:null, reviewComment:null },
   ] },
   { id:'ANO-0229', asset:'DEMO-ESP', title:'Électrovanne zone jardin bloquée', location:'Extérieur · Jardin nord', priority:'Faible', status:'Clôturée', reported:'19 août · 09:05', due:'20 août · 17:00', owner:'PREST-ESP', delayed:false, proof:true, description:'Électrovanne nettoyée et remise en service. Cycle d’arrosage contrôlé sur vingt minutes.' },
   { id:'ANO-0226', asset:'DEMO-ASC-1', title:'Éclairage cabine défaillant', location:'Tour A · Ascenseur 1', priority:'Moyenne', status:'Clôturée', reported:'18 août · 14:30', due:'19 août · 12:00', owner:'PREST-ASC', delayed:false, proof:true, description:'Bloc LED remplacé et essai d’éclairage de secours réalisé.' },
@@ -178,7 +235,7 @@ const personas: Persona[] = [
 ];
 
 // The persona switcher and browser storage below are limited to explicit demo mode.
-// When enabled, Supabase Auth resolves the persona from the RLS-protected business profile.
+// When enabled, the authenticated session resolves the persona from the protected business profile.
 const DEMO_PASSWORD = 'Behira-Design-Demo-2026!';
 const SESSION_KEY = 'behira_demo_session_v1';
 const demoAccounts: DemoAccount[] = [
@@ -276,7 +333,7 @@ const fallbackEquipment: EquipmentItem[] = [
   { code:'DEMO-RND', label:'Rondes & constats', health:93, state:'Sain' },
 ];
 
-const DECISION_THRESHOLD_FCFA = 400_000;
+
 const FINANCIAL_DECISION_PARAMETER: ParameterWorkspaceData = {
   code:'financial_decision_threshold',
   label:'Seuil de décision financière',
@@ -402,8 +459,8 @@ function expectedProofFor(anomaly:Anomaly) {
 }
 
 function canonicalResponsible(anomaly:Anomaly) {
-  if (anomaly.owner === 'Non affectée') return null;
-  return personas.some((persona) => persona.name === anomaly.owner) ? anomaly.owner : null;
+  const owner = anomaly.owner?.trim();
+  return !owner || ['Non affectée', 'Non attribué', 'À définir'].includes(owner) ? null : owner;
 }
 
 function externalActorConcerned(anomaly:Anomaly) {
@@ -419,6 +476,8 @@ function expectedActorFor(anomaly:Anomaly) {
 }
 
 function nextActionFor(anomaly:Anomaly) {
+  if (anomaly.workflow?.actionCode === 'RECEIVE_INTERVENTION') return 'Réceptionner l’intervention';
+  if (anomaly.workflow?.actionCode === 'REVIEW_REOPENED_DOSSIER') return 'Réexaminer le dossier rouvert';
   if (anomaly.status === 'Clôturée') return 'Aucune action — dossier clôturé';
   if (anomaly.status === 'À qualifier') return canonicalResponsible(anomaly) ? 'Examiner le rapport et qualifier' : 'Qualifier et affecter un responsable interne';
   if (anomaly.status === 'Affectée' && !canonicalResponsible(anomaly)) return 'Affecter un responsable interne';
@@ -499,7 +558,7 @@ function AuthFrame({
   );
 }
 
-function AuthExperience({ onAuthenticate, onDemoAuthenticate, onForgot, onReset, supabaseMode, allowDemoFallback, environmentLabel }: {
+function AuthExperience({ onAuthenticate, onDemoAuthenticate, onForgot, onReset, supabaseMode, allowDemoFallback, environmentLabel, sessionNotice }: {
   onAuthenticate:(personaId:PersonaId, remember:boolean, email:string, password:string)=>Promise<void>;
   onDemoAuthenticate:(personaId:PersonaId, remember:boolean)=>Promise<void>;
   onForgot:(email:string)=>Promise<void>;
@@ -507,10 +566,12 @@ function AuthExperience({ onAuthenticate, onDemoAuthenticate, onForgot, onReset,
   supabaseMode:boolean;
   allowDemoFallback:boolean;
   environmentLabel:string;
+  sessionNotice:string;
 }) {
   const [screen, setScreen] = useState<AuthScreen>('login');
-  const [email, setEmail] = useState(demoAccounts[1].email);
-  const [password, setPassword] = useState(DEMO_PASSWORD);
+  const demoFallbackVisible = !supabaseMode || allowDemoFallback;
+  const [email, setEmail] = useState(demoFallbackVisible ? demoAccounts[1].email : '');
+  const [password, setPassword] = useState(demoFallbackVisible ? DEMO_PASSWORD : '');
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
   const [status, setStatus] = useState<'idle'|'loading'|'error'|'success'>('idle');
@@ -519,13 +580,12 @@ function AuthExperience({ onAuthenticate, onDemoAuthenticate, onForgot, onReset,
   const [invitePassword, setInvitePassword] = useState('');
   const [inviteConfirm, setInviteConfirm] = useState('');
   const [inviteAccepted, setInviteAccepted] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors<'email'|'password'|'confirm'|'accepted'>>({});
 
   const switchScreen = (next:AuthScreen) => {
-    setScreen(next); setStatus('idle'); setMessage(''); setForgotSent(false); setFieldErrors({});
+    setScreen(next); setStatus('idle'); setMessage(''); setForgotSent(false);
   };
   const chooseAccount = (account:DemoAccount) => {
-    setEmail(account.email); setPassword(account.password); setStatus('idle'); setMessage(''); setFieldErrors({});
+    setEmail(account.email); setPassword(account.password); setStatus('idle'); setMessage('');
   };
   const openDemoAccount = async (account:DemoAccount) => {
     setStatus('loading'); setMessage(`Ouverture de ${account.destination} en mode démonstration…`);
@@ -538,15 +598,14 @@ function AuthExperience({ onAuthenticate, onDemoAuthenticate, onForgot, onReset,
   };
   const resetInterface = () => {
     onReset(); setScreen('login'); setEmail(demoAccounts[1].email); setPassword(DEMO_PASSWORD); setRemember(true);
-    setInvitePassword(''); setInviteConfirm(''); setInviteAccepted(false); setForgotSent(false); setFieldErrors({});
+    setInvitePassword(''); setInviteConfirm(''); setInviteAccepted(false); setForgotSent(false);
     setStatus('success'); setMessage('Démonstration réinitialisée. Vous pouvez repartir avec un compte fictif.');
   };
   const submitLogin = async (event:FormEvent) => {
     event.preventDefault();
-    const next = validateLogin({ email, password });
-    setFieldErrors(next);
-    if (hasFieldErrors(next)) { setStatus('error'); setMessage('Corrigez les champs indiqués.'); return; }
     const account = demoAccounts.find((item) => item.email.toLowerCase() === email.trim().toLowerCase());
+    if (!email.trim() || !/^\S+@\S+\.\S+$/.test(email)) { setStatus('error'); setMessage('Saisissez une adresse email valide.'); return; }
+    if (!password) { setStatus('error'); setMessage('Saisissez votre mot de passe.'); return; }
     if (!supabaseMode && (!account || password !== account.password)) { setStatus('error'); setMessage('Identifiants non reconnus. Utilisez un compte fictif parmi les accès de démonstration.'); return; }
     setStatus('loading'); setMessage(supabaseMode ? `Vérification par ${environmentLabel}…` : 'Vérification locale du compte…');
     try {
@@ -560,9 +619,7 @@ function AuthExperience({ onAuthenticate, onDemoAuthenticate, onForgot, onReset,
   };
   const submitForgot = async (event:FormEvent) => {
     event.preventDefault();
-    const next = validateEmailOnly(email);
-    setFieldErrors(next);
-    if (hasFieldErrors(next)) { setStatus('error'); setMessage('Corrigez les champs indiqués.'); return; }
+    if (!email.trim() || !/^\S+@\S+\.\S+$/.test(email)) { setStatus('error'); setMessage('Saisissez une adresse email valide.'); return; }
     setStatus('loading'); setMessage(supabaseMode ? 'Préparation sécurisée de la réinitialisation…' : 'Préparation de l’envoi simulé…');
     try {
       await onForgot(email.trim());
@@ -572,16 +629,21 @@ function AuthExperience({ onAuthenticate, onDemoAuthenticate, onForgot, onReset,
       setStatus('error'); setMessage(error instanceof Error ? error.message : 'Demande impossible.');
     }
   };
-  const passwordRules = passwordStrength(invitePassword, 12);
+  const passwordRules = {
+    length: invitePassword.length >= 12,
+    upper: /[A-Z]/.test(invitePassword),
+    lower: /[a-z]/.test(invitePassword),
+    number: /\d/.test(invitePassword),
+    symbol: /[^A-Za-z0-9]/.test(invitePassword),
+  };
+  const inviteValid = Object.values(passwordRules).every(Boolean) && invitePassword === inviteConfirm && inviteAccepted;
   const submitInvite = (event:FormEvent) => {
     event.preventDefault();
-    const next = validateInvite({ password: invitePassword, confirm: inviteConfirm, accepted: inviteAccepted });
-    setFieldErrors(next);
-    if (hasFieldErrors(next)) { setStatus('error'); setMessage('Corrigez les champs indiqués.'); return; }
+    if (!inviteValid) { setStatus('error'); setMessage('Respectez toutes les règles, confirmez le mot de passe et acceptez les conditions de démonstration.'); return; }
     setStatus('loading'); setMessage('Activation locale de l’invitation…');
     window.setTimeout(() => {
       setStatus('success'); setMessage('Compte invité activé. Ouverture de l’espace Rondes & constats.');
-      window.setTimeout(() => onAuthenticate('rondes_assistance', true), 550);
+      window.setTimeout(() => onDemoAuthenticate('rondes_assistance', true), 550);
     }, 550);
   };
 
@@ -590,16 +652,17 @@ function AuthExperience({ onAuthenticate, onDemoAuthenticate, onForgot, onReset,
       kicker="PILOTAGE TECHNIQUE & MAINTENANCE"
       title="Une vision claire du bâtiment, jusqu’à la preuve."
       lede="Centralisez les constats, priorisez les risques et suivez chaque intervention jusqu’à sa clôture."
-      note={<>{supabaseMode ? `${environmentLabel} prêt · mode démonstration conservé` : 'Prototype local · authentification et données simulées'} · <a href="/design-system">Système de design</a></>}
+      note={<>{supabaseMode ? `${environmentLabel} · ${allowDemoFallback ? 'mode démonstration conservé' : 'authentification réelle uniquement'}` : 'Prototype local · authentification et données simulées'} · <a href="/design-system">Système de design</a></>}
     >
       <div className="auth-card">
         {screen === 'login' && <>
           <div className="auth-heading"><span className="auth-mode-chip">{supabaseMode ? environmentLabel.toUpperCase() : 'DÉMONSTRATION LOCALE'}</span><h2>Bienvenue</h2><p>Entrez dans l’espace opérationnel BEHIRA.</p></div>
           <form className="auth-form" onSubmit={submitLogin} noValidate>
-            <label className={`auth-field ${fieldErrors.email ? 'is-invalid' : ''}`}>Email professionnel<input type="email" autoComplete="username" value={email} onChange={(event) => {setEmail(event.target.value);setStatus('idle');setFieldErrors((current) => ({ ...current, email: undefined }))}} aria-invalid={Boolean(fieldErrors.email)} aria-describedby={fieldErrors.email ? 'login-email-error auth-message' : 'auth-message'} placeholder="nom@organisation.com" /><FieldError id="login-email-error" message={fieldErrors.email} /></label>
-            <label className={`auth-field ${fieldErrors.password ? 'is-invalid' : ''}`}>Mot de passe<span className="password-control"><input type={showPassword ? 'text' : 'password'} autoComplete="current-password" value={password} onChange={(event) => {setPassword(event.target.value);setStatus('idle');setFieldErrors((current) => ({ ...current, password: undefined }))}} aria-invalid={Boolean(fieldErrors.password)} aria-describedby={fieldErrors.password ? 'login-password-error auth-message' : 'auth-message'} /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}>{showPassword ? 'Masquer' : 'Afficher'}</button></span><FieldError id="login-password-error" message={fieldErrors.password} /></label>
+            {sessionNotice && <div id="auth-session-notice" className="auth-message error" role="alert"><span><BrandIcon name="circleAlert" /></span>{sessionNotice}</div>}
+            <label className="auth-field">Email professionnel<input type="email" autoComplete="username" value={email} onChange={(event) => {setEmail(event.target.value);setStatus('idle')}} aria-invalid={status === 'error'} aria-describedby="auth-message" placeholder="nom@organisation.com" /></label>
+            <label className="auth-field">Mot de passe<span className="password-control"><input type={showPassword ? 'text' : 'password'} autoComplete="current-password" value={password} onChange={(event) => {setPassword(event.target.value);setStatus('idle')}} aria-invalid={status === 'error'} aria-describedby="auth-message" /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}>{showPassword ? 'Masquer' : 'Afficher'}</button></span></label>
             <div className="auth-form-options"><label className="check-control"><input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} /><span>Se souvenir de moi</span></label><button type="button" className="auth-link" onClick={() => switchScreen('forgot')}>Mot de passe oublié ?</button></div>
-            {message && <div id="auth-message" className={`auth-message ${status}`} role={status === 'error' ? 'alert' : 'status'}><span>{status === 'error' ? '!' : status === 'success' ? '✓' : '•'}</span>{message}</div>}
+            {message && <div id="auth-message" className={`auth-message ${status}`} role={status === 'error' ? 'alert' : 'status'}><span>{status === 'error' ? <BrandIcon name="circleAlert" /> : status === 'success' ? <BrandIcon name="check" /> : '•'}</span>{message}</div>}
             <Button className="auth-submit" type="submit" disabled={status === 'loading' || status === 'success'}>{status === 'loading' ? 'Connexion…' : status === 'success' ? 'Connecté ✓' : 'Se connecter'}</Button>
           </form>
           {!supabaseMode && <button type="button" className="invite-link" onClick={() => switchScreen('invite')}>Première connexion ? Activer une invitation</button>}
@@ -608,29 +671,28 @@ function AuthExperience({ onAuthenticate, onDemoAuthenticate, onForgot, onReset,
         {screen === 'forgot' && <>
           <button type="button" className="auth-back" onClick={() => switchScreen('login')}>← Retour à la connexion</button>
           <div className="auth-heading"><span className="auth-mode-chip">ASSISTANCE</span><h2>Mot de passe oublié</h2><p>{supabaseMode ? 'Recevez un lien sécurisé de réinitialisation si votre compte est actif.' : 'Recevez les instructions de réinitialisation — envoi simulé uniquement.'}</p></div>
-          {!forgotSent ? <form className="auth-form" onSubmit={submitForgot} noValidate><label className={`auth-field ${fieldErrors.email ? 'is-invalid' : ''}`}>Email professionnel<input type="email" value={email} onChange={(event) => {setEmail(event.target.value);setStatus('idle');setFieldErrors((current) => ({ ...current, email: undefined }))}} aria-invalid={Boolean(fieldErrors.email)} aria-describedby={fieldErrors.email ? 'forgot-email-error auth-message' : 'auth-message'} /><FieldError id="forgot-email-error" message={fieldErrors.email} /></label>{message && <div id="auth-message" className={`auth-message ${status}`} role={status === 'error' ? 'alert' : 'status'}><span>{status === 'error' ? '!' : '•'}</span>{message}</div>}<Button className="auth-submit" type="submit" disabled={status === 'loading'}>{status === 'loading' ? 'Envoi…' : 'Envoyer les instructions'}</Button></form> : <div className="auth-confirmation" role="status"><span>✓</span><h3>Demande prise en compte</h3><p>{message}</p><small>Adresse indiquée : {email}</small><Button className="auth-submit" onClick={() => switchScreen('login')}>Retour à la connexion</Button></div>}
+          {!forgotSent ? <form className="auth-form" onSubmit={submitForgot} noValidate><label className="auth-field">Email professionnel<input type="email" value={email} onChange={(event) => {setEmail(event.target.value);setStatus('idle')}} aria-invalid={status === 'error'} aria-describedby="auth-message" /></label>{message && <div id="auth-message" className={`auth-message ${status}`} role={status === 'error' ? 'alert' : 'status'}><span>{status === 'error' ? <BrandIcon name="circleAlert" /> : '•'}</span>{message}</div>}<Button className="auth-submit" type="submit" disabled={status === 'loading'}>{status === 'loading' ? 'Envoi…' : 'Envoyer les instructions'}</Button></form> : <div className="auth-confirmation" role="status"><span><BrandIcon name="check" /></span><h3>Demande prise en compte</h3><p>{message}</p><small>Adresse indiquée : {email}</small><Button className="auth-submit" onClick={() => switchScreen('login')}>Retour à la connexion</Button></div>}
         </>}
 
         {screen === 'invite' && <>
           <button type="button" className="auth-back" onClick={() => switchScreen('login')}>← Retour à la connexion</button>
-          <div className="auth-heading"><span className="auth-mode-chip">INVITATION DE DÉMONSTRATION</span><h2>Activez votre compte</h2><p>Compte invité : <b>Agente Rondes & Assistance Démo</b><br />Rôle : Rondes & constats · périmètre {displayAssetCode('DEMO-RND')}</p></div>
+          <div className="auth-heading"><span className="auth-mode-chip">INVITATION DE DÉMONSTRATION</span><h2>Activez votre compte</h2><p>Compte invité : <b>Agente Rondes & Assistance Démo</b><br />Rôle : Rondes & constats · périmètre DEMO-RND</p></div>
           <form className="auth-form" onSubmit={submitInvite} noValidate>
-            <label className={`auth-field ${fieldErrors.password ? 'is-invalid' : ''}`}>Créer un mot de passe<input type="password" autoComplete="new-password" value={invitePassword} onChange={(event) => {setInvitePassword(event.target.value);setStatus('idle');setFieldErrors((current) => ({ ...current, password: undefined }))}} aria-invalid={Boolean(fieldErrors.password)} aria-describedby="password-rules invite-password-error auth-message" /><FieldError id="invite-password-error" message={fieldErrors.password} /></label>
-            <label className={`auth-field ${fieldErrors.confirm ? 'is-invalid' : ''}`}>Confirmer le mot de passe<input type="password" autoComplete="new-password" value={inviteConfirm} onChange={(event) => {setInviteConfirm(event.target.value);setStatus('idle');setFieldErrors((current) => ({ ...current, confirm: undefined }))}} aria-invalid={Boolean(fieldErrors.confirm)} /><FieldError id="invite-confirm-error" message={fieldErrors.confirm} /></label>
+            <label className="auth-field">Créer un mot de passe<input type="password" autoComplete="new-password" placeholder="12 caractères minimum" value={invitePassword} onChange={(event) => {setInvitePassword(event.target.value);setStatus('idle')}} aria-describedby="password-rules auth-message" /></label>
+            <label className="auth-field">Confirmer le mot de passe<input type="password" autoComplete="new-password" placeholder="12 caractères minimum" value={inviteConfirm} onChange={(event) => {setInviteConfirm(event.target.value);setStatus('idle')}} aria-invalid={Boolean(inviteConfirm && inviteConfirm !== invitePassword)} /></label>
             <ul className="password-rules" id="password-rules" aria-label="Règles de robustesse"><li className={passwordRules.length ? 'valid' : ''}>12 caractères minimum</li><li className={passwordRules.upper && passwordRules.lower ? 'valid' : ''}>Majuscule et minuscule</li><li className={passwordRules.number ? 'valid' : ''}>Au moins un chiffre</li><li className={passwordRules.symbol ? 'valid' : ''}>Au moins un symbole</li><li className={invitePassword && invitePassword === inviteConfirm ? 'valid' : ''}>Confirmation identique</li></ul>
-            <label className={`check-control invite-accept ${fieldErrors.accepted ? 'is-invalid' : ''}`}><input type="checkbox" checked={inviteAccepted} onChange={(event) => {setInviteAccepted(event.target.checked);setFieldErrors((current) => ({ ...current, accepted: undefined }))}} /><span>J’accepte l’activation simulée de ce compte fictif.</span></label>
-            <FieldError message={fieldErrors.accepted} />
-            {message && <div id="auth-message" className={`auth-message ${status}`} role={status === 'error' ? 'alert' : 'status'}><span>{status === 'error' ? '!' : status === 'success' ? '✓' : '•'}</span>{message}</div>}
+            <label className="check-control invite-accept"><input type="checkbox" checked={inviteAccepted} onChange={(event) => setInviteAccepted(event.target.checked)} /><span>J’accepte l’activation simulée de ce compte fictif.</span></label>
+            {message && <div id="auth-message" className={`auth-message ${status}`} role={status === 'error' ? 'alert' : 'status'}><span>{status === 'error' ? <BrandIcon name="circleAlert" /> : status === 'success' ? <BrandIcon name="check" /> : '•'}</span>{message}</div>}
             <Button className="auth-submit" type="submit" disabled={status === 'loading' || status === 'success'}>{status === 'loading' ? 'Activation…' : status === 'success' ? 'Compte activé ✓' : 'Activer et accéder à mon espace'}</Button>
           </form>
         </>}
       </div>
 
-      {screen === 'login' && <aside className="demo-accounts" aria-label="Comptes de démonstration">
-        <div><span>{supabaseMode ? 'MODE DÉMONSTRATION DE SECOURS' : 'COMPTES DE DÉMONSTRATION'}</span><p>Profils fictifs en <code>.invalid</code> · {supabaseMode ? 'séparés de Supabase Auth et sans écriture distante' : 'session simulée'}.</p></div>
+      {screen === 'login' && demoFallbackVisible && <aside className="demo-accounts" aria-label="Comptes de démonstration">
+        <div><span>{supabaseMode ? 'MODE DÉMONSTRATION DE SECOURS' : 'COMPTES DE DÉMONSTRATION'}</span><p>Profils fictifs en <code>.invalid</code> · {supabaseMode ? 'séparés de l’authentification réelle et sans écriture distante' : 'session simulée'}.</p></div>
         {!supabaseMode && <p className="demo-password"><span>Mot de passe commun</span><b>{DEMO_PASSWORD}</b></p>}
         {(!supabaseMode || allowDemoFallback) && <div className="demo-account-grid">{demoAccounts.map((account) => {const person = personas.find((item) => item.id === account.personaId)!; const selected = email.trim().toLowerCase() === account.email.toLowerCase(); return <button type="button" key={account.email} className={selected ? 'is-selected' : ''} aria-pressed={selected} aria-label={`${person.shortName} · ${account.destination}`} onClick={() => {if (supabaseMode) void openDemoAccount(account); else {chooseAccount(account);switchScreen('login')}}}><span>{person.initials}</span><div><b>{person.shortName}</b><small>{account.email}</small><em>{account.destination}</em></div><i>{selected ? 'Sélectionné' : supabaseMode ? 'Ouvrir la démo' : 'Utiliser'}</i></button>})}</div>}
-        <div className="demo-reset"><p><b>{supabaseMode ? environmentLabel : 'Session locale uniquement'}</b><br />{supabaseMode ? 'Une connexion réelle impose le rôle du profil métier protégé par RLS. Le mode démo reste local.' : 'La sécurité réelle sera assurée par Supabase Auth et les politiques RLS.'}</p><button type="button" onClick={resetInterface}>Réinitialiser la démonstration</button></div>
+        <div className="demo-reset"><p><b>{supabaseMode ? environmentLabel : 'Session locale uniquement'}</b><br />{supabaseMode ? 'Une connexion réelle impose le rôle du profil métier protégé par les règles d’accès. Le mode démo reste local.' : 'La sécurité réelle sera assurée par l’authentification et les règles d’accès.'}</p><button type="button" onClick={resetInterface}>Réinitialiser la démonstration</button></div>
       </aside>}
     </AuthFrame>
   );
@@ -647,17 +709,20 @@ function RequiredPasswordChange({ requirement, onComplete, onSignOut }: {
   const [showPasswords, setShowPasswords] = useState(false);
   const [status, setStatus] = useState<'idle'|'loading'|'error'>('idle');
   const [message, setMessage] = useState('');
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors<'current'|'next'|'confirm'>>({});
   const rules = {
-    ...passwordStrength(newPassword, 16),
+    length:newPassword.length >= 16,
+    upper:/[A-Z]/.test(newPassword),
+    lower:/[a-z]/.test(newPassword),
+    number:/\d/.test(newPassword),
+    symbol:/[^A-Za-z0-9]/.test(newPassword),
     different:Boolean(currentPassword) && newPassword !== currentPassword,
     match:Boolean(newPassword) && newPassword === confirmation,
   };
+  const valid = Object.values(rules).every(Boolean);
   const submit = async (event:FormEvent) => {
     event.preventDefault();
-    const next = validatePasswordChange({ current: currentPassword, next: newPassword, confirm: confirmation });
-    setFieldErrors(next);
-    if (hasFieldErrors(next)) { setStatus('error'); setMessage('Corrigez les champs indiqués.'); return; }
+    if (!currentPassword) { setStatus('error'); setMessage('Saisissez le mot de passe temporaire reçu.'); return; }
+    if (!valid) { setStatus('error'); setMessage('Le nouveau mot de passe doit respecter toutes les règles affichées.'); return; }
     setStatus('loading'); setMessage('Mise à jour sécurisée du mot de passe…');
     try {
       await onComplete(currentPassword, newPassword);
@@ -671,20 +736,20 @@ function RequiredPasswordChange({ requirement, onComplete, onSignOut }: {
       kicker="PREMIÈRE CONNEXION"
       title="Protégez votre accès avant de continuer."
       lede="Votre espace métier restera verrouillé jusqu’au remplacement du mot de passe temporaire."
-      note="Contrôle assuré par Supabase Auth et les politiques RLS"
+      note="Contrôle assuré par l’authentification et les règles d’accès"
       single
     >
       <div className="auth-card">
         <div className="auth-heading"><span className="auth-mode-chip">CHANGEMENT OBLIGATOIRE</span><h2>Créez votre mot de passe</h2><p>Compte : <b>{requirement.displayName}</b><br />{requirement.email}</p></div>
         <form className="auth-form" onSubmit={submit} noValidate>
-          <label className={`auth-field ${fieldErrors.current ? 'is-invalid' : ''}`}>Mot de passe temporaire<input type={showPasswords ? 'text' : 'password'} autoComplete="current-password" value={currentPassword} onChange={(event) => {setCurrentPassword(event.target.value);setStatus('idle');setFieldErrors((current) => ({ ...current, current: undefined }))}} aria-invalid={Boolean(fieldErrors.current)} aria-describedby="required-password-message" /><FieldError message={fieldErrors.current} /></label>
-          <label className={`auth-field ${fieldErrors.next ? 'is-invalid' : ''}`}>Nouveau mot de passe<input type={showPasswords ? 'text' : 'password'} autoComplete="new-password" value={newPassword} onChange={(event) => {setNewPassword(event.target.value);setStatus('idle');setFieldErrors((current) => ({ ...current, next: undefined }))}} aria-invalid={Boolean(fieldErrors.next)} aria-describedby="required-password-rules required-password-message" /><FieldError message={fieldErrors.next} /></label>
-          <label className={`auth-field ${fieldErrors.confirm ? 'is-invalid' : ''}`}>Confirmer le nouveau mot de passe<input type={showPasswords ? 'text' : 'password'} autoComplete="new-password" value={confirmation} onChange={(event) => {setConfirmation(event.target.value);setStatus('idle');setFieldErrors((current) => ({ ...current, confirm: undefined }))}} aria-invalid={Boolean(fieldErrors.confirm)} /><FieldError message={fieldErrors.confirm} /></label>
+          <label className="auth-field">Mot de passe temporaire<input type={showPasswords ? 'text' : 'password'} autoComplete="current-password" value={currentPassword} onChange={(event) => {setCurrentPassword(event.target.value);setStatus('idle')}} aria-describedby="required-password-message" /></label>
+          <label className="auth-field">Nouveau mot de passe<input type={showPasswords ? 'text' : 'password'} autoComplete="new-password" placeholder="16 caractères minimum" value={newPassword} onChange={(event) => {setNewPassword(event.target.value);setStatus('idle')}} aria-describedby="required-password-rules required-password-message" /></label>
+          <label className="auth-field">Confirmer le nouveau mot de passe<input type={showPasswords ? 'text' : 'password'} autoComplete="new-password" placeholder="16 caractères minimum" value={confirmation} onChange={(event) => {setConfirmation(event.target.value);setStatus('idle')}} aria-invalid={Boolean(confirmation && confirmation !== newPassword)} /></label>
           <label className="check-control"><input type="checkbox" checked={showPasswords} onChange={(event) => setShowPasswords(event.target.checked)} /><span>Afficher les mots de passe pendant la saisie</span></label>
           <ul className="password-rules" id="required-password-rules" aria-label="Règles de robustesse">
             <li className={rules.length ? 'valid' : ''}>16 caractères minimum</li><li className={rules.upper && rules.lower ? 'valid' : ''}>Majuscule et minuscule</li><li className={rules.number ? 'valid' : ''}>Au moins un chiffre</li><li className={rules.symbol ? 'valid' : ''}>Au moins un symbole</li><li className={rules.different ? 'valid' : ''}>Différent du temporaire</li><li className={rules.match ? 'valid' : ''}>Confirmation identique</li>
           </ul>
-          {message && <div id="required-password-message" className={`auth-message ${status}`} role={status === 'error' ? 'alert' : 'status'}><span>{status === 'error' ? '!' : '•'}</span>{message}</div>}
+          {message && <div id="required-password-message" className={`auth-message ${status}`} role={status === 'error' ? 'alert' : 'status'}><span>{status === 'error' ? <BrandIcon name="circleAlert" /> : '•'}</span>{message}</div>}
           <Button className="auth-submit" type="submit" disabled={status === 'loading'}>{status === 'loading' ? 'Sécurisation…' : 'Changer le mot de passe et continuer'}</Button>
           <button className="auth-back required-password-signout" type="button" onClick={() => void onSignOut()}>Se déconnecter et revenir à l’accueil</button>
         </form>
@@ -695,19 +760,26 @@ function RequiredPasswordChange({ requirement, onComplete, onSignOut }: {
 
 function LiveHealthCockpit({ session, onNavigate, actionCount, causeActions, bannerExtras, children }: { session: UiSession; onNavigate: (view: View) => void; actionCount?: number; causeActions?: ReactNode; bannerExtras?: ReactNode; children?: ReactNode }) {
   const { scenario } = useDemoScoreScenario();
-  const snapshot = demoHomeSnapshot(session, session.demo ? scenario : 'not_computable');
-  return <BuildingHealthCockpit snapshot={snapshot} session={session} onNavigate={onNavigate} rounds={demoRoundsFor(session)} actionCount={actionCount} causeActions={causeActions} bannerExtras={bannerExtras}>{children}</BuildingHealthCockpit>;
+  const current = useContext(ConnectedPresentation);
+  const snapshot = current.live ? current.health : demoHomeSnapshot(session, scenario);
+  if (!snapshot) return <InsufficientNote title="Santé non calculable" detail="Le paramètre financier ou le périmètre serveur n’est pas encore disponible." />;
+  return <BuildingHealthCockpit snapshot={snapshot} session={session} onNavigate={onNavigate} rounds={current.live ? current.source?.ge01Operations.rounds ?? [] : demoRoundsFor(session)} roundsConfigured={!current.live || Boolean(current.source?.ge01Operations.policyVersion)} syncContent={current.sync} actionCount={current.live ? snapshot.pendingDecisions ?? current.source?.workOrders.filter(w=>w.status!=='Terminé').length ?? 0 : actionCount} causeActions={causeActions} bannerExtras={bannerExtras}>{children}{current.live && <InsufficientNote title="Planning GE-01" detail="Du lundi au samedi, avant 23:59 (heure d’Abidjan). Seule la ronde quotidienne GE-01 est planifiée ici." />}</BuildingHealthCockpit>;
 }
 
 function LiveEquipmentWorkspace({ session }: { session: UiSession }) {
   const { scenario } = useDemoScoreScenario();
-  const snapshot = demoHomeSnapshot(session, session.demo ? scenario : 'not_computable');
-  return <EquipmentWorkspace equipment={snapshot.equipment} />;
+  const current = useContext(ConnectedPresentation);
+  return <EquipmentWorkspace demo={!current.live} equipment={current.live ? current.health?.equipment ?? [] : demoHomeSnapshot(session, scenario).equipment} />;
 }
 
 export default function Home() {
   const supabaseIntegration = getSupabaseIntegrationState();
   const [session, setSession] = useState<DemoSession|null>(null);
+  const [sessionNotice, setSessionNotice] = useState('');
+  const [presentationSource, setPresentationSource] = useState<OperationalSnapshot|null>(null);
+  const [recipeMode, setRecipeMode] = useState(false);
+  const [recipeAvailable, setRecipeAvailable] = useState(false);
+  const spaceGeneration = useRef(0);
   const [passwordChangeRequirement, setPasswordChangeRequirement] = useState<PasswordChangeRequirement|null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [signOutConfirm, setSignOutConfirm] = useState(false);
@@ -718,10 +790,14 @@ export default function Home() {
   const [anomalies, setAnomalies] = useState(seedAnomalies);
   const [equipmentItems, setEquipmentItems] = useState(fallbackEquipment);
   const [vendorReferences, setVendorReferences] = useState(fallbackVendors);
+  const [workOrders, setWorkOrders] = useState<OperationalWorkOrder[]>([]);
+  const [reports, setReports] = useState<OperationalReport[]>([]);
   const [canUploadVendorReport, setCanUploadVendorReport] = useState(false);
-  const [dataState, setDataState] = useState<'demo'|'loading'|'live'|'fallback'>('demo');
+  const [dataState, setDataState] = useState<OperationalDataState>('demo');
   const [referenceCounts, setReferenceCounts] = useState({ anomalies:seedAnomalies.length, equipment:fallbackEquipment.length, zones:0, profiles:0 });
   const [escalations, setEscalations] = useState(seedEscalations);
+  const [decisionThreshold, setDecisionThreshold] = useState(DECISION_THRESHOLD_FCFA);
+  const [financialDecisionParameter, setFinancialDecisionParameter] = useState<ParameterWorkspaceData>(FINANCIAL_DECISION_PARAMETER);
   const [fieldRequests, setFieldRequests] = useState<FieldRequest[]>([
     { id:'REQ-031', from:'Agente Rondes & Assistance Démo', subject:'Infiltration légère · Atrium restaurant', note:'Photo ajoutée, origine à qualifier après la pluie.', status:'À traiter par Facility Manager' },
     { id:'REQ-030', from:'Agent Eau & Incendie Démo', subject:'DEMO-EAU · deuxième réarmement en 7 jours', note:'Service rétabli provisoirement, diagnostic demandé.', status:'À traiter par Facility Manager' },
@@ -730,14 +806,69 @@ export default function Home() {
   const [query, setQuery] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('Toutes');
   const [statusFilter, setStatusFilter] = useState('Tous');
-  const [managerTab, setManagerTab] = useState<ManagerQueue>('all');
   const [dossiersTab, setDossiersTab] = useState<DossiersTab>('atraiter');
+  const [managerTab, setManagerTab] = useState<ManagerQueue>('all');
   const [toast, setToast] = useState('');
   const [mutationBusy, setMutationBusy] = useState(false);
   const [moreNavOpen, setMoreNavOpen] = useState(false);
   const moreNavRef = useRef<HTMLDivElement>(null);
   const moreNavTriggerRef = useRef<HTMLButtonElement>(null);
   const moreNavItemRefs = useRef<Array<HTMLButtonElement|null>>([]);
+  const sessionUserIdRef = useRef<string|null>(null);
+
+  const resetSensitiveWorkspace = useCallback(() => {
+    spaceGeneration.current++;
+    setPresentationSource(null);
+    setRecipeMode(false);
+    setRecipeAvailable(false);
+    setAnomalies(seedAnomalies);
+    setEquipmentItems(fallbackEquipment);
+    setVendorReferences(fallbackVendors);
+    setWorkOrders([]);
+    setReports([]);
+    setCanUploadVendorReport(false);
+    setReferenceCounts({ anomalies:seedAnomalies.length, equipment:fallbackEquipment.length, zones:0, profiles:0 });
+    setEscalations(seedEscalations);
+    setDecisionThreshold(DECISION_THRESHOLD_FCFA);
+    setFinancialDecisionParameter(FINANCIAL_DECISION_PARAMETER);
+  }, []);
+
+  const invalidateChangedSession = useCallback(() => {
+    sessionUserIdRef.current = null;
+    setSession(null);
+    setPasswordChangeRequirement(null);
+    setMutationBusy(false);
+    setSignOutConfirm(false);
+    setMoreNavOpen(false);
+    setDataState('loading');
+    setToast('');
+    setSessionNotice(SESSION_CHANGED_MESSAGE);
+    resetSensitiveWorkspace();
+  }, [resetSensitiveWorkspace]);
+
+  useEffect(() => {
+    sessionUserIdRef.current = session?.mode === 'supabase' ? session.userId ?? null : null;
+  }, [session?.mode, session?.userId]);
+
+  useEffect(() => {
+    if (!isSupabaseIntegrationEnabled) return;
+
+    const client = getBrowserSupabaseClient();
+    const { data: { subscription } } = client.auth.onAuthStateChange((event, nextSession) => {
+      const expectedUserId = sessionUserIdRef.current;
+      const nextUserId = nextSession?.user.id ?? null;
+
+      if (event === 'SIGNED_OUT') {
+        if (expectedUserId) invalidateChangedSession();
+        return;
+      }
+      if (!expectedUserId || !nextUserId || expectedUserId === nextUserId) return;
+
+      invalidateChangedSession();
+    });
+
+    return () => subscription.unsubscribe();
+  }, [invalidateChangedSession]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -758,22 +889,54 @@ export default function Home() {
     if (session?.mode !== 'supabase') return;
 
     let cancelled = false;
-    loadOperationalSnapshot(getBrowserSupabaseClient())
+    getBrowserSupabaseClient(recipeMode).rpc('is_recette_enabled').then(({ data, error }) => {
+      if (!cancelled) setRecipeAvailable(!error && data === true);
+    });
+    loadOperationalSnapshot(getBrowserSupabaseClient(recipeMode), recipeMode)
       .then((snapshot) => {
         if (cancelled) return;
-        if (snapshot.anomalies.length) setAnomalies(snapshot.anomalies as Anomaly[]);
-        if (snapshot.equipment.length) setEquipmentItems(snapshot.equipment);
-        if (snapshot.vendors.length) setVendorReferences(snapshot.vendors);
+        const connected = acceptConnectedSnapshot(snapshot);
+        setPresentationSource(snapshot);
+        setFieldRequests([]);
+        setAnomalies(connected.anomalies as Anomaly[]);
+        setEquipmentItems(connected.equipment);
+        setVendorReferences(connected.vendors);
+        setWorkOrders(connected.workOrders);
+        setReports(connected.reports as OperationalReport[]);
+        setEscalations(connected.costs.map(mapOperationalCostDecision));
+        if (snapshot.financialDecisionParameter) {
+          setDecisionThreshold(snapshot.financialDecisionParameter.value);
+          setFinancialDecisionParameter({
+            code:'financial_decision_threshold',
+            label:snapshot.financialDecisionParameter.label,
+            value:snapshot.financialDecisionParameter.value,
+            unit:snapshot.financialDecisionParameter.unit,
+            scope:'Décisions avec montant documenté',
+            effectiveDate:snapshot.financialDecisionParameter.effectiveDate?.split('-').reverse().join('/') ?? 'Date métier non confirmée',
+            authority:'Administration de SCI Groupe Behira',
+          });
+        }
         setCanUploadVendorReport(snapshot.canUploadVendorReport);
         setReferenceCounts(snapshot.counts);
-        setDataState(snapshot.anomalies.length ? 'live' : 'fallback');
+        setDataState(connected.dataState);
       })
       .catch(() => {
-        if (!cancelled) { setDataState('fallback'); setCanUploadVendorReport(false); }
+        if (cancelled) return;
+        const failed = rejectConnectedSnapshot();
+        setPresentationSource(null);
+        setAnomalies(failed.anomalies);
+        setEquipmentItems(failed.equipment);
+        setVendorReferences(failed.vendors);
+        setWorkOrders(failed.workOrders);
+        setReports(failed.reports);
+        setEscalations(failed.costs);
+        setReferenceCounts({ anomalies:0, equipment:0, zones:0, profiles:0 });
+        setDataState(failed.dataState);
+        setCanUploadVendorReport(false);
       });
 
     return () => { cancelled = true; };
-  }, [session?.mode, session?.userId]);
+  }, [session?.mode, session?.userId, recipeMode]);
 
   useEffect(() => {
     if (!signOutConfirm) return;
@@ -814,6 +977,7 @@ export default function Home() {
             const gate = await getAuthenticatedProfileGate(client);
             if (gate.mustChangePassword) {
               if (!cancelled) {
+                sessionUserIdRef.current = data.session.user.id;
                 setSession(null);
                 setPasswordChangeRequirement({
                   userId:data.session.user.id,
@@ -825,6 +989,7 @@ export default function Home() {
             }
             const resolvedPersona = await resolveAuthenticatedPersona(client, data.session.user.id) as PersonaId;
             if (!cancelled) {
+              sessionUserIdRef.current = data.session.user.id;
               setDataState('loading');
               setSession({
                 personaId: resolvedPersona,
@@ -833,6 +998,7 @@ export default function Home() {
                 mode: 'supabase',
                 userId: data.session.user.id,
                 email: data.session.user.email,
+                displayName: gate.displayName,
               });
               setPersonaId(resolvedPersona);
               setView(landingViewByPersona[resolvedPersona]);
@@ -859,13 +1025,14 @@ export default function Home() {
     return () => { cancelled = true; window.clearTimeout(timer); };
   }, [supabaseIntegration.demoFallback]);
 
-  const persona = personas.find((item) => item.id === personaId) ?? personas[0];
+  const demoPersona = personas.find((item) => item.id === personaId) ?? personas[0];
+  const persona = session?.mode === 'supabase' ? { ...demoPersona, name: session.displayName ?? session.email ?? 'Compte connecté' } : demoPersona;
   const effectiveCanUploadVendorReport = session?.mode === 'demo'
     ? personaId === 'electricite' || personaId === 'eau_incendie'
     : canUploadVendorReport;
   const selected = anomalies.find((a) => a.id === selectedId) ?? anomalies[0];
   const filtered = useMemo(() => anomalies.filter((a) => {
-    const haystack = `${a.id} ${a.asset} ${displayAssetCode(a.asset)} ${a.title} ${a.location}`.toLowerCase();
+    const haystack = `${a.id} ${a.asset} ${a.title} ${a.location}`.toLowerCase();
     return haystack.includes(query.toLowerCase()) && (priorityFilter === 'Toutes' || a.priority === priorityFilter) && (statusFilter === 'Tous' || a.status === statusFilter);
   }), [anomalies, query, priorityFilter, statusFilter]);
 
@@ -901,16 +1068,223 @@ export default function Home() {
     setSelectedId(id); setPreviousView(from); navigate('detail');
   };
   const flash = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 3200); };
-  const syncOperationalData = async () => {
-    const snapshot = await loadOperationalSnapshot(getBrowserSupabaseClient());
-    setAnomalies(snapshot.anomalies as Anomaly[]);
-    setEquipmentItems(snapshot.equipment);
-    setVendorReferences(snapshot.vendors);
+  const syncOperationalData = useCallback(async () => {
+    const requestingUserId = sessionUserIdRef.current;
+    const generation = spaceGeneration.current;
+    const snapshot = await loadOperationalSnapshot(getBrowserSupabaseClient(recipeMode), recipeMode);
+    if (spaceGeneration.current !== generation) return;
+    if (!requestingUserId || sessionUserIdRef.current !== requestingUserId) throw new Error(SESSION_CHANGED_MESSAGE);
+    const connected = acceptConnectedSnapshot(snapshot);
+        setPresentationSource(snapshot);
+        setFieldRequests([]);
+    setAnomalies(connected.anomalies as Anomaly[]);
+    setEquipmentItems(connected.equipment);
+    setVendorReferences(connected.vendors);
+    setWorkOrders(connected.workOrders);
+    setReports(connected.reports as OperationalReport[]);
+    setEscalations(connected.costs.map(mapOperationalCostDecision));
+    if (snapshot.financialDecisionParameter) {
+      setDecisionThreshold(snapshot.financialDecisionParameter.value);
+      setFinancialDecisionParameter({
+        code:'financial_decision_threshold',
+        label:snapshot.financialDecisionParameter.label,
+        value:snapshot.financialDecisionParameter.value,
+        unit:snapshot.financialDecisionParameter.unit,
+        scope:'Décisions avec montant documenté',
+        effectiveDate:snapshot.financialDecisionParameter.effectiveDate?.split('-').reverse().join('/') ?? 'Date métier non confirmée',
+        authority:'Administration de SCI Groupe Behira',
+      });
+    }
     setCanUploadVendorReport(snapshot.canUploadVendorReport);
     setReferenceCounts(snapshot.counts);
-    setDataState('live');
+    setDataState(connected.dataState);
+  }, [recipeMode]);
+  const retryOperationalData = () => {
+    const generation = spaceGeneration.current;
+    setDataState('loading');
+    void syncOperationalData().catch(() => {
+      if (generation !== spaceGeneration.current) return;
+      const failed = rejectConnectedSnapshot();
+        setPresentationSource(null);
+      setAnomalies(failed.anomalies);
+      setEquipmentItems(failed.equipment);
+      setVendorReferences(failed.vendors);
+      setWorkOrders(failed.workOrders);
+      setReports(failed.reports);
+      setEscalations(failed.costs);
+      setReferenceCounts({ anomalies:0, equipment:0, zones:0, profiles:0 });
+      setCanUploadVendorReport(false);
+      setDataState(failed.dataState);
+    });
   };
+  const handleGe01Assignment: Ge01AssignmentHandler = async input => {
+    const ownerId = sessionUserIdRef.current;
+    const generation = spaceGeneration.current;
+    if (session?.mode !== 'supabase' || !ownerId || personaId !== 'facility' || dataState !== 'live') throw new Error('Session FM connectée requise.');
+    const client = getBrowserSupabaseClient(recipeMode);
+    await assertAuthenticatedUser(client, ownerId);
+    const { error } = await client.rpc('assign_ge01_round', {p_id:input.id,p_date:input.date,p_agent_id:input.agentId,p_reason:input.reason.trim()});
+    if (error) throw error;
+    if (sessionUserIdRef.current !== ownerId || generation !== spaceGeneration.current) throw new Error(SESSION_CHANGED_MESSAGE);
+    await syncOperationalData();
+  };
+  const handleGe01Read = async (report: OperationalReport) => {
+    const ownerId = sessionUserIdRef.current;
+    const generation = spaceGeneration.current;
+    if (session?.mode !== 'supabase' || !ownerId || personaId !== 'facility' || dataState !== 'live') throw new Error('Session FM connectée requise.');
+    const client = getBrowserSupabaseClient(recipeMode);
+    await assertAuthenticatedUser(client, ownerId);
+    const { error } = await client.rpc('mark_ge01_report_read', { p_report_id: report.id });
+    if (error) throw error;
+    if (sessionUserIdRef.current !== ownerId || generation !== spaceGeneration.current) throw new Error(SESSION_CHANGED_MESSAGE);
+    await syncOperationalData();
+  };
+  const handleGe01Proof = async (path: string) => {
+    const ownerId = sessionUserIdRef.current;
+    const generation = spaceGeneration.current;
+    if (session?.mode !== 'supabase' || !ownerId || personaId !== 'facility') throw new Error('Session FM connectée requise.');
+    const client = getBrowserSupabaseClient(recipeMode);
+    await assertAuthenticatedUser(client, ownerId);
+    const { data, error } = await client.storage.from('round-proofs').download(path);
+    if (error) throw error;
+    if (sessionUserIdRef.current !== ownerId || generation !== spaceGeneration.current) throw new Error(SESSION_CHANGED_MESSAGE);
+    return data;
+  };
+  const handleGe01Review: Ge01ReviewHandler = async (report, input) => {
+    const ownerId = sessionUserIdRef.current;
+    const generation = spaceGeneration.current;
+    if (session?.mode !== 'supabase' || !ownerId || personaId !== 'facility' || dataState !== 'live') {
+      throw new Error('Une session Facility Manager connectée est nécessaire.');
+    }
+    const client = getBrowserSupabaseClient(recipeMode);
+    await assertAuthenticatedUser(client, ownerId);
+    const result = await reviewGe01Report(client, report, input);
+    if (sessionUserIdRef.current !== ownerId || generation !== spaceGeneration.current) throw new Error(SESSION_CHANGED_MESSAGE);
+    const receipt = { ...result, reviewedBy:session.displayName ?? 'Facility Manager' };
+    setReports((current) => current.map((item) => item.id === report.id ? { ...item, review:receipt } : item));
+    // Keep the confirmed decision even if the subsequent global refresh fails.
+    try { await syncOperationalData(); }
+    catch { flash('Décision enregistrée. Actualisez la file pour recharger les dossiers.'); }
+    if (sessionUserIdRef.current !== ownerId || generation !== spaceGeneration.current) throw new Error(SESSION_CHANGED_MESSAGE);
+    return receipt;
+  };
+  const offlineSync = useOfflineSync({
+    enabled:session?.mode === 'supabase' && Boolean(session.userId),
+    userId:session?.mode === 'supabase' ? session.userId : undefined,
+  });
+  const handledSyncRun = useRef<typeof offlineSync.lastRun>(null);
+  useEffect(() => {
+    if (!offlineSync.lastRun?.synced || handledSyncRun.current === offlineSync.lastRun) return;
+    handledSyncRun.current = offlineSync.lastRun;
+    const roundReceipt = offlineSync.lastRun.syncedItems
+      .filter((entry) => entry.kind === 'field-round')
+      .map((entry) => readRoundReferences(entry.serverResult))
+      .find((receipt) => Boolean(receipt));
+    const confirmation = roundReceipt
+      ? `${roundReceipt.isTest ? 'RECETTE — DONNÉES FICTIVES · ' : ''}Ronde ${roundReceipt.reportReference} synchronisée${roundReceipt.anomalyReference ? ` · constat ${roundReceipt.anomalyReference} créé` : ''}.`
+      : `${offlineSync.lastRun.synced} saisie${offlineSync.lastRun.synced === 1 ? '' : 's'} terrain synchronisée${offlineSync.lastRun.synced === 1 ? '' : 's'}.`;
+    const generation = spaceGeneration.current;
+    const timer = window.setTimeout(() => {
+      if (generation !== spaceGeneration.current) return;
+      void syncOperationalData()
+        .then(() => { if (generation === spaceGeneration.current) flash(confirmation); })
+        .catch(() => { if (generation === spaceGeneration.current) flash('Synchronisation terminée ; actualisation du registre à reprendre.'); });
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [offlineSync.lastRun, syncOperationalData]);
   const mutationError = (error:unknown) => error instanceof Error ? error.message : 'Une erreur locale est survenue.';
+  const requireCurrentSupabaseUser = async (options: { allowOffline?: boolean } = {}) => {
+    const expectedUserId = session?.mode === 'supabase' ? session.userId : undefined;
+    if (!expectedUserId) {
+      invalidateChangedSession();
+      throw new AuthSessionChangedError();
+    }
+
+    try {
+      return await assertAuthenticatedUser(getBrowserSupabaseClient(recipeMode), expectedUserId, options);
+    } catch (error) {
+      if (isAuthSessionChangedError(error)) invalidateChangedSession();
+      throw error;
+    }
+  };
+  const persistGe01Workflow:Ge01WorkflowHandler = async (command, comment, requestId, treatment, employeeCode) => {
+    if (session?.mode !== 'supabase' || dataState !== 'live' || !selected.workflow || mutationBusy) return false;
+    setMutationBusy(true);
+    try {
+      await requireCurrentSupabaseUser();
+      const client = getBrowserSupabaseClient(recipeMode);
+      if (command === 'assign') {
+        if (!employeeCode) throw new Error('Sélectionnez un agent habilité pour le diagnostic.');
+        const { error } = await client.rpc('assign_ge01_diagnosis', { p_reference:selected.id, p_employee_code:employeeCode, p_comment:comment, p_base_version_no:selected.workflow.version, p_idempotency_key:requestId });
+        if (error) throw error;
+      } else if (command === 'diagnose') {
+        if (!selected.workflow.actionId) throw new Error('Actualisez le dossier avant de confirmer le diagnostic.');
+        const { error } = await client.rpc('complete_qualification_action', { p_reference:selected.id, p_action_id:selected.workflow.actionId, p_comment:comment, p_base_version_no:selected.workflow.version, p_idempotency_key:requestId });
+        if (error) throw error;
+      } else if (command === 'branch' && treatment && treatment.branch !== 'internal_without_cost') {
+        const { error } = await client.rpc('authorize_ge01_cost_intervention', { p_reference:selected.id, p_branch:treatment.branch, p_cost_reference:treatment.costReference, p_vendor_code:treatment.branch === 'vendor' ? treatment.vendorCode : null, p_comment:comment, p_base_version_no:selected.workflow.version, p_idempotency_key:requestId });
+        if (error) throw error;
+      } else {
+        const targets = { branch:'Affectée', start:'En intervention', finish:'En validation', close:'Clôturée' };
+        await advanceAnomalyWorkflow(client, selected.id, targets[command], command === 'branch' ? `Branche A — interne sans coût. ${comment}` : comment);
+      }
+      await syncOperationalData();
+      flash('Étape GE-01 enregistrée dans le dossier.');
+      return true;
+    } catch (error) {
+      flash(`Étape non confirmée : ${mutationError(error)}. Actualisez le dossier avant de réessayer.`);
+      return false;
+    } finally { setMutationBusy(false); }
+  };
+  const persistReception:ReceptionHandler = async (decision,comment,requestId) => {
+    if (session?.mode !== 'supabase' || dataState !== 'live' || !selected.workflow || mutationBusy) return false;
+    setMutationBusy(true);
+    try {
+      await requireCurrentSupabaseUser();
+      const { error } = await getBrowserSupabaseClient(recipeMode).rpc('receive_intervention', {
+        p_reference:selected.id,p_decision:decision,p_comment:comment,p_base_version_no:selected.workflow.version,p_idempotency_key:requestId,
+      });
+      if(error)throw error;
+      await syncOperationalData();
+      flash(decision==='accepted'?'Intervention réceptionnée et dossier clôturé.':'Intervention renvoyée à l’agent avec votre motif.');
+      return true;
+    } catch(error) { flash(`Réception non confirmée : ${mutationError(error)}`);return false; }
+    finally {setMutationBusy(false);}
+  };
+  const persistReopenDossier = async (reason:string, requestId:string):Promise<boolean> => {
+    if (session?.mode !== 'supabase' || dataState !== 'live' || !selected.workflow || mutationBusy) return false;
+    setMutationBusy(true);
+    try {
+      await requireCurrentSupabaseUser();
+      const { error } = await getBrowserSupabaseClient(recipeMode).rpc('reopen_closed_dossier', {
+        p_reference:selected.id, p_reason:reason, p_base_version_no:selected.workflow.version, p_idempotency_key:requestId,
+      });
+      if (error) throw error;
+      await syncOperationalData();
+      flash('Dossier rouvert. Une nouvelle échéance et un réexamen FM ont été créés.');
+      return true;
+    } catch (error) {
+      flash(`Réouverture non confirmée : ${mutationError(error)}`);
+      return false;
+    } finally { setMutationBusy(false); }
+  };
+  const persistReviewReopenedDossier = async (comment:string, requestId:string):Promise<boolean> => {
+    if (session?.mode !== 'supabase' || dataState !== 'live' || !selected.workflow || mutationBusy) return false;
+    setMutationBusy(true);
+    try {
+      await requireCurrentSupabaseUser();
+      const { error } = await getBrowserSupabaseClient(recipeMode).rpc('review_reopened_dossier', {
+        p_reference:selected.id, p_comment:comment, p_base_version_no:selected.workflow.version, p_idempotency_key:requestId,
+      });
+      if (error) throw error;
+      await syncOperationalData();
+      flash('Réexamen enregistré. Le dossier attend sa nouvelle qualification.');
+      return true;
+    } catch (error) {
+      flash(`Réexamen non confirmé : ${mutationError(error)}`);
+      return false;
+    } finally { setMutationBusy(false); }
+  };
   const persistWorkflowStatus = async (status:Status) => {
     if (status === selected.status) return;
     if (status === 'Clôturée' && selected.priority === 'Critique' && !selected.proof) {
@@ -924,9 +1298,10 @@ export default function Home() {
     }
     setMutationBusy(true);
     try {
-      await advanceAnomalyWorkflow(getBrowserSupabaseClient(), selected.id, status);
+      await requireCurrentSupabaseUser();
+      await advanceAnomalyWorkflow(getBrowserSupabaseClient(recipeMode), selected.id, status);
       await syncOperationalData();
-      flash(`Étape enregistrée dans Supabase : ${status}.`);
+      flash(`Étape enregistrée sur le serveur métier : ${status}.`);
     } catch (error) {
       flash(`Action non enregistrée : ${mutationError(error)}`);
     } finally {
@@ -934,32 +1309,103 @@ export default function Home() {
     }
   };
   const persistProof = async (file:File):Promise<SyncStatusState> => {
-    if (session?.mode !== 'supabase' || dataState !== 'live') {
+    if (session?.mode !== 'supabase') {
       setAnomalies((items) => items.map((a) => a.id === selected.id ? { ...a, proof:true } : a));
       flash('Preuve ajoutée — simulation de repli.');
       return 'demo-volatile';
     }
+    if (dataState !== 'live' || !selected.databaseId) {
+      flash('Preuve non enregistrée : ce dossier de repli n’a pas d’identifiant serveur canonique.');
+      return 'error';
+    }
     setMutationBusy(true);
     try {
-      const result = await uploadAnomalyProof(getBrowserSupabaseClient(), selected.id, file);
-      await syncOperationalData();
-      flash(result.verification_status === 'accepted' ? 'Preuve déposée et acceptée dans Supabase.' : 'Preuve déposée ; validation de Facility Manager requise.');
-      return 'server-confirmed';
+      await requireCurrentSupabaseUser({ allowOffline:true });
+      await offlineSync.enqueueProof({
+        isTest:recipeMode,
+        anomalyReference:selected.id,
+        anomalyId:selected.databaseId,
+        file,
+        capturedAt:new Date().toISOString(),
+        proofType:file.type === 'application/pdf' ? 'pv' : 'photo',
+      });
+      setAnomalies((items) => items.map((a) => a.id === selected.id ? { ...a, proofQueued:true } : a));
+      flash(offlineSync.online ? 'Preuve mise en file ; synchronisation lancée.' : 'Preuve protégée sur cet appareil ; envoi automatique au retour du réseau.');
+      return 'queued-local';
     } catch (error) {
-      flash(`Preuve non enregistrée : ${mutationError(error)}`);
+      flash(`Preuve non mise en file : ${mutationError(error)}`);
       return 'error';
     } finally {
       setMutationBusy(false);
     }
   };
-  const verifyProof = async () => {
+  const persistAssignedIntervention = async (order:OperationalWorkOrder, target:'En intervention'|'En validation', comment:string) => {
+    if (session?.mode !== 'supabase' || dataState !== 'live') {
+      flash('Action réelle indisponible hors de la session métier connectée.');
+      return false;
+    }
     setMutationBusy(true);
     try {
-      await verifyLatestAnomalyProof(getBrowserSupabaseClient(), selected.id, 'accepted');
+      await requireCurrentSupabaseUser();
+      await advanceAnomalyWorkflow(getBrowserSupabaseClient(recipeMode), order.anomalyReference, target, comment);
       await syncOperationalData();
-      flash('Preuve validée par le Facility Manager.');
+      flash(target === 'En intervention'
+        ? `${order.id} · intervention démarrée et historisée.`
+        : `${order.id} · intervention terminée et transmise à Facility Manager.`);
+      return true;
     } catch (error) {
-      flash(`Validation non enregistrée : ${mutationError(error)}`);
+      flash(`Intervention non enregistrée : ${mutationError(error)}`);
+      return false;
+    } finally {
+      setMutationBusy(false);
+    }
+  };
+  const persistAssignedProof = async (order:OperationalWorkOrder, file:File) => {
+    if (session?.mode !== 'supabase' || dataState !== 'live') {
+      flash('Dépôt réel indisponible hors de la session métier connectée.');
+      return false;
+    }
+    setMutationBusy(true);
+    try {
+      await requireCurrentSupabaseUser({ allowOffline:true });
+      await offlineSync.enqueueProof({
+        isTest:order.isTest,
+        anomalyReference:order.anomalyReference,
+        anomalyId:order.anomalyDatabaseId,
+        file,
+        capturedAt:new Date().toISOString(),
+        proofType:file.type === 'application/pdf' ? 'pv' : 'photo',
+      });
+      flash(offlineSync.online
+        ? `${order.id} · preuve mise en file sécurisée ; transmission lancée.`
+        : `${order.id} · preuve protégée sur cet appareil jusqu’au retour du réseau.`);
+      return true;
+    } catch (error) {
+      flash(`Preuve non mise en file : ${mutationError(error)}`);
+      return false;
+    } finally {
+      setMutationBusy(false);
+    }
+  };
+  const consultProof = async (proof:OperationalProof) => {
+    if (session?.mode !== 'supabase' || dataState !== 'live') {
+      throw new Error('Consultation réelle indisponible hors de la session métier connectée.');
+    }
+    if (!proof.storagePath) throw new Error('Le fichier de preuve n’est pas relié au dossier.');
+    await requireCurrentSupabaseUser();
+    return createAnomalyProofConsultationUrl(getBrowserSupabaseClient(recipeMode), proof.storagePath);
+  };
+  const verifyProof = async (decision:'accepted'|'rejected', comment:string) => {
+    setMutationBusy(true);
+    try {
+      await requireCurrentSupabaseUser();
+      await verifyLatestAnomalyProof(getBrowserSupabaseClient(recipeMode), selected.id, decision, comment);
+      await syncOperationalData();
+      flash(decision === 'accepted' ? 'Preuve acceptée par Facility Manager.' : 'Preuve refusée ; le motif est conservé dans le dossier.');
+      return true;
+    } catch (error) {
+      flash(`Décision sur la preuve non enregistrée : ${mutationError(error)}`);
+      return false;
     } finally {
       setMutationBusy(false);
     }
@@ -975,7 +1421,8 @@ export default function Home() {
     }
     setMutationBusy(true);
     try {
-      const result = await uploadVendorInterventionReport(getBrowserSupabaseClient(), input);
+      await requireCurrentSupabaseUser();
+      const result = await uploadVendorInterventionReport(getBrowserSupabaseClient(recipeMode), input);
       flash(`${String(result.reference)} déposé au nom de ${input.vendorCode} ; validation de Facility Manager requise.`);
     } catch (error) {
       flash(`Rapport prestataire non enregistré : ${mutationError(error)}`);
@@ -984,9 +1431,52 @@ export default function Home() {
       setMutationBusy(false);
     }
   };
+  const persistCostDecision = async (input:CostSubmissionInput) => {
+    if (session?.mode !== 'supabase') {
+      const id = `DEC-${String(19 + escalations.length).padStart(3, '0')}`;
+      setEscalations((items) => [{ id, anomaly:input.anomalyReference, asset:anomalies.find((item) => item.id === input.anomalyReference)?.asset ?? 'Équipement', title:input.description, kind:'Coût', amount:input.amount, due:'À l’instant · simulation', risk:`${input.budgetType.toUpperCase()} · simulation`, recommendation:input.description, state:input.amount >= decisionThreshold ? 'À décider' : 'Approuvée', decisionScope:input.amount >= decisionThreshold ? 'administration' : 'facility_manager', thresholdAmount:decisionThreshold }, ...items]);
+      flash(input.amount >= decisionThreshold ? 'Décision simulée transmise à l’Administration.' : 'Décision simulée dans la délégation de Facility Manager.');
+      return;
+    }
+    if (dataState !== 'live') throw new Error('Actualisez les données avant cette décision.');
+    setMutationBusy(true);
+    try {
+      await requireCurrentSupabaseUser();
+      const result = await submitAnomalyCostDecision(getBrowserSupabaseClient(recipeMode), input);
+      await syncOperationalData();
+      flash(String(result.decision_scope) === 'administration'
+        ? `${String(result.cost_reference)} soumise à l’Administration.`
+        : `${String(result.cost_reference)} décidée dans la délégation de Facility Manager.`);
+    } catch (error) {
+      flash(`Décision financière non enregistrée : ${mutationError(error)}`);
+      throw error;
+    } finally {
+      setMutationBusy(false);
+    }
+  };
+  const persistCostReview = async (input:CostReviewInput) => {
+    if (session?.mode !== 'supabase') {
+      setEscalations((items) => items.map((item) => item.id === input.costReference ? { ...item, state:input.decision === 'approved' ? 'Approuvée' : input.decision === 'returned' ? 'Renvoyée à Facility Manager' : 'Refusée', motive:input.comment, reviewedBy:'Administration Démo' } : item));
+      flash(`Décision ${input.decision === 'approved' ? 'approuvée' : input.decision === 'returned' ? 'renvoyée au FM' : 'refusée'} — simulation locale.`);
+      return;
+    }
+    if (dataState !== 'live') throw new Error('Actualisez les données avant cette décision.');
+    setMutationBusy(true);
+    try {
+      await requireCurrentSupabaseUser();
+      await reviewAnomalyCostDecision(getBrowserSupabaseClient(recipeMode), input);
+      await syncOperationalData();
+      flash(`${input.costReference} · décision ${input.decision === 'approved' ? 'approuvée' : input.decision === 'returned' ? 'renvoyée au FM' : 'refusée'} et historisée.`);
+    } catch (error) {
+      flash(`Arbitrage non enregistré : ${mutationError(error)}`);
+      throw error;
+    } finally {
+      setMutationBusy(false);
+    }
+  };
   const changePersona = (next: PersonaId) => {
     if (session?.mode === 'supabase') {
-      flash('Le rôle est imposé par Supabase Auth et les politiques RLS.');
+      flash('Le rôle est imposé par l’authentification et les règles d’accès.');
       return;
     }
     setPersonaId(next);
@@ -1004,13 +1494,14 @@ export default function Home() {
   };
   const authenticate = async (next:PersonaId, remember:boolean, email:string, password:string) => {
     if (isSupabaseIntegrationEnabled) {
-      const client = getBrowserSupabaseClient();
+      const client = getBrowserSupabaseClient(recipeMode);
       setDataState('loading');
       setSupabaseRememberPreference(remember);
       const { data, error } = await client.auth.signInWithPassword({ email, password });
-      if (error || !data.user) throw new Error('Identifiants Supabase non reconnus.');
+      if (error || !data.user) throw new Error('Identifiants non reconnus.');
 
       try {
+        sessionUserIdRef.current = data.user.id;
         const gate = await getAuthenticatedProfileGate(client);
         if (gate.mustChangePassword) {
           setSession(null);
@@ -1029,10 +1520,12 @@ export default function Home() {
           mode:'supabase',
           userId:data.user.id,
           email:data.user.email,
+          displayName:gate.displayName,
         };
-        setSession(nextSession); setPersonaId(resolvedPersona); setView(landingViewByPersona[resolvedPersona]); setPreviousView(landingViewByPersona[resolvedPersona]);
+        setSessionNotice(''); setSession(nextSession); setPersonaId(resolvedPersona); setView(landingViewByPersona[resolvedPersona]); setPreviousView(landingViewByPersona[resolvedPersona]);
         return;
       } catch (profileError) {
+        sessionUserIdRef.current = null;
         await client.auth.signOut();
         throw profileError;
       }
@@ -1041,24 +1534,25 @@ export default function Home() {
     const nextSession:DemoSession = { personaId:next, remember, issuedAt:new Date().toISOString(), mode:'demo' };
     window.localStorage.removeItem(SESSION_KEY); window.sessionStorage.removeItem(SESSION_KEY);
     (remember ? window.localStorage : window.sessionStorage).setItem(SESSION_KEY, JSON.stringify(nextSession));
-    setSession(nextSession); setPersonaId(next); setView(landingViewByPersona[next]); setPreviousView(landingViewByPersona[next]);
+    sessionUserIdRef.current = null; setSessionNotice(''); setSession(nextSession); setPersonaId(next); setView(landingViewByPersona[next]); setPreviousView(landingViewByPersona[next]);
   };
   const authenticateDemo = async (next:PersonaId, remember:boolean) => {
     const nextSession:DemoSession = { personaId:next, remember, issuedAt:new Date().toISOString(), mode:'demo' };
     window.localStorage.removeItem(SESSION_KEY); window.sessionStorage.removeItem(SESSION_KEY);
     (remember ? window.localStorage : window.sessionStorage).setItem(SESSION_KEY, JSON.stringify(nextSession));
-    setDataState('demo'); setCanUploadVendorReport(false); setSession(nextSession); setPersonaId(next); setView(landingViewByPersona[next]); setPreviousView(landingViewByPersona[next]);
+    sessionUserIdRef.current = null; setSessionNotice(''); setDataState('demo'); setCanUploadVendorReport(false); setSession(nextSession); setPersonaId(next); setView(landingViewByPersona[next]); setPreviousView(landingViewByPersona[next]);
   };
   const requestPasswordReset = async (email:string) => {
     if (!isSupabaseIntegrationEnabled) return;
-    const client = getBrowserSupabaseClient();
+    const client = getBrowserSupabaseClient(recipeMode);
     const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo:window.location.origin });
     if (error) throw new Error('Impossible de lancer la réinitialisation du mot de passe.');
   };
   const completeRequiredPasswordChange = async (currentPassword:string, newPassword:string) => {
     if (!passwordChangeRequirement) throw new Error('La session de première connexion a expiré.');
-    const client = getBrowserSupabaseClient();
-    const { data, error } = await client.auth.updateUser({ password:newPassword, currentPassword });
+    const client = getBrowserSupabaseClient(recipeMode);
+    await assertAuthenticatedUser(client, passwordChangeRequirement.userId);
+    const { data, error } = await client.auth.updateUser({ password:newPassword, current_password:currentPassword });
     if (error || !data.user) throw new Error('Le mot de passe temporaire est incorrect ou la mise à jour a été refusée.');
     const gate = await getAuthenticatedProfileGate(client);
     if (gate.mustChangePassword) throw new Error('Le changement n’a pas été confirmé par le contrôle de sécurité.');
@@ -1070,28 +1564,34 @@ export default function Home() {
       mode:'supabase',
       userId:data.user.id,
       email:data.user.email,
+      displayName:gate.displayName,
     };
+    sessionUserIdRef.current = data.user.id;
     setPasswordChangeRequirement(null);
-    setSession(nextSession); setPersonaId(resolvedPersona); setView(landingViewByPersona[resolvedPersona]); setPreviousView(landingViewByPersona[resolvedPersona]); setDataState('loading');
+    setSessionNotice(''); setSession(nextSession); setPersonaId(resolvedPersona); setView(landingViewByPersona[resolvedPersona]); setPreviousView(landingViewByPersona[resolvedPersona]); setDataState('loading');
   };
   const signOutLockedSession = async () => {
-    await getBrowserSupabaseClient().auth.signOut();
+    sessionUserIdRef.current = null;
+    await getBrowserSupabaseClient(recipeMode).auth.signOut();
     setPasswordChangeRequirement(null);
+    setSessionNotice('');
     setSession(null);
   };
   const signOut = async () => {
     if (session?.mode === 'supabase') {
-      const { error } = await getBrowserSupabaseClient().auth.signOut();
-      if (error) { flash('Déconnexion Supabase impossible. Réessayez.'); return; }
+      sessionUserIdRef.current = null;
+      const { error } = await getBrowserSupabaseClient(recipeMode).auth.signOut();
+      if (error) { sessionUserIdRef.current = session.userId ?? null; flash('Déconnexion impossible. Réessayez.'); return; }
     }
     window.localStorage.removeItem(SESSION_KEY); window.sessionStorage.removeItem(SESSION_KEY);
-    setSignOutConfirm(false); setSession(null); setPasswordChangeRequirement(null); setPersonaId('facility'); setView('workspace'); setToast(''); setDataState('demo'); setCanUploadVendorReport(false);
+    setSignOutConfirm(false); setSessionNotice(''); setSession(null); setPasswordChangeRequirement(null); setPersonaId('facility'); setView('workspace'); setToast(''); setDataState('demo'); setCanUploadVendorReport(false); setWorkOrders([]); setReports([]);
   };
   const resetDemo = () => {
-    if (isSupabaseIntegrationEnabled) void getBrowserSupabaseClient().auth.signOut();
+    sessionUserIdRef.current = null;
+    if (isSupabaseIntegrationEnabled) void getBrowserSupabaseClient(recipeMode).auth.signOut();
     window.localStorage.removeItem('behira_supabase_remember');
     window.localStorage.removeItem(SESSION_KEY); window.sessionStorage.removeItem(SESSION_KEY);
-    setSession(null); setPasswordChangeRequirement(null); setPersonaId('facility'); setView('workspace'); setPreviousView('registry'); setAnomalies(seedAnomalies); setEquipmentItems(fallbackEquipment); setVendorReferences(fallbackVendors); setCanUploadVendorReport(false); setDataState('demo'); setReferenceCounts({ anomalies:seedAnomalies.length, equipment:fallbackEquipment.length, zones:0, profiles:0 }); setEscalations(seedEscalations);
+    setSessionNotice(''); setSession(null); setPasswordChangeRequirement(null); setPersonaId('facility'); setView('workspace'); setPreviousView('registry'); setAnomalies(seedAnomalies); setEquipmentItems(fallbackEquipment); setVendorReferences(fallbackVendors); setWorkOrders([]); setReports([]); setCanUploadVendorReport(false); setDataState('demo'); setReferenceCounts({ anomalies:seedAnomalies.length, equipment:fallbackEquipment.length, zones:0, profiles:0 }); setEscalations(seedEscalations); setDecisionThreshold(DECISION_THRESHOLD_FCFA); setFinancialDecisionParameter(FINANCIAL_DECISION_PARAMETER);
     setFieldRequests([
       { id:'REQ-031', from:'Agente Rondes & Assistance Démo', subject:'Infiltration légère · Atrium restaurant', note:'Photo ajoutée, origine à qualifier après la pluie.', status:'À traiter par Facility Manager' },
       { id:'REQ-030', from:'Agent Eau & Incendie Démo', subject:'DEMO-EAU · deuxième réarmement en 7 jours', note:'Service rétabli provisoirement, diagnostic demandé.', status:'À traiter par Facility Manager' },
@@ -1099,11 +1599,18 @@ export default function Home() {
     setQuery(''); setPriorityFilter('Toutes'); setStatusFilter('Tous'); setToast('');
   };
   const submitFieldRequest = (request: Omit<FieldRequest, 'id' | 'status'>) => {
+    if (session?.mode === 'supabase') { flash('Le signalement hors ronde sera raccordé dans la suite de la livraison 1.'); return; }
     const id = `REQ-${String(32 + fieldRequests.length).padStart(3, '0')}`;
     setFieldRequests((items) => [{ ...request, id, status:'À traiter par Facility Manager' }, ...items]);
     flash(`${id} transmise à Facility Manager — simulation locale.`);
   };
-  const decideEscalation = (id:string, state:DecisionState, motive:string) => {
+  const decideEscalation = async (id:string, state:DecisionState, motive:string, idempotencyKey:string) => {
+    const item = escalations.find((candidate) => candidate.id === id);
+    if (item?.costReference) {
+      await persistCostReview({ costReference:item.costReference, decision:state === 'Approuvée' ? 'approved' : state === 'Renvoyée à Facility Manager' ? 'returned' : 'rejected', comment:motive, idempotencyKey });
+      return;
+    }
+    if (session?.mode === 'supabase') throw new Error('Cette décision n’est pas reliée à un arbitrage financier. Aucun changement enregistré.');
     setEscalations((items) => items.map((item) => item.id === id ? { ...item, state, motive } : item));
     flash(`${id} · décision ${state.toLowerCase()} et retour envoyé à Facility Manager.`);
   };
@@ -1114,6 +1621,20 @@ export default function Home() {
     flash(`${id} transmise à l’Administration pour arbitrage.`);
   };
 
+  const uiSession: UiSession | null = session?.mode === 'supabase' && presentationSource?.profileId ? {
+    profileId: presentationSource.profileId, audience: personaId, displayName: session.displayName ?? persona.name,
+    perimeter: presentationSource.perimeter?.all ? { kind:'all' } : { kind:'codes',
+      equipmentCodes: presentationSource.equipment.filter(e=>e.id && presentationSource.perimeter?.equipmentIds.includes(e.id)).map(e=>e.code as EquipmentCode),
+      zoneIds:presentationSource.perimeter?.zoneIds ?? [], roundModuleCodes:[] },
+    scopeVersion:presentationSource.healthSnapshot.scopeVersion, demo:false,
+  } : null;
+  const healthPresentation = uiSession && presentationSource ? presentationSource.healthSnapshot : null;
+  const localPresentationSource = presentationSource ? { ...presentationSource, ge01Operations: {
+    ...presentationSource.ge01Operations,
+    rounds: presentationSource.ge01Operations.rounds.map(round => round.state !== 'done'
+      && offlineSync.ge01Drafts.some(draft => draft.isTest === recipeMode && draft.date === round.scheduledDate)
+      ? { ...round, state: 'draft' as const } : round),
+  } } : null;
   const primaryNavKeys = primaryNavKeysByPersona[personaId];
   const visibleNav = navItems.filter((item) => allowedViewsByPersona[personaId].includes(item.key) || primaryNavKeys.includes(item.key));
   const primaryNav = primaryNavKeys.map((key) => navItems.find((item) => item.key === key)).filter((item): item is NavigationItem => Boolean(item));
@@ -1154,10 +1675,11 @@ export default function Home() {
 
   if (!authReady) return <main className="auth-loading" aria-label="Chargement de la session"><span className="brand-mark">B</span><p>Préparation de votre espace…</p></main>;
   if (passwordChangeRequirement) return <RequiredPasswordChange requirement={passwordChangeRequirement} onComplete={completeRequiredPasswordChange} onSignOut={signOutLockedSession} />;
-  if (!session) return <AuthExperience onAuthenticate={authenticate} onDemoAuthenticate={authenticateDemo} onForgot={requestPasswordReset} onReset={resetDemo} supabaseMode={isSupabaseIntegrationEnabled} allowDemoFallback={supabaseIntegration.demoFallback} environmentLabel={supabaseIntegration.environmentLabel} />;
+  if (!session) return <AuthExperience onAuthenticate={authenticate} onDemoAuthenticate={authenticateDemo} onForgot={requestPasswordReset} onReset={resetDemo} supabaseMode={isSupabaseIntegrationEnabled} allowDemoFallback={supabaseIntegration.demoFallback} environmentLabel={supabaseIntegration.environmentLabel} sessionNotice={sessionNotice} />;
 
   return (
-    <DemoScenarioProvider>
+    <ConnectedPresentation.Provider value={{live:session.mode === 'supabase', session:uiSession, health:healthPresentation, source:localPresentationSource, pendingRounds:offlineSync.ge01Pending.filter(item => item.isTest === recipeMode), threshold:decisionThreshold, costs:<ConnectedCostsWorkspace items={escalations.filter(e=>e.anomaly === selected?.id).map(item=>({...item, amount:item.amount ?? null, reviewComment:item.motive}))} anomalies={selected ? [{reference:selected.id, asset:selected.asset, title:selected.title}] : []} audience={personaId === 'administration' ? 'administration' : 'facility'} threshold={decisionThreshold} persistenceMode={session.mode === 'supabase' ? 'server' : 'demo'} busy={mutationBusy} onSubmit={persistCostDecision} onReview={persistCostReview} onOpenDossier={openDetail} />, sync:<span className="home-hero-sync">{offlineSync.running ? "Envoi en cours" : offlineSync.counts.actionable ? `${offlineSync.counts.actionable} envoi(s) en attente` : "Aucun envoi local en attente"}</span>}}>
+    <DemoScenarioProvider enabled={session.mode === 'demo'}>
     <div className="app-shell">
       <header className="app-navigation">
         <button className="brand" onClick={() => navigate('workspace')} aria-label="BEHIRA — aller à l’Accueil"><span className="brand-mark">B</span><span className="brand-wordmark">BEHIRA<small>FM / GB TRACK</small></span></button>
@@ -1181,27 +1703,34 @@ export default function Home() {
             </div>}
           </div>}
         </nav>
-        <div className="scope-box"><span>●</span><div><b>Site Démo Atlas</b><small>{session.mode === 'supabase' ? dataState === 'live' ? `${referenceCounts.anomalies} anomalies · ${referenceCounts.equipment} équipements · ${referenceCounts.zones} zones` : dataState === 'loading' ? `Synchronisation ${supabaseIntegration.environmentLabel}…` : 'Repli sur les données de démonstration' : 'Site principal · démonstration'}</small></div></div>
+        <div className="scope-box"><span>●</span><div><b>{session.mode === 'supabase' ? 'BEHIRA' : 'Site Démo Atlas'}</b><small>{session.mode === 'supabase' ? dataState === 'live' ? `${referenceCounts.anomalies} anomalies · ${referenceCounts.equipment} équipements · ${referenceCounts.zones} zones` : dataState === 'loading' ? `Synchronisation ${supabaseIntegration.environmentLabel}…` : 'Données métier indisponibles' : 'Site principal · démonstration'}</small></div></div>
         <div className="app-navigation-user"><button className="logout-button" onClick={() => setSignOutConfirm(true)} aria-label="Se déconnecter">↪</button></div>
       </header>
 
       <main className={`main-column${view === 'manager' || view === 'registry' ? ' is-dossiers-page' : ''}`}>
         <header className="topbar">
           <div className="topbar-title"><h1>{pageTitle}</h1><p>{pageSubtitle}</p></div>
-          <div className="top-actions">{session.mode === 'demo' ? <PersonaSwitcher value={personaId} onChange={changePersona} /> : <div className={`authenticated-persona data-${dataState}`} title={`${session.email} · ${dataState === 'live' ? `données ${supabaseIntegration.environmentLabel}` : 'données de repli'}`}><span>{persona.initials}</span><p><b>{persona.name}</b><small>{dataState === 'live' ? `${supabaseIntegration.environmentLabel} · ${referenceCounts.anomalies} anomalies visibles` : dataState === 'loading' ? `Connexion à ${supabaseIntegration.environmentLabel}…` : `Mode de repli · ${persona.role}`}</small></p></div>}<NotificationBell personaId={personaId} anomalies={anomalies} equipment={equipmentItems} dataState={dataState} canConfigure={personaId === 'facility' || personaId === 'administration'} canOpenEquipment={allowedViewsByPersona[personaId].includes('equipment')} onOpenAnomaly={(id) => openDetail(id, view === 'detail' ? previousView : view)} onOpenEquipment={() => navigate('equipment')} onOpenHome={() => navigate('workspace')} /><button className="auth-signout-top" onClick={() => setSignOutConfirm(true)} aria-label="Se déconnecter"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 4.5H5.5A1.5 1.5 0 0 0 4 6v8a1.5 1.5 0 0 0 1.5 1.5H8"/><path d="M8.5 10H16m0 0-2.4-2.4M16 10l-2.4 2.4"/></svg></button></div>
+          <div className="top-actions">{session.mode === 'demo' ? <PersonaSwitcher value={personaId} onChange={changePersona} /> : <div className={`authenticated-persona data-${dataState}`} title={`${session.email} · ${dataState === 'live' ? `données ${supabaseIntegration.environmentLabel}` : 'données métier indisponibles'}`}><span>{persona.initials}</span><p><b>{persona.name}</b><small>{dataState === 'live' ? `${supabaseIntegration.environmentLabel} · ${referenceCounts.anomalies} anomalies visibles` : dataState === 'loading' ? `Connexion à ${supabaseIntegration.environmentLabel}…` : `Erreur de chargement · ${persona.role}`}</small></p></div>}<NotificationBell personaId={personaId} anomalies={anomalies} equipment={equipmentItems} dataState={dataState} canConfigure={personaId === 'facility' || personaId === 'administration'} canOpenEquipment={allowedViewsByPersona[personaId].includes('equipment')} onOpenAnomaly={(id) => openDetail(id, view === 'detail' ? previousView : view)} onOpenEquipment={() => navigate('equipment')} onOpenHome={() => navigate('workspace')} /><button className="auth-signout-top" onClick={() => setSignOutConfirm(true)} aria-label="Se déconnecter"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 4.5H5.5A1.5 1.5 0 0 0 4 6v8a1.5 1.5 0 0 0 1.5 1.5H8"/><path d="M8.5 10H16m0 0-2.4-2.4M16 10l-2.4 2.4"/></svg></button></div>
         </header>
 
         <div className="content">
+          {session.mode === 'supabase' && (recipeAvailable || recipeMode) && <section className="recette-space" aria-label="Espace de travail">
+            <Field label="Espace de travail"><Select aria-label="Espace de travail" value={recipeMode ? 'recette' : 'real'} disabled={mutationBusy || dataState === 'loading' || view === 'report'} onChange={(event) => { spaceGeneration.current++; setDataState('loading'); setAnomalies([]); setEquipmentItems([]); setWorkOrders([]); setReports([]); setEscalations([]); setReferenceCounts({anomalies:0,equipment:0,zones:0,profiles:0}); setToast(''); setSelectedId(''); setView('workspace'); setRecipeMode(event.target.value === 'recette'); }}><option value="real">Exploitation — données réelles</option><option value="recette">Recette — données fictives</option></Select></Field>
+            {recipeMode && <p role="status"><Badge tone="orange">RECETTE — DONNÉES FICTIVES</Badge> Rapports, dossiers, preuves et montants de test. Aucun engagement réel ; exclus des indicateurs d’exploitation.</p>}
+            {view === 'report' && <small>Revenez à l’Accueil pour changer d’espace après sauvegarde du brouillon.</small>}
+          </section>}
+          {session.mode === 'supabase' && dataState !== 'live' ? <ConnectedDataStatus state={dataState} environmentLabel={supabaseIntegration.environmentLabel} onRetry={retryOperationalData} /> : <>
+
           {view === 'workspace' && <PersonaWorkspace persona={persona} anomalies={anomalies} equipment={equipmentItems} vendors={vendorReferences} canUploadVendorReport={effectiveCanUploadVendorReport} vendorReportBusy={mutationBusy} onVendorReport={persistVendorReport} escalations={escalations} fieldRequests={fieldRequests} onEscalationDecision={decideEscalation} onEscalateToDirection={escalateToDirection} onFieldRequest={submitFieldRequest} onOpen={(id) => openDetail(id, 'workspace')} onNavigate={navigate} flash={flash} />}
           {view === 'dashboard' && <Dashboard anomalies={anomalies} equipment={equipmentItems} escalations={escalations} audience={personaId === 'administration' ? 'administration' : 'facility'} onOpen={openDetail} onNavigate={navigate} />}
           {(view === 'manager' || view === 'registry') && <DossiersWorkspace
             tab={view === 'registry' ? 'tous' : dossiersTab}
             onTab={(tab) => { setDossiersTab(tab); if (view === 'registry') setView('manager'); }}
-            threshold={DECISION_THRESHOLD_FCFA}
+            threshold={decisionThreshold}
             query={query}
             onQuery={setQuery}
             counts={{
-              atraiter: atraiterCount(anomalies, fieldRequests),
+              atraiter: presentationSource ? pendingFmDossierIds(presentationSource).size : atraiterCount(anomalies, fieldRequests),
               tous: anomalies.length,
               clotures: anomalies.filter((item) => item.status === 'Clôturée').length,
             }}
@@ -1219,21 +1748,23 @@ export default function Home() {
                   onOpen={(id) => openDetail(id, 'manager')}
                 />}
           </DossiersWorkspace>}
-          {view === 'equipment' && <LiveEquipmentWorkspace session={sessionForAudience(personaId === 'administration' ? 'administration' : 'facility', persona.name)} />}
-          {view === 'costs' && <CostsWorkspace items={escalations.map((item) => ({ id:item.id, anomaly:item.anomaly, asset:item.asset, title:item.title, kind:item.kind, amount:item.amount ?? null, due:item.due, state:item.state }))} audience={personaId === 'administration' ? 'administration' : 'facility'} threshold={DECISION_THRESHOLD_FCFA} onOpenDossier={(id) => openDetail(id, 'costs')} />}
-          {view === 'access' && <AccessWorkspace users={personas.map((item) => ({ id:item.id, name:item.name, initials:item.initials, role:item.role, scope:item.scope }))} audience={personaId === 'administration' ? 'administration' : 'facility'} />}
-          {view === 'settings' && <ParametersWorkspace parameter={FINANCIAL_DECISION_PARAMETER} onOpenCosts={() => navigate('costs')} users={personaId === 'administration' ? personas.map((item) => ({ id:item.id, name:item.name, initials:item.initials, role:item.role, scope:item.scope })) : undefined} />}
-          {view === 'report' && <>
-            <Report persona={persona} onNavigate={navigate} />
-            {(personaId === 'electricite' || personaId === 'eau_incendie') && <InternalVendorReportPanel anomalies={anomalies.filter((item) => (personaId === 'electricite' ? ['DEMO-GE'] : ['DEMO-EAU','DEMO-SSI','DEMO-ESP']).includes(item.asset) && item.status !== 'Clôturée')} vendors={vendorReferences} canUpload={effectiveCanUploadVendorReport} busy={mutationBusy} onSubmit={persistVendorReport} />}
+          {view === 'equipment' && <LiveEquipmentWorkspace session={uiSession ?? sessionForAudience(personaId === 'administration' ? 'administration' : 'facility', persona.name)} />}
+          {view === 'costs' && <CostsWorkspace items={escalations.map((item) => ({ id:item.id, anomaly:item.anomaly, asset:item.asset, title:item.title, kind:item.kind, amount:item.amount ?? null, due:item.due, state:item.state }))} audience={personaId === 'administration' ? 'administration' : 'facility'} threshold={decisionThreshold} onOpenDossier={(id) => openDetail(id, 'costs')} />}
+          {view === 'access' && (session.mode === 'supabase' ? <InsufficientNote title="Gestion des comptes" detail="La gestion des accès depuis cet écran reste à raccorder." /> : <AccessWorkspace users={personas.map((item) => ({ id:item.id, name:item.name, initials:item.initials, role:item.role, scope:item.scope }))} audience={personaId === 'administration' ? 'administration' : 'facility'} />)}
+          {view === 'settings' && <>
+            <ParametersWorkspace parameter={financialDecisionParameter} onOpenCosts={() => navigate('costs')} />
+            {personaId === 'administration' && session.mode === 'demo' ? <AccessWorkspace users={personas.map((item) => ({ id:item.id, name:item.name, initials:item.initials, role:item.role, scope:item.scope }))} audience="administration" /> : null}
           </>}
-          {view === 'detail' && <Detail key={`${selected.id}-${selected.status}-${selected.proof}-${selected.proofPending}`} anomaly={selected} decisionAmount={escalations.find((item) => item.anomaly === selected.id)?.amount ?? null} persistenceMode={session.mode === 'supabase' && dataState === 'live' ? 'server' : 'demo'} readOnly={personaId === 'administration'} canVerify={personaId === 'facility' && session.mode === 'supabase'} busy={mutationBusy} onBack={() => navigate(previousView)} onStatus={(status) => void persistWorkflowStatus(status)} onProof={persistProof} onVerify={() => void verifyProof()} vendorReport={(personaId === 'electricite' || personaId === 'eau_incendie') ? { vendors:vendorReferences, canUpload:effectiveCanUploadVendorReport, busy:mutationBusy, onSubmit:persistVendorReport } : null} />}
+          {view === 'report' && <><Report key={`${session.userId ?? 'demo'}:${personaId}:${recipeMode}`} isTest={recipeMode} persona={persona} agentName={session.displayName ?? persona.name} reports={reports} connected={session.mode === 'supabase' && dataState === 'live'} onNavigate={navigate} persistenceEnabled={session.mode === 'supabase'} offlineSync={offlineSync} flash={flash} onReview={handleGe01Review} onRead={handleGe01Read} onLoadProof={handleGe01Proof} planning={presentationSource?.ge01Operations} onAssign={handleGe01Assignment} onOpenAnomaly={(reference) => openDetail(reference, 'report')} onRefresh={retryOperationalData} />{(personaId === 'electricite' || personaId === 'eau_incendie') && <InternalVendorReportPanel anomalies={anomalies.filter(item => (personaId === 'electricite' ? ['GE-01'] : ['WILO-01','RIA-01','IRR-01']).includes(displayAssetCode(item.asset)) && item.status !== 'Clôturée')} vendors={vendorReferences} canUpload={effectiveCanUploadVendorReport} busy={mutationBusy} onSubmit={persistVendorReport} />}</>}
+          {view === 'detail' && <Detail key={`${selected.id}-${selected.status}-${selected.workflow?.version}-${selected.proof}-${selected.proofPending}-${selected.proofQueued}`} anomaly={selected} decision={escalations.find((item) => item.anomaly === selected.id && (!selected.treatment || item.costReference === selected.treatment.costReference)) ?? null} decisionThreshold={decisionThreshold} persistenceMode={session.mode === 'supabase' && dataState === 'live' ? 'server' : 'demo'} persistenceEnabled={session.mode === 'supabase'} offlineSync={offlineSync} readOnly={personaId === 'administration'} canReopen={session.mode === 'supabase' && dataState === 'live' && (personaId === 'facility' || personaId === 'administration')} canVerify={personaId === 'facility' && session.mode === 'supabase'} busy={mutationBusy} onBack={() => navigate(previousView)} onStatus={(status) => void persistWorkflowStatus(status)} onProof={persistProof} onConsultProof={consultProof} onVerify={verifyProof} onReception={persistReception} onReopen={persistReopenDossier} onReviewReopened={persistReviewReopenedDossier} onOpenCosts={() => navigate('costs')} onGe01Workflow={persistGe01Workflow} onRefresh={() => { void syncOperationalData().catch((error) => flash(mutationError(error))); }} isManager={personaId === 'facility'} isAgent={personaId === 'electricite'} />}
+          </>}
         </div>
       </main>
       {toast && <div className={`toast ${/impossible|non enregistrée/i.test(toast) ? 'toast-error' : ''}`} role="status"><span>{/impossible|non enregistrée/i.test(toast) ? '!' : '✓'}</span>{toast}</div>}
-      {signOutConfirm && <div className="signout-backdrop" role="presentation" onMouseDown={(event) => {if (event.target === event.currentTarget) setSignOutConfirm(false)}}><section className="signout-dialog" role="dialog" aria-modal="true" aria-labelledby="signout-title"><span className="signout-icon">↪</span><h2 id="signout-title">Se déconnecter ?</h2><p>{session.mode === 'supabase' ? `La session ${supabaseIntegration.environmentLabel} sera fermée. Les données métier de démonstration resteront disponibles.` : 'La session simulée sera supprimée de cet appareil. Les données de démonstration resteront disponibles.'}</p><div><Button ref={signOutCancelRef} variant="secondary" onClick={() => setSignOutConfirm(false)}>Annuler</Button><Button onClick={() => void signOut()}>Se déconnecter</Button></div><button className="reset-session-link" onClick={resetDemo}>Déconnecter et réinitialiser toute la démo</button></section></div>}
+      {signOutConfirm && <div className="signout-backdrop" role="presentation" onMouseDown={(event) => {if (event.target === event.currentTarget) setSignOutConfirm(false)}}><section className="signout-dialog" role="dialog" aria-modal="true" aria-labelledby="signout-title"><span className="signout-icon">↪</span><h2 id="signout-title">Se déconnecter ?</h2><p>{session.mode === 'supabase' ? `La session ${supabaseIntegration.environmentLabel} sera fermée. Les brouillons et les envois en attente seront conservés sur cet appareil.` : 'La session simulée sera supprimée de cet appareil. Les données de démonstration resteront disponibles.'}</p><div><Button ref={signOutCancelRef} variant="secondary" onClick={() => setSignOutConfirm(false)}>Annuler</Button><Button onClick={() => void signOut()}>Se déconnecter</Button></div>{session.mode === 'demo' && <button className="reset-session-link" onClick={resetDemo}>Déconnecter et réinitialiser toute la démo</button>}</section></div>}
     </div>
     </DemoScenarioProvider>
+    </ConnectedPresentation.Provider>
   );
 }
 
@@ -1247,7 +1778,7 @@ function PersonaWorkspace({ persona, anomalies, equipment, vendors, canUploadVen
   onVendorReport:(input:{ anomalyReference:string; vendorCode:string; file:File; reportType:'intervention_report'|'pv'|'quote'|'photo_bundle'; reportDate:string; summary:string; reserveNotes?:string; costAmount?:number })=>Promise<void>;
   escalations:Escalation[];
   fieldRequests:FieldRequest[];
-  onEscalationDecision:(id:string, state:DecisionState, motive:string)=>void;
+  onEscalationDecision:(id:string, state:DecisionState, motive:string, idempotencyKey:string)=>Promise<void>;
   onEscalateToDirection:(request:FieldRequest)=>void;
   onFieldRequest:(request:Omit<FieldRequest,'id'|'status'>)=>void;
   onOpen:(id:string)=>void;
@@ -1256,7 +1787,7 @@ function PersonaWorkspace({ persona, anomalies, equipment, vendors, canUploadVen
 }) {
   if (persona.id === 'administration') return <DirectionWorkspace anomalies={anomalies} equipment={equipment} escalations={escalations} onDecision={onEscalationDecision} onOpen={onOpen} onNavigate={onNavigate} />;
   if (persona.id === 'facility') return <FacilityManagerWorkspace anomalies={anomalies} equipment={equipment} escalations={escalations} fieldRequests={fieldRequests} onEscalate={onEscalateToDirection} onOpen={onOpen} onNavigate={onNavigate} />;
-  if (persona.id === 'electricite' || persona.id === 'eau_incendie') return <AgentWorkspace key={persona.id} persona={persona} anomalies={anomalies} equipment={equipment} vendors={vendors} canUploadVendorReport={canUploadVendorReport} vendorReportBusy={vendorReportBusy} onVendorReport={onVendorReport} onFieldRequest={onFieldRequest} onNavigate={onNavigate} flash={flash} />;
+  if (persona.id === 'electricite' || persona.id === 'eau_incendie') return <AgentWorkspace key={persona.id} persona={persona} anomalies={anomalies} equipment={equipment} vendors={vendors} canUploadVendorReport={canUploadVendorReport} vendorReportBusy={vendorReportBusy} onVendorReport={onVendorReport} onFieldRequest={onFieldRequest} onOpen={onOpen} onNavigate={onNavigate} flash={flash} />;
   if (persona.id === 'rondes_assistance') return <RoundsAssistanceWorkspace fieldRequests={fieldRequests} equipment={equipment} anomalies={anomalies} onNavigate={onNavigate} flash={flash} />;
   return null;
 }
@@ -1271,7 +1802,7 @@ function formatMoney(value:number) {
 
 function atraiterSources(anomalies: Anomaly[], fieldRequests: FieldRequest[]) {
   return {
-    open: anomalies.filter((item) => item.status !== 'Clôturée'),
+    open: anomalies.filter(requiresFmDecision),
     hygiene: fieldRequests.filter((item) => item.status === 'À traiter par Facility Manager'),
   };
 }
@@ -1296,14 +1827,16 @@ function sortTodaysRounds(rounds: TodaysRound[]) {
   });
 }
 
-function TodayRoundsPanel({ session, title, detail, withPicker = false, onStart }: {
+function TodayRoundsPanel({ session, title, detail, withPicker = false, onStart, onOpenReports }: {
   session: UiSession;
   title: string;
   detail: string;
   withPicker?: boolean;
   onStart?: () => void;
+  onOpenReports?: () => void;
 }) {
-  const rounds = sortTodaysRounds(demoRoundsFor(session));
+  const current = useContext(ConnectedPresentation);
+  const rounds = sortTodaysRounds(current.live ? current.source?.ge01Operations.rounds ?? [] : demoRoundsFor(session));
   const doneCount = rounds.filter((item) => item.state === 'done').length;
   return (
     <article className="sheet today-rounds-panel">
@@ -1316,7 +1849,9 @@ function TodayRoundsPanel({ session, title, detail, withPicker = false, onStart 
         {rounds.map((item) => (
           <li key={item.roundId}>
             <small>{item.deadline ? formatTime(item.deadline) : '—'}</small>
-            <span>{roundSubjectLabel(item)}{item.agentName ? `, ${item.agentName}` : ''}</span>
+            <span>{current.live && item.equipmentCode === 'GE-01' && onOpenReports
+              ? <Button variant="ghost" onClick={onOpenReports} aria-label="Consulter les rapports GE-01">{roundSubjectLabel(item)}{item.agentName ? `, ${item.agentName}` : ''} →</Button>
+              : <>{roundSubjectLabel(item)}{item.agentName ? `, ${item.agentName}` : ''}</>}</span>
             <em className={`is-${item.state}`}>{roundStateLabel(item.state)}{item.missedYesterday ? ' · manquée hier' : ''}</em>
           </li>
         ))}
@@ -1325,14 +1860,18 @@ function TodayRoundsPanel({ session, title, detail, withPicker = false, onStart 
   );
 }
 
-function DirectionWorkspace({ anomalies, equipment, escalations, onDecision, onOpen, onNavigate }: { anomalies:Anomaly[]; equipment:EquipmentItem[]; escalations:Escalation[]; onDecision:(id:string,state:DecisionState,motive:string)=>void; onOpen:(id:string)=>void; onNavigate:(view:View)=>void }) {
-  const threshold = DECISION_THRESHOLD_FCFA;
+function DirectionWorkspace({ anomalies, equipment, escalations, onDecision, onOpen, onNavigate }: { anomalies:Anomaly[]; equipment:EquipmentItem[]; escalations:Escalation[]; onDecision:(id:string,state:DecisionState,motive:string,idempotencyKey:string)=>Promise<void>; onOpen:(id:string)=>void; onNavigate:(view:View)=>void }) {
+  const current = useContext(ConnectedPresentation);
+  const threshold = current.threshold;
   const [tab, setTab] = useState<'pending'|'history'>('pending');
   const [filter, setFilter] = useState<'Tous'|Escalation['kind']>('Tous');
   const [selectedCaseId, setSelectedCaseId] = useState('DEC-016');
   const [motive, setMotive] = useState('');
   const [motiveError, setMotiveError] = useState('');
   const [decisionMsg, setDecisionMsg] = useState('');
+  const [decisionBusy,setDecisionBusy] = useState(false);
+  const decisionLock=useRef(false);
+  const decisionRetry=useRef<{payload:string;key:string}|null>(null);
   const pending = escalations.filter((item) => item.state === 'À décider').slice().sort((a, b) => {
     const late = (item: Escalation) => /retard/i.test(item.due) ? 0 : 1;
     const today = (item: Escalation) => /aujourd/i.test(item.due) ? 0 : 1;
@@ -1347,28 +1886,47 @@ function DirectionWorkspace({ anomalies, equipment, escalations, onDecision, onO
   const lateCount = pending.filter((item) => /retard/i.test(item.due)).length;
   const firstDue = pending.find((item) => /10:30/.test(item.due)) ?? pending[0];
   const filters: Array<'Tous'|Escalation['kind']> = ['Tous','Risque','Coût','Arbitrage','Clôture sensible'];
-  const decide = (state: DecisionState) => {
-    if (!focusItem) return;
+  const decide = async (state: DecisionState) => {
+    if (!focusItem || decisionLock.current) return;
     const motiveText = motive.trim();
     const needsMotive = state !== 'Approuvée';
     if (needsMotive && !motiveText) { setMotiveError('Indiquez un motif pour refuser ou renvoyer.'); return; }
     if (needsMotive && motiveText.length < 12) { setMotiveError('Le motif doit contenir au moins 12 caractères.'); return; }
-    onDecision(focusItem.id, state, motiveText || 'Approuvé sans motif complémentaire.');
-    setMotiveError('');
-    setDecisionMsg(`${state === 'Approuvée' ? 'Approuvé' : state === 'Refusée' ? 'Refusé' : 'Renvoyé au FM'}. Décision tracée avec votre nom, l’heure et le motif.`);
+    const payload=JSON.stringify([focusItem.id,state,motiveText]);
+    if (decisionRetry.current?.payload !== payload) decisionRetry.current={payload,key:crypto.randomUUID()};
+    decisionLock.current=true;setDecisionBusy(true);setMotiveError('');setDecisionMsg('');
+    try {
+      await onDecision(focusItem.id,state,motiveText || 'Approuvé sans motif complémentaire.',decisionRetry.current.key);
+      decisionRetry.current=null;
+      setDecisionMsg(`${state === 'Approuvée' ? 'Approuvé' : state === 'Refusée' ? 'Refusé' : 'Renvoyé au FM'}. Décision confirmée et historisée.`);
+    } catch(error) { setMotiveError(error instanceof Error ? error.message : 'Décision non confirmée. Réessayez ou actualisez.'); }
+    finally { decisionLock.current=false;setDecisionBusy(false); }
   };
   return <div className="admin-home">
     <LiveHealthCockpit
-      session={sessionForAudience('administration', 'Administration Démo')}
+      session={useUiSession('administration', 'Administration Démo')}
       onNavigate={onNavigate}
       actionCount={pending.length}
       bannerExtras={<div className="admin-big">{[
-        { n: formatCompactMoney(documentedCostTotal), k: 'FCFA soumis à décision' },
+        { n: formatCompactMoney(documentedCostTotal), k: 'soumis à décision' },
         { n: firstDue ? firstDue.due.replace('Aujourd’hui · ', '') : '—', k: firstDue ? `première échéance, ${displayAssetCode(firstDue.asset)}` : 'aucune échéance' },
         { n: String(lateCount), k: 'arbitrage en retard' },
       ].map((item) => <div key={item.k}><b>{item.n}</b><span>{item.k}</span></div>)}</div>}
     >
-      <div className="admin-ctrl" role="group" aria-label="Points de contrôle">
+      {current.live ? <div className="admin-ctrl" role="group" aria-label="Points de contrôle">
+        <button type="button" onClick={() => { setTab('pending'); setFilter('Clôture sensible'); }}>
+          <div className="n">{pending.filter(item => item.kind === 'Clôture sensible').length}</div><div className="k">Clôtures sensibles à contrôler</div><div className="s">Arbitrages en attente</div>
+        </button>
+        <button type="button" onClick={() => onNavigate('access')}>
+          <div className="n">—</div><div className="k">Demandes d’accès</div><div className="s">Suivi non raccordé</div>
+        </button>
+        <button type="button" onClick={() => { setTab('pending'); setFilter('Tous'); }}>
+          <div className="n">{lateCount}</div><div className="k">Arbitrages en retard</div><div className="s">{pending.filter(item => /retard/i.test(item.due) && item.amount != null && item.amount >= threshold).length} au seuil ou au-dessus</div>
+        </button>
+        <button type="button" onClick={() => onNavigate('settings')}>
+          <div className="n">—</div><div className="k">Règles à compléter</div><div className="s">Décompte non établi</div>
+        </button>
+      </div> : <div className="admin-ctrl" role="group" aria-label="Points de contrôle">
         <button type="button" onClick={() => { setTab('pending'); setFilter('Clôture sensible'); setSelectedCaseId('DEC-015'); }}>
           <div className="n is-warn">1</div><div className="k">Clôture sensible à contrôler</div><div className="s">ANO-0234, WILO-01, récidive</div>
         </button>
@@ -1381,7 +1939,7 @@ function DirectionWorkspace({ anomalies, equipment, escalations, onDecision, onO
         <button type="button" onClick={() => onNavigate('settings')}>
           <div className="n">3</div><div className="k">Règles à raccorder</div><div className="s">SLA, seuils techniques, scores</div>
         </button>
-      </div>
+      </div>}
     </LiveHealthCockpit>
     <section className="decision-workbench admin-layout">
       <article className="panel direction-inbox">
@@ -1412,12 +1970,12 @@ function DirectionWorkspace({ anomalies, equipment, escalations, onDecision, onO
           })()}
         </section>
         {focusItem.state === 'À décider' ? <>
-          <label className={`field ${motiveError ? 'is-invalid' : ''}`}>Motif de votre décision<textarea value={motive} aria-invalid={Boolean(motiveError)} onChange={(event) => { setMotive(event.target.value); setMotiveError(''); setDecisionMsg(''); }} placeholder="Obligatoire pour refuser ou renvoyer" rows={2} /><FieldError message={motiveError} /></label>
+          <label className={`field ${motiveError ? 'is-invalid' : ''}`}>Motif de votre décision<textarea value={motive} aria-invalid={Boolean(motiveError)} onChange={(event) => { setMotive(event.target.value); setMotiveError(''); setDecisionMsg(''); }} placeholder="Motif obligatoire pour refuser ou renvoyer — 12 caractères minimum." rows={2} /><FieldError message={motiveError} /></label>
           <div className="case-actions admin-decide-foot">
             {focusItem.anomaly.startsWith('ANO-') && <button className="secondary-button" onClick={() => onOpen(focusItem.anomaly)}>Voir l’anomalie</button>}
-            <button className="return-action" type="button" aria-label="Renvoyer à Facility Manager" onClick={() => decide('Renvoyée à Facility Manager')}>Renvoyer au FM</button>
-            <button className="reject-action" type="button" onClick={() => decide('Refusée')}>{focusItem.kind === 'Clôture sensible' ? 'Refuser la clôture' : 'Refuser'}</button>
-            <button className="primary-button" type="button" onClick={() => decide('Approuvée')}>{focusItem.kind === 'Clôture sensible' ? 'Approuver la clôture' : 'Approuver'}</button>
+            <button className="return-action" type="button" aria-label="Renvoyer à Facility Manager" disabled={decisionBusy} onClick={() => void decide('Renvoyée à Facility Manager')}>Renvoyer au FM</button>
+            <button className="reject-action" type="button" disabled={decisionBusy} onClick={() => void decide('Refusée')}>{focusItem.kind === 'Clôture sensible' ? 'Refuser la clôture' : 'Refuser'}</button>
+            <button className="primary-button" type="button" disabled={decisionBusy} onClick={() => void decide('Approuvée')}>{focusItem.kind === 'Clôture sensible' ? 'Approuver la clôture' : 'Approuver'}</button>
             <span className="visually-hidden">Confirmer et notifier Facility Manager</span>
           </div>
           {decisionMsg ? <p className="admin-decision-msg" role="status">{decisionMsg}</p> : null}
@@ -1450,9 +2008,13 @@ function DirectionWorkspace({ anomalies, equipment, escalations, onDecision, onO
 }
 
 function FacilityManagerWorkspace({ anomalies, escalations, fieldRequests, onOpen, onNavigate }: { anomalies:Anomaly[]; equipment:EquipmentItem[]; escalations:Escalation[]; fieldRequests:FieldRequest[]; onEscalate:(request:FieldRequest)=>void; onOpen:(id:string)=>void; onNavigate:(view:View)=>void }) {
-  const session = sessionForAudience('facility', 'Facility Manager Démo');
+  const DECISION_THRESHOLD_FCFA = useContext(ConnectedPresentation).threshold;
+  const session = useUiSession('facility', 'Facility Manager Démo');
+  const current = useContext(ConnectedPresentation);
+  const rounds = current.live ? current.source?.ge01Operations.rounds ?? [] : demoRoundsFor(session);
+  const doneCount = rounds.filter((item) => item.state === 'done').length;
   const { scenario } = useDemoScoreScenario();
-  const scoreNotComputable = demoHomeSnapshot(session, scenario).score.state === 'not_computable';
+  const scoreNotComputable = (current.live ? current.health : demoHomeSnapshot(session, scenario))?.score.state === 'not_computable';
   const withMeta = (item: Anomaly) => ({
     ...item,
     amount: escalations.find((row) => row.anomaly === item.id)?.amount ?? item.treatment?.amount ?? null,
@@ -1468,7 +2030,9 @@ function FacilityManagerWorkspace({ anomalies, escalations, fieldRequests, onOpe
   push(anomalies.find((item) => item.status !== 'À qualifier' && item.status !== 'Clôturée' && item.owner === 'Non affectée'));
   push(anomalies.find((item) => (item.treatment?.amount ?? escalations.find((row) => row.anomaly === item.id)?.amount ?? 0) >= DECISION_THRESHOLD_FCFA));
   push(anomalies.find((item) => ['Affectée', 'En intervention', 'En validation'].includes(item.status) && (item.treatment?.amount ?? escalations.find((row) => row.anomaly === item.id)?.amount ?? 0) < DECISION_THRESHOLD_FCFA));
+  if (current.live) { decisions.length = 0; seen.clear(); }
   for (const item of anomalies) {
+    if (current.live && (!current.source || !pendingFmDossierIds(current.source).has(item.id))) continue;
     if (item.status === 'Clôturée') continue;
     push(item);
   }
@@ -1486,7 +2050,7 @@ function FacilityManagerWorkspace({ anomalies, escalations, fieldRequests, onOpe
       <div className="facility-home-grid">
         <article className="sheet">
           <div className="analytics-card-head">
-            <div><h3>Décisions à prendre</h3><p>Triées par échéance. Chaque décision fait remonter le score.</p></div>
+            <div><h3>Décisions à prendre</h3><p>Actions attendues du Facility Manager.</p></div>
             <button type="button" className="health-link" onClick={() => onNavigate('manager')}>Ouvrir Dossiers</button>
           </div>
           <div className="fm-decision-list">
@@ -1504,19 +2068,17 @@ function FacilityManagerWorkspace({ anomalies, escalations, fieldRequests, onOpe
           </div>
         </article>
         <article className={`sheet points-lost-card${scoreNotComputable ? ' is-compact' : ''}`}>
-          <div className="analytics-card-head"><div><h3>Où se perdent les points</h3><p>Poids 70 / 15 / 10 / 5. Points obtenus non raccordés.</p></div></div>
-          {scoreNotComputable
-            ? <p className="points-lost-compact-note">Score non calculable — la répartition par domaine restera vide tant que la formule n’est pas validée.</p>
-            : <InsufficientNote title="Poids de domaine non raccordés" detail="Équipements, sécurité, zones, continuité : aucune courbe historique n’est affichée." />}
+          <div className="analytics-card-head"><div><h3>Où se perdent les points</h3><p>Équipements 70 % · Sécurité 15 % · Zones 10 % · Continuité 5 %</p></div></div>
+          <DomainPointsSummary section={current.live ? current.health?.domainPoints : undefined} />
         </article>
       </div>
     </LiveHealthCockpit>
     <div className="facility-home-grid">
-      <TodayRoundsPanel session={session} title="Rondes du jour" detail="Rondes techniques quotidiennes de tous les agents." />
+      <TodayRoundsPanel session={session} title="Rondes du jour" detail="Rondes techniques quotidiennes de tous les agents." onOpenReports={() => onNavigate('report')} />
       <article className="sheet">
         <div className="analytics-card-head"><div><h3>Hygiène et paysage</h3><p>Notifications de l’agente rondes. Hors score tant qu’elles ne sont pas qualifiées.</p></div></div>
         <div className="hygiene-list">
-          {fieldRequests.map((request) => {
+          {fieldRequests.filter(request=>request.from.includes('Rondes')).map((request) => {
             return <article key={request.id}>
               <div><h3>{displayAssetText(request.subject)}</h3><p>{request.note}</p><small>{request.from} · {request.status}</small></div>
               {request.status === 'À traiter par Facility Manager' ? <div className="hygiene-acts"><button type="button" className="primary-button qualify-action" onClick={() => onNavigate('manager')}>Qualifier</button></div> : <small>En attente de décision de l’Administration.</small>}
@@ -1528,7 +2090,7 @@ function FacilityManagerWorkspace({ anomalies, escalations, fieldRequests, onOpe
   </>;
 }
 
-type AgentTask = { id:string; asset:string; title:string; due:string; risk:string; status:'À faire'|'En cours'|'Terminé'|'Rétabli provisoirement'; proof:boolean; delayed?:boolean; escalated?:boolean; detail:string };
+type AgentTask = { id:string; asset:string; title:string; due:string; risk:string; status:'À faire'|'En cours'|'Terminé'|'Rétabli provisoirement'; proof:boolean; proofPending?:boolean; delayed?:boolean; escalated?:boolean; detail:string };
 
 const agentTaskSets: Record<'electricite'|'eau_incendie', AgentTask[]> = {
   electricite:[
@@ -1543,19 +2105,26 @@ const agentTaskSets: Record<'electricite'|'eau_incendie', AgentTask[]> = {
   ],
 };
 
-function AgentWorkspace({ persona, anomalies, equipment, vendors, canUploadVendorReport, vendorReportBusy, onVendorReport, onFieldRequest, onNavigate, flash }: { persona:Persona; anomalies:Anomaly[]; equipment:EquipmentItem[]; vendors:OperationalVendor[]; canUploadVendorReport:boolean; vendorReportBusy:boolean; onVendorReport:(input:VendorReportInput)=>Promise<void>; onFieldRequest:(request:Omit<FieldRequest,'id'|'status'>)=>void; onNavigate:(view:View)=>void; flash:(message:string)=>void }) {
+function AgentWorkspace({ onOpen, persona, anomalies, equipment, vendors, canUploadVendorReport, vendorReportBusy, onVendorReport, onFieldRequest, onNavigate, flash }: { onOpen:(id:string)=>void; persona:Persona; anomalies:Anomaly[]; equipment:EquipmentItem[]; vendors:OperationalVendor[]; canUploadVendorReport:boolean; vendorReportBusy:boolean; onVendorReport:(input:VendorReportInput)=>Promise<void>; onFieldRequest:(request:Omit<FieldRequest,'id'|'status'>)=>void; onNavigate:(view:View)=>void; flash:(message:string)=>void }) {
   const agentKey = persona.id as 'electricite'|'eau_incendie';
-  const [tasks, setTasks] = useState(agentTaskSets[agentKey]);
+  const current = useContext(ConnectedPresentation);
+  const [demoTasks, setTasks] = useState(agentTaskSets[agentKey]);
+  const assigned = anomalies.filter(a=>a.workflow?.assignedToCurrentUser && a.status !== 'Clôturée');
+  const tasks: AgentTask[] = current.live ? [...new Map<string, AgentTask>([
+    ...(current.source?.workOrders ?? []).map(w=>[w.anomalyReference, {...w, id:w.anomalyReference}] as const),
+    ...assigned.map(a=>[a.id, {id:a.id,asset:a.asset,title:a.title,due:a.due,risk:a.priority,status:'À faire' as const,proof:a.proof,proofPending:a.proofPending,delayed:a.delayed,detail:a.antiZombieSummary?.nextAction ?? a.description}] as const),
+  ]).values()] : demoTasks;
   const [tab, setTab] = useState<'todo'|'done'|'hist'>('todo');
   const [action, setAction] = useState<{type:'measure'|'proof'|'escalate'|'reset'; id:string}|null>(null);
   const [note, setNote] = useState('');
   const visible = tasks.filter((task) => tab === 'done' ? task.status === 'Terminé' : task.status !== 'Terminé').slice().sort((a, b) => Number(Boolean(b.delayed)) - Number(Boolean(a.delayed)));
   const activeTask = action ? tasks.find((task) => task.id === action.id) : null;
-  const history = demoReportTracking.filter((item) => {
+  const history = (current.live ? [] : demoReportTracking).filter((item) => {
     const codes = agentKey === 'electricite' ? ['GE-01', 'ASC-A1', 'ASC-A2'] : ['WILO-01', 'RIA-01', 'IRR-01'];
-    return codes.includes(item.equipmentCode);
+    return item.equipmentCode != null && codes.includes(item.equipmentCode);
   }).slice(0, 5);
   const completeAction = () => {
+    if (current.live) { flash('Ouvrez le dossier pour enregistrer cette action dans le parcours pilote.'); return; }
     if (!action || !activeTask || !note.trim()) return;
     if (action.type === 'proof') setTasks((items) => items.map((task) => task.id === action.id ? { ...task, proof:true } : task));
     if (action.type === 'measure') setTasks((items) => items.map((task) => task.id === action.id ? { ...task, status:'En cours' } : task));
@@ -1567,7 +2136,7 @@ function AgentWorkspace({ persona, anomalies, equipment, vendors, canUploadVendo
     setAction(null); setNote('');
   };
   return <>
-    <LiveHealthCockpit session={sessionForAudience(agentKey, persona.name)} onNavigate={onNavigate} actionCount={tasks.filter((task) => task.status !== 'Terminé').length} />
+    <LiveHealthCockpit session={useUiSession(agentKey, persona.name)} onNavigate={onNavigate} actionCount={tasks.filter((task) => task.status !== 'Terminé').length} />
     {agentKey === 'eau_incendie' && <section className="provisional-rule"><span>↻</span><div><b>Réarmement = rétablissement provisoire</b><p>L’anomalie reste ouverte jusqu’au diagnostic, à l’intervention corrective et à la preuve validée par Facility Manager.</p></div></section>}
     <section className="sheet agent-actions-sheet" aria-labelledby="h-actions">
       <div className="analytics-card-head"><div><h2 id="h-actions">Mes actions</h2><p>Ce qui vous a été affecté, et ce que sont devenus vos rapports.</p></div></div>
@@ -1577,15 +2146,16 @@ function AgentWorkspace({ persona, anomalies, equipment, vendors, canUploadVendo
         <button type="button" role="tab" aria-selected={tab === 'hist'} className={tab === 'hist' ? 'active' : ''} onClick={() => setTab('hist')}>Historique des rondes</button>
       </div>
       {tab !== 'hist' ? (
-        <div className="agent-task-list">{visible.length === 0 ? <div className="empty-state compact"><span>✓</span><h3>Tout est terminé</h3><p>Aucune action dans cette file.</p></div> : visible.map((task) => <article key={task.id} className={`act-row${task.delayed ? ' late' : ''}`}><span className={`act-bar ${task.delayed ? 'is-bad' : task.status === 'Terminé' ? 'is-ok' : 'is-sig'}`} /><div className="task-copy"><div className="task-status"><Badge tone={task.delayed ? 'critical' : task.status === 'Terminé' ? 'success' : task.status === 'Rétabli provisoirement' ? 'orange' : 'blue'}>{task.delayed ? 'En retard' : tab === 'todo' && task.status === 'À faire' ? 'À faire' : task.status}</Badge><span className="task-ref">{task.id}</span></div><h3>{displayAssetCode(task.asset)}, {task.title}</h3><p>{task.detail}</p><div className="facts"><span>Risque : <b>{task.risk}</b></span><span>Échéance : <b className={task.delayed ? 'late-text' : undefined}>{task.due}</b></span><span>Preuve : <b>{task.proof ? 'Jointe' : 'Manquante'}</b></span></div></div>{tab === 'todo' && <div className="task-actions"><button type="button" onClick={() => {setAction({type:'measure',id:task.id});setNote('')}}>Saisie rapide</button>{agentKey === 'eau_incendie' && task.asset === 'DEMO-EAU' && <button type="button" className="reset-action" onClick={() => {setAction({type:'reset',id:task.id});setNote('')}}>↻ Réarmement provisoire</button>}<button type="button" onClick={() => {setAction({type:'proof',id:task.id});setNote('')}}>Ajouter une preuve</button><button type="button" onClick={() => {setAction({type:'escalate',id:task.id});setNote('')}}>{task.escalated ? '✓ Escalade envoyée' : 'Escalader au FM'}</button></div>}</article>)}</div>
+        <div className="agent-task-list">{visible.length === 0 ? <div className="empty-state compact"><span>✓</span><h3>Tout est terminé</h3><p>Aucune action dans cette file.</p></div> : visible.map((task) => <article key={task.id} className={`act-row${task.delayed ? ' late' : ''}`}><span className={`act-bar ${task.delayed ? 'is-bad' : task.status === 'Terminé' ? 'is-ok' : 'is-sig'}`} /><div className="task-copy"><div className="task-status"><Badge tone={task.delayed ? 'critical' : task.status === 'Terminé' ? 'success' : task.status === 'Rétabli provisoirement' ? 'orange' : 'blue'}>{task.delayed ? 'En retard' : tab === 'todo' && task.status === 'À faire' ? 'À faire' : task.status}</Badge><span className="task-ref">{task.id}</span></div><h3>{displayAssetCode(task.asset)}, {task.title}</h3><p>{task.detail}</p><div className="facts"><span>Risque : <b>{task.risk}</b></span><span>Échéance : <b className={task.delayed ? 'late-text' : undefined}>{task.due}</b></span><span>Preuve : <b>{task.proofPending ? 'À valider' : task.proof ? 'Jointe' : 'Manquante'}</b></span></div></div>{current.live ? <div className="task-actions"><Button onClick={()=>onOpen(task.id)}>Ouvrir le dossier</Button></div> : tab === 'todo' && <div className="task-actions"><button type="button" onClick={() => {setAction({type:'measure',id:task.id});setNote('')}}>Saisie rapide</button>{agentKey === 'eau_incendie' && task.asset === 'DEMO-EAU' && <button type="button" className="reset-action" onClick={() => {setAction({type:'reset',id:task.id});setNote('')}}>↻ Réarmement provisoire</button>}<button type="button" onClick={() => {setAction({type:'proof',id:task.id});setNote('')}}>Ajouter une preuve</button><button type="button" onClick={() => {setAction({type:'escalate',id:task.id});setNote('')}}>{task.escalated ? '✓ Escalade envoyée' : 'Escalader au FM'}</button></div>}</article>)}</div>
       ) : (
         <div className="agent-round-history">
-          {history.length === 0 ? <p className="empty">Aucun rapport dans cet historique.</p> : history.map((item) => <ReportTrackingLine key={item.clientMutationId} item={item} onView={() => onNavigate('report')} />)}
+          {current.live && current.pendingRounds?.map(item => <p className="report-tracking-line" key={item.id}><span>{formatHistoryMoment(item.sentAt)}</span><span>GE-01 · conservé sur cet appareil, envoi en attente de confirmation.</span></p>)}
+          {current.live ? (current.source?.reports.length ? current.source.reports.slice(0,5).map(report=><p className="report-tracking-line" key={report.id}><span className="report-tracking-when">{formatHistoryMoment(report.submittedAt ?? report.performedAt)}</span><span className="report-tracking-ref">{report.equipmentCode} · {report.reference}</span><span className="report-tracking-stage">{report.review ? report.review.decision === 'conform' ? 'Examiné — conforme' : 'Qualifié — anomalie ouverte' : report.ge01Status?.readAt ? 'Lu par le FM — examen attendu' : report.ge01Status?.confirmedAt ? 'Confirmé par le serveur — lecture non attestée' : 'Reçu — réception des preuves à confirmer'}</span></p>) : <p className="empty">Aucun rapport confirmé par le serveur.</p>) : history.length === 0 ? <p className="empty">Aucun rapport dans cet historique.</p> : history.map((item) => <ReportTrackingLine key={item.clientMutationId} item={item} onView={() => onNavigate('report')} />)}
           <div className="hl-foot"><button type="button" className="health-link" onClick={() => onNavigate('report')}>Voir tout l’historique</button></div>
         </div>
       )}
     </section>
-    <InternalVendorReportPanel anomalies={anomalies.filter((item) => (agentKey === 'electricite' ? ['DEMO-GE'] : ['DEMO-EAU','DEMO-SSI','DEMO-ESP']).includes(item.asset) && item.status !== 'Clôturée')} vendors={vendors} canUpload={canUploadVendorReport} busy={vendorReportBusy} onSubmit={onVendorReport} />
+    <InternalVendorReportPanel anomalies={anomalies.filter((item) => (agentKey === 'electricite' ? ['GE-01','DEMO-GE'] : ['WILO-01','RIA-01','IRR-01','DEMO-EAU','DEMO-SSI','DEMO-ESP']).includes(item.asset) && item.status !== 'Clôturée')} vendors={vendors} canUpload={canUploadVendorReport} busy={vendorReportBusy} onSubmit={onVendorReport} />
     {action && activeTask && <div className="demo-modal-backdrop"><section className="demo-modal" role="dialog" aria-modal="true" aria-labelledby="agent-action-title"><button className="modal-close" aria-label="Fermer" onClick={() => setAction(null)}>×</button><Badge tone={action.type === 'escalate' ? 'orange' : action.type === 'reset' ? 'critical' : 'blue'}>{action.type === 'measure' ? 'SAISIE RAPIDE' : action.type === 'proof' ? 'PREUVE' : action.type === 'reset' ? 'RÉARMEMENT PROVISOIRE' : 'ESCALADE FACILITY MANAGER'}</Badge><h3 id="agent-action-title">{displayAssetCode(activeTask.asset)} · {activeTask.title}</h3><p>{action.type === 'reset' ? 'Le service sera indiqué comme rétabli provisoirement. Le dossier restera ouvert.' : action.type === 'proof' ? 'Décrivez la photo ou le document illustré dans la maquette.' : action.type === 'escalate' ? 'Expliquez le risque ou le blocage qui nécessite Facility Manager.' : 'Saisissez les mesures et observations relevées.'}</p><label className="field">{action.type === 'proof' ? 'Description de la preuve' : 'Observation obligatoire'}<textarea autoFocus value={note} onChange={(e) => setNote(e.target.value)} placeholder={action.type === 'measure' ? 'Ex. batterie 25,8 V · mode AUTO confirmé…' : 'Ajoutez un commentaire précis…'} /></label>{action.type === 'proof' && <div className="simulated-file"><span>▧</span><div><b>photo_terrain_demo.jpg</b><small>Illustration de maquette · aucun fichier téléversé</small></div></div>}<SyncStatusNotice state="demo-volatile" compact label="État de l’action terrain" /><div className="modal-actions"><button className="secondary-button" onClick={() => setAction(null)}>Annuler</button><button className="primary-button" disabled={!note.trim()} onClick={completeAction}>Appliquer dans la démonstration</button></div></section></div>}
   </>;
 }
@@ -1628,9 +2198,11 @@ function InternalVendorReportPanel({ anomalies, vendors, canUpload, busy, onSubm
     file,
   };
 
-  const thresholdLabel = formatMoney(DECISION_THRESHOLD_FCFA);
-  const costPosition = thresholdPosition(cost.trim() ? Number(cost) : null, DECISION_THRESHOLD_FCFA);
+  const threshold = useContext(ConnectedPresentation).threshold;
+  const thresholdLabel = formatMoney(threshold);
+  const costPosition = thresholdPosition(cost.trim() ? Number(cost) : null, threshold);
   const acceptFile = (nextFile:File|null) => {
+    if (!nextFile && fileInputRef.current) fileInputRef.current.value = "";
     setFile(nextFile);
     setFieldErrors((current) => ({ ...current, file: validateVendorReportFields({ ...currentValues, file: nextFile }).file }));
   };
@@ -1708,7 +2280,7 @@ function InternalVendorReportPanel({ anomalies, vendors, canUpload, busy, onSubm
         <label className="field">Nature du document<Select value={reportType} onChange={(event) => setReportType(event.target.value as VendorReportInput['reportType'])}><option value="intervention_report">Rapport d’intervention</option><option value="pv">Procès-verbal</option><option value="quote">Devis</option><option value="photo_bundle">Dossier photos</option></Select></label>
         <label className={`field ${fieldErrors.reportDate ? 'is-invalid' : ''}`}>Date du rapport<input type="date" className="native-date-input" max={new Date().toISOString().slice(0,10)} value={reportDate} aria-invalid={Boolean(fieldErrors.reportDate)} aria-describedby={fieldErrors.reportDate ? `${formId}-date` : undefined} onChange={(event) => { setReportDate(event.target.value); if (fieldErrors.reportDate) setFieldErrors((current) => ({ ...current, reportDate: undefined })); }} /><FieldError id={`${formId}-date`} message={fieldErrors.reportDate} /></label>
       </div>
-      <label className={`field ${fieldErrors.summary ? 'is-invalid' : ''}`}>Résumé de l’intervention<textarea value={summary} maxLength={2000} aria-invalid={Boolean(fieldErrors.summary)} aria-describedby={fieldErrors.summary ? `${formId}-summary` : undefined} onChange={(event) => { setSummary(event.target.value); if (fieldErrors.summary) setFieldErrors((current) => ({ ...current, summary: undefined })); }} placeholder="Diagnostic, action réalisée, essais et résultat…" /><FieldError id={`${formId}-summary`} message={fieldErrors.summary} /></label>
+      <label className={`field ${fieldErrors.summary ? 'is-invalid' : ''}`}>Résumé de l’intervention<textarea value={summary} maxLength={2000} aria-invalid={Boolean(fieldErrors.summary)} aria-describedby={fieldErrors.summary ? `${formId}-summary` : undefined} onChange={(event) => { setSummary(event.target.value); if (fieldErrors.summary) setFieldErrors((current) => ({ ...current, summary: undefined })); }} placeholder="Diagnostic, action réalisée, essais et résultat — 20 caractères minimum." /><FieldError id={`${formId}-summary`} message={fieldErrors.summary} /></label>
       <div className="two-fields">
         <div className={`field ${fieldErrors.reserveNotes ? 'is-invalid' : ''}`}>
           <span className="field-label" id={`${formId}-reserves-label`}>Réserves éventuelles</span>
@@ -1716,9 +2288,9 @@ function InternalVendorReportPanel({ anomalies, vendors, canUpload, busy, onSubm
             <button type="button" className={`choice-button ${hasReserves ? '' : 'is-selected'}`} aria-pressed={!hasReserves} onClick={() => { setHasReserves(false); setReserveNotes(''); setFieldErrors((current) => ({ ...current, reserveNotes: undefined })); }}>Aucune réserve</button>
             <button type="button" className={`choice-button ${hasReserves ? 'is-selected' : ''}`} aria-pressed={hasReserves} onClick={() => setHasReserves(true)}>Réserves à lever</button>
           </div>
-          {hasReserves ? <><input value={reserveNotes} maxLength={500} aria-invalid={Boolean(fieldErrors.reserveNotes)} aria-describedby={fieldErrors.reserveNotes ? `${formId}-reserves` : undefined} onChange={(event) => { setReserveNotes(event.target.value); if (fieldErrors.reserveNotes) setFieldErrors((current) => ({ ...current, reserveNotes: undefined })); }} placeholder="Détail de la réserve à lever" /><FieldError id={`${formId}-reserves`} message={fieldErrors.reserveNotes} /></> : <small className="field-hint">Aucune réserve ne sera enregistrée pour ce rapport.</small>}
+          {hasReserves ? <><input aria-labelledby={`${formId}-reserves-label`} value={reserveNotes} maxLength={500} aria-invalid={Boolean(fieldErrors.reserveNotes)} aria-describedby={fieldErrors.reserveNotes ? `${formId}-reserves` : undefined} onChange={(event) => { setReserveNotes(event.target.value); if (fieldErrors.reserveNotes) setFieldErrors((current) => ({ ...current, reserveNotes: undefined })); }} placeholder="Détail de la réserve à lever" /><FieldError id={`${formId}-reserves`} message={fieldErrors.reserveNotes} /></> : <small className="field-hint">Aucune réserve ne sera enregistrée pour ce rapport.</small>}
         </div>
-        <label className={`field ${fieldErrors.cost ? 'is-invalid' : ''}`}>Coût indiqué<input type="number" min="0" step="1" inputMode="numeric" value={cost} aria-invalid={Boolean(fieldErrors.cost)} aria-describedby={fieldErrors.cost ? `${formId}-cost` : `${formId}-cost-hint`} onChange={(event) => { setCost(event.target.value); if (fieldErrors.cost) setFieldErrors((current) => ({ ...current, cost: undefined })); }} /><small id={`${formId}-cost-hint`} className={`field-hint ${costPosition === 'at_or_above' ? 'is-warning' : costPosition === 'below' ? 'is-ok' : ''}`}>{costPosition === 'at_or_above' ? `Au-dessus du seuil de ${thresholdLabel} : la décision revient à l’Administration.` : costPosition === 'below' ? `Sous le seuil de ${thresholdLabel} : la décision reste au Facility Manager.` : `Montant en FCFA, si le rapport en mentionne un. Seuil : ${thresholdLabel}.`}</small><FieldError id={`${formId}-cost`} message={fieldErrors.cost} /></label>
+        <label className={`field ${fieldErrors.cost ? 'is-invalid' : ''}`}>Coût indiqué<input type="number" min="0" step="1" inputMode="numeric" value={cost} aria-invalid={Boolean(fieldErrors.cost)} aria-describedby={fieldErrors.cost ? `${formId}-cost` : `${formId}-cost-hint`} onChange={(event) => { setCost(event.target.value); if (fieldErrors.cost) setFieldErrors((current) => ({ ...current, cost: undefined })); }} /><small id={`${formId}-cost-hint`} className={`field-hint ${costPosition === 'at_or_above' ? 'is-warning' : costPosition === 'below' ? 'is-ok' : ''}`}>{costPosition === 'at_or_above' ? `Montant supérieur ou égal au seuil de ${thresholdLabel} : la décision revient à l’Administration.` : costPosition === 'below' ? `Sous le seuil de ${thresholdLabel} : la décision reste au Facility Manager.` : `Montant en FCFA, si le rapport en mentionne un. Seuil : ${thresholdLabel}.`}</small><FieldError id={`${formId}-cost`} message={fieldErrors.cost} /></label>
       </div>
       <div className={`field vendor-dropzone-field ${fieldErrors.file ? 'is-invalid' : ''}`}>
         <span className="field-label" id={`${formId}-file-label`}>Rapport, PV ou photo</span>
@@ -1747,27 +2319,25 @@ function RoundsAssistanceWorkspace({ fieldRequests, equipment, anomalies, onNavi
   ]);
   const [complementDone, setComplementDone] = useState(false);
   return <>
-    <LiveHealthCockpit session={sessionForAudience('rondes_assistance', 'Agente Rondes & Assistance Démo')} onNavigate={onNavigate} actionCount={submitted.filter((item) => item.status === 'Complément demandé' && !complementDone).length} />
+    <LiveHealthCockpit session={useUiSession('rondes_assistance', 'Agente Rondes & Assistance Démo')} onNavigate={onNavigate} />
     <div className="mission-switch" role="tablist" aria-label="Fonction de Agente Rondes & Assistance"><button type="button" role="tab" aria-selected={missionTab === 'terrain'} className={missionTab === 'terrain' ? 'active' : ''} onClick={() => setMissionTab('terrain')}><BrandIcon name="mapPin" size={16} /><b>Terrain</b><small>Rondes, constats et brouillons de démonstration</small></button><button type="button" role="tab" aria-selected={missionTab === 'administration'} className={missionTab === 'administration' ? 'active' : ''} onClick={() => setMissionTab('administration')}><BrandIcon name="files" size={16} /><b>Administratif</b><small>Devis, paiements et autorisations</small></button></div>
     {missionTab === 'terrain' && <><section className="rondes_assistance-grid"><article className="panel zone-rounds"><div className="panel-head"><div><h3>Zones du jour</h3><p>Ronde du jour · {formatWeekdayDate('2026-09-16T08:00:00Z')}</p></div><span className="panel-count">4 / 6 contrôlées</span></div>{['Hall & accueil|Terminé','Atrium restaurant|À vérifier','Jardinières RDC|En cours','Sanitaires R+2|Terminé','Terrasse R+4|À faire','Parking sous-sol|À faire'].map((item) => {const [label,status] = item.split('|'); return <button key={label}><span className={status === 'Terminé' ? 'done' : status === 'En cours' ? 'current' : ''}>{status === 'Terminé' ? '✓' : '○'}</span><div><b>{label}</b><small>Propreté · plantes · fuite · dégradation</small></div><Badge tone={status === 'Terminé' ? 'success' : status === 'À vérifier' ? 'critical' : status === 'En cours' ? 'blue' : 'neutral'}>{status}</Badge></button>})}</article><article className="panel quick-finding"><div className="panel-head"><div><h3>Saisie dans Rondes</h3><p>Un seul formulaire de constat, pour éviter une double saisie.</p></div><Badge tone="blue">RONDES</Badge></div><p className="finding-pointer-copy">Les zones du jour restent ici. La création et la photo se font dans la destination Rondes.</p><button type="button" className="secondary-button" onClick={() => onNavigate('report')}>Ouvrir la ronde</button></article></section><section className="panel signal-tracker"><div className="panel-head"><div><h3>Mes signalements</h3><p>Statuts visibles sans accès aux décisions techniques</p></div><Badge>{submitted.length} dossiers</Badge></div><div className="signal-list">{submitted.map((item,index) => <article key={`${item.title}-${index}`}><div><b>{item.title}</b><p>{item.zone} · {item.category}</p></div><Badge tone={item.status === 'Complément demandé' && !complementDone ? 'orange' : item.status === 'À qualifier' ? 'blue' : 'success'}>{item.status === 'Complément demandé' && complementDone ? 'Complément transmis' : item.status}</Badge>{item.status === 'Complément demandé' && !complementDone && <button onClick={() => {setComplementDone(true);flash('Complément photo transmis à Facility Manager — simulation locale.')}}>Ajouter la photo demandée</button>}</article>)}</div><div className="field-feed-note">{fieldRequests.filter((request) => request.from === 'Agente Rondes & Assistance Démo').length} remontée(s) visible(s) dans la file de Facility Manager.</div></section></>}
     {missionTab === 'administration' && <><section className="mission-permission-note"><span>i</span><div><b>Fonction administrative, sans décision technique</b><p>Agente Rondes & Assistance prépare et suit les pièces. Facility Manager et l’Administration conservent leurs validations respectives.</p></div></section><section className="rondes_assistance-admin-grid"><article className="panel"><div className="panel-head"><div><p className="design-kicker">SUIVI ADMINISTRATIF</p><h3>Devis et autorisations</h3></div><span className="panel-count is-alert">3 à suivre</span></div>{[['DEV-031','PREST-EAU','280 000 FCFA','Validation Facility Manager'],['DEV-029','PREST-ASC','950 000 FCFA','Arbitrage Administration'],['DEV-026','PREST-ESP','190 000 FCFA','Bon à payer']].map((item) => <button className="admin-follow-row" key={item[0]}><span>{item[0]}</span><p><b>{item[1]}</b><small>{item[2]} · {item[3]}</small></p><em>Voir →</em></button>)}</article><article className="panel"><div className="panel-head"><div><p className="design-kicker">COÛTS & PAIEMENTS</p><h3>Échéances de la semaine</h3></div></div><div className="payment-summary"><strong>2,12 M</strong><span>FCFA à contrôler</span></div><div className="payment-lines"><span><i className="done" /> 3 pièces complètes</span><span><i /> 1 autorisation attendue</span><span><i className="late" /> 1 paiement en retard</span></div><button className="secondary-button">Ouvrir le suivi financier</button></article></section></>}
   </>;
 }
 
-const agentPerformance = [
-  { name:'Agent Électricité', score:88 },
-  { name:'Agent Eau & Incendie', score:84 },
-  { name:'Agente Rondes & Assistance', score:91 },
-];
-
 function OperationalAnalytics({ equipment, section = 'team', onNavigate }: { equipment:EquipmentItem[]; section?: 'health' | 'team'; onNavigate?: (view:View)=>void }) {
   const [period, setPeriod] = useState<'7j'|'30j'|'90j'>('30j');
   const periodLabel = period === '7j' ? '7 jours' : period === '30j' ? '30 jours' : '90 jours';
   const { scenario } = useDemoScoreScenario();
-  const snapshot = demoHomeSnapshot(sessionForAudience('facility', 'Facility Manager Démo'), scenario);
-  const homeScoreValue = scoreFigure(snapshot.score);
-  const parkEquipment = snapshot.equipment.filter((item) => item.code !== 'RND-LET');
-  const watchlist = parkEquipment.filter((item) => item.operationalStatus !== 'available').slice(0, 5);
+  const current = useContext(ConnectedPresentation);
+  const analyticsSession = useUiSession('facility', 'Facility Manager Démo');
+  const snapshot = current.live ? current.health : demoHomeSnapshot(analyticsSession, scenario);
+  const homeScoreValue = snapshot ? scoreFigure(snapshot.score) : null;
+  const parkEquipment = (snapshot?.equipment ?? []).filter((item) => String(item.code) !== 'RND-LET');
+  const riskCodes = new Set(snapshot?.atRisk.status === 'ok' ? snapshot.atRisk.items.map(item => item.code) : []);
+  const attentionEquipment = parkEquipment.filter((item) => item.operationalStatus !== 'available' || item.controlValidity !== 'valid' || riskCodes.has(item.code));
+  const watchlist = attentionEquipment.slice(0, 5);
 
   if (section === 'team') {
     return <section className="operational-analytics analytics-direction" aria-labelledby="team-analytics-title">
@@ -1778,9 +2348,9 @@ function OperationalAnalytics({ equipment, section = 'team', onNavigate }: { equ
       <div className="analytics-grid">
         <article className="panel analytics-card agent-chart-card">
           <div className="analytics-card-head"><div><span>ÉQUIPE TERRAIN</span><h4>Performance des agents</h4></div><span className="mockup-label">Méthode à valider</span></div>
-          <div className="agent-score-chart" aria-label="Scores globaux de démonstration des agents">{agentPerformance.map((agent) => <div className="agent-score-row" key={agent.name}><span><b>{agent.name}</b><small>Score global</small></span><div className="agent-score-track" role="progressbar" aria-label={`${agent.name}, score global de démonstration, ${agent.score} sur 100`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={agent.score}><i style={{width:`${agent.score}%`}} /></div><strong>{agent.score}</strong></div>)}</div>
+          <InsufficientNote title="Score agent non calculable" detail="Méthode, période et échantillon admissible non disponibles. Aucun score ni sanction automatique." />
           <div className="agent-score-method"><span><b>Période observée</b>Non disponible</span><span><b>Échantillon</b>Non raccordé</span><span><b>Méthode proposée</b>Délais · réactivité · qualité des preuves</span><span><b>Variation / fraîcheur</b>Indisponibles</span></div>
-          <p className="analytics-note">Valeurs de démonstration uniquement. Facteurs positifs et négatifs, date de mise à jour : source non raccordée. Aucune sanction automatique n’est autorisée.</p>
+          <p className="analytics-note">Facteurs positifs et négatifs, date de mise à jour : source non raccordée. Aucune sanction automatique n’est autorisée.</p>
           <button type="button" className="health-link" disabled>Détail explicatif — source non raccordée</button>
         </article>
       </div>
@@ -1790,18 +2360,19 @@ function OperationalAnalytics({ equipment, section = 'team', onNavigate }: { equ
   return <section className="operational-analytics analytics-direction" aria-labelledby="health-analytics-title">
     <div className="analytics-heading">
       <div><p className="design-kicker">SCORES & TENDANCES</p><h3 id="health-analytics-title">Santé et évolution</h3><p>Lecture du bâtiment. Les scores agents restent dans Équipe.</p></div>
-      <span className="mockup-label">Données de démonstration</span>
+      <span className="mockup-label">{current.live ? "Données du serveur" : "Données de démonstration"}</span>
     </div>
     <div className="analytics-grid">
       <article className="panel analytics-card building-health-card">
         <div className="analytics-card-head"><div><span>SANTÉ BÂTIMENT</span><h4>Score global actuel</h4></div><span className="mockup-label">Fraîcheur à confirmer</span></div>
         <div className="building-health-content">
           {homeScoreValue == null
-            ? <div className="insufficient-chart is-wide" role="status"><BrandIcon name="activity" size={18} /><div><b>Score non calculable</b><p>La formule et les pondérations sont en attente. Aucun chiffre n’est affiché.</p></div></div>
+            ? <div className="insufficient-chart is-wide" role="status"><BrandIcon name="activity" size={18} /><div><b>Score non calculable</b><p>Les contrôles admissibles et les preuves des domaines doivent être complets et à jour.</p></div></div>
             : <ScoreRing value={homeScoreValue} />}
-          {homeScoreValue == null ? null : <div className="score-components" aria-label="Composition du score bâtiment">
-            <InsufficientNote title="Composition du score" detail="Les pondérations de domaine ne sont pas raccordées." />
-          </div>}
+          <div className="score-components" aria-label="Composition du score bâtiment">
+            <p>Équipements 70 % · Sécurité 15 % · Zones 10 % · Continuité 5 %</p>
+            <DomainPointsSummary section={snapshot?.domainPoints} />
+          </div>
         </div>
         <div className="score-causes"><span><b>Facteur négatif</b> Données insuffisantes</span><span><b>Facteur positif</b> Données insuffisantes</span></div>
         <p className="analytics-note">Le score est plafonné si un équipement vital devient indisponible. La variation sera affichée après constitution de l’historique.</p>
@@ -1815,16 +2386,19 @@ function OperationalAnalytics({ equipment, section = 'team', onNavigate }: { equ
 
       <article className="panel analytics-card equipment-chart-card">
         <div className="analytics-card-head"><div><span>PARC TECHNIQUE</span><h4>Équipements à surveiller</h4></div>{onNavigate ? <button type="button" className="health-link" onClick={() => onNavigate('equipment')}>Ouvrir Équipements →</button> : null}</div>
-        {watchlist.length === 0
-          ? <div className="insufficient-chart is-wide" role="status"><BrandIcon name="activity" size={18} /><div><b>Aucun équipement à surveiller</b><p>Les {parkEquipment.length} équipements suivis sont disponibles avec un contrôle valide.</p></div></div>
+        {!snapshot || snapshot.atRisk.status !== 'ok' || parkEquipment.length === 0
+          ? <InsufficientNote title="Données de risque insuffisantes" detail="Consultez Équipements pour vérifier les informations disponibles." />
+          : watchlist.length === 0
+          ? <div className="insufficient-chart is-wide" role="status"><BrandIcon name="activity" size={18} /><div><b>Aucun équipement à surveiller</b><p>Aucune indisponibilité ou dégradation renseignée dans cette liste. Consultez les validités des contrôles dans Équipements.</p></div></div>
           : <ul className="watchlist">{watchlist.map((item) => <li key={item.code}><span className="watchlist-identity"><b>{item.code}</b><small>{item.name}</small></span>{item.operationalStatus == null ? <Badge tone="neutral">Statut inconnu</Badge> : <Badge tone={statusBadgeTone(item.operationalStatus)}>{statusLabel(item.operationalStatus)}</Badge>}<span className="watchlist-score">{item.score == null ? <em>—</em> : <><b className={`palier-${palierFromScore(item.score)}`}>{item.score}</b><small>provisoire</small></>}</span></li>)}</ul>}
-        <p className="analytics-note">{watchlist.length ? `${watchlist.length} équipement${watchlist.length > 1 ? 's' : ''} sur ${parkEquipment.length} demande${watchlist.length > 1 ? 'nt' : ''} une attention. Le parc complet et ses colonnes détaillées restent dans Équipements.` : 'Le parc complet et ses colonnes détaillées restent dans Équipements.'}</p>
+        <p className="analytics-note">{snapshot?.atRisk.status === 'ok' && watchlist.length ? `${watchlist.length} affiché(s) sur ${attentionEquipment.length} équipement(s) à examiner. Le parc complet et ses colonnes détaillées restent dans Équipements.` : 'Le parc complet et ses colonnes détaillées restent dans Équipements.'}</p>
       </article>
     </div>
   </section>;
 }
 
 function ManagerOperationalContext() {
+  const DECISION_THRESHOLD_FCFA = useContext(ConnectedPresentation).threshold;
   return <section className="manager-command-hero" aria-label="Contexte opérationnel">
     <div className="manager-heading-copy">
       <p className="design-kicker">Contexte</p>
@@ -1839,7 +2413,8 @@ function ManagerOperationalContext() {
 }
 
 function Dashboard({ equipment, escalations, audience = 'facility', onNavigate, readOnly = false }: { anomalies?: Anomaly[]; equipment:EquipmentItem[]; escalations:Escalation[]; audience?:'administration'|'facility'; onOpen?:(id:string, from?:View)=>void; onNavigate:(view:View, options?: { queue?: ManagerQueue })=>void; readOnly?:boolean }) {
-  const [dashboardTab, setDashboardTab] = useState<'overview'|'actions'|'health'|'equipment'>('overview');
+  const [dashboardTab, setDashboardTab] = useState<'overview'|'actions'|'health'>('overview');
+  const DECISION_THRESHOLD_FCFA = useContext(ConnectedPresentation).threshold;
   const documentedCosts = escalations.filter((item) => item.amount !== undefined);
   const documentedCostTotal = documentedCosts.reduce((total,item) => total + (item.amount ?? 0),0);
   const overThresholdCosts = documentedCosts.filter((item) => (item.amount ?? 0) >= DECISION_THRESHOLD_FCFA).length;
@@ -1875,7 +2450,6 @@ function Dashboard({ equipment, escalations, audience = 'facility', onNavigate, 
       </article>
     </section>}
     {dashboardTab === 'health' && <section id="dashboard-panel-health" role="tabpanel" aria-labelledby="dashboard-tab-health" className="dashboard-tab-panel"><OperationalAnalytics equipment={equipment} /></section>}
-    {dashboardTab === 'equipment' && <section id="dashboard-panel-equipment" role="tabpanel" aria-labelledby="dashboard-tab-equipment" className="dashboard-tab-panel"><article className="panel dashboard-equipment-pointer"><div className="panel-head"><div><p className="design-kicker">PARC TECHNIQUE</p><h3>Le catalogue vit dans Équipements</h3><p>{equipment.length} modules suivis · {equipment.filter((item) => item.health < 90).length} à surveiller. Pilotage n’en garde qu’un aperçu.</p></div><button type="button" className="primary-button" onClick={() => onNavigate('equipment')}>Ouvrir Équipements →</button></div><div className="compact-actions">{equipment.filter((item) => item.health < 90).slice(0,4).map((item) => <button type="button" key={item.code} onClick={() => onNavigate('equipment')}><span className={`risk-dot ${item.health < 70 ? 'critical' : ''}`} /><div><b>{displayAssetCode(item.code)} · {item.label}</b><small>{item.state} · indice {item.health}/100</small></div><span>›</span></button>)}</div></article></section>}
   </>;
 }
 
@@ -1884,14 +2458,13 @@ function Registry({ anomalies, query, setQuery, priority, setPriority, status, s
   return <>
     <section className="section-heading"><div><p>{anomalies.length} anomalie{anomalies.length > 1 ? 's' : ''} correspondant à vos critères</p></div><button className="secondary-button">⇩ Exporter</button></section>
     <section className="filter-bar"><label className="search-box"><span>⌕</span><input aria-label="Rechercher dans le registre" placeholder="Rechercher par équipement, anomalie…" value={query} onChange={(e) => setQuery(e.target.value)} /></label><label>Priorité<Select value={priority} onChange={(e) => setPriority(e.target.value)}><option>Toutes</option><option>Critique</option><option>Haute</option><option>Moyenne</option><option>Faible</option></Select></label><label>Statut<Select value={status} onChange={(e) => setStatus(e.target.value)}><option>Tous</option><option>À qualifier</option><option>Affectée</option><option>En intervention</option><option>En validation</option><option>Clôturée</option></Select></label>{(query || priority !== 'Toutes' || status !== 'Tous') && <button className="clear-button" onClick={() => {setQuery('');setPriority('Toutes');setStatus('Tous')}}>Effacer</button>}</section>
-    <section className="registry-card"><div className="registry-head"><span>Anomalie</span><span>Priorité</span><span>Étape</span><span>Échéance</span><span>Responsable</span><span /></div>{anomalies.length === 0 ? <div className="empty-state"><span>⌕</span><h3>Aucun résultat</h3><p>Essayez d’élargir vos critères de recherche.</p></div> : anomalies.map((a) => <article className={`registry-entry ${expandedId === a.id ? 'is-expanded' : ''}`} key={a.id}><button className="registry-row" onClick={() => onOpen(a.id)}><div className="registry-title"><span className={`asset-square ${priorityTone(a.priority)}`}>{a.asset.split('-')[0].slice(0,2)}</span><div><b>{a.title}</b><small>{a.id} · <span className="equipment-reference">{displayAssetCode(a.asset)}</span> · {a.location}</small></div></div><div><Badge tone={priorityTone(a.priority)}>{a.priority}</Badge></div><div><Badge tone={statusTone(a.status)}>{a.status}</Badge></div><div className={a.delayed && a.status !== 'Clôturée' ? 'late-text' : ''}>{a.delayed && a.status !== 'Clôturée' && <b>En retard</b>}<span>{a.due}</span></div><div className="owner-cell"><span className="mini-avatar">{canonicalResponsible(a) ? asciiInitials(canonicalResponsible(a)!) : '—'}</span><span>{canonicalResponsible(a) ?? 'Non attribué'}{externalActorConcerned(a) && <small>Acteur externe : {externalActorConcerned(a)}</small>}</span></div><div className="registry-mobile-meta"><Badge tone={priorityTone(a.priority)}>{a.priority}</Badge><Badge tone={statusTone(a.status)}>{a.status}</Badge>{a.delayed && a.status !== 'Clôturée' && <Badge tone="critical">En retard</Badge>}</div><div className="registry-mobile-details"><span><b>Échéance</b>{a.due}</span><span><b>Responsable interne</b>{canonicalResponsible(a) ?? 'Non attribué'}{externalActorConcerned(a) && <small>Acteur externe : {externalActorConcerned(a)}</small>}</span></div><span className="row-arrow">›</span></button><button type="button" className="registry-summary-toggle" aria-expanded={expandedId === a.id} onClick={() => setExpandedId((current) => current === a.id ? null : a.id)}>{expandedId === a.id ? 'Masquer la continuité de traitement' : 'Afficher la continuité de traitement'} <span>{expandedId === a.id ? '−' : '+'}</span></button>{expandedId === a.id && <AntiZombieSummary data={adaptDossierToAntiZombieSummary(a)} variant="compact" />}</article>)}</section>
+    <section className="registry-card"><div className="registry-head"><span>Anomalie</span><span>Priorité</span><span>Étape</span><span>Échéance</span><span>Responsable</span><span /></div>{anomalies.length === 0 ? <div className="empty-state"><span>⌕</span><h3>Aucun résultat</h3><p>Essayez d’élargir vos critères de recherche.</p></div> : anomalies.map((a) => <article className={`registry-entry ${expandedId === a.id ? 'is-expanded' : ''}`} key={a.id}><button className="registry-row" onClick={() => onOpen(a.id)}><div className="registry-title"><span className={`asset-square ${priorityTone(a.priority)}`}>{a.asset.split('-')[0].slice(0,2)}</span><div><b>{a.title}</b><small>{a.id} · <span className="equipment-reference">{displayAssetCode(a.asset)}</span> · {a.location}</small></div></div><div><Badge tone={priorityTone(a.priority)}>{a.priority}</Badge></div><div><Badge tone={statusTone(a.status)}>{a.status}</Badge></div><div className={a.delayed && a.status !== 'Clôturée' ? 'late-text' : ''}>{a.delayed && a.status !== 'Clôturée' && <b>En retard</b>}<span>{a.due}</span></div><div className="owner-cell"><span className="mini-avatar">{canonicalResponsible(a) ? asciiInitials(canonicalResponsible(a)!) : '—'}</span><span>{canonicalResponsible(a) ?? 'Non attribué'}{externalActorConcerned(a) && <small>Acteur externe : {externalActorConcerned(a)}</small>}</span></div><div className="registry-mobile-meta"><Badge tone={priorityTone(a.priority)}>{a.priority}</Badge><Badge tone={statusTone(a.status)}>{a.status}</Badge>{a.delayed && a.status !== 'Clôturée' && <Badge tone="critical">En retard</Badge>}</div><div className="registry-mobile-details"><span><b>Échéance</b>{a.due}</span><span><b>Responsable interne</b>{canonicalResponsible(a) ?? 'Non attribué'}{externalActorConcerned(a) && <small>Acteur externe : {externalActorConcerned(a)}</small>}</span></div><span className="row-arrow">›</span></button><button type="button" className="registry-summary-toggle" aria-expanded={expandedId === a.id} onClick={() => setExpandedId((current) => current === a.id ? null : a.id)}>{expandedId === a.id ? 'Masquer la continuité de traitement' : 'Afficher la continuité de traitement'} <span>{expandedId === a.id ? '−' : '+'}</span></button>{expandedId === a.id && <AntiZombieSummary data={resolveAntiZombieSummary(a)} variant="compact" />}</article>)}</section>
   </>;
 }
 
-function Manager({ anomalies, tab, setTab, onOpen }: { anomalies:Anomaly[]; tab:ManagerQueue; setTab:(v:ManagerQueue)=>void; onOpen:(id:string)=>void; escalations?:Escalation[]; fieldRequests?:FieldRequest[] }) {
-  const escalations = (arguments[0] as { escalations?: Escalation[] }).escalations ?? [];
-  const fieldRequests = (arguments[0] as { fieldRequests?: FieldRequest[] }).fieldRequests ?? [];
-  const { open: openAnomalies, hygiene: hygieneRequests } = atraiterSources(anomalies, fieldRequests);
+function Manager({ anomalies, tab, setTab, onOpen, escalations = [], fieldRequests = [] }: { anomalies:Anomaly[]; tab:ManagerQueue; setTab:(v:ManagerQueue)=>void; onOpen:(id:string)=>void; escalations?:Escalation[]; fieldRequests?:FieldRequest[] }) {
+  const DECISION_THRESHOLD_FCFA = useContext(ConnectedPresentation).threshold;
+  const { hygiene: hygieneRequests } = atraiterSources(anomalies, fieldRequests);
   const hygieneItems: Anomaly[] = hygieneRequests.map((request) => ({
     id: request.id,
     asset: request.subject.includes('DEMO-EAU') ? 'DEMO-EAU' : 'DEMO-RND',
@@ -1905,10 +2478,14 @@ function Manager({ anomalies, tab, setTab, onOpen }: { anomalies:Anomaly[]; tab:
     delayed: false,
     proof: false,
     description: request.note,
-    origin: 'Rondes et services',
-    horsScore: true,
+    origin: request.from.includes('Rondes') ? 'Rondes et services' : 'Eau et incendie',
+    horsScore: request.from.includes('Rondes'),
   }));
-  const openItems = [...openAnomalies, ...hygieneItems];
+  const current = useContext(ConnectedPresentation);
+  const pendingIds = current.source ? pendingFmDossierIds(current.source) : new Set<string>();
+  const receptionIds = current.source ? managerActionQueueIds(current.source.anomalies, 'RECEIVE_INTERVENTION') : new Set<string>();
+  const reopenedIds = current.source ? managerActionQueueIds(current.source.anomalies, 'REVIEW_REOPENED_DOSSIER') : new Set<string>();
+  const openItems = [...anomalies.filter((item) => item.status !== 'Clôturée' && (current.live ? pendingIds.has(item.id) : requiresFmDecision(item))), ...hygieneItems];
   const amountOf = (item: Anomaly) => item.treatment?.amount ?? escalations.find((row) => row.anomaly === item.id)?.amount ?? null;
   const originOf = (item: Anomaly) => item.origin ?? (item.asset === 'DEMO-RND' || item.id.startsWith('REQ-') ? 'Rondes et services' : item.owner === 'Non affectée' ? 'Agent terrain' : item.owner);
   const groups:Record<ManagerQueue,Anomaly[]> = {
@@ -1919,18 +2496,18 @@ function Manager({ anomalies, tab, setTab, onOpen }: { anomalies:Anomaly[]; tab:
     unassigned: openItems.filter((item) => !canonicalResponsible(item)),
     overThreshold: openItems.filter((item) => (amountOf(item) ?? 0) >= DECISION_THRESHOLD_FCFA),
     proof: openItems.filter((item) => item.proofPending),
-    reception:[],
+    reception:anomalies.filter((item) => receptionIds.has(item.id)),
     reservations:[],
-    reopened:[],
+    reopened:anomalies.filter((item) => reopenedIds.has(item.id)),
   };
   const queueMeta:Record<Exclude<ManagerQueue,'all'|'decide'|'overThreshold'>,{label:string;short:string;tone:string;pending?:boolean}> = {
     qualify:{label:'À qualifier',short:'AQ',tone:'amber'},
     late:{label:'En retard',short:'SLA',tone:'red'},
     unassigned:{label:'Sans responsable',short:'SR',tone:'orange'},
     proof:{label:'Preuves à vérifier',short:'PV',tone:'blue'},
-    reception:{label:'Réceptions',short:'RC',tone:'neutral',pending:true},
+    reception:{label:'Réceptions',short:'RC',tone:'neutral',pending:!current.source?.managerQueueAvailability.reception},
     reservations:{label:'Réserves',short:'RS',tone:'neutral',pending:true},
-    reopened:{label:'Dossiers rouverts',short:'RO',tone:'neutral',pending:true},
+    reopened:{label:'Dossiers rouverts',short:'RO',tone:'neutral',pending:!current.source?.managerQueueAvailability.reopened},
   };
   const visibleFilters: Array<{ key:ManagerQueue; label:string }> = [
     { key:'qualify', label:'À qualifier' },
@@ -2010,7 +2587,7 @@ function Manager({ anomalies, tab, setTab, onOpen }: { anomalies:Anomaly[]; tab:
                 <span className={canonicalResponsible(item) ? 'muted' : 'unassigned-text'}>{canonicalResponsible(item) ?? 'Sans responsable'}</span>
               </span>
             </button>;
-          }) : <div className="empty-state compact"><span>{['reception','reservations','reopened'].includes(tab) ? '⌁' : '✓'}</span><h3>{['reception','reservations','reopened'].includes(tab) ? 'Donnée non raccordée' : 'File à jour'}</h3><p>{['reception','reservations','reopened'].includes(tab) ? 'La source métier canonique de cette file doit encore être raccordée.' : 'Aucune action dans cette catégorie.'}</p></div>}
+          }) : <div className="empty-state compact"><span>{queueMeta[tab as keyof typeof queueMeta]?.pending ? '⌁' : '✓'}</span><h3>{queueMeta[tab as keyof typeof queueMeta]?.pending ? current.live ? 'Circuit métier à activer' : 'Donnée non raccordée' : 'File à jour'}</h3><p>{tab === 'reservations' || !current.live ? 'La source métier canonique de cette file doit encore être raccordée.' : tab === 'reception' ? current.source?.managerQueueAvailability.reception ? 'Aucune réception d’intervention en attente.' : 'La réception des interventions n’est pas encore activée sur le serveur.' : tab === 'reopened' ? current.source?.managerQueueAvailability.reopened ? 'Aucun dossier rouvert à réexaminer.' : 'La réouverture des dossiers n’est pas encore activée sur le serveur.' : 'Aucune action dans cette catégorie.'}</p></div>}
         </div>
       </article>
 
@@ -2022,7 +2599,7 @@ function Manager({ anomalies, tab, setTab, onOpen }: { anomalies:Anomaly[]; tab:
         </div>
         <div className="dossier-next">
           <div className="k">Prochaine action</div>
-          <div className="v">{focus.status === 'À qualifier' || focus.horsScore ? 'Qualifier et affecter' : !canonicalResponsible(focus) ? 'Réaffecter' : (focusAmount ?? 0) >= DECISION_THRESHOLD_FCFA ? 'Soumettre à l’Administration' : 'Valider'}</div>
+          <div className="v">{current.live ? focus.antiZombieSummary?.nextAction ?? 'Action à définir' : focus.status === 'À qualifier' || focus.horsScore ? 'Qualifier et affecter' : !canonicalResponsible(focus) ? 'Réaffecter' : (focusAmount ?? 0) >= DECISION_THRESHOLD_FCFA ? 'Soumettre à l’Administration' : 'Valider'}</div>
           <div className={`due${focus.delayed ? ' is-late' : ''}`}>{focus.delayed ? 'En retard, ' : ''}{focus.due}{canonicalResponsible(focus) ? `, ${canonicalResponsible(focus)}` : ''}</div>
         </div>
         <div className="dossier-steps" aria-label="Avancement">
@@ -2033,7 +2610,7 @@ function Manager({ anomalies, tab, setTab, onOpen }: { anomalies:Anomaly[]; tab:
           })}
         </div>
 
-        {focus.status === 'À qualifier' || focus.horsScore ? (
+        {current.live ? <div className="dossier-qualify"><p>Le dossier contient les actions autorisées, les preuves et le journal serveur.</p><Button onClick={()=>onOpen(focus.id)}>Traiter le dossier</Button></div> : focus.status === 'À qualifier' || focus.horsScore ? (
           <div className="dossier-qualify">
             <h3>Qualifier <span className="visually-hidden">Qualifier maintenant</span></h3>
             <span className="lbl">Ce constat devient</span>
@@ -2092,7 +2669,7 @@ function Manager({ anomalies, tab, setTab, onOpen }: { anomalies:Anomaly[]; tab:
 
         <details className="dossier-treatment-details">
           <summary>Détails de traitement</summary>
-          {focus.id.startsWith('REQ-') ? <p className="hint">Notification hors score. Qualification requise avant toute branche de traitement.</p> : <AntiZombieSummary data={adaptDossierToAntiZombieSummary(focus)} variant="standard" hideMissing />}
+          {focus.id.startsWith('REQ-') ? <p className="hint">Notification hors score. Qualification requise avant toute branche de traitement.</p> : <AntiZombieSummary data={resolveAntiZombieSummary(focus)} variant="standard" hideMissing />}
         </details>
         {decisionDone && <div className="inline-success" role="status"><span>✓</span><p><b>{focus.status === 'À qualifier' || focus.horsScore ? 'Qualifié et affecté' : 'Proposition préparée'}</b><small>Elle reste distincte de l’état actuel du dossier jusqu’à son enregistrement côté serveur.</small></p></div>}
         <div className="dossier-history-block">
@@ -2106,14 +2683,27 @@ function Manager({ anomalies, tab, setTab, onOpen }: { anomalies:Anomaly[]; tab:
   </div>;
 }
 
-function Detail({ anomaly, decisionAmount, persistenceMode, onBack, onStatus, onProof, onVerify, readOnly = false, canVerify = false, busy = false, vendorReport = null }: { anomaly:Anomaly; decisionAmount:number|null; persistenceMode:'demo'|'server'; onBack:()=>void; onStatus:(s:Status)=>void; onProof:(file:File)=>Promise<SyncStatusState>; onVerify:()=>void; readOnly?:boolean; canVerify?:boolean; busy?:boolean; vendorReport?:null|{ vendors:OperationalVendor[]; canUpload:boolean; busy:boolean; onSubmit:(input:VendorReportInput)=>Promise<void> } }) {
+function Detail({ anomaly, decision, decisionThreshold, persistenceMode, persistenceEnabled, offlineSync, onBack, onStatus, onProof, onConsultProof, onVerify, onReception, onReopen, onReviewReopened, onGe01Workflow, onOpenCosts, onRefresh, isManager, isAgent, readOnly = false, canReopen = false, canVerify = false, busy = false }: { anomaly:Anomaly; decision:Escalation|null; decisionThreshold:number; persistenceMode:'demo'|'server'; persistenceEnabled:boolean; offlineSync:ReturnType<typeof useOfflineSync>; onBack:()=>void; onStatus:(s:Status)=>void; onProof:(file:File)=>Promise<SyncStatusState>; onConsultProof:(proof:OperationalProof)=>Promise<string>; onVerify:(decision:'accepted'|'rejected',comment:string)=>Promise<boolean>; onReception:ReceptionHandler; onReopen:(reason:string,requestId:string)=>Promise<boolean>; onReviewReopened:(comment:string,requestId:string)=>Promise<boolean>; onGe01Workflow:Ge01WorkflowHandler; onOpenCosts:()=>void; onRefresh:()=>void; isManager:boolean; isAgent:boolean; readOnly?:boolean; canReopen?:boolean; canVerify?:boolean; busy?:boolean }) {
+  const connectedPresentation = useContext(ConnectedPresentation);
   const nextStep:Partial<Record<Status,Status>> = { 'À qualifier':'Affectée', 'Affectée':'En intervention', 'En intervention':'En validation', 'En validation':'Clôturée' };
-  const nextStatusOption = nextStep[anomaly.status];
+  const ge01Connected = anomaly.asset === 'GE-01' && persistenceMode === 'server';
+  const reviewingReopened = persistenceMode === 'server' && isManager && anomaly.workflow?.actionCode === 'REVIEW_REOPENED_DOSSIER' && anomaly.workflow.actionAssignedToCurrentUser;
+  const receiving = persistenceMode === 'server' && isManager && anomaly.workflow?.actionCode === 'RECEIVE_INTERVENTION' && anomaly.workflow.actionAssignedToCurrentUser;
+  const reopenAvailable = canReopen && anomaly.status === 'Clôturée';
+  const nextStatusOption = ge01Connected || reviewingReopened || receiving ? undefined : nextStep[anomaly.status];
   const [nextStatus, setNextStatus] = useState<Status>(nextStatusOption ?? anomaly.status);
   const [section, setSection] = useState<'overview'|'finance'|'evidence'|'history'>('overview');
+  useEffect(() => {
+    if (section === 'evidence') document.getElementById('dossier-evidence-panel')?.focus();
+  }, [section]);
   const proofInput = useRef<HTMLInputElement>(null);
   const [pendingProof, setPendingProof] = useState<File|null>(null);
   const [proofTransferState, setProofTransferState] = useState<SyncStatusState>(persistenceMode === 'server' ? 'online-required' : 'demo-volatile');
+  const [proofReviewDecision, setProofReviewDecision] = useState<'accepted'|'rejected'|null>(null);
+  const [proofReviewComment, setProofReviewComment] = useState('');
+  const [proofPreview, setProofPreview] = useState<{ proof:OperationalProof; url:string }|null>(null);
+  const [proofPreviewLoading, setProofPreviewLoading] = useState<string|null>(null);
+  const [proofPreviewError, setProofPreviewError] = useState('');
   const chooseProof = () => proofInput.current?.click();
   const submitProof = async (file:File) => {
     setPendingProof(file);
@@ -2122,20 +2712,41 @@ function Detail({ anomaly, decisionAmount, persistenceMode, onBack, onStatus, on
     setProofTransferState(result);
     if (result !== 'error') setPendingProof(null);
   };
+  const submitProofReview = async () => {
+    if (!proofReviewDecision || (proofReviewDecision === 'rejected' && !proofReviewComment.trim())) return;
+    if (await onVerify(proofReviewDecision, proofReviewComment.trim())) {
+      setProofReviewDecision(null);
+      setProofReviewComment('');
+    }
+  };
+  const consultProof = async (proof:OperationalProof) => {
+    setProofPreviewLoading(proof.id);
+    setProofPreviewError('');
+    try {
+      const url = await onConsultProof(proof);
+      setProofPreview({ proof, url });
+    } catch (error) {
+      setProofPreview(null);
+      setProofPreviewError(error instanceof Error ? error.message : 'Consultation de la preuve impossible.');
+    } finally {
+      setProofPreviewLoading(null);
+    }
+  };
   const workflow = ['Constat','Qualification','Décision','Intervention','Preuve','Clôture'];
-  const statusStep:Record<Status,number> = { 'À qualifier':1, 'Affectée':1, 'En intervention':3, 'En validation':4, 'Clôturée':5 };
-  const currentStep = statusStep[anomaly.status];
-  const overThreshold = decisionAmount !== null && decisionAmount >= DECISION_THRESHOLD_FCFA;
+  const statusStep:Record<Status,number> = { 'À qualifier':1, 'Affectée':2, 'En intervention':3, 'En validation':4, 'Clôturée':5 };
+  const currentStep = ge01Connected && anomaly.status === 'Affectée' ? 3 : statusStep[anomaly.status];
+  const decisionAmount = decision?.amount ?? null;
+  const overThreshold = decisionAmount !== null && decisionAmount >= (decision?.thresholdAmount ?? decisionThreshold);
   const expectedProof = expectedProofFor(anomaly);
   const proofs = anomaly.proofs ?? [];
-  const proofCount = proofs.length || ((anomaly.proof || anomaly.proofPending) ? 1 : 0);
+  const historyEvents = anomaly.history ?? [];
   const criticalClosureLocked = nextStatusOption === 'Clôturée' && anomaly.priority === 'Critique' && !anomaly.proof;
-  const proofRequiresAttention = Boolean(anomaly.proofPending) || criticalClosureLocked;
-  const diagnosisStage = anomaly.status === 'À qualifier' || anomaly.status === 'Affectée';
-  const primaryActionLabel = proofRequiresAttention ? 'Ouvrir les preuves' : diagnosisStage ? nextActionFor(anomaly) : overThreshold ? 'Examiner la décision financière' : nextStatusOption ? `Valider : ${nextStatus}` : 'Consulter les repères du dossier';
+  const proofRequiresAttention = anomaly.proofPending || criticalClosureLocked;
+  const primaryActionLabel = receiving ? 'Réceptionner l’intervention' : reviewingReopened ? 'Réexaminer le dossier' : reopenAvailable ? 'Rouvrir le dossier' : proofRequiresAttention ? 'Ouvrir les preuves' : overThreshold ? 'Examiner la décision financière' : nextStatusOption ? `Valider : ${nextStatus}` : 'Consulter les repères du dossier';
   const runPrimaryAction = () => {
+    if(receiving){document.getElementById('dossier-reception-panel')?.scrollIntoView({behavior:'smooth',block:'center'});return;}
+    if (reviewingReopened || reopenAvailable) { document.getElementById('dossier-reopen-panel')?.scrollIntoView({ behavior:'smooth', block:'center' }); return; }
     if (proofRequiresAttention) { setSection('evidence'); return; }
-    if (diagnosisStage) { if (nextStatusOption && canonicalResponsible(anomaly)) onStatus(nextStatus); return; }
     if (overThreshold) { setSection('finance'); return; }
     if (nextStatusOption) { onStatus(nextStatus); return; }
     setSection('history');
@@ -2143,119 +2754,479 @@ function Detail({ anomaly, decisionAmount, persistenceMode, onBack, onStatus, on
   return <>
     <input ref={proofInput} className="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(event) => { const file = event.target.files?.[0]; if (file) void submitProof(file); event.currentTarget.value = ''; }} />
     <button className="back-button dossier-back" onClick={onBack}>← Retour à la file</button>
-    <section className="dossier-hero"><div><div className="detail-labels"><Badge tone={priorityTone(anomaly.priority)}>{anomaly.priority}</Badge>{anomaly.delayed && anomaly.status !== 'Clôturée' && <Badge tone="critical">En retard</Badge>}{readOnly && <Badge tone="neutral">CONSULTATION</Badge>}<span>{anomaly.id}</span></div><h2>{anomaly.title}</h2><p>{anomaly.asset} · {anomaly.location}</p></div></section>
-    <section className="dossier-workflow" aria-label="Cycle du dossier">{workflow.map((item,index) => <div key={item} className={index < currentStep ? 'done' : index === currentStep ? 'current' : ''}><span>{index < currentStep ? '✓' : index+1}</span><b>{item}</b></div>)}</section>
-    {anomaly.priority === 'Critique' && !anomaly.proof && <section className="critical-banner dossier-critical"><BrandIcon name="circleAlert" size={18} /><div><b>Clôture verrouillée jusqu’à l’acceptation de la preuve</b><p>{anomaly.proofPending ? 'Une preuve a été déposée et attend le contrôle de Facility Manager.' : 'La matrice des preuves exige une pièce conforme avant clôture.'}</p></div>{!readOnly && !anomaly.proofPending && <button disabled={busy} onClick={chooseProof}>＋ Ajouter une preuve</button>}</section>}
-    <div className="dossier-continuity"><AntiZombieSummary data={adaptDossierToAntiZombieSummary(anomaly)} variant="detailed" /></div>
-    <nav className="dossier-tabs" aria-label="Sections du dossier" role="tablist"><button type="button" role="tab" aria-selected={section === 'overview'} aria-controls="dossier-overview-panel" className={section === 'overview' ? 'active' : ''} onClick={() => setSection('overview')}>Vue d’ensemble</button><button type="button" role="tab" aria-selected={section === 'finance'} aria-controls="dossier-finance-panel" className={section === 'finance' ? 'active' : ''} onClick={() => setSection('finance')}>Coûts & décision</button><button type="button" role="tab" aria-selected={section === 'evidence'} aria-controls="dossier-evidence-panel" className={section === 'evidence' ? 'active' : ''} onClick={() => setSection('evidence')}>Preuves <span>{proofCount}</span></button><button type="button" role="tab" aria-selected={section === 'history'} aria-controls="dossier-history-panel" className={section === 'history' ? 'active' : ''} onClick={() => setSection('history')}>Historique</button></nav>
+    <section className="dossier-hero"><div><div className="detail-labels"><Badge tone={priorityTone(anomaly.priority)}>{anomaly.priority}</Badge>{anomaly.delayed && anomaly.status !== 'Clôturée' && <Badge tone="critical">En retard</Badge>}{readOnly && !reopenAvailable && <Badge tone="neutral">CONSULTATION</Badge>}<span>{anomaly.id}</span></div><h2>{anomaly.title}</h2><p>{anomaly.asset} · {anomaly.location}</p></div>{!readOnly && nextStatusOption && <div className="detail-actions"><Select value={nextStatus} onChange={(event) => setNextStatus(event.target.value as Status)} aria-label="Étape suivante"><option value={nextStatusOption}>{nextStatusOption}</option></Select><Button type="submit" className="" disabled={busy || criticalClosureLocked} onClick={() => onStatus(nextStatus)}>{busy ? 'Enregistrement…' : criticalClosureLocked ? 'Preuve requise avant clôture' : 'Valider l’étape'}</Button></div>}</section>
+    <section className="dossier-workflow" aria-label="Cycle du dossier">{workflow.map((item,index) => <div key={item} className={index < currentStep ? 'done' : index === currentStep ? 'current' : ''}><span>{index < currentStep ? <BrandIcon name="check" /> : index+1}</span><b>{item}</b></div>)}</section>
+    <OfflineSyncStatus enabled={persistenceEnabled} online={offlineSync.online} running={offlineSync.running} counts={offlineSync.counts} latestIssue={offlineSync.latestIssue} latestRoundReceipt={offlineSync.latestRoundReceipt} onRetry={() => void offlineSync.retryFailed().then(() => offlineSync.synchronize())} />
+    {anomaly.priority === 'Critique' && !anomaly.proof && <section className="critical-banner dossier-critical"><span><BrandIcon name="circleAlert" /></span><div><b>Clôture verrouillée jusqu’à l’acceptation de la preuve</b><p>{anomaly.proofPending ? 'Une preuve a été déposée et attend le contrôle de Facility Manager.' : anomaly.proofQueued ? 'Une preuve est protégée sur cet appareil et attend sa synchronisation.' : 'La matrice des preuves exige une pièce conforme avant clôture.'}</p></div>{!readOnly && !anomaly.proofPending && !anomaly.proofQueued && <button disabled={busy} onClick={chooseProof}><BrandIcon name="plus" /> Ajouter une preuve</button>}</section>}
+    {receiving && <div id="dossier-reception-panel"><InterventionReceptionPanel summary={anomaly.interventionResult?.summary ?? ''} proofRequired={anomaly.asset==='GE-01'||anomaly.priority==='Critique'} proofAccepted={anomaly.proof} busy={busy} onSubmit={onReception} onOpenProofs={()=>setSection('evidence')} /></div>}
+    {reopenAvailable && <div id="dossier-reopen-panel"><ReopenDossierPanel mode="reopen" busy={busy} onSubmit={onReopen} /></div>}
+    {reviewingReopened && <div id="dossier-reopen-panel"><ReopenDossierPanel mode="review" busy={busy} onSubmit={onReviewReopened} /></div>}
+    {ge01Connected && !reviewingReopened && !receiving && <Ge01WorkflowPanel key={`${anomaly.id}-${anomaly.workflow?.version}`} anomaly={anomaly} isManager={isManager} isAgent={isAgent} onSubmit={onGe01Workflow} onRefresh={onRefresh} onOpenProofs={() => setSection('evidence')} onOpenCosts={() => setSection('finance')} busy={busy} />}
+    <div className="dossier-continuity"><AntiZombieSummary data={resolveAntiZombieSummary(anomaly)} variant="detailed" /></div>
+    <nav className="dossier-tabs" aria-label="Sections du dossier" role="tablist"><button type="button" role="tab" aria-selected={section === 'overview'} aria-controls="dossier-overview-panel" className={section === 'overview' ? 'active' : ''} onClick={() => setSection('overview')}>Vue d’ensemble</button><button type="button" role="tab" aria-selected={section === 'finance'} aria-controls="dossier-finance-panel" className={section === 'finance' ? 'active' : ''} onClick={() => setSection('finance')}>Coûts & décision</button><button type="button" role="tab" aria-selected={section === 'evidence'} aria-controls="dossier-evidence-panel" className={section === 'evidence' ? 'active' : ''} onClick={() => setSection('evidence')}>Preuves <span>{proofs.length}</span></button><button type="button" role="tab" aria-selected={section === 'history'} aria-controls="dossier-history-panel" className={section === 'history' ? 'active' : ''} onClick={() => setSection('history')}>Historique</button></nav>
 
     {section === 'overview' && <section id="dossier-overview-panel" role="tabpanel" className="dossier-three-zone">
       <aside className="dossier-identity-column">
-        <article className="panel dossier-identity-card"><p className="design-kicker">IDENTITÉ & RISQUE</p><div className="identity-priority"><Badge tone={statusTone(anomaly.status)}>{anomaly.status}</Badge></div><dl><div><dt>Équipement</dt><dd>{anomaly.asset}</dd></div><div><dt>Zone</dt><dd>{anomaly.location}</dd></div><div><dt>Origine</dt><dd>{dossierOrigin(anomaly)}</dd></div>{externalActorConcerned(anomaly) && <div><dt>Acteur externe concerné</dt><dd>{externalActorConcerned(anomaly)}</dd></div>}<div><dt>Constaté le</dt><dd>{anomaly.reported}</dd></div></dl></article>
-        <article className="panel dossier-source-card"><span>R</span><div><b>Saisie directe</b><small>Source traçable · aucun import de reporting</small></div></article>
+        <Card as="article" className="dossier-identity-card"><p className="design-kicker">IDENTITÉ & RISQUE</p><div className="identity-priority"><Badge tone={statusTone(anomaly.status)}>{anomaly.status}</Badge></div><dl><div><dt>Équipement</dt><dd>{anomaly.asset}</dd></div><div><dt>Zone</dt><dd>{anomaly.location}</dd></div><div><dt>Origine</dt><dd>{anomaly.asset === 'DEMO-EAU' ? 'Ronde Surpresseur quotidienne' : 'Constat terrain'}</dd></div><div><dt>Responsable interne actuel</dt><dd className={!canonicalResponsible(anomaly) ? 'missing-value' : ''}>{canonicalResponsible(anomaly) ?? 'Responsable non attribué'}</dd></div>{externalActorConcerned(anomaly) && <div><dt>Acteur externe concerné</dt><dd>{externalActorConcerned(anomaly)}</dd></div>}<div><dt>Constaté le</dt><dd>{anomaly.reported}</dd></div></dl></Card>
+        <Card as="article" className="dossier-source-card"><span>R</span><div><b>Saisie directe</b><small>Source traçable · aucun import de reporting</small></div></Card>
       </aside>
       <div className="dossier-activity-column">
-        <article className="panel dossier-description"><div className="panel-head"><div><p className="design-kicker">CONSTAT D’ORIGINE</p><h3>Situation observée</h3></div><span>{anomaly.reported}</span></div><p>{anomaly.description}</p></article>
-        <article className="panel dossier-diagnostic-card"><div className="panel-head"><div><p className="design-kicker">DIAGNOSTIC & INTERVENTION</p><h3>Progression métier</h3></div><Badge tone={statusTone(anomaly.status)}>{workflow[currentStep]}</Badge></div><div className="diagnostic-state"><BrandIcon name="wrench" size={18} /><div><b>{anomaly.status === 'À qualifier' || anomaly.status === 'Affectée' ? 'Diagnostic technique attendu' : 'Diagnostic enregistré dans le cycle'}</b><p>{anomaly.status === 'À qualifier' || anomaly.status === 'Affectée' ? 'Aucun diagnostic canonique n’est disponible dans la projection actuelle.' : 'Consultez l’historique pour les détails attribués et horodatés.'}</p></div></div></article>
+        <Card as="article" className="dossier-description"><div  className="panel-head"><div><p className="design-kicker">CONSTAT D’ORIGINE</p><h3>Situation observée</h3></div><span>{anomaly.reported}</span></div><p>{anomaly.description}</p></Card>
+        <Card as="article" className="dossier-diagnostic-card"><div  className="panel-head"><div><p className="design-kicker">DIAGNOSTIC & INTERVENTION</p><h3>Progression métier</h3></div><Badge tone={statusTone(anomaly.status)}>{workflow[currentStep]}</Badge></div><div className="diagnostic-state"><span><BrandIcon name="activity" /></span><div><b>{anomaly.diagnosis ? 'Diagnostic enregistré' : 'Diagnostic technique attendu'}</b><p>{anomaly.diagnosis ?? 'Aucun diagnostic confirmé n’est disponible. Consultez l’historique pour les événements du dossier.'}</p></div></div></Card>
       </div>
       <aside className="dossier-decision-column">
-        <DossierActionBoard
-          nextAction={nextActionFor(anomaly)}
-          expectedActor={expectedActorFor(anomaly)}
-          responsible={canonicalResponsible(anomaly)}
-          deadline={anomaly.due}
-          delayed={Boolean(anomaly.delayed)}
-          closed={anomaly.status === 'Clôturée'}
-          primaryLabel={primaryActionLabel}
-          onPrimary={runPrimaryAction}
-          readOnly={readOnly}
-          busy={busy}
-          showMeta={false}
-        >{readOnly ? <div className="next-step-read-only" role="note">Consultation uniquement · aucune action métier accordée</div> : <button className="primary-button" disabled={busy || criticalClosureLocked} onClick={runPrimaryAction}>{busy ? 'Enregistrement…' : criticalClosureLocked ? 'Preuve requise avant clôture' : primaryActionLabel}</button>}</DossierActionBoard>
-        <DossierTreatmentStrip
-          branch={treatmentBranchFor(anomaly, decisionAmount)}
-          workOrder={anomaly.treatment?.workOrderReference ?? null}
-          retainedCost={anomaly.treatment?.amount ?? null}
-          decisionAmount={decisionAmount}
-          company={anomaly.treatment?.vendorLabel ?? externalActorConcerned(anomaly)}
-          formatMoney={formatMoney}
-        />
-        <DossierProofSnapshot
-          accepted={Boolean(anomaly.proof)}
-          pending={Boolean(anomaly.proofPending)}
-          countLabel={String(proofCount)}
-          onOpen={() => setSection('evidence')}
-        />
+        <Card as="article" className="next-step-card"><p className="design-kicker">ACTION PRINCIPALE</p><h3>{reopenAvailable ? 'Réouverture possible' : nextActionFor(anomaly)}</h3><p>{!canonicalResponsible(anomaly) ? 'Facility Manager doit d’abord attribuer un responsable interne autorisé.' : `Responsable interne actuel : ${canonicalResponsible(anomaly)}.`}</p>{externalActorConcerned(anomaly) && <small>Acteur externe concerné : {externalActorConcerned(anomaly)}</small>}{readOnly && !reopenAvailable ? <div className="next-step-read-only" role="note">Consultation uniquement · aucune action métier accordée</div> : <Button type="button" className="" disabled={busy} onClick={runPrimaryAction}>{busy ? 'Enregistrement…' : primaryActionLabel}</Button>}</Card>
+        <Card as="article" className="recurrence-card"><div><span><BrandIcon name="refresh" /></span><p><b>Récurrence à confirmer</b><small>Historique insuffisant</small></p></div><p>Aucune récurrence n’est affirmée sans événements métier datés.</p></Card>
       </aside>
     </section>}
 
-    {section === 'finance' && <section id="dossier-finance-panel" role="tabpanel" className="dossier-two-columns"><article className="panel finance-decision-card"><div className="panel-head"><div><p className="design-kicker">BRANCHE DE TRAITEMENT</p><h3>{decisionAmount === null ? 'Montant non renseigné' : 'Intervention avec montant documenté'}</h3></div><Badge tone={decisionAmount === null ? 'neutral' : overThreshold ? 'orange' : 'success'}>{decisionAmount === null ? 'DONNÉES INSUFFISANTES' : overThreshold ? 'ADMINISTRATION' : 'DÉLÉGATION FM'}</Badge></div><div className="finance-amount"><span>Montant de décision</span><strong>{decisionAmount === null ? 'Non renseigné' : formatMoney(decisionAmount)}</strong><small>Seuil d’approbation : {formatMoney(DECISION_THRESHOLD_FCFA)} · une approbation ne démarre pas l’intervention</small></div>{decisionAmount === null ? <div className="compact-insufficient-state"><b>Qualification financière incomplète</b><p>Aucun montant canonique n’est relié à ce dossier.</p></div> : <><div className={`authority-result ${overThreshold ? 'escalate' : 'delegated'}`}><span>{overThreshold ? '↑' : '✓'}</span><div><b>{overThreshold ? 'Arbitrage de l’Administration' : 'Facility Manager peut décider'}</b><small>{overThreshold ? 'Le montant dépasse la délégation validée.' : 'Le montant reste sous le seuil validé.'}</small></div></div><div className="decision-audit"><span><b>Décision</b>{overThreshold ? 'À soumettre' : 'Autorisée dans la délégation'}</span><span><b>Montant engagé</b>Non renseigné</span><span><b>Montant payé</b>Non renseigné</span></div></>}</article><aside className="panel quote-card"><p className="design-kicker">PIÈCES FINANCIÈRES</p><h3>Devis et engagement</h3><div className="quote-file"><span>▧</span><p><b>Pièce financière non reliée</b><small>Données insuffisantes dans la source actuelle</small></p></div></aside></section>}
+    {section === 'finance' && connectedPresentation.live && (isManager || readOnly) ? connectedPresentation.costs : null}
+    {section === 'finance' && <section id="dossier-finance-panel" role="tabpanel" className="dossier-two-columns"><Card as="article" className="finance-decision-card"><div  className="panel-head"><div><p className="design-kicker">BRANCHE DE TRAITEMENT</p><h3>{decisionAmount === null ? 'Montant non renseigné' : anomaly.treatment ? 'Décision liée à l’intervention' : 'Décision financière enregistrée'}</h3></div><Badge tone={decisionAmount === null ? 'neutral' : decision?.state === 'Refusée' ? 'critical' : decision?.state === 'Approuvée' ? 'success' : 'orange'}>{decisionAmount === null ? 'DONNÉES INSUFFISANTES' : decision?.state === 'Approuvée' ? 'APPROUVÉE' : decision?.state === 'Refusée' ? 'REFUSÉE' : 'EN ATTENTE'}</Badge></div><div className="finance-amount"><span>{decision?.costReference ? `${decision.costReference} · Montant de décision` : 'Montant de décision'}</span><strong>{decisionAmount === null ? 'Non renseigné' : formatMoney(decisionAmount)}</strong><small>Seuil photographié : {formatMoney(decision?.thresholdAmount ?? decisionThreshold)}</small></div>{decisionAmount === null ? <div className="compact-insufficient-state"><b>Qualification financière incomplète</b><p>Aucun montant canonique n’est relié à ce dossier.</p></div> : <><div className={`authority-result ${decision?.state === 'Refusée' ? 'escalate' : overThreshold ? 'escalate' : 'delegated'}`}><span>{decision?.state === 'Refusée' ? <BrandIcon name="circleAlert" /> : overThreshold ? <BrandIcon name="chevronRight" /> : <BrandIcon name="check" />}</span><div><b>{decision?.state === 'Refusée' ? 'Décision refusée par l’Administration' : overThreshold ? 'Arbitrage de l’Administration' : 'Décision dans la délégation de Facility Manager'}</b><small>{decision?.state === 'À décider' ? 'Une décision motivée est encore attendue.' : decision?.motive ?? 'La décision et son seuil sont conservés dans l’historique du dossier.'}</small></div></div><div className="decision-audit"><span><b>Décision</b>{decision?.state ?? 'Non renseignée'}</span><span><b>Soumis par</b>{decision?.submittedBy ?? 'Non renseigné'}</span><span><b>Décidé par</b>{decision?.reviewedBy ?? (decision?.state === 'À décider' ? 'Administration attendue' : 'Non renseigné')}</span><span><b>Montant engagé</b>Non renseigné</span><span><b>Montant payé</b>Non renseigné</span></div></>}</Card><Card as="aside" className="quote-card"><p className="design-kicker">PIÈCES FINANCIÈRES</p><h3>Devis et engagement</h3>{(isManager || readOnly) && <Button variant="secondary" type="submit" className="" onClick={onOpenCosts}>Consulter toutes les décisions</Button>}<div className="quote-file"><span><BrandIcon name="files" /></span><p><b>Pièce financière non reliée</b><small>Données insuffisantes dans la source actuelle</small></p></div></Card></section>}
 
-    {section === 'evidence' && <section id="dossier-evidence-panel" role="tabpanel" className="dossier-two-columns"><article className="panel evidence-panel"><div className="panel-head"><div><h3>Preuves du dossier</h3><p>Consultation, motif de refus et nouveau dépôt au même endroit</p></div>{!readOnly && anomaly.status !== 'Clôturée' && !anomaly.proofPending && <button type="button" className="primary-button" disabled={busy} onClick={chooseProof}><BrandIcon name="plus" size={16} /> {proofs.some((item) => item.verificationStatus === 'rejected') ? 'Déposer la preuve corrigée' : 'Déposer un justificatif'}</button>}</div>
-        {!readOnly && !anomaly.proof && !anomaly.proofPending && <SyncStatusNotice state={proofTransferState} compact label="État du dépôt de preuve" onRetry={proofTransferState === 'error' && pendingProof ? () => void submitProof(pendingProof) : undefined} />}
-        {proofs.length > 0 && <div className="evidence-list" aria-label="Fichiers de preuve enregistrés">{proofs.map((proof) => <article key={proof.id} className="evidence-file evidence-file-record"><BrandIcon name={proof.mimeType === 'application/pdf' ? 'fileCheck' : 'camera'} size={18} /><div><b>{proof.reference}</b><small>{proof.mimeType === 'application/pdf' ? 'Document PDF' : 'Image'} · {proof.capturedAt}</small>{proof.verificationStatus === 'rejected' && proof.rejectionReason ? <em>Motif : {proof.rejectionReason}</em> : null}</div><Badge tone={proof.verificationStatus === 'accepted' ? 'success' : proof.verificationStatus === 'rejected' ? 'critical' : 'orange'}>{proof.verificationStatus === 'accepted' ? 'ACCEPTÉE' : proof.verificationStatus === 'rejected' ? 'REFUSÉE' : 'À VALIDER'}</Badge><button type="button" className="secondary-button" disabled>Consulter · miroir</button></article>)}</div>}
-        {proofs.length === 0 && anomaly.proof ? <div className="evidence-file"><BrandIcon name="fileCheck" size={18} /><div><b>Preuve d’intervention acceptée</b><small>Fichier privé · contrôle Facility Manager terminé</small></div><Badge tone="success">ACCEPTÉE</Badge></div> : null}
-        {proofs.length === 0 && anomaly.proofPending ? <div className="evidence-file"><BrandIcon name="fileCheck" size={18} /><div><b>Preuve reçue</b><small>Contrôle Facility Manager requis</small></div><Badge tone="orange">À VALIDER</Badge>{canVerify && <button className="primary-button" disabled={busy} onClick={onVerify}>Valider</button>}</div> : null}
-        {proofs.length === 0 && !anomaly.proof && !anomaly.proofPending ? <div className="proof-requirement"><BrandIcon name="camera" size={18} /><div><b>{expectedProof ?? 'Preuve attendue non définie'}</b><p>{expectedProof ? 'La clôture reste impossible tant que le dernier justificatif n’est pas accepté.' : 'Aucune règle de preuve canonique n’est raccordée à ce dossier.'}</p></div>{!readOnly && <button className="primary-button" onClick={chooseProof}><BrandIcon name="plus" size={16} /> Déposer</button>}</div> : null}
-      </article><aside className="panel proof-matrix-card"><p className="design-kicker">EXIGENCE APPLIQUÉE</p><h3>{anomaly.asset}</h3>{expectedProof ? <ul><li><span>✓</span>{expectedProof}</li></ul> : <div className="compact-insufficient-state"><b>Preuve attendue non définie</b><p>La règle contextuelle doit être confirmée avant d’afficher une matrice.</p></div>}</aside></section>}
-    {vendorReport ? <InternalVendorReportPanel anomalies={[anomaly]} vendors={vendorReport.vendors} canUpload={vendorReport.canUpload} busy={vendorReport.busy} onSubmit={vendorReport.onSubmit} /> : null}
+    {section === 'evidence' && <section id="dossier-evidence-panel" role="tabpanel" tabIndex={-1} className="dossier-two-columns">
+      <Card as="article" className="evidence-panel">
+        <div  className="panel-head"><div><h3>Preuves du dossier</h3><p>Fichiers privés consultables uniquement par les profils autorisés</p></div>{!readOnly && anomaly.status !== 'Clôturée' && !anomaly.proofPending && !anomaly.proofQueued && <Button type="submit" className="evidence-deposit-button" disabled={busy} onClick={chooseProof}>{proofs.some(proof => proof.verificationStatus === 'rejected') ? 'Déposer la preuve corrigée' : 'Déposer un justificatif'}</Button>}</div>
+        {!readOnly && !anomaly.proof && !anomaly.proofPending && <SyncStatusNotice state={anomaly.proofQueued ? 'queued-local' : proofTransferState} compact label="État du dépôt de preuve" onRetry={proofTransferState === 'error' && pendingProof ? () => void submitProof(pendingProof) : undefined} />}
+        {proofs.length > 0 && <div className="evidence-list" aria-label="Fichiers de preuve enregistrés">
+          {proofs.map((proof) => <article key={proof.id} className="evidence-file evidence-file-record">
+            <span aria-hidden="true">{proof.mimeType === 'application/pdf' ? 'PDF' : <BrandIcon name="files" />}</span>
+            <div><b>{proof.reference || 'Preuve enregistrée'}</b><small>{proof.mimeType === 'application/pdf' ? 'Document PDF' : 'Image'} · {new Date(proof.capturedAt).toLocaleString('fr-FR')}</small>{proof.verificationStatus === 'rejected' && proof.rejectionReason && <em>Motif : {proof.rejectionReason}</em>}</div>
+            <Badge tone={proof.verificationStatus === 'accepted' ? 'success' : proof.verificationStatus === 'rejected' ? 'critical' : 'orange'}>{proof.verificationStatus === 'accepted' ? 'ACCEPTÉE' : proof.verificationStatus === 'rejected' ? 'REFUSÉE' : 'À VALIDER'}</Badge>
+            <Button variant="secondary" type="submit" className="evidence-consult-button" disabled={!proof.storagePath || proofPreviewLoading === proof.id} onClick={() => void consultProof(proof)}>{proofPreviewLoading === proof.id ? 'Ouverture…' : 'Consulter'}</Button>
+          </article>)}
+        </div>}
+        {proofs.length === 0 && (anomaly.proof || anomaly.proofPending) && <div className="evidence-file"><span><BrandIcon name="files" /></span><div><b>{anomaly.proof ? 'Preuve acceptée' : 'Preuve reçue'}</b><small>Métadonnées de consultation indisponibles dans cette source</small></div><Badge tone={anomaly.proof ? 'success' : 'orange'}>{anomaly.proof ? 'ACCEPTÉE' : 'À VALIDER'}</Badge></div>}
+        {anomaly.proofQueued && <div className="evidence-file"><span><BrandIcon name="cloudOff" /></span><div><b>Preuve protégée localement</b><small>En attente de synchronisation vers le stockage privé sécurisé</small></div><Badge tone="blue">EN FILE</Badge></div>}
+        {proofs.length === 0 && !anomaly.proof && !anomaly.proofPending && !anomaly.proofQueued && <div className="proof-requirement"><span><BrandIcon name="activity" /></span><div><b>{expectedProof ?? 'Preuve attendue non définie'}</b><p>{expectedProof ? 'La clôture reste impossible tant que la pièce obligatoire n’est pas acceptée.' : 'Aucune règle de preuve canonique n’est raccordée à ce dossier.'}</p></div>{!readOnly && <Button type="submit" className="" onClick={chooseProof}>Déposer</Button>}</div>}
+        {proofPreviewError && <div className="proof-preview-error" role="alert"><b>Consultation impossible</b><span>{proofPreviewError}</span></div>}
+        {proofPreview && <section className="proof-preview" aria-label={`Aperçu de ${proofPreview.proof.reference}`}>
+          <div className="proof-preview-head"><div><b>{proofPreview.proof.reference}</b><small>Lien privé temporaire · validité 5 minutes</small></div><Button variant="secondary" type="submit" className="" onClick={() => setProofPreview(null)}>Fermer l’aperçu</Button></div>
+          {proofPreview.proof.mimeType?.startsWith('image/') ? <Image src={proofPreview.url} alt={`Preuve ${proofPreview.proof.reference}`} width={1200} height={800} unoptimized /> : <div className="proof-document-preview"><span>PDF</span><div><b>Document prêt à consulter</b><p>Le PDF s’ouvre dans un onglet sécurisé distinct.</p></div></div>}
+          <a className="primary-button proof-open-link" href={proofPreview.url} target="_blank" rel="noreferrer">Ouvrir dans un nouvel onglet</a>
+        </section>}
+        {anomaly.proofPending && canVerify && !proofReviewDecision && <div className="proof-review-actions" aria-label="Décision sur la preuve"><button className="reject-action" disabled={busy} onClick={() => {setProofReviewDecision('rejected');setProofReviewComment('')}}>Refuser avec motif</button><Button type="submit" className="" disabled={busy} onClick={() => {setProofReviewDecision('accepted');setProofReviewComment('')}}>Accepter la preuve</Button></div>}
+        {anomaly.proofPending && canVerify && proofReviewDecision && <div className={`proof-review-form is-${proofReviewDecision}`}><div><Badge tone={proofReviewDecision === 'accepted' ? 'success' : 'critical'}>{proofReviewDecision === 'accepted' ? 'ACCEPTATION' : 'REFUS'}</Badge><b>{proofReviewDecision === 'accepted' ? 'Confirmer la conformité de la preuve' : 'Motiver le refus de la preuve'}</b></div><Field label={null}>{proofReviewDecision === 'rejected' ? 'Motif obligatoire' : 'Commentaire facultatif'}<textarea autoFocus value={proofReviewComment} onChange={(event) => setProofReviewComment(event.target.value)} placeholder={proofReviewDecision === 'rejected' ? 'Indiquez ce qui manque ou ce qui doit être repris…' : 'Précision de contrôle éventuelle…'} /></Field><div className="modal-actions"><Button variant="secondary" type="submit" className="" disabled={busy} onClick={() => {setProofReviewDecision(null);setProofReviewComment('')}}>Annuler</Button><Button type="submit" className="" disabled={busy || (proofReviewDecision === 'rejected' && !proofReviewComment.trim())} onClick={() => void submitProofReview()}>{busy ? 'Enregistrement…' : proofReviewDecision === 'accepted' ? 'Confirmer l’acceptation' : 'Confirmer le refus'}</Button></div></div>}
+      </Card>
+      <Card as="aside" className="proof-matrix-card"><p className="design-kicker">EXIGENCE APPLIQUÉE</p><h3>{anomaly.asset}</h3>{expectedProof ? <ul><li><span><BrandIcon name="check" /></span>{expectedProof}</li></ul> : <div className="compact-insufficient-state"><b>Preuve attendue non définie</b><p>La règle contextuelle doit être confirmée avant d’afficher une matrice.</p></div>}</Card>
+    </section>}
 
-    {section === 'history' && <section id="dossier-history-panel" role="tabpanel" className="panel dossier-history"><div className="panel-head"><div><h3>Historique du dossier</h3><p>Seuls les événements métier datés et attribués peuvent constituer l’historique</p></div><span className="panel-count">0 événement canonique</span></div><div className="dossier-history-missing" role="note"><BrandIcon name="info" size={18} /><div><b>Historique métier indisponible</b><p>Aucune source chargée ne fournit actuellement l’action, l’acteur, l’étape et l’horodatage complets. Les repères ci-dessous ne remplacent pas un journal métier.</p></div></div><div className="dossier-current-markers" aria-label="Repères disponibles hors historique"><article><span>R</span><div><b>Constat d’origine</b><small>{anomaly.reported} · auteur non renseigné</small></div><em>REPÈRE DOSSIER</em></article><article className="current"><span>{currentStep+1}</span><div><b>Étape actuelle : {anomaly.status}</b><small>Date et auteur de transition non disponibles</small></div><em>ÉTAT ACTUEL</em></article></div></section>}
+    {section === 'history' && <Card id="dossier-history-panel" role="tabpanel" as="section" className="dossier-history"><div  className="panel-head"><div><h3>Historique du dossier</h3><p>Événements métier canoniques, datés et attribués</p></div><span className="panel-count">{historyEvents.length} événement{historyEvents.length > 1 ? 's' : ''} canonique{historyEvents.length > 1 ? 's' : ''}</span></div>{historyEvents.length > 0 ? <div className="history-grid dossier-history-grid" aria-label="Événements métier du dossier">{historyEvents.map((event,index) => <article key={event.id} className={index === 0 ? 'current' : 'done'}><span aria-hidden="true">{index === 0 ? '•' : <BrandIcon name="check" />}</span><div className="history-event-copy"><b>{event.label}</b><small>{formatHistoryMoment(event.occurredAt)} · {event.actor ?? 'Auteur non renseigné'} · {event.stage ?? 'Étape non renseignée'}</small>{event.comment && <p>{event.comment}</p>}</div><em>{event.code}</em></article>)}</div> : <><div className="dossier-history-missing" role="note"><span><BrandIcon name="activity" /></span><div><b>Historique métier indisponible</b><p>Aucune source chargée ne fournit actuellement l’action, l’acteur, l’étape et l’horodatage complets. Les repères ci-dessous ne remplacent pas un journal métier.</p></div></div><div className="dossier-current-markers" aria-label="Repères disponibles hors historique"><article><span>R</span><div><b>Constat d’origine</b><small>{anomaly.reported} · auteur non renseigné</small></div><em>REPÈRE DOSSIER</em></article><article className="current"><span>{currentStep+1}</span><div><b>Étape actuelle : {anomaly.status}</b><small>Date et auteur de transition non disponibles</small></div><em>ÉTAT ACTUEL</em></article></div></>}</Card>}
   </>;
 }
 
-function Report({ persona, onNavigate }: { persona:Persona; onNavigate:(v:View)=>void }) {
-  const surpresseurAccess = persona.id === 'eau_incendie';
-  const [submitted, setSubmitted] = useState(false);
-  const session = sessionForAudience(persona.id as UiSession['audience'], persona.name);
-  const roundsLead = <>
-    <DemoScenarioSelect />
-    <TodayRoundsPanel session={session} title="Rondes du jour" detail="Votre périmètre, aujourd’hui." withPicker onStart={() => {}} />
-  </>;
+function MeasureRange({ label, value, min, max, unit }: { label:string; value:number; min:number; max:number; unit:string }) {
+  const valid = Number.isFinite(value);
+  const inRange = valid && value >= min && value <= max;
+  const position = valid ? Math.max(0,Math.min(100,((value - min) / Math.max(.01,max - min)) * 100)) : 0;
+  return <article className={`measure-range ${!valid ? 'unknown' : inRange ? 'in-range' : 'out-range'}`}>
+    <div><span>{label}</span><b>{valid ? `${value.toLocaleString('fr-FR')} ${unit}` : 'Valeur non renseignée'}</b><em>{valid ? inRange ? 'DANS LA PLAGE' : 'HORS PLAGE' : 'À COMPLÉTER'}</em></div>
+    <div className="measure-range-track" aria-label={`${label} : ${valid ? value : 'valeur absente'} ${unit}, plage attendue ${min} à ${max} ${unit}`}><i style={{'--measure-position':`${position}%`} as React.CSSProperties} /></div>
+    <small><span>Minimum {min} {unit}</span><span>Maximum {max} {unit}</span></small>
+  </article>;
+}
 
-  if (persona.id === 'facility') {
-    return <div className="rounds-page">
-      <h2 className="visually-hidden">Rondes</h2>
-      <DemoScenarioSelect />
-      <TodayRoundsPanel session={session} title="Planning du jour" detail="Tous les agents, triées par dépassement puis par heure." withPicker onStart={() => {}} />
-    </div>;
-  }
-
-  if (persona.id === 'electricite') {
-    return <div className="rounds-page">
-      {roundsLead}
-      <Ge01AgentForm agentName={persona.name} />
-    </div>;
-  }
-
-  if (!surpresseurAccess) {
-    const isRoundsAssistance = persona.id === 'rondes_assistance';
-    return <div className="rounds-page">
-      {roundsLead}
-      <RoundPilotHeader
-        title={isRoundsAssistance ? 'RND-LET · Rondes de services · zones' : 'Ronde technique'}
-        subtitle="Constat terrain · transmission à Facility Manager"
-        badge={<span className="mockup-label">Aucun import</span>}
-      />
-      <section className="quick-round-layout">
-        <form className="panel quick-round-card" onSubmit={(event) => { event.preventDefault(); setSubmitted(true); }}>
-          <div className="round-card-head"><span className="round-icon">{isRoundsAssistance ? 'R' : 'GE'}</span><div><b>{isRoundsAssistance ? 'Zones du jour' : displayAssetCode('DEMO-GE')}</b><small>{isRoundsAssistance ? 'Périmètre nettoyage et jardinage' : 'Périmètre électrique autorisé'}</small></div><span className="mockup-label">MAQUETTE</span></div>
-          <div className="two-fields"><label className="field">Zone<Select defaultValue={isRoundsAssistance ? 'Jardin nord' : 'Local groupe électrogène'}><option>{isRoundsAssistance ? 'Jardin nord' : 'Local groupe électrogène'}</option><option>{isRoundsAssistance ? 'Atrium restaurant' : 'Local TGBT'}</option></Select></label><label className="field">Type de contrôle<Select><option>{isRoundsAssistance ? 'Propreté & état' : 'Ronde préventive'}</option><option>{isRoundsAssistance ? 'Jardinage' : 'Constat incident'}</option></Select></label></div>
-          <label className="field">Constat<textarea defaultValue={isRoundsAssistance ? 'Présence d’eau stagnante près de l’accès jardin nord.' : 'Mode AUTO confirmé. Tension batterie à contrôler au prochain démarrage.'} /></label>
-          <div className="evidence-drop"><BrandIcon name="camera" size={20} /><div><b>Ajouter une photo</b><small>La pièce reste attachée au constat, jamais importée comme reporting.</small></div></div>
-          <SyncStatusNotice state="demo-volatile" compact label="État du brouillon de ronde" />
-          <div className="round-submit"><p>Interaction de maquette uniquement</p><button className="primary-button" type="submit">Valider la maquette</button></div>
-        </form>
-        <aside className="panel direct-flow-card"><p className="design-kicker">APRÈS L’ENVOI</p><h3>Un circuit court et lisible</h3>{['Constat enregistré','Qualification par Facility Manager','Affectation et échéance','Traitement avec preuve'].map((item,index) => <div key={item}><span>{index+1}</span><p><b>{item}</b><small>{index === 0 ? 'Vous gardez une trace immédiate' : 'Le dossier avance dans le même outil'}</small></p></div>)}</aside>
-      </section>
-      {submitted && <div className="prototype-success" role="status"><span>✓</span><div><b>Simulation de constat terminée</b><small>Aucune donnée n’a été enregistrée ou transmise.</small></div><button onClick={() => onNavigate('workspace')}>Retour à mon espace</button></div>}
-    </div>;
-  }
-
+function DesignEauReport() {
+  const [submitted,setSubmitted] = useState(false);
   return <div className="rounds-page">
-    {roundsLead}
+    <DemoScenarioSelect />
     <p className="visually-hidden">MODULE PILOTE · SURPRESSEUR</p>
-    <EauRounds agentName={persona.name} draftNote="Brouillon temporaire dans cette page" onSubmit={() => setSubmitted(true)} />
+    <EauRounds agentName="Agent Eau & Incendie Démo" draftNote="Brouillon temporaire dans cette page" onSubmit={() => setSubmitted(true)} />
     {submitted && <div className="prototype-success" role="status"><span>✓</span><div><b>Simulation de ronde terminée</b><small>Aucune donnée n’a été enregistrée dans Supabase ni mise en file hors ligne.</small></div><button onClick={() => setSubmitted(false)}>Continuer la revue</button></div>}
   </div>;
+}
+
+function Report({ isTest = false, persona, agentName, reports, connected, onNavigate, persistenceEnabled, offlineSync, flash, onReview, onRead, onLoadProof, planning, onAssign, onOpenAnomaly, onRefresh }: {
+  isTest?:boolean;
+  persona:Persona;
+  agentName:string;
+  reports:OperationalReport[];
+  connected:boolean;
+  onNavigate:(v:View)=>void;
+  persistenceEnabled:boolean;
+  offlineSync:ReturnType<typeof useOfflineSync>;
+  flash:(message:string)=>void;
+  onReview:Ge01ReviewHandler;
+  planning?:Ge01Operations;
+  onAssign:Ge01AssignmentHandler;
+  onRead:(report:OperationalReport)=>Promise<void>;
+  onLoadProof:(path:string)=>Promise<Blob>;
+  onOpenAnomaly:(reference:string)=>void;
+  onRefresh:()=>void;
+}) {
+  const current = useContext(ConnectedPresentation);
+  const ria = <RiaRoundSpace manager={persona.id==='facility'} enabled={connected&&!isTest} offlineSync={offlineSync} onRefresh={onRefresh} onOpenAnomaly={onOpenAnomaly}/>;
+  if (persona.id === 'facility') return <RiaRoundNavigation ria={ria}><Ge01ReportInbox reports={reports.filter(r=>r.equipmentCode==='GE-01')} connected={connected} onReview={onReview} onRead={onRead} onLoadProof={onLoadProof} planning={planning} onAssign={onAssign} onOpenAnomaly={onOpenAnomaly} onRefresh={onRefresh} /></RiaRoundNavigation>;
+  if (persona.id === 'electricite') return <Ge01AgentForm equipment={current.health?.equipment.find(item => item.code === 'GE-01')} isTest={isTest} agentName={agentName} persistenceEnabled={persistenceEnabled} offlineSync={offlineSync} flash={flash} />;
+  if (isTest) return <Card role="status">La saisie de recette est réservée au pilote GE-01.</Card>;
+  if (persona.id === 'eau_incendie' && !connected) return <DesignEauReport />;
+  if (persona.id === 'eau_incendie') return <RiaRoundNavigation existingLabel="WILO-01 · Eau" ria={ria}><LegacyReport persona={persona} onNavigate={onNavigate} persistenceEnabled={persistenceEnabled} offlineSync={offlineSync} flash={flash}/></RiaRoundNavigation>;
+  return <LegacyReport persona={persona} onNavigate={onNavigate} persistenceEnabled={persistenceEnabled} offlineSync={offlineSync} flash={flash} />;
+}
+
+
+function readRoundReferences(value: unknown) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const result = value as Record<string, unknown>;
+  const reportReference = typeof result.report_reference === 'string' ? result.report_reference : '';
+  if (!reportReference) return null;
+  return {
+    isTest: result.is_test === true,
+    reportReference,
+    anomalyReference: typeof result.anomaly_reference === 'string' ? result.anomaly_reference : undefined,
+  };
+}
+
+function mapOperationalCostDecision(item:OperationalCostDecision):Escalation {
+  const state:DecisionState = item.approvalStatus === 'approved'
+    ? 'Approuvée'
+    : item.approvalStatus === 'rejected'
+      ? 'Refusée'
+      : item.approvalStatus === 'returned' ? 'Renvoyée à Facility Manager' : 'À décider';
+  const due = item.reviewedAt
+    ? `Décidée le ${new Date(item.reviewedAt).toLocaleString('fr-FR')}`
+    : `Soumise le ${new Date(item.createdAt).toLocaleString('fr-FR')}`;
+  return {
+    id:item.id,
+    costReference:item.id,
+    replacesCostReference:item.replacesCostReference,
+    replacedByCostReference:item.replacedByCostReference,
+    anomaly:item.anomalyReference,
+    asset:item.asset,
+    title:item.title,
+    kind:'Coût',
+    amount:item.amount,
+    due,
+    risk:`${item.budgetType.toUpperCase()} · ${item.decisionScope === 'administration' ? 'Arbitrage Administration' : 'Délégation Facility Manager'}`,
+    recommendation:item.title,
+    state,
+    motive:item.reviewComment ?? undefined,
+    decisionScope:item.decisionScope,
+    thresholdAmount:item.thresholdAmount,
+    budgetType:item.budgetType,
+    submittedBy:item.submittedBy,
+    reviewedBy:item.reviewedBy,
+  };
+}
+
+function ConnectedDataStatus({ state, environmentLabel, onRetry }: { state:OperationalDataState; environmentLabel:string; onRetry:()=>void }) {
+  const loading = state === 'loading';
+  return <section className="empty-state" role={loading ? 'status' : 'alert'} aria-live="polite">
+    <span aria-hidden="true">{loading ? <BrandIcon name="refresh" /> : <BrandIcon name="circleAlert" />}</span>
+    <h2>{loading ? 'Chargement des données métier' : 'Données métier indisponibles'}</h2>
+    <p>{loading ? `La réponse de ${environmentLabel} est en cours de vérification.` : `La connexion à ${environmentLabel} a échoué. Aucune donnée de démonstration n’est affichée à sa place.`}</p>
+    {!loading && <Button variant="secondary" onClick={onRetry}>Réessayer</Button>}
+  </section>;
+}
+
+function adaptDemoDossierToAntiZombieSummary(anomaly:Anomaly):AntiZombieSummaryData {
+  return {
+    dossierState:anomaly.status === 'Clôturée' ? 'Clôturé' : 'Ouvert',
+    status:anomaly.status,
+    responsible:canonicalResponsible(anomaly),
+    nextAction:nextActionFor(anomaly),
+    deadline:anomaly.due,
+    slaLabel:anomaly.delayed && anomaly.status !== 'Clôturée' ? 'En retard' : 'Dans le délai',
+    isDelayed:anomaly.delayed && anomaly.status !== 'Clôturée',
+    isBlocked:false,
+    blockingActor:null,
+    blockingOrDelayReason:null,
+    expectedProof:expectedProofFor(anomaly),
+    expectedProofState:anomaly.proof ? 'Preuve déposée et acceptée' : anomaly.proofPending ? 'Preuve déposée · validation Facility Manager attendue' : 'Aucune preuve déposée',
+    lastHistoryActivity:null,
+  };
+}
+
+function resolveAntiZombieSummary(anomaly:Anomaly):AntiZombieSummaryData {
+  return anomaly.antiZombieSummary ?? adaptDemoDossierToAntiZombieSummary(anomaly);
+}
+
+function formatHistoryMoment(value:string) {
+  return new Intl.DateTimeFormat('fr-FR', {
+    day:'2-digit',
+    month:'short',
+    year:'numeric',
+    hour:'2-digit',
+    minute:'2-digit',
+  }).format(new Date(value)).replace(',', ' ·');
+}
+
+type RoundDraft = {
+  submissionId?:string;
+  performedAt?:string;
+  startedAfterReceiptId?:string;
+  step:number;
+  pressure:string;
+  tankLevel:string;
+  observation:string;
+  checks:Record<string,boolean|null>;
+  quickTitle:string;
+  quickPriority:Priority;
+  quickZone:string;
+  quickControlType:string;
+  confirmed:boolean;
+  photoExceptionReason?:string;
+};
+
+function LegacyReport({ persona, onNavigate, persistenceEnabled, offlineSync, flash }: {
+  persona:Persona;
+  onNavigate:(v:View)=>void;
+  persistenceEnabled:boolean;
+  offlineSync:ReturnType<typeof useOfflineSync>;
+  flash:(message:string)=>void;
+}) {
+  const { deleteDraft, enqueueRound, loadDraft, saveDraft } = offlineSync;
+  const surpresseurAccess = persona.id === 'eau_incendie' || persona.id === 'facility';
+  const isRoundsAssistance = persona.id === 'rondes_assistance';
+  const draftId = `round:${persona.id}:${surpresseurAccess ? 'WILO-01' : isRoundsAssistance ? 'RND-LET' : 'GE-01'}`;
+  const [photoExceptionReason,setPhotoExceptionReason]=useState('');
+  const [step, setStep] = useState(0);
+  const [furthestStep, setFurthestStep] = useState(0);
+  useEffect(() => setFurthestStep(value => Math.max(value, step)), [step]);
+  const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const submissionLockRef = useRef(false);
+  const [submissionId, setSubmissionId] = useState('');
+  const [performedAt, setPerformedAt] = useState('');
+  const [startedAfterReceiptId, setStartedAfterReceiptId] = useState<string>();
+  const [draftReady, setDraftReady] = useState(!persistenceEnabled);
+  const [pressure, setPressure] = useState(persistenceEnabled ? '' : '2.8');
+  const [tankLevel, setTankLevel] = useState(persistenceEnabled ? '' : '72');
+  const [observation, setObservation] = useState(persistenceEnabled ? '' : surpresseurAccess ? 'Vibration légère sur la pompe P1 au démarrage.' : isRoundsAssistance ? 'Présence d’eau stagnante près de l’accès jardin nord.' : 'Mode AUTO confirmé. Tension batterie à contrôler au prochain démarrage.');
+  const [quickTitle, setQuickTitle] = useState(persistenceEnabled ? '' : isRoundsAssistance ? 'Eau stagnante près de l’accès' : 'Tension batterie à contrôler');
+  const [quickPriority, setQuickPriority] = useState<Priority>('Moyenne');
+  const [quickZone, setQuickZone] = useState(isRoundsAssistance ? 'Jardin nord' : 'Local groupe électrogène');
+  const [quickControlType, setQuickControlType] = useState(isRoundsAssistance ? 'Propreté & état' : 'Ronde préventive');
+  const [confirmed, setConfirmed] = useState(!persistenceEnabled);
+  const [checks, setChecks] = useState<Record<string,boolean|null>>(persistenceEnabled
+    ? { auto:null, p1:null, p2:null, leak:null, valves:null, alarm:null }
+    : { auto:true, p1:false, p2:true, leak:true, valves:true, alarm:true });
+  const currentEquipmentCode = surpresseurAccess ? 'WILO-01' : isRoundsAssistance ? 'RND-LET' : 'GE-01';
+  const latestReceiptMatchesEquipment = offlineSync.latestRoundReceipt?.equipmentCode === currentEquipmentCode;
+  const explicitNewRoundAfterLatestReceipt = Boolean(
+    offlineSync.latestRoundReceipt
+      && startedAfterReceiptId === offlineSync.latestRoundReceipt.queueId
+      && submissionId !== offlineSync.latestRoundReceipt.queueId,
+  );
+  const restoredRoundReceipt = latestReceiptMatchesEquipment && !explicitNewRoundAfterLatestReceipt ? offlineSync.latestRoundReceipt : null;
+  const roundSubmitted = submitted || Boolean(restoredRoundReceipt);
+  const setCheck = (key:string) => setChecks((items) => ({ ...items, [key]:items[key] === null ? true : !items[key] }));
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!persistenceEnabled) return;
+    loadDraft<RoundDraft>(draftId).then((draft) => {
+      if (cancelled) return;
+      const value = draft?.value;
+      setSubmissionId(value?.submissionId || crypto.randomUUID());
+      setPerformedAt(value?.performedAt || new Date().toISOString());
+      setStartedAfterReceiptId(value?.startedAfterReceiptId);
+      if (!value) return;
+      setPhotoExceptionReason(value.photoExceptionReason??''); setStep(value.step); setPressure(value.pressure); setTankLevel(value.tankLevel); setObservation(value.observation);
+      setChecks(value.checks); setQuickTitle(value.quickTitle); setQuickPriority(value.quickPriority); setQuickZone(value.quickZone);
+      setQuickControlType(value.quickControlType); setConfirmed(value.confirmed);
+    }).catch(() => {
+      if (cancelled) return;
+      setSubmissionId(crypto.randomUUID());
+      setPerformedAt(new Date().toISOString());
+    }).finally(() => { if (!cancelled) setDraftReady(true); });
+    return () => { cancelled = true; };
+  }, [draftId, loadDraft, persistenceEnabled]);
+
+  useEffect(() => {
+    if (!persistenceEnabled || !draftReady || roundSubmitted || !submissionId || !performedAt) return;
+    const timer = window.setTimeout(() => {
+      if (submissionLockRef.current) return;
+      void saveDraft<RoundDraft>(draftId, { submissionId, performedAt, startedAfterReceiptId, step, pressure, tankLevel, observation, checks, quickTitle, quickPriority, quickZone, quickControlType, confirmed, photoExceptionReason });
+    }, 450);
+    return () => window.clearTimeout(timer);
+  }, [photoExceptionReason, checks, confirmed, draftId, draftReady, observation, performedAt, persistenceEnabled, pressure, quickControlType, quickPriority, quickTitle, quickZone, roundSubmitted, saveDraft, startedAfterReceiptId, step, submissionId, tankLevel]);
+
+  const syncedReferences = useMemo(() => {
+    if (!submissionId || !offlineSync.lastRun) return null;
+    const item = offlineSync.lastRun.syncedItems.find((entry) => entry.queueId === submissionId && entry.kind === 'field-round');
+    if (!item || !item.serverResult || typeof item.serverResult !== 'object' || Array.isArray(item.serverResult)) return null;
+    return readRoundReferences(item.serverResult);
+  }, [offlineSync.lastRun, submissionId]);
+  const displayedReferences = syncedReferences ?? (restoredRoundReceipt ? {
+    reportReference:restoredRoundReceipt.reportReference,
+    anomalyReference:restoredRoundReceipt.anomalyReference,
+  } : null);
+
+  useEffect(() => {
+    if (!persistenceEnabled || !restoredRoundReceipt) return;
+    void deleteDraft(draftId);
+  }, [deleteDraft, draftId, persistenceEnabled, restoredRoundReceipt]);
+
+  const finalizeQueuedRound = async () => {
+    await deleteDraft(draftId);
+    setSubmitted(true);
+    setSubmitting(false);
+    flash(offlineSync.online ? 'Ronde mise en file ; synchronisation lancée.' : 'Ronde protégée sur cet appareil ; synchronisation automatique au retour du réseau.');
+  };
+
+  const submitQuickRound = async (event:FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (submissionLockRef.current || roundSubmitted) return;
+    if(!photoExceptionReason.trim()){flash('Indiquez le motif d’absence de photo à ce stade du signalement.');return;}
+    submissionLockRef.current = true;
+    setSubmitting(true);
+    if (!persistenceEnabled) { setSubmitted(true); setSubmitting(false); return; }
+    if (!submissionId || !performedAt) {
+      submissionLockRef.current = false;
+      setSubmitting(false);
+      flash('La ronde n’est pas encore prête. Patientez un instant puis réessayez.');
+      return;
+    }
+    try {
+      await enqueueRound({
+        equipmentCode:isRoundsAssistance ? 'RND-LET' : 'GE-01',
+        reportType:isRoundsAssistance ? 'cleaning_gardening_round' : 'technical_round',
+        performedAt,
+        summary:observation.trim(),
+        checks:[
+          { code:'TYPE_CONTROLE', label:'Type de contrôle', status:'ok', valueText:quickControlType, notes:`Zone déclarée : ${quickZone}` },
+          {code:'PHOTO_EXCEPTION',label:'Motif d’impossibilité de photo',status:'ok',valueText:photoExceptionReason.trim()},
+          { code:'CONSTAT_TERRAIN', label:'Constat terrain', status:'alert', valueText:observation.trim() },
+        ],
+        anomaly:{ title:quickTitle.trim(), description:observation.trim(), priority:quickPriority },
+      }, submissionId);
+      await finalizeQueuedRound();
+    } catch (error) {
+      submissionLockRef.current = false;
+      setSubmitting(false);
+      flash(`Ronde non mise en file : ${error instanceof Error ? error.message : 'stockage local indisponible'}.`);
+    }
+  };
+
+  const steps = ['Contexte','Pression','Pompes','Sécurité','Synthèse'];
+  const pressureValue = Number(pressure.replace(',','.'));
+  const tankValue = Number(tankLevel.replace(',','.'));
+  const hasPressureAlert = pressure.trim() !== '' && Number.isFinite(pressureValue) && pressureValue < 3;
+  const completedChecks = Object.values(checks).filter((value) => value === true).length;
+  const reviewedChecks = Object.values(checks).filter((value) => value !== null).length;
+  const hasTankAlert=tankLevel.trim()!==''&&Number.isFinite(tankValue)&&(tankValue<40||tankValue>100);
+  const hasCheckAlert = Object.values(checks).some((value) => value === false);
+  const incompleteRound = pressure.trim() === '' || tankLevel.trim() === '' || !Number.isFinite(pressureValue) || !Number.isFinite(tankValue) || reviewedChecks < 6;
+
+  const submitSurpresseurRound = async () => {
+    if (submissionLockRef.current || roundSubmitted) return;
+    if((hasPressureAlert||hasCheckAlert||hasTankAlert)&&!photoExceptionReason.trim()){flash('Indiquez le motif d’absence de photo ; vous pourrez joindre une preuve au dossier après synchronisation.');return;}
+    if (incompleteRound || !confirmed) {
+      flash('Complétez les deux mesures, les six contrôles et la confirmation avant l’envoi.');
+      return;
+    }
+    submissionLockRef.current = true;
+    setSubmitting(true);
+    if (!persistenceEnabled) { setSubmitted(true); setSubmitting(false); return; }
+    if (!submissionId || !performedAt) {
+      submissionLockRef.current = false;
+      setSubmitting(false);
+      flash('La ronde n’est pas encore prête. Patientez un instant puis réessayez.');
+      return;
+    }
+    const anomalyTitle = hasPressureAlert ? 'Pression Wilo sous le seuil attendu' : hasCheckAlert||hasTankAlert ? 'Écart constaté pendant la ronde WILO-01' : undefined;
+    try {
+      await enqueueRound({
+        equipmentCode:'WILO-01',
+        reportType:'wilo_round',
+        performedAt,
+        summary:observation.trim(),
+        checks:[
+          ...(photoExceptionReason.trim()?[{code:'PHOTO_EXCEPTION',label:'Motif d’impossibilité de photo',status:'ok' as const,valueText:photoExceptionReason.trim()}]:[]),
+          { code:'PRESSION_RESEAU', label:'Pression réseau', status:hasPressureAlert ? 'alert' : 'ok', valueNumeric:pressureValue, unit:'bar' },
+          { code:'NIVEAU_BACHE', label:'Niveau de bâche', status:tankValue >= 40 && tankValue <= 100 ? 'ok' : 'alert', valueNumeric:tankValue, unit:'%' },
+          ...[['auto','Mode automatique actif'],['p1','Pompe P1 disponible'],['p2','Pompe P2 disponible'],['leak','Absence de fuite active'],['valves','Vannes en position normale'],['alarm','Aucune alarme active']].map(([code,label]) => ({ code:code.toUpperCase(), label, status:checks[code] ? 'ok' as const : 'alert' as const, valueBoolean:Boolean(checks[code]) })),
+        ],
+        ...(anomalyTitle ? { anomaly:{ title:anomalyTitle, description:observation.trim() || 'Écart relevé pendant la ronde WILO-01.', priority:hasPressureAlert || checks.p1 === false ? 'Haute' as const : 'Moyenne' as const } } : {}),
+      }, submissionId);
+      await finalizeQueuedRound();
+    } catch (error) {
+      submissionLockRef.current = false;
+      setSubmitting(false);
+      flash(`Ronde non mise en file : ${error instanceof Error ? error.message : 'stockage local indisponible'}.`);
+    }
+  };
+
+  const startNextRound = () => {
+    submissionLockRef.current = false;
+    setSubmitting(false);
+    setSubmitted(false);
+    if (!persistenceEnabled) return;
+    const nextSubmissionId = crypto.randomUUID();
+    const nextPerformedAt = new Date().toISOString();
+    const nextStartedAfterReceiptId = offlineSync.latestRoundReceipt?.queueId;
+    setSubmissionId(nextSubmissionId);
+    setPerformedAt(nextPerformedAt);
+    setStartedAfterReceiptId(nextStartedAfterReceiptId);
+    setStep(0); setFurthestStep(0);
+    setPressure('');
+    setTankLevel('');
+    setObservation(''); setPhotoExceptionReason('');
+    setChecks({ auto:null, p1:null, p2:null, leak:null, valves:null, alarm:null });
+    setConfirmed(false);
+    void saveDraft<RoundDraft>(draftId, {
+      submissionId:nextSubmissionId,
+      performedAt:nextPerformedAt,
+      startedAfterReceiptId:nextStartedAfterReceiptId,
+      step:0,
+      pressure:'',
+      tankLevel:'',
+      observation:'',
+      checks:{ auto:null, p1:null, p2:null, leak:null, valves:null, alarm:null },
+      quickTitle:'',
+      quickPriority,
+      quickZone,
+      quickControlType,
+      confirmed:false,
+    });
+  };
+
+  if (!surpresseurAccess) return <>
+    <section className="section-heading round-heading"><div><p className="design-kicker">SAISIE DIRECTE · {persistenceEnabled ? 'EN LIGNE' : 'DÉMONSTRATION'}</p><h2 className="visually-hidden">Rondes</h2><p>{isRoundsAssistance ? 'Ronde cleaning & jardinage' : 'Ronde technique'} : un constat terrain est enregistré dans l’application puis transmis à Facility Manager pour qualification.</p></div><Badge tone="blue">Aucun import</Badge></section>
+    <OfflineSyncStatus enabled={persistenceEnabled} online={offlineSync.online} running={offlineSync.running} counts={offlineSync.counts} latestIssue={offlineSync.latestIssue} latestRoundReceipt={offlineSync.latestRoundReceipt} onRetry={() => void offlineSync.retryFailed().then(() => offlineSync.synchronize())} />
+    <section className="quick-round-layout">
+      <form className="panel quick-round-card" onSubmit={(event) => void submitQuickRound(event)}>
+        <div className="round-card-head"><span className="round-icon">{isRoundsAssistance ? 'R' : 'GE'}</span><div><b>{isRoundsAssistance ? 'RND-LET' : 'GE-01'}</b><small>{isRoundsAssistance ? 'Périmètre cleaning et jardinage' : 'Périmètre électrique autorisé'}</small></div><span className="mockup-label">{persistenceEnabled ? 'SAISIE RÉELLE' : 'DÉMO'}</span></div>
+        <div className="two-fields"><Field label={null}>Zone<Select value={quickZone} onChange={(event) => setQuickZone(event.target.value)}><option>{isRoundsAssistance ? 'Jardin nord' : 'Local groupe électrogène'}</option><option>{isRoundsAssistance ? 'Atrium restaurant' : 'Local TGBT'}</option></Select></Field><Field label={null}>Type de contrôle<Select value={quickControlType} onChange={(event) => setQuickControlType(event.target.value)}><option>{isRoundsAssistance ? 'Propreté & état' : 'Ronde préventive'}</option><option>{isRoundsAssistance ? 'Jardinage' : 'Constat incident'}</option></Select></Field></div>
+        <div className="two-fields"><Field label={null}>Intitulé court<input required value={quickTitle} onChange={(event) => setQuickTitle(event.target.value)} placeholder="Décrivez le problème en quelques mots" /></Field><Field label={null}>Priorité proposée<Select value={quickPriority} onChange={(event) => setQuickPriority(event.target.value as Priority)}><option>Critique</option><option>Haute</option><option>Moyenne</option><option>Normale</option><option>Faible</option></Select></Field></div>
+        <Field label={null}>Constat<textarea required value={observation} onChange={(event) => setObservation(event.target.value)} placeholder="Décrivez uniquement ce qui a été observé sur le terrain." /></Field>
+        <p>La photo du constat peut être jointe au dossier après synchronisation.</p><Field label="Photo non jointe — motif obligatoire"><textarea required maxLength={2000} value={photoExceptionReason} onChange={e=>setPhotoExceptionReason(e.target.value)}/></Field>
+        <div className="round-submit"><p><span className={`status-dot ${persistenceEnabled && offlineSync.online ? 'online' : 'local'}`} /> {persistenceEnabled ? draftReady ? 'Brouillon enregistré automatiquement sur cet appareil' : 'Chargement du brouillon local…' : 'Simulation sans écriture serveur'}</p><Button className="" type="submit" disabled={!draftReady || submitting || roundSubmitted} aria-busy={submitting}>{submitting ? 'Transmission…' : roundSubmitted ? 'Déjà transmis' : 'Transmettre à Facility Manager'}</Button></div>
+      </form>
+      <Card as="aside" className="direct-flow-card"><p className="design-kicker">APRÈS L’ENVOI</p><h3>Un circuit court et lisible</h3>{['Constat enregistré','Qualification par Facility Manager','Affectation et échéance','Traitement avec preuve'].map((item,index) => <div key={item}><span>{index+1}</span><p><b>{item}</b><small>{index === 0 ? 'Vous gardez une trace immédiate' : 'Le dossier avance dans le même outil'}</small></p></div>)}</Card>
+    </section>
+    {roundSubmitted && <div className="prototype-success" role="status"><span><BrandIcon name="check" /></span><div><b>{persistenceEnabled ? displayedReferences?.anomalyReference ? `Constat ${displayedReferences.anomalyReference} transmis` : 'Constat placé dans la file de synchronisation' : 'Simulation de constat terminée'}</b><small>{persistenceEnabled ? displayedReferences?.reportReference ? `Ronde ${displayedReferences.reportReference} enregistrée · un nouvel envoi réutilise le même identifiant.` : 'Un seul envoi est autorisé ; la référence apparaîtra après synchronisation.' : 'Aucune donnée n’a été enregistrée ou transmise.'}</small></div><button onClick={() => onNavigate('workspace')}>Retour à mon espace</button></div>}
+  </>;
+
+  return <>
+    <p className="visually-hidden">MODULE PILOTE · SURPRESSEUR</p>
+    <RoundPilotHeader
+      title={`${displayAssetCode('DEMO-EAU')} · Ronde quotidienne du surpresseur`}
+      subtitle="Cinq étapes · fréquence quotidienne"
+      badge={<span className="mockup-label">{persistenceEnabled ? "Saisie terrain" : "Maquette"}</span>}
+    />
+
+    <OfflineSyncStatus enabled={persistenceEnabled} online={offlineSync.online} running={offlineSync.running} counts={offlineSync.counts} latestIssue={offlineSync.latestIssue} latestRoundReceipt={offlineSync.latestRoundReceipt} onRetry={() => void offlineSync.retryFailed().then(() => offlineSync.synchronize())} />
+
+    <section className="surpresseur-progress connected-round-progress" aria-label="Progression de la ronde">
+      {steps.map((item,index) => <button key={item} className={index === step ? 'active' : index < step ? 'done' : ''} disabled={index > Math.max(step, furthestStep)} aria-current={index === step ? 'step' : undefined} onClick={() => setStep(index)}><span>{index < step ? '✓' : index+1}</span><b>{item}</b></button>)}
+    </section>
+
+    <section className="surpresseur-layout">
+      <Card as="article" className="surpresseur-form-card">
+        <div className="surpresseur-section-head"><div><span>ÉTAPE {step+1} SUR 5</span><h3>{steps[step]}</h3></div><span className="mockup-label">{persistenceEnabled ? 'SAISIE RÉELLE' : 'DÉMO INTERACTIVE'}</span></div>
+        {step === 0 && <div className="surpresseur-fields"><div className="context-grid"><div><span>Agent</span><b>{persona.name}</b><small>{persona.role}</small></div><div><span>Horodatage</span><b>Heure d’Abidjan</b><small>Date et heure conservées</small></div><div><span>Synchronisation</span><b>{offlineSync.online ? 'Réseau disponible' : 'Hors ligne'}</b><small>{persistenceEnabled ? 'File idempotente active' : 'Démonstration'}</small></div></div><RoundDateTimeFields value={performedAt} onChange={setPerformedAt}/><Field label={null}>Type de ronde<Select defaultValue=""><option value="">À renseigner</option><option>Quotidienne</option><option>Après intervention</option><option>Contrôle exceptionnel</option></Select></Field><div className="surpresseur-callout"><span><BrandIcon name="info" /></span><p><b>{persistenceEnabled ? 'Contrôle terrain' : 'Point d’attention transmis'}</b><small>{persistenceEnabled ? 'Vérifiez les pompes et relevez la pression observée. Ne déclarez que les écarts constatés.' : 'Vérifier la récidive du défaut pompe P1 et la pression de refoulement.'}</small></p></div></div>}
+        {step === 1 && <div className="surpresseur-fields"><div className="measure-grid"><label><span>Pression réseau</span><div><input required value={pressure} inputMode="decimal" onChange={(event) => setPressure(event.target.value)} /><b>bar</b></div><small>Plage attendue : 3,0 à 4,5 bar</small></label><label><span>Niveau bâche</span><div><input required value={tankLevel} inputMode="numeric" onChange={(event) => setTankLevel(event.target.value)} /><b>%</b></div><small>Plage de contrôle : 40 à 100 %</small></label></div><div className="measure-range-grid"><MeasureRange label="Pression réseau" value={pressure.trim() === '' ? Number.NaN : pressureValue} min={3} max={4.5} unit="bar" /><MeasureRange label="Niveau de bâche" value={tankLevel.trim() === '' ? Number.NaN : tankValue} min={40} max={100} unit="%" /></div>{hasPressureAlert && <div className="measure-alert"><span><BrandIcon name="circleAlert" /></span><div><b>Écart détecté automatiquement</b><small>La pression saisie est inférieure au seuil. Un constat sera proposé à Facility Manager.</small></div></div>}<Field label={null}>Stabilité du manomètre<Select defaultValue=""><option value="">À contrôler</option><option>Stable</option><option>Oscillation légère</option><option>Oscillation importante</option></Select></Field></div>}
+        {step === 2 && <div className="surpresseur-fields"><div className="check-grid">{[['auto','Mode automatique actif','Commande générale'],['p1','Pompe P1 disponible','Pompe prioritaire'],['p2','Pompe P2 disponible','Pompe de secours'],['leak','Absence de fuite active','Collecteur et raccords']].map(([key,title,detail]) => <button type="button" key={key} className={checks[key] === null ? 'unreviewed' : checks[key] ? 'checked' : 'unchecked'} onClick={() => setCheck(key)}><span>{checks[key] === null ? <BrandIcon name="circleAlert" /> : checks[key] ? <BrandIcon name="check" /> : <BrandIcon name="circleAlert" />}</span><p><b>{title}</b><small>{detail}</small></p><em>{checks[key] === null ? 'À contrôler' : checks[key] ? 'Conforme' : 'À signaler'}</em></button>)}</div></div>}
+        {step === 3 && <div className="surpresseur-fields"><div className="check-grid compact">{[['valves','Vannes en position normale','Aspiration et refoulement'],['alarm','Aucune alarme active','Coffret et supervision']].map(([key,title,detail]) => <button type="button" key={key} className={checks[key] === null ? 'unreviewed' : checks[key] ? 'checked' : 'unchecked'} onClick={() => setCheck(key)}><span>{checks[key] === null ? <BrandIcon name="circleAlert" /> : checks[key] ? <BrandIcon name="check" /> : <BrandIcon name="circleAlert" />}</span><p><b>{title}</b><small>{detail}</small></p><em>{checks[key] === null ? 'À contrôler' : checks[key] ? 'Conforme' : 'À signaler'}</em></button>)}</div><Field label={null}>Observation terrain<textarea value={observation} onChange={(event) => setObservation(event.target.value)} placeholder="Observation factuelle ou précision sur un écart." /></Field>{(hasPressureAlert||hasCheckAlert||hasTankAlert)?<><p>La photo du constat peut être jointe au dossier après synchronisation.</p><Field label="Photo non jointe — motif obligatoire"><textarea maxLength={2000} value={photoExceptionReason} onChange={e=>setPhotoExceptionReason(e.target.value)}/></Field></>:<p>Aucune photo requise sans anomalie.</p>}</div>}
+        {step === 4 && <div className="surpresseur-fields"><div className="round-summary"><div><span>MESURES</span><b className={hasPressureAlert ? 'warning' : ''}>{pressure.trim() ? `${pressure} bar` : 'Valeur non renseignée'}</b><small>{pressure.trim() ? 'Pression réseau' : 'À COMPLÉTER'}</small></div><div><span>NIVEAU</span><b>{tankLevel.trim() ? `${tankLevel} %` : 'Valeur non renseignée'}</b><small>{tankLevel.trim() ? 'Bâche de stockage' : 'À COMPLÉTER'}</small></div><div><span>CONTRÔLES</span><b>{completedChecks}/6</b><small>{reviewedChecks}/6 vérifiés</small></div></div>{incompleteRound ? <div className="surpresseur-callout"><span><BrandIcon name="info" /></span><p><b>Contrôle incomplet</b><small>Renseignez les deux mesures et les six contrôles avant de conclure.</small></p></div> : (hasPressureAlert || hasCheckAlert) ? <div className="proposed-finding"><span><BrandIcon name="circleAlert" /></span><div><p>CONSTAT PROPOSÉ</p><h4>{hasPressureAlert ? 'Pression Wilo sous le seuil attendu' : 'Écart constaté pendant la ronde'}</h4><small>Priorité proposée : {hasPressureAlert || checks.p1 === false ? 'Haute' : 'Moyenne'} · Transmission à Facility Manager.</small></div><Badge tone="orange">À QUALIFIER</Badge></div> : <div className="surpresseur-callout"><span><BrandIcon name="check" /></span><p><b>Aucun écart déclaré</b><small>La ronde sera conservée sans créer d’anomalie.</small></p></div>}<label className="confirmation-line"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} /><span>Je confirme que les valeurs correspondent à la ronde réalisée sur WILO-01.</span></label></div>}
+        <div className="surpresseur-actions"><Button variant="secondary" type="submit" className="" disabled={step === 0 || submitting || roundSubmitted} onClick={() => setStep((value) => Math.max(0,value-1))}>← Précédent</Button><p><span className={`status-dot ${persistenceEnabled && offlineSync.online ? 'online' : 'local'}`} /> {persistenceEnabled ? draftReady ? 'Brouillon local automatique' : 'Chargement du brouillon…' : 'Simulation locale'}</p>{step < 4 ? <Button type="submit" className="" disabled={submitting || roundSubmitted} onClick={() => setStep((value) => Math.min(4,value+1))}>Continuer →</Button> : <Button type="submit" className="" disabled={!draftReady || submitting || roundSubmitted} aria-busy={submitting} onClick={() => void submitSurpresseurRound()}>{submitting ? 'Transmission…' : roundSubmitted ? 'Ronde transmise' : 'Terminer la ronde'}</Button>}</div>
+      </Card>
+      <aside className="surpresseur-aside">
+        <Card as="article" className="next-action-card"><p className="design-kicker">À SURVEILLER</p><span className="next-action-icon"><BrandIcon name="circleAlert" /></span><h3>{persistenceEnabled ? 'Réarmement provisoire' : 'Pompe P1 indisponible'}</h3><p>{persistenceEnabled ? 'Un réarmement ne suffit pas à clôturer une anomalie. Le diagnostic et la preuve restent nécessaires.' : 'Deuxième défaut en sept jours. Le réarmement provisoire ne permet pas la clôture.'}</p>{!persistenceEnabled && <div><span>Responsable pressenti</span><b>Agent Eau & Incendie</b></div>}</Card>
+        <Card as="article" className="score-explain-card"><div><span>SCORE WILO</span><b>Indisponible</b></div><div className="score-freshness"><span><b>État</b>À confirmer</span><span><b>Variation</b>Indisponible</span><span><b>Fraîcheur</b>Indisponible</span></div><ul><li><i /> Méthode de calcul <b>À valider</b></li><li><i /> Période observée <b>Non définie</b></li><li><i /> Données sources <b>Insuffisantes</b></li></ul><p className="analytics-note">Aucune valeur de score n’est affichée avant validation de la méthode et de ses données sources.</p></Card>
+      </aside>
+    </section>
+    {roundSubmitted && <div className="prototype-success" role="status"><span><BrandIcon name="check" /></span><div><b>{persistenceEnabled ? displayedReferences?.reportReference ? `Ronde ${displayedReferences.reportReference} synchronisée` : 'Ronde placée dans la file de synchronisation' : 'Simulation de ronde terminée'}</b><small>{persistenceEnabled ? displayedReferences?.anomalyReference ? `Constat ${displayedReferences.anomalyReference} transmis à Facility Manager.` : displayedReferences?.reportReference ? 'Ronde enregistrée sans constat séparé.' : 'Un seul envoi est autorisé ; la référence apparaîtra après synchronisation.' : 'Aucune donnée n’a été enregistrée sur le serveur.'}</small></div><button onClick={startNextRound}>Nouvelle ronde</button></div>}
+  </>;
 }

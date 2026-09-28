@@ -184,6 +184,7 @@ export type BuildingHealthSnapshot = {
   openReserves: number | null;
   counterUnavailableReasons: Partial<Record<'pendingDecisions' | 'overdueCritical' | 'openReserves', CounterUnavailableReason>>;
   equipment: EquipmentCard[];
+  domainPoints?: V2Section<DomainPoints>;
 };
 
 export type DomainPoints = {

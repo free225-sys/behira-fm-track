@@ -497,12 +497,12 @@ export const fixtureRoundedCases = {
   capped8240: snapshot({
     ...fixtureScoreCapped,
     snapshotId: id('round-capped-8240'),
-    score: { ...fixtureScoreCapped.score, final: 69, raw: 82.4 },
+    score: { ...(fixtureScoreCapped.score as Extract<BuildingHealthSnapshot['score'], { state: 'capped' }>), final: 69, raw: 82.4 },
   }),
   capped6150: snapshot({
     ...fixtureScoreCapped,
     snapshotId: id('round-capped-6150'),
-    score: { ...fixtureScoreCapped.score, final: 62, raw: 61.5 },
+    score: { ...(fixtureScoreCapped.score as Extract<BuildingHealthSnapshot['score'], { state: 'capped' }>), final: 62, raw: 61.5 },
   }),
 };
 
@@ -695,10 +695,11 @@ export function demoHomeSnapshot(session: UiSession, scenario: DemoScoreScenario
 }
 
 export function demoRoundsFor(session: UiSession): TodaysRound[] {
-  if (session.perimeter.kind === 'all') return demoTodaysRounds;
+  const perimeter = session.perimeter;
+  if (perimeter.kind === 'all') return demoTodaysRounds;
   return demoTodaysRounds.filter((item) => {
     if (item.equipmentCode && inPerimeter(item.equipmentCode, session.perimeter)) return true;
-    if (item.zoneId && session.perimeter.zoneIds.includes(item.zoneId)) return true;
+    if (item.zoneId && perimeter.zoneIds.includes(item.zoneId)) return true;
     return false;
   });
 }

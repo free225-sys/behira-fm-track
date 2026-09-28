@@ -1,6 +1,6 @@
 export type WorkflowAnalyticsItem = {
   id:string;
-  priority:'Critique'|'Haute'|'Moyenne'|'Faible';
+  priority:'Critique'|'Haute'|'Moyenne'|'Normale'|'Faible';
   status:'À qualifier'|'Affectée'|'En intervention'|'En validation'|'Clôturée';
   location:string;
   owner:string;

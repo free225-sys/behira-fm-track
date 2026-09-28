@@ -48,7 +48,7 @@ check('liste + détail 2 col / 640 px', sources.split.includes('list-detail-spli
 check('retards en casse normale', !page.includes("'EN RETARD'") && page.includes('En retard'))
 check('pas de numérotation 01–05 hors séquence', !page.includes('direction-number'))
 check('GE-01 date native conservée', ge01.includes('type="date"') && ge01.includes('type="time"'))
-check('GE-01 Transmettre seulement pendant l’envoi', ge01.includes('disabled={submitting}') && !/Transmettre[^]*disabled=\{[^}]*!/.test(ge01))
+check('GE-01 envoi protégé pendant restauration du brouillon et transmission', ge01.includes('disabled={!draftReady || submitting}') && ge01.includes('queueGe01Draft') && ge01.includes('visibleSubmissionState'))
 check('fixtures rondes démo', fixtures.demoTodaysRounds.length >= 4 && fixtures.demoRoundsFor(fixtures.sessionForAudience('electricite', 'AE')).every((item) => ['GE-01', 'ASC-A1', 'ASC-A2'].includes(item.equipmentCode)))
 check('palierRangeLabel sans mot métier', display.palierRangeLabel('critical') === '0–69' && display.palierRangeLabel('watch') === '70–89' && display.palierRangeLabel('ok') === '90–100')
 check('cockpit utilise le bandeau partagé', cockpit.includes('<HomeHeroBanner') && cockpit.includes('Ma journée'))

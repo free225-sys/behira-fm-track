@@ -9,7 +9,7 @@ export type ErrorRuleId = 'critical' | 'sla' | 'health' | 'sync';
 export type ErrorChannel = 'in-app' | 'email';
 export type ErrorPersonaId = 'facility' | 'administration' | 'electricite' | 'eau_incendie' | 'rondes_assistance';
 export type ErrorAnomaly = { id: string; asset: string; title: string; priority: string; status: string; delayed: boolean };
-export type ErrorEquipment = { code: string; label: string; health: number };
+export type ErrorEquipment = { code: string; label: string; health: number | null };
 
 type ErrorRule = {
   id: ErrorRuleId;
@@ -92,7 +92,7 @@ export function deriveErrorNotifications({
 }: {
   anomalies: ErrorAnomaly[];
   equipment: ErrorEquipment[];
-  dataState: 'demo' | 'loading' | 'live' | 'fallback';
+  dataState: 'demo' | 'loading' | 'live' | 'error';
   personaId: ErrorPersonaId;
   rules: ErrorRule[];
 }): ErrorItem[] {
@@ -130,7 +130,7 @@ export function deriveErrorNotifications({
   }
 
   if (enabled.has('health')) {
-    equipment.filter((item) => item.health < 70).forEach((item) => {
+    equipment.filter((item) => item.health !== null && item.health < 70).forEach((item) => {
       items.push({
         id: `health-${item.code}`,
         rule: 'health',
@@ -143,7 +143,7 @@ export function deriveErrorNotifications({
     });
   }
 
-  if (enabled.has('sync') && dataState === 'fallback') {
+  if (enabled.has('sync') && dataState === 'error') {
     items.push({
       id: 'sync-fallback',
       rule: 'sync',
@@ -255,7 +255,7 @@ export function NotificationBell({
   personaId: ErrorPersonaId;
   anomalies: ErrorAnomaly[];
   equipment: ErrorEquipment[];
-  dataState: 'demo' | 'loading' | 'live' | 'fallback';
+  dataState: 'demo' | 'loading' | 'live' | 'error';
   canConfigure: boolean;
   canOpenEquipment: boolean;
   onOpenAnomaly: (id: string) => void;

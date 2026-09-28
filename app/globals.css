@@ -3957,6 +3957,10 @@ button.executive-metric.is-link:hover{
   .report-tracking-line{grid-template-columns:78px minmax(0,1fr) auto}
 }
 @media (max-width:640px){
+  /* Preserve the action on the right without squeezing the dossier into a word-wide column. */
+  .dec-row{grid-template-columns:4px minmax(0,1fr) minmax(78px,110px);gap:10px;padding-inline:14px}
+  .dec-row>button{max-width:110px;white-space:normal;overflow-wrap:normal}
+  .today-rounds-list li{grid-template-columns:42px minmax(0,1fr) minmax(70px,96px);gap:8px;padding-inline:14px;align-items:start}
   .building-health-cockpit.is-facility .kpi-strip{grid-template-columns:repeat(2,minmax(0,1fr))}
   .home-hero-banner .health-score-figure>strong{font-size:var(--font-size-display)}
   .dossiers-search-on-navy{min-width:0;width:100%}
@@ -4373,7 +4377,8 @@ button.executive-metric.is-link:hover{
 }
 
 @media (min-width:701px){
-  .app-navigation{position:fixed;top:0;left:0;right:0;z-index:var(--z-sticky)}
+  .app-shell{padding-top:0}
+  .app-navigation{position:sticky;top:0;z-index:var(--z-sticky)}
 }
 @media (max-width:700px){
   :root{--app-nav-height:0px}
@@ -4461,6 +4466,212 @@ button.executive-metric.is-link:hover{
 .ds-matrix{width:100%;border-collapse:collapse;font-size:var(--font-size-body)}
 .ds-matrix th,.ds-matrix td{padding:8px 10px;border:1px solid var(--border);text-align:left;vertical-align:top}
 .ds-matrix th{background:var(--surface-muted);font-size:var(--font-size-label);letter-spacing:.04em;text-transform:uppercase}
+
+
+/* Livraison 1: preserved backend form/proof styles; Grok final design above unchanged. */
+.ge01-workflow-panel { display:grid; gap:var(--space-3); margin-block:var(--space-4); background:var(--surface); }
+.ge01-workflow-panel .panel-head { flex-wrap:wrap; gap:var(--space-3); margin:0; }
+.ge01-workflow-panel .panel-head button { display:inline-flex; }
+.ge01-workflow-panel p { margin:0; line-height:1.5; }
+.ge01-workflow-panel textarea { min-height:96px; width:100%; }
+.ge01-treatment-fields { display:grid; gap:var(--space-3); min-width:0; }
+.ge01-treatment-fields .field { margin:0; min-width:0; }
+.ge01-treatment-summary { display:grid; gap:var(--space-2); padding:var(--space-3); border:1px solid var(--border); border-radius:var(--radius-sm); overflow-wrap:anywhere; }
+.ge01-workflow-panel button { white-space:normal; min-height:44px; max-width:100%; }
+.ge01-workflow-panel > div > button { margin-block:var(--space-2); margin-right:var(--space-2); }
+.evidence-file-record>div>em{
+  display:block;
+  margin-top:var(--space-1);
+  color:var(--danger-text);
+  font-size:var(--font-size-label);
+  font-style:normal;
+}
+.evidence-consult-button{
+  min-width:104px;
+  min-height:44px;
+}
+.proof-preview-error{
+  display:grid;
+  gap:var(--space-1);
+  margin-top:var(--space-3);
+  padding:var(--space-3);
+  border:1px solid var(--danger-border);
+  border-radius:var(--radius-sm);
+  background:var(--danger-surface);
+  color:var(--danger-text);
+  font-size:var(--font-size-label);
+}
+.proof-preview{
+  display:grid;
+  gap:var(--space-3);
+  margin-top:var(--space-3);
+  padding:var(--space-4);
+  border:1px solid var(--border);
+  border-radius:var(--radius-md);
+  background:var(--surface-muted);
+}
+.proof-preview-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:var(--space-3);
+}
+.proof-preview-head b,
+.proof-preview-head small{
+  display:block;
+}
+.proof-preview-head b{font-size:var(--font-size-body)}
+.proof-preview-head small{
+  margin-top:var(--space-1);
+  color:var(--foreground-muted);
+  font-size:var(--font-size-label);
+}
+.proof-preview img{
+  width:100%;
+  max-height:520px;
+  object-fit:contain;
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  background:var(--surface);
+}
+.proof-document-preview{
+  display:flex;
+  align-items:center;
+  gap:var(--space-3);
+  padding:var(--space-4);
+  border:1px dashed var(--border-strong);
+  border-radius:var(--radius-sm);
+  background:var(--surface);
+}
+.proof-document-preview>span{
+  display:grid;
+  place-items:center;
+  width:48px;
+  height:48px;
+  flex:0 0 auto;
+  border-radius:var(--radius-sm);
+  background:var(--danger-surface);
+  color:var(--danger-text);
+  font-size:var(--font-size-label);
+  font-weight:var(--font-weight-bold);
+}
+.proof-document-preview p{
+  margin:var(--space-1) 0 0;
+  color:var(--foreground-muted);
+  font-size:var(--font-size-label);
+}
+@media (max-width:700px){
+  .evidence-file-record>.badge,
+  .evidence-consult-button{
+    grid-column:1 / -1;
+    width:100%;
+  }
+  .proof-preview-head{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+  .proof-preview-head button,
+  .proof-open-link{
+    width:100%;
+  }
+}
+.cost-submission-card{padding:var(--space-5);box-shadow:none}
+.cost-submission-card .panel-head{align-items:flex-start}
+.cost-submission-form{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(180px,.65fr) minmax(180px,.65fr);gap:var(--space-3);margin-top:var(--space-4)}
+.cost-submission-form .field{min-width:0;margin:0}
+.cost-submission-form .field:nth-child(4){grid-column:1/-1}
+.cost-submission-form input,.cost-submission-form select,.cost-submission-form textarea{width:100%;min-width:0;max-width:100%}
+.cost-submission-form textarea,.cost-review-form textarea{min-height:92px;resize:vertical}
+.cost-review-comment{grid-column:1/-1;padding:var(--space-3);border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-muted)}
+.cost-review-comment b{font-size:var(--font-size-label)}
+.cost-review-comment p{margin:var(--space-1) 0 0;color:var(--foreground-muted);font-size:var(--font-size-label);line-height:1.45}
+.cost-review-form{grid-column:1/-1;display:grid;gap:var(--space-3);padding:var(--space-4);border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-muted)}
+.cost-review-form .field{margin:0}
+.cost-review-choice{display:flex;align-items:center;gap:var(--space-2)}
+.cost-review-choice button{min-height:44px;padding:0 var(--space-3);border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--foreground);font-size:var(--font-size-label);font-weight:800}
+.cost-review-choice button.active{border-color:var(--success-border);background:var(--success-surface);color:var(--success-text)}
+.cost-review-choice button.active.danger{border-color:var(--danger-border);background:var(--danger-surface);color:var(--danger-text)}
+@media (max-width:960px){.cost-submission-form{grid-template-columns:1fr 1fr}.cost-submission-form .field:first-child,.cost-submission-form .field:nth-child(4){grid-column:1/-1}}
+@media (max-width:700px){.cost-submission-card{padding:var(--space-4)}.cost-submission-card .panel-head{display:block}.cost-submission-card .panel-head>.badge{width:max-content;max-width:100%;margin-top:var(--space-3)}.cost-submission-form{grid-template-columns:1fr}.cost-submission-form .field{grid-column:1!important}.cost-review-choice{align-items:stretch;flex-direction:column}.cost-review-choice button{width:100%}}
+.proof-review-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:var(--space-2);
+  margin-top:var(--space-3);
+}
+.proof-review-actions button{
+  min-height:var(--control-height);
+  padding:0 var(--space-3);
+  border-radius:var(--radius-sm);
+  font-size:var(--font-size-label);
+  font-weight:750;
+}
+.proof-review-form{
+  display:grid;
+  gap:var(--space-3);
+  margin-top:var(--space-3);
+  padding:var(--space-4);
+  border:1px solid var(--border);
+  border-radius:var(--radius-md);
+  background:var(--surface-muted);
+}
+.ge-review-form,.ge-review-result,.ge-review-unavailable{
+  margin-top:var(--space-5);
+  padding-top:var(--space-5);
+  border-top:1px solid var(--border);
+  overflow-wrap:anywhere;
+}
+.ge-review-form h3,.ge-review-result h3,.ge-review-unavailable h3{font-size:var(--font-size-body);margin-bottom:var(--space-3)}
+.ge-review-form fieldset{border:0;padding:0;min-width:0;display:grid;gap:var(--space-3)}
+.ge-review-form legend{font-weight:700;margin-bottom:var(--space-3)}
+.ge-review-form fieldset>label:not(.field){display:flex;align-items:center;gap:var(--space-2);min-height:44px;font-size:var(--font-size-body)}
+.ge-review-form input[type=checkbox],.ge-review-form input[type=radio]{width:20px;height:20px;flex-shrink:0;accent-color:var(--brand)}
+.ge-review-form .ge-review-checks{grid-template-columns:repeat(2,minmax(0,1fr));padding:var(--space-3);background:var(--surface-muted)}
+.ge-review-note,.ge-review-unavailable p,.ge-review-result p{font-size:var(--font-size-body);color:var(--foreground-muted);line-height:1.5}
+.ge-review-result p{margin:var(--space-3) 0}
+.ge-review-form textarea{min-height:110px}
+@media(max-width:700px){.ge-review-form .ge-review-checks{grid-template-columns:1fr}.ge-review-form button,.ge-review-result button{width:100%;min-height:44px;white-space:normal}}
+.proof-review-form>div:first-child{
+  display:flex;
+  align-items:center;
+  gap:var(--space-2);
+}
+.proof-review-form>div:first-child>b{
+  font-size:var(--font-size-body);
+}
+.proof-review-form .modal-actions{
+  margin-top:0;
+}
+@media (max-width:700px){
+  .real-task-actions,
+  .proof-review-actions{
+    display:grid;
+    grid-template-columns:1fr;
+  }
+  .real-task-actions button,
+  .proof-review-actions button,
+  .task-proof-state{
+    width:100%;
+    min-height:44px;
+    justify-content:center;
+  }
+}
+
+.ge01-workflow-panel .dossier-action-board{padding:var(--space-4);margin-bottom:var(--space-4)}
+.ge01-workflow-panel .dossier-action-board>p{margin:var(--space-3) 0}
+.ge01-workflow-refresh{display:flex;justify-content:flex-end;margin-bottom:var(--space-3)}
+.ge01-workflow-panel button,.evidence-consult-button,.evidence-deposit-button{min-height:44px;white-space:normal}
+.ge01-workflow-panel .field{margin:var(--space-3) 0}
+.ge01-treatment-summary{margin:var(--space-3) 0;padding:var(--space-3);background:var(--surface-muted);overflow-wrap:anywhere}
+.evidence-file-record>div{min-width:0;overflow-wrap:anywhere}
+@media (max-width:700px){
+  .ge01-open-proofs,.evidence-deposit-button{width:100%;justify-content:center}
+  .evidence-file-record .badge,.evidence-file-record .evidence-consult-button{grid-column:2}
+  .evidence-file-record .badge{max-width:100%}
+}
+.recette-space { display: grid; gap: var(--space-2); margin-bottom: var(--space-4); }
+.recette-space > .field { max-width: 28rem; }
+.recette-space p { margin: 0; }
 
 /* DESIGN-070 — audit visuel 015c253 : 380 px, contrastes, plancher 12 px, bandeaux */
 .content{
@@ -5145,3 +5356,7 @@ h1{
   .ge-datetime-row input[type="time"]{flex:1 1 140px;width:auto;min-width:0;max-width:100%}
   .ge-now-button{flex:1 0 auto}
 }
+
+/* Connected rounds retain the shared design rail, including readable long labels. */
+.connected-round-progress button b{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+.connected-round-progress button{align-items:flex-start}

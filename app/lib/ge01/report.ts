@@ -1,4 +1,5 @@
 import type { FieldCheckInput, FieldRoundPayload } from "../offline/types";
+import { validateGe01Evidence, type Ge01Evidence } from './evidence.ts';
 
 export const GE01_EQUIPMENT_CODE = "GE-01";
 export const GE01_REPORT_TYPE = "technical_round" as const;
@@ -34,6 +35,7 @@ export type Ge01StartOutcome = "" | "success" | "failed" | "not_performed";
 export type Ge01Measure = { value: string; unavailable: boolean; reason: string };
 
 export type Ge01Draft = {
+  isTest?: boolean;
   submissionId: string;
   date: string;
   time: string;
@@ -64,6 +66,8 @@ export type Ge01Draft = {
   finalStatus: "" | "Opérationnel" | "Surveillance" | "Intervention" | "Critique";
   comment: string;
   photos: string[];
+  evidence?: Ge01Evidence[];
+  photoExceptionReason?: string;
   confirmed: boolean;
   step: number;
 };
@@ -120,6 +124,7 @@ export function createEmptyGe01Draft(now = new Date(), submissionId = "") : Ge01
     finalStatus: "",
     comment: "",
     photos: [],
+    evidence: [],
     confirmed: false,
     step: 0,
   };
@@ -173,16 +178,15 @@ export function validateGe01Step(draft: Ge01Draft, step: number) {
   if (step === 2) {
     if (!draft.startOutcome) errors.startOutcome = "Indiquez si l’essai a été réalisé, a échoué ou était impossible.";
     if (draft.startOutcome === "success") {
-      if (!draft.testStartTime) errors.testStartTime = "Indiquez l’heure de l’essai.";
-      if (!draft.returnAuto) errors.returnAuto = "Indiquez si le retour AUTO a pu être contrôlé.";
-    }
-    if (draft.startOutcome === "failed") {
-      const attempts = finiteNumber(draft.startAttempts);
-      if (attempts === null || attempts < 1 || !Number.isInteger(attempts)) errors.startAttempts = "Indiquez le nombre de tentatives, au moins 1.";
-      if (!draft.startSymptom.trim()) errors.startSymptom = "Décrivez le symptôme constaté.";
+      const duration = finiteNumber(draft.testDuration);
+      if (duration === null || duration <= 0) errors.testDuration = "Saisissez la durée réelle de l’essai, supérieure à zéro.";
     }
     if (draft.startOutcome === "not_performed" && !draft.testExceptionReason.trim()) {
       errors.testExceptionReason = "Décrivez pourquoi l’essai prévu n’a pas pu être réalisé.";
+    }
+    if (draft.startOutcome && draft.startOutcome !== "not_performed") {
+      if (!draft.functioningCorrect) errors.functioningCorrect = "Indiquez si le fonctionnement a pu être contrôlé.";
+      if (!draft.returnAuto) errors.returnAuto = "Indiquez si le retour AUTO a pu être contrôlé.";
     }
     if (!draft.geAuto) errors.geAuto = "Contrôlez séparément le mode actuel du groupe.";
     if (!draft.atsAuto) errors.atsAuto = "Contrôlez séparément le mode actuel de l’ATS.";
@@ -191,6 +195,7 @@ export function validateGe01Step(draft: Ge01Draft, step: number) {
   }
   if (step === 3) {
     if (!draft.finalStatus) errors.finalStatus = "Choisissez l’état final que vous déclarez.";
+    if (ge01HasAnomaly(draft)&&!(draft.evidence??[]).some(p=>p.purpose==='defect')&&!draft.photoExceptionReason?.trim()) errors.photoExceptionReason='Joignez une photo de l’anomalie ou indiquez pourquoi elle est impossible.';
     if (!draft.confirmed) errors.confirmed = "Confirmez l’exactitude des informations avant la transmission.";
   }
   return errors;
@@ -266,7 +271,7 @@ function observationTextCheck(code: Ge01FieldCode, value: string, isAlert: boole
 }
 
 export function buildGe01Checks(draft: Ge01Draft, intervenant: string): FieldCheckInput[] {
-  const performedAt = new Date(`${draft.date}T${draft.time}:00`);
+  const performedAt = new Date(`${draft.date}T${draft.time}:00Z`);
   if (Number.isNaN(performedAt.getTime())) throw new Error("Date ou heure du contrôle invalide.");
   const checks: FieldCheckInput[] = [
     textCheck("date", draft.date),
@@ -305,16 +310,27 @@ export function buildGe01Checks(draft: Ge01Draft, intervenant: string): FieldChe
   });
 }
 
+export function ge01HasAnomaly(d:Ge01Draft):boolean {
+  const badMeasure=(m:Ge01Measure,p:(n:number)=>boolean)=>!m.unavailable&&m.value.trim()!==''&&Number.isFinite(Number(m.value.replace(',','.')))&&p(Number(m.value.replace(',','.')));
+  return d.startOutcome==='failed'||d.functioningCorrect==='no'||d.returnAuto==='no'||d.geAuto==='no'||d.atsAuto==='no'
+    ||d.temperatureLocal==='Chaud'||d.temperatureLocal==='Très chaud'||d.cleanliness==='Écart constaté'||d.abnormalNoise==='yes'
+    ||['Blanche','Bleue','Noire'].includes(d.smoke)||d.alarmMc4==='Alarme affichée'||['Surveillance','Intervention','Critique'].includes(d.finalStatus)
+    ||badMeasure(d.fuelLevel,n=>n<64)||badMeasure(d.oilLevel,n=>n<90||n>100)||badMeasure(d.waterTemperature,n=>n>=95)||badMeasure(d.batteryVoltage,n=>n<=25);
+}
+
 export function buildGe01Payload(draft: Ge01Draft, intervenant: string): FieldRoundPayload {
   const errors = validateCompleteGe01Draft(draft);
   if (Object.keys(errors).length) throw new Error("Le rapport GE-01 contient encore des informations à compléter.");
-  const performedAt = new Date(`${draft.date}T${draft.time}:00`);
+  const performedAt = new Date(`${draft.date}T${draft.time}:00Z`);
+  validateGe01Evidence(draft.evidence ?? []);
   return {
+    evidence: draft.evidence ?? [],
+    ...(draft.isTest ? { isTest: true, testAttested: draft.confirmed } : {}),
     equipmentCode: GE01_EQUIPMENT_CODE,
     reportType: GE01_REPORT_TYPE,
     performedAt: performedAt.toISOString(),
     summary: draft.comment.trim() || "Contrôle quotidien GE-01 saisi dans FM Track.",
-    checks: buildGe01Checks(draft, intervenant),
+    checks: [...buildGe01Checks(draft, intervenant), ...(draft.photoExceptionReason?.trim() ? [{code:'PHOTO_EXCEPTION',label:'Motif d’impossibilité de photo',status:'ok' as const,valueText:draft.photoExceptionReason.trim()}] : [])],
   };
 }
 
@@ -328,6 +344,7 @@ export function restoreGe01Draft(
     ...createEmptyGe01Draft(now),
     ...stored,
     photos: stored.photos ?? [],
+    evidence: stored.evidence ?? [],
     submissionId: stored.submissionId || createId(),
   } satisfies Ge01Draft;
 }
@@ -342,6 +359,7 @@ export async function queueGe01Draft(
   },
 ) {
   const payload = buildGe01Payload(draft, agentName);
+  payload.sentAt = new Date().toISOString();
   await queue.enqueueRound(payload, draft.submissionId);
   await queue.deleteDraft(draftId);
   return payload;

@@ -16,9 +16,9 @@ const DemoScenarioContext = createContext<{
   setScenario: (next: DemoScoreScenario) => void;
 } | null>(null);
 
-export function DemoScenarioProvider({ children }: { children: ReactNode }) {
+export function DemoScenarioProvider({ children, enabled = true }: { children: ReactNode; enabled?: boolean }) {
   const [scenario, setScenario] = useState<DemoScoreScenario>('not_computable');
-  const value = useMemo(() => ({ scenario, setScenario }), [scenario]);
+  const value = useMemo(() => enabled ? { scenario, setScenario } : null, [enabled, scenario]);
   return <DemoScenarioContext.Provider value={value}>{children}</DemoScenarioContext.Provider>;
 }
 

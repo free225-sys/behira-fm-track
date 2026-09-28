@@ -140,3 +140,88 @@ export function buildReviewItems(draft: Ge01Draft, agentName: string): ReviewIte
 export function missingReviewCount(items: ReviewItem[]) {
   return items.filter((item) => item.status === 'missing').length;
 }
+
+import { GE01_FIELD_DEFINITIONS } from "./report";
+import type { OperationalReport, OperationalReportCheck } from "../supabase/data";
+
+export type Ge01ReviewInput = {
+  decision: "conform" | "anomaly";
+  comment: string;
+  checkCodes: string[];
+  priorityCode?: string;
+  anomalyTitle?: string;
+};
+export type Ge01Review = {
+  decision: "conform" | "anomaly";
+  reviewedAt: string;
+  reviewedBy: string;
+  comment: string;
+  checkCodes: string[];
+  anomalyId: string | null;
+  anomalyReference: string | null;
+};
+
+export const GE01_PRIORITIES = [
+  ["LOW", "Faible"], ["NORMAL", "Normale"], ["PRIORITY", "Moyenne"],
+  ["URGENT", "Haute"], ["CRITICAL", "Critique"],
+] as const;
+
+export function ge01ChecksSnapshot(checks: OperationalReportCheck[]) {
+  return [...checks].sort((a, b) => a.code < b.code ? -1 : a.code > b.code ? 1 : 0).map((check) => ({
+    code: check.code, label: check.label, status: check.status,
+    valueNumeric: check.valueNumeric ?? null, valueText: check.valueText ?? null,
+    valueBoolean: check.valueBoolean ?? null, unit: check.unit ?? null, notes: check.notes ?? null,
+  }));
+}
+
+export function ge01ConformityBlocker(report: OperationalReport): string | null {
+  if (report.reportStatus !== "submitted") return "Ce rapport n’est pas en attente d’examen.";
+  if (report.checks.some(check => check.valueNumeric !== undefined && (
+    (check.code === 'niveau_carburant' && evaluateFuel(check.valueNumeric) !== 'ok') ||
+    (check.code === 'niveau_huile' && evaluateOil(check.valueNumeric) !== 'ok') ||
+    (check.code === 'temperature_eau' && evaluateWater(check.valueNumeric) !== 'ok') ||
+    (check.code === 'tension_batterie' && evaluateBattery(check.valueNumeric) !== 'ok') ||
+    (check.code === 'demarrages_24h' && check.valueNumeric > 7)
+  ))) return 'Une mesure dépasse un seuil métier. Examinez l’écart avant de décider de la suite.';
+  if (GE01_FIELD_DEFINITIONS.some(({ code }) => !report.checks.some((check) => check.code === code))) {
+    return "Des réponses sont absentes. Le rapport ne peut pas être déclaré conforme.";
+  }
+  if (report.checks.some((check) => check.status === "alert" || check.status === "critical")) {
+    return "Un écart est déclaré. Examinez les contrôles concernés avant de décider de la suite.";
+  }
+  if (report.checks.some((check) => check.code !== "maintenance_dmc" && check.code !== "statut_global" && (
+    check.status !== "ok" || (check.valueBoolean === undefined && check.valueNumeric === undefined && !check.valueText?.trim())
+  ))) return "Des contrôles n’ont pas été observés. La conformité ne peut pas être confirmée.";
+  if (report.checks.find((check) => check.code === "statut_global")?.valueText !== "Opérationnel") {
+    return "L’état final déclaré nécessite un examen complémentaire.";
+  }
+  return null;
+}
+
+export function validateGe01Review(report: OperationalReport, input: Ge01ReviewInput): string | null {
+  if (report.equipmentCode !== "GE-01" || report.reportType !== "technical_round") return "Rapport GE-01 attendu.";
+  if (!input.comment.trim() || input.comment.trim().length > 4000) return "Indiquez un motif de 1 à 4 000 caractères.";
+  if (input.decision === "conform") return ge01ConformityBlocker(report);
+  if (input.decision !== "anomaly") return "Choisissez une décision.";
+  if (!input.anomalyTitle?.trim() || input.anomalyTitle.trim().length > 200) return "Indiquez un titre de 1 à 200 caractères.";
+  if (!GE01_PRIORITIES.some(([code]) => code === input.priorityCode)) return "Choisissez la priorité confirmée.";
+  if (!input.checkCodes.length || input.checkCodes.some((code) => !report.checks.some((check) => check.code === code))) {
+    return "Sélectionnez au moins un contrôle du rapport concerné par l’anomalie.";
+  }
+  return null;
+}
+
+export function decodeGe01Review(value: unknown, reviewerLabel?: string): Ge01Review {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Décision serveur invalide.");
+  const row = value as Record<string, unknown>;
+  if ((row.decision !== "conform" && row.decision !== "anomaly") || typeof row.reviewed_at !== "string"
+    || typeof row.reviewed_by_profile_id !== "string" || typeof row.comment !== "string"
+    || !Array.isArray(row.check_codes) || !row.check_codes.every((code) => typeof code === "string")
+    || (row.decision === "anomaly" && typeof row.anomaly_id !== "string")) throw new Error("Décision serveur incomplète.");
+  return {
+    decision: row.decision, reviewedAt: row.reviewed_at,
+    reviewedBy: reviewerLabel ?? "Facility Manager", comment: row.comment, checkCodes: row.check_codes as string[],
+    anomalyId: typeof row.anomaly_id === "string" ? row.anomaly_id : null,
+    anomalyReference: typeof row.anomaly_reference === "string" ? row.anomaly_reference : null,
+  };
+}

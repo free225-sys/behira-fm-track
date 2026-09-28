@@ -20,7 +20,7 @@ const STATUS_FILTERS: Array<{ value: StateFilter; label: string }> = [
   { value: 'unknown', label: 'Statut non établi' },
 ];
 
-export function EquipmentWorkspace({ equipment }: { equipment: EquipmentCard[] }) {
+export function EquipmentWorkspace({ equipment, demo = true }: { equipment: EquipmentCard[]; demo?: boolean }) {
   const [query, setQuery] = useState('');
   const [stateFilter, setStateFilter] = useState<StateFilter>('all');
 
@@ -51,13 +51,13 @@ export function EquipmentWorkspace({ equipment }: { equipment: EquipmentCard[] }
         <h2 id="equipment-workspace-title" className="visually-hidden">Équipements</h2>
         <p>Parc technique suivi. Un statut inconnu n’affiche pas de chiffre.</p>
       </div>
-      <span className="mockup-label">Démo</span>
+      <span className="mockup-label">{demo ? 'Démo' : 'Données du serveur'}</span>
     </header>
-    <DemoScenarioSelect />
+    {demo && <DemoScenarioSelect />}
 
     <section className="equipment-summary" aria-label="Synthèse du parc technique">
       <Card className="equipment-summary-card">
-        <span>ÉQUIPEMENTS SUIVIS</span><strong>{equipment.length}</strong><small>Six références du site</small>
+        <span>ÉQUIPEMENTS SUIVIS</span><strong>{equipment.length}</strong><small>{demo ? 'Six références du site' : 'Périmètre autorisé'}</small>
       </Card>
       <Card className="equipment-summary-card">
         <span>DISPONIBLE</span><strong>{counts.available}</strong><small>Statut métier</small>

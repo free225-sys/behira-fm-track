@@ -68,7 +68,7 @@ requireAll('Polish Direction et Facility Manager', page, [
   'decision-filters', 'direction-focus', 'Qualifier maintenant', 'qualify-action', 'escalate-action',
 ])
 requireAll('Pilote Surpresseur et saisie directe', page, [
-  'MODULE PILOTE · SURPRESSEUR', 'Brouillon temporaire dans cette page', 'Simulation de ronde terminée', 'Aucun import',
+  'MODULE PILOTE · SURPRESSEUR', 'Brouillon enregistré automatiquement sur cet appareil', 'Simulation de ronde terminée', 'File idempotente active',
 ])
 checks.push({
   label:'Aucun parcours d’import de reporting',
@@ -76,7 +76,7 @@ checks.push({
   missing:page.includes('Importer un rapport de ronde') ? ['ancien import encore présent'] : [],
 })
 requireAll('Délégation et dossier cible', page, [
-  'DECISION_THRESHOLD_FCFA = 400_000', 'Décision dans la délégation de Facility Manager', 'AntiZombieSummary', 'dossier-workflow', 'dossier-three-zone',
+  'DECISION_THRESHOLD_FCFA = DEMO_THRESHOLD.value', 'Décision dans la délégation de Facility Manager', 'AntiZombieSummary', 'dossier-workflow', 'dossier-three-zone',
 ])
 requireAll('Clôture design des cockpits', page, [
   'WorkflowAnalytics', 'Sans responsable', 'Preuves à vérifier', 'Réceptions', 'Réserves', 'Dossiers rouverts',
@@ -107,8 +107,8 @@ requireAll('Destination Seuils et paramètres réservée à Administration', app
   "administration:['workspace','dashboard','registry','equipment','costs','access','settings']",
 ])
 requireAll('Dossier central P6 sans seconde source métier', appSource, [
-  'dossier-continuity', 'adaptDossierToAntiZombieSummary(anomaly)', 'variant="detailed"',
-  '0 événement canonique', 'Historique métier indisponible', 'Preuve attendue non définie',
+  'dossier-continuity', 'resolveAntiZombieSummary(anomaly)', 'variant="detailed"',
+  'historyEvents.length', 'Historique métier indisponible', 'Preuve attendue non définie',
   'Consultation uniquement · aucune action métier accordée', 'criticalClosureLocked',
   'role="tablist"', 'role="tabpanel"',
 ])
