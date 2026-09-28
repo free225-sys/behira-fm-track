@@ -57,7 +57,7 @@ function MeasureRange({ label, value, min, max, unit, pending = false }: { label
       <div className="measure-range-track" aria-label={described}>
         <i style={{ '--measure-position': `${position}%` } as CSSProperties} />
       </div>
-      <small>{pending ? <span>Valeur à confirmer par SECURISYS</span> : <><span>Minimum {min} {unit}</span><span>Maximum {max} {unit}</span></>}</small>
+      <small>{pending ? <span>Valeur à confirmer par SECURISYS</span> : <><span>Minimum {min.toLocaleString('fr-FR')} {unit}</span><span>Maximum {max.toLocaleString('fr-FR')} {unit}</span></>}</small>
     </article>
   );
 }
@@ -129,7 +129,7 @@ export function EauRounds({ agentName, draftNote, onSubmit }: { agentName: strin
   const pressureValue = readMeasure(pressure);
   const tankValue = readMeasure(tankLevel);
   const riaPressureValue = readMeasure(riaPressure);
-  const hasPressureAlert = Number.isFinite(pressureValue) && pressureValue < 3;
+  const hasPressureAlert = Number.isFinite(pressureValue) && (pressureValue < 4.5 || pressureValue > 5.5);
   const pumpKeys = ['auto', 'p1', 'p2', 'leak', 'valves', 'alarm'];
   const answeredChecks = pumpKeys.filter((key) => checks[key] === 'ok' || checks[key] === 'alert').length;
   const wiloComplete = Number.isFinite(pressureValue) && Number.isFinite(tankValue) && answeredChecks === pumpKeys.length;
@@ -194,14 +194,14 @@ export function EauRounds({ agentName, draftNote, onSubmit }: { agentName: strin
               {wiloStep === 1 && (
                 <div className="surpresseur-fields">
                   <div className="measure-grid">
-                    <label><span>Pression réseau</span><div><input value={pressure} inputMode="decimal" placeholder="—" aria-label="Pression réseau" onChange={(event) => setPressure(event.target.value)} /><b>bar</b></div><small>Plage attendue : 3,0 à 4,5 bar. Vide ≠ 0.</small></label>
+                    <label><span>Pression réseau</span><div><input value={pressure} inputMode="decimal" placeholder="—" aria-label="Pression réseau" onChange={(event) => setPressure(event.target.value)} /><b>bar</b></div><small>Valeur normale : 5 bar. En deçà de 4,5 ou au-delà de 5,5 : état à surveiller. Vide ≠ 0.</small></label>
                     <label><span>Niveau bâche</span><div><input value={tankLevel} inputMode="decimal" placeholder="—" aria-label="Niveau bâche" onChange={(event) => setTankLevel(event.target.value)} /><b>%</b></div><small>Plage de contrôle : 40 à 100 %. Vide ≠ 0.</small></label>
                   </div>
                   <div className="measure-range-grid">
-                    <MeasureRange label="Pression réseau" value={pressureValue} min={3} max={4.5} unit="bar" />
+                    <MeasureRange label="Pression réseau" value={pressureValue} min={4.5} max={5.5} unit="bar" />
                     <MeasureRange label="Niveau de bâche" value={tankValue} min={40} max={100} unit="%" />
                   </div>
-                  {hasPressureAlert && <div className="measure-alert"><span>!</span><div><b>Écart constaté</b><small>La pression saisie est inférieure au seuil. Un constat sera proposé à Facility Manager.</small></div></div>}
+                  {hasPressureAlert && <div className="measure-alert"><span>!</span><div><b>État à surveiller</b><small>Valeur normale : 5 bar. En deçà de 4,5 ou au-delà de 5,5, la pression est à surveiller.</small></div></div>}
                   <label className="field">Stabilité du manomètre<Select defaultValue=""><option value="">Choisir</option><option>Stable</option><option>Oscillation légère</option><option>Oscillation importante</option></Select></label>
                 </div>
               )}
@@ -233,7 +233,7 @@ export function EauRounds({ agentName, draftNote, onSubmit }: { agentName: strin
                   {!wiloComplete ? (
                     <div className="surpresseur-callout"><span>i</span><p><b>Contrôle incomplet</b><small>Renseignez les deux mesures et les six contrôles avant de conclure. Une case vide n’est ni un zéro ni un écart.</small></p></div>
                   ) : hasPressureAlert ? (
-                    <div className="proposed-finding"><span>!</span><div><p>CONSTAT PROPOSÉ</p><h4>Pression surpresseur sous le seuil attendu</h4><small>Priorité proposée : Haute · Transmission à la file de qualification de Facility Manager.</small></div><Badge tone="orange">À QUALIFIER</Badge></div>
+                    <div className="proposed-finding"><span>!</span><div><p>CONSTAT PROPOSÉ</p><h4>Pression réseau à surveiller</h4><small>Valeur normale 5 bar. La saisie est en deçà de 4,5 ou au-delà de 5,5.</small></div><Badge tone="orange">À QUALIFIER</Badge></div>
                   ) : (
                     <div className="surpresseur-callout"><span>i</span><p><b>Aucun écart déclaré</b><small>Les mesures saisies sont dans la plage. Aucun constat n’est proposé automatiquement.</small></p></div>
                   )}

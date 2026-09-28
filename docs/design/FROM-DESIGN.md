@@ -10,10 +10,11 @@ Ce journal utilise le même gabarit que `FROM-DEV.md` et `DECISIONS.md`. Ajouter
 
 ## Index
 
-Statuts : les entrées 062 à 079 sont **En vigueur** (la plus récente l’emporte). DESIGN-003 (Geist auto-hébergé) est traité (DESIGN-015). DESIGN-005 (`.gitattributes`) reste à vérifier dans le dépôt.
+Statuts : les entrées 062 à 080 sont **En vigueur** (la plus récente l’emporte). DESIGN-003 (Geist auto-hébergé) est traité (DESIGN-015). DESIGN-005 (`.gitattributes`) reste à vérifier dans le dépôt.
 
 | id | date | sujet | attendu de | bloque |
 | --- | --- | --- | --- | --- |
+| DESIGN-080 | 2026-09-28 | Pression réseau WILO : normale 5 bar, surveillance ±10 % | Wilkam | livré |
 | DESIGN-079 | 2026-09-28 | Panneau WILO, retour d’étape, cadences provisoires | Wilkam | livré |
 | DESIGN-078 | 2026-09-28 | Parcours Eau & Incendie aligné sur GE-01 | Wilkam | livré |
 | DESIGN-077 | 2026-09-18 | Pilotage : liste d’attention et carte d’évolution | Codex | En vigueur |
@@ -81,6 +82,16 @@ Statuts : les entrées 062 à 079 sont **En vigueur** (la plus récente l’empo
 | DESIGN-003 | 2026-08-28 | `pnpm dev` échoue sans accès réseau à `fonts.googleapis.com` | Dev Lead | tout audit hors ligne |
 | DESIGN-002 | 2026-08-28 | Nomenclature unique des destinations — *arbitrée, voir DEC-002* | Dev Lead | routes |
 | DESIGN-001 | 2026-08-28 | Lot 1 — spécification du socle de tokens | Dev Lead | lot 2, écran pilote |
+
+---
+
+## DESIGN-080 — Pression réseau WILO-01
+
+- **Date :** 28 septembre 2026
+- **Statut :** Livré.
+- **Périmètre :** affichage de la ronde surpresseur. Pas de `data.ts`.
+
+La valeur normale de la pression réseau est **5 bar**. Une variation de plus ou moins 10 % — en deçà de 4,5 ou au-delà de 5,5 — signale un état à surveiller. L’ancienne plage 3,0 à 4,5 bar est retirée. Une case vide reste « À compléter », pas un zéro. Le niveau de bâche (40 à 100 %) ne change pas. La pression RIA reste « à confirmer par SECURISYS ».
 
 ---
 
