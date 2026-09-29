@@ -2,7 +2,7 @@
 
 Miroir public **anonymisé** destiné à la revue et aux contributions UI/UX. Il contient le frontend et sa documentation design, sans base Supabase, migration, donnée réelle, secret ni configuration de déploiement. La démonstration fonctionne localement avec des données fictives.
 
-Source de référence privée : checkpoint `72acc55f56a35d6c33cf615d692d5eec6f861008`. Le miroir possède volontairement un historique Git neuf.
+Source de référence privée : checkpoint `a2373c2495603cf755b45cb026bb5e11a2c16e2b`. Actualisé le 30 septembre 2026 depuis la version 32 déployée ; historique public conservé, aucun commit privé importé.
 
 ## Prérequis et lancement
 
@@ -51,3 +51,20 @@ La branche de travail design est `design/lot-1-tokens`. Les contributions du des
 ## Revue WILO/RIA — source a3bd818
 
 Consulter [la passation et les commandes de lancement](docs/design/REVUE_WILO_RIA.md). `pnpm preview:water:ui` ouvre les formulaires connectés avec transport simulé, sans accès Supabase.
+
+## Rondes du checkpoint du 30 septembre
+
+- Persona `electricite` : connexion fictive → **Rondes** → GE-01 en 4 étapes, jusqu'au récapitulatif.
+- Persona `eau_incendie` : **Rondes** → formulaire WILO-01 déployé (5 étapes), puis onglet RIA-01 pour son formulaire complet.
+- Données et soumissions simulées uniquement ; accès distant désactivé même si le poste possède des variables Supabase. Aucun déploiement depuis ce miroir.
+- Inventaire des fichiers, props et configurations : dernière entrée de [`FROM-DEV.md`](docs/design/FROM-DEV.md).
+- Test navigateur : `pnpm dev --port 4190`, puis `node scripts/verify-mirror-rounds.mjs` (installer `tests/browser` avec npm et disposer de Chrome).
+
+Branche de cette livraison : `mirror/checkpoint-a2373c2`.
+
+```bash
+git fetch origin
+git switch --track origin/mirror/checkpoint-a2373c2
+pnpm install --frozen-lockfile
+pnpm dev
+```

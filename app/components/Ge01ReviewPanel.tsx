@@ -25,7 +25,7 @@ export function Ge01ReviewPanel({ report, onReview, onOpenAnomaly }: {
   const review = receipt ?? report.review;
   const blocker = ge01ConformityBlocker(report);
 
-  if (review) return <section className="ge-review-result" aria-label="Décision de Facility Manager" role="status">
+  if (review) return <section className="ge-review-result" aria-label="Décision de Facility Manager Démo" role="status">
     <h3>{review.decision === "conform" ? "Rapport examiné — conforme" : "Rapport examiné — anomalie ouverte"}</h3>
     <p>{review.reviewedBy} · {new Date(review.reviewedAt).toLocaleString("fr-FR")}</p>
     <p>{review.comment}</p>
@@ -52,7 +52,7 @@ export function Ge01ReviewPanel({ report, onReview, onOpenAnomaly }: {
     finally { lock.current = false; setBusy(false); }
   };
   return <form className="ge-review-form" onSubmit={submit} aria-label="Examiner le rapport">
-    <h3>Décision de Facility Manager</h3>
+    <h3>Décision de Facility Manager Démo</h3>
     <fieldset disabled={busy}>
       <legend>Suite à donner au rapport</legend>
       <label><input type="radio" name={`review-${report.id}`} value="conform" checked={decision === "conform"} disabled={Boolean(blocker)} onChange={() => { setDecision("conform"); setConfirmed(false); }} /> Confirmer la conformité</label>

@@ -269,6 +269,8 @@ export function NotificationBell({
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Hydrate browser storage after SSR; the external store is unavailable on the server.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setReadIds(readJson<string[]>(STORAGE_READ, []));
   }, []);
 

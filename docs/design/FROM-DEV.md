@@ -216,7 +216,7 @@ Le lot ne crée aucune route réseau autonome : `/couts` reste réservé pour le
 - **Statut :** Implémenté et vérifié localement — non publié
 - **Périmètre :** destination Équipements en lecture pour l'Administration et le Facility Manager
 
-Wilkam a validé les six recommandations du contrat produit. La décision est consignée dans **DEC-014**. Le lot P2 ajoute une destination **Équipements** groupée sous **Le bâtiment** dans le menu **Plus**. Elle ne remplace aucune des destinations principales et reste absente des trois profils terrain.
+Responsable projet Démo a validé les six recommandations du contrat produit. La décision est consignée dans **DEC-014**. Le lot P2 ajoute une destination **Équipements** groupée sous **Le bâtiment** dans le menu **Plus**. Elle ne remplace aucune des destinations principales et reste absente des trois profils terrain.
 
 La vue consomme exclusivement `equipmentItems`, la source déjà utilisée par Accueil et Pilotage. Elle fournit une synthèse calculée sur les scores disponibles, une recherche par code/libellé/état et un filtre sur les états existants. Aucune fraîcheur, intervention, maintenance ou cause n'est inventée : les absences sont affichées comme **Non renseignée** ou **Données insuffisantes**. La destination réutilise `Card`, `Field` et `Badge`, ainsi que les tokens du système vivant et l'accent teal de DEC-013.
 
@@ -244,7 +244,7 @@ Ce lot ne crée aucune route réseau autonome : `/equipements` reste réservé p
 - **Statut :** Checkpoint design reçu et vérifié localement — roadmap produit reprise
 - **Périmètre :** commits `85413e6` et `0580270`, contrat design vivant, recette du miroir et séquencement produit
 
-Le Dev Lead prend acte des deux commits livrés par le design. Les arbitrages **DEC-011**, **DEC-012** et **DEC-013** sont considérés comme clos conformément à la validation de Wilkam. En particulier, aucune nouvelle surface ne doit redéfinir la marque : `--mark #20b2aa` reste réservé au glyphe B, `--teal #0e6a66` porte l'accent courant, `--accent` reste son alias et le triplet `warning` conserve son rôle métier distinct.
+Le Dev Lead prend acte des deux commits livrés par le design. Les arbitrages **DEC-011**, **DEC-012** et **DEC-013** sont considérés comme clos conformément à la validation de Responsable projet Démo. En particulier, aucune nouvelle surface ne doit redéfinir la marque : `--mark #20b2aa` reste réservé au glyphe B, `--teal #0e6a66` porte l'accent courant, `--accent` reste son alias et le triplet `warning` conserve son rôle métier distinct.
 
 Le spécimen `/design-system`, `:root` et les primitives `Button`, `IconButton`, `Badge`, `Field` et `Card` constituent désormais le contrat obligatoire avant toute évolution d'interface. Les entrées DESIGN-030 à DESIGN-032 sont présentes dans la table de suivi de `FROM-DESIGN.md`, mais leurs corps détaillés ne figurent pas dans le journal ; cette lacune documentaire ne rouvre pas les décisions, dont la portée est confirmée par les commits, `DESIGN.md` et `DECISIONS.md`.
 
@@ -283,7 +283,7 @@ Le lot **P1 — Contrat DEC-002** est livré dans `docs/design/DEC-002_CONTRAT_D
 - **Statut :** Implémenté — recette finale et publication en cours
 - **Périmètre :** ordre de lecture du cockpit Facility Manager
 
-Wilkam a validé l'option A de DEC-005. DEC-007 consigne l'arbitrage sans réécrire l'historique. Le cockpit présente maintenant un contexte opérationnel compact avec le seuil de délégation, puis les compteurs, la file et son dossier actif, le flux opérationnel, et enfin la synthèse Santé & Performance.
+Responsable projet Démo a validé l'option A de DEC-005. DEC-007 consigne l'arbitrage sans réécrire l'historique. Le cockpit présente maintenant un contexte opérationnel compact avec le seuil de délégation, puis les compteurs, la file et son dossier actif, le flux opérationnel, et enfin la synthèse Santé & Performance.
 
 La synthèse de santé reste complète, mais ne masque plus la première action sur les écrans portables courants. Son texte est mis à jour pour ne plus affirmer qu'elle précède les files. Un contrôle automatique protège désormais l'ordre canonique.
 
@@ -328,7 +328,7 @@ Les trois régressions bloquantes de DESIGN-014 sont corrigées sans changement 
 - **R2 — Surpresseur :** au palier grand écran, la marge négative et le padding horizontal du bandeau reprennent exactement `clamp(32px,3.2vw,60px)`, la même formule que `.content`. Le contrat est protégé par l’audit statique.
 - **R3 — Administration :** le badge `ACCÈS ADMIN` porte désormais `flex:0 0 auto` et `min-width:max-content`, ce qui interdit sa compression dans `.authority-split`.
 
-L’ordre du cockpit n’est pas déclaré acté. **DEC-005** expose les options « priorité opérationnelle DEC-004 » et « vue d’ensemble d’abord », avec un statut explicitement proposé et un arbitrage demandé à Wilkam.
+L’ordre du cockpit n’est pas déclaré acté. **DEC-005** expose les options « priorité opérationnelle DEC-004 » et « vue d’ensemble d’abord », avec un statut explicitement proposé et un arbitrage demandé à Responsable projet Démo.
 
 ### Contrôles réalisés
 
@@ -338,7 +338,7 @@ L’ordre du cockpit n’est pas déclaré acté. **DEC-005** expose les options
 - aucun fichier Supabase, secret, rôle ou permission modifié ;
 - aucune publication effectuée.
 
-- **Suite proposée :** recette éclair Design sur R1 à R3, arbitrage Wilkam sur DEC-005, puis publication du checkpoint accepté.
+- **Suite proposée :** recette éclair Design sur R1 à R3, arbitrage Responsable projet Démo sur DEC-005, puis publication du checkpoint accepté.
 
 ## DEV-005 — Correctifs de recette mobile du checkpoint `ec3ec06`
 
@@ -437,7 +437,7 @@ Le menu `Plus` ne s'affiche pas encore dans les cinq profils actuels, car aucun 
 - **Auteur :** Dev Lead
 - **Statut :** Décision transmise — refonte structurelle retenue
 - **Périmètre :** Shell de navigation, sémantique de `page.tsx`, catalogue de destinations et contrôle responsive du registre
-- **Contexte :** Wilkam a retenu la navigation en bandeau haut. Le caractère réversible de la surcharge CSS n'est donc plus un bénéfice suffisant pour conserver deux mises en page concurrentes. La réversibilité doit être assurée par Git, pas par une seconde architecture laissée active dans la feuille de styles. Par ailleurs, `lot5-bandeau-haut.patch` cible l'état produit par les lots 3 et 4, qui ne sont pas encore intégrés dans la branche de développement courante : il doit servir de spécification visuelle jusqu'à consolidation de cette base, et non être forcé sur le code actuel.
+- **Contexte :** Responsable projet Démo a retenu la navigation en bandeau haut. Le caractère réversible de la surcharge CSS n'est donc plus un bénéfice suffisant pour conserver deux mises en page concurrentes. La réversibilité doit être assurée par Git, pas par une seconde architecture laissée active dans la feuille de styles. Par ailleurs, `lot5-bandeau-haut.patch` cible l'état produit par les lots 3 et 4, qui ne sont pas encore intégrés dans la branche de développement courante : il doit servir de spécification visuelle jusqu'à consolidation de cette base, et non être forcé sur le code actuel.
 
 ### 1. Shell : refonte propre maintenant
 
@@ -523,3 +523,49 @@ Le contrôle statique peut protéger la présence de ces deux contrats, mais il 
 ## Revue publique WILO/RIA — 28/09/2026
 
 Transposition frontend du correctif privé a3bd818 sur le miroir public. Contrôles WILO, motifs de non-relevé, horodatage de confirmation de pression et tests ; aucun backend importé. [Passation Grok](REVUE_WILO_RIA.md). Aucun déploiement.
+
+## DEV-20260930 — Miroir jouable du checkpoint déployé a2373c2
+
+- **Date :** 30 septembre 2026.
+- **Statut :** livraison du miroir public, DEC-000 ; aucune publication en préproduction dans ce chantier.
+- **Source :** checkpoint privé `a2373c2495603cf755b45cb026bb5e11a2c16e2b` (version applicative 32). Les fichiers frontend sont transposés ; aucun historique privé, backend, migration, export de données ou secret n'est importé. La branche publique conserve les commits design 080/081 déjà livrés.
+- **Anonymisation :** comptes en `.invalid`, noms de rôles Démo, fixtures fictives. Les noms de personnes/prestataires dans les composants et documents sont remplacés sans modifier les décisions historiques. Suppression du rattachement Sites et de l'injection de configuration ; accès distant désactivé dans `app/lib/supabase/config.ts`, y compris si des variables d'environnement existent sur le poste.
+
+### Parcours accessibles
+
+Connexion locale → sélectionner **Agent Électricité** (`electricite`) → Se connecter → **Rondes** : GE-01 en quatre étapes. Agent **Eau & Incendie** (`eau_incendie`) → Rondes : WILO-01 ; onglet **RIA-01 · Incendie** pour le second formulaire. Aucune saisie n'est envoyée au serveur. Les données ne survivent pas à la fermeture du formulaire. Ne saisir que des données fictives.
+
+### Inventaire des composants de ronde
+
+| Fichier / composant | Props | Configuration par équipement / rôle dans le miroir |
+| --- | --- | --- |
+| `app/components/Ge01Pilot.tsx` — `Ge01AgentForm` | `isTest?`, `agentName`, `equipment?`, `persistenceEnabled`, `offlineSync`, `flash` | GE-01 : Contexte → Observations → Essai & AUTO → Récapitulatif. `persistenceEnabled=false` ; agent fictif. Définitions/validations : `app/lib/ge01/report.ts`, seuils : `thresholds.ts`, contexte fictif : `lastContext.ts`. |
+| `app/page.tsx` — `LegacyReport` | `isTest?`, `persona`, `onNavigate`, `persistenceEnabled`, `offlineSync`, `flash` | Formulaire WILO-01 effectivement utilisé par le checkpoint : Contexte → Pression → Pompes → Sécurité → Synthèse. `persistenceEnabled=false`, persona `eau_incendie`. Référence 5 bar ; normal 4,5–5,5 inclus. Mesures vides conservées vides ; aucun score fabriqué. |
+| `app/components/WiloSupplement.tsx` | `step`, `answers`, `reasons`, `pressure`, `onChange`, `onReason` | Champs WILO issus de `app/lib/wilo/report.ts` / `activeWiloFields`. Choix explicites sans présélection ; motifs de non-vérification et second relevé conditionnel. |
+| `app/components/RiaRound.tsx` — `RiaForm` | `demo?`, `isTest?`, `offlineSync`, `rounds?` | RIA-01 : Local → Coffrets → Pressions et pressostats → Pompes et réseau → Synthèse et envoi. Champs : `app/lib/ria/report.ts` / `RIA_FIELDS`. Dans le miroir : `demo=true`, brouillon en mémoire ; confirmation de simulation distincte d'un accusé serveur. |
+| même fichier — `RiaRoundNavigation` | `children`, `ria`, `existingLabel?` | Pour Eau & Incendie, `existingLabel="WILO-01 · Eau"` ; ne pas conserver le défaut GE-01 sur ce persona. |
+| `app/page.tsx` — `DesignEauReport` | `persona`, `onNavigate`, `flash` | Adaptateur du miroir qui compose les deux formulaires déployés. Transport fictif en mémoire via `app/lib/demo-round-sync.ts`, sans IndexedDB ni file réelle. |
+| `app/components/EauRounds.tsx` | `agentName`, `draftNote`, `onSubmit` | Ancienne maquette autonome : WILO cinq étapes, RIA deux étapes. Conservée comme référence design, **non utilisée pour remplacer les formulaires ci-dessus**. |
+| `app/components/shared/RoundPilotHeader.tsx` | `title`, `subtitle`, `badge?` | En-tête à deux niveaux commun GE/WILO/RIA. |
+| `app/components/shared/RoundDateTimeFields.tsx` | `value`, `onChange` | WILO/RIA : ISO UTC, présentation date + heure Abidjan + Maintenant. GE possède les mêmes contrôles dans son formulaire. |
+| `app/components/shared/CountStepper.tsx` | `label`, `value`, `onChange`, `groupLabel`, `ariaMinus`, `ariaPlus`, `min?`, `error?`, `hint?`, `className?` | GE : démarrages et tentatives, entiers seulement. |
+| `app/components/Ge01Pilot.tsx` — `Ge01ReportInbox` | `reports`, `connected`, `onReview`, `onRead`, `onLoadProof`, `planning?`, `onAssign`, `onOpenAnomaly`, `onRefresh` | Réception FM présente dans la source ; aucun rapport réel ni appel serveur dans le miroir. |
+| `app/components/RiaRound.tsx` — `RiaRoundSpace` / `RiaReview` | Space : `isTest?`, `manager`, `enabled`, `offlineSync`, `onRefresh`, `onOpenAnomaly`. Review : `isTest?`, `report`, `manager`, `onDone`, `onOpenAnomaly` | Couches de consultation/revue connectées conservées pour lisibilité frontend, non activées dans cette démo. Le parcours agent utilise directement `RiaForm`. |
+| `app/components/WiloRoundInbox.tsx` | `isTest`, `manager`, `enabled`, `receiptId?`, `onOpenAnomaly` | Historique/lecture/retour WILO présent, désactivé en démonstration. |
+
+### Vérification reproductible
+
+`pnpm lint`, `pnpm build`, `pnpm verify:personas`, `pnpm verify:auth`.
+Recette navigateur : `npm install --prefix tests/browser --ignore-scripts`, lancer `pnpm dev --port 4190`, puis `node scripts/verify-mirror-rounds.mjs` (Chrome installé, 1440 et 380 px). La variable `MIRROR_TEST_URL` permet une autre adresse locale. Captures générées sous `outputs/mirror-review/` (non versionnées).
+
+Le lint conserve les avertissements préexistants ; aucune désactivation globale de règle. Les exceptions ponctuelles documentent l'hydratation du stockage navigateur et la synchronisation des reçus externes. Les rails conservent les étapes atteintes sans effet de synchronisation superflu.
+
+### Résultats de livraison du miroir
+
+- `pnpm lint` : réussi, 0 erreur et 41 avertissements existants.
+- `pnpm build` : réussi.
+- `pnpm verify:personas` : 38/38.
+- `pnpm verify:auth` : 21/21, dont verrouillage des accès distants propre au miroir.
+- `node scripts/verify-mirror-rounds.mjs` : réussi à 1440 et 380 px ; GE-01 jusqu'au récapitulatif avec confirmation explicite, WILO à 5 bar normal / 4,4 bar en alerte, RIA sans choix présélectionné, aucun appel distant et aucun débordement horizontal.
+- Contrôle local des 163 fichiers candidats : aucun nom réel recherché, identifiant de projet privé, clé détectée, migration ou configuration de publication inclus. Les fixtures et le mot de passe commun de démonstration sont publics et fictifs.
+- Adaptation spécifique au miroir : initialisation WILO vide même en simulation ; la version connectée privée n'est pas modifiée.

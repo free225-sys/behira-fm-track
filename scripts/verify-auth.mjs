@@ -2,7 +2,10 @@ import { readFileSync } from 'node:fs';
 
 const page = readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+const config = readFileSync(new URL('../app/lib/supabase/config.ts', import.meta.url), 'utf8');
+const layout = readFileSync(new URL('../app/layout.tsx', import.meta.url), 'utf8');
 const checks = [
+ ['DEC-000 accès distant désactivé', config.includes('isSupabaseIntegrationEnabled = false') && config.includes('throw new Error') && !config.includes('process.env') && !layout.includes('NEXT_PUBLIC_SUPABASE')],
   ['Connexion et états', ['Bienvenue', 'Connexion…', 'Identifiants non reconnus', 'Connecté ✓'].every((value) => page.includes(value))],
   ['Afficher / masquer', page.includes('Masquer le mot de passe') && page.includes('Afficher le mot de passe')],
   ['Mot de passe oublié', page.includes('Mot de passe oublié') && page.includes('Instructions simulées envoyées')],
@@ -18,7 +21,7 @@ const checks = [
   ['Supabase local branché', page.includes('signInWithPassword') && page.includes('resetPasswordForEmail') && page.includes("mode:'supabase'")],
   ['Première connexion verrouillée', page.includes('RequiredPasswordChange') && page.includes('getAuthenticatedProfileGate') && page.includes('currentPassword')],
   ['Mot de passe robuste obligatoire', page.includes('16 caractères minimum') && page.includes('Différent du temporaire') && page.includes('Confirmation identique')],
-  ['Déverrouillage Auth confirmé', page.includes('updateUser({ password:newPassword, currentPassword })') && page.includes('gate.mustChangePassword')],
+  ['Déverrouillage Auth confirmé', page.includes('updateUser({ password:newPassword, current_password:currentPassword })') && page.includes('gate.mustChangePassword')],
   ['Persona imposé par RLS', page.includes('resolveAuthenticatedPersona') && page.includes("session.mode === 'demo'")],
   ['Responsive 390 / 768 / 1440', ['max-width:430px','max-width:900px','.auth-shell'].every((value) => css.includes(value))],
   ['Focus clavier unique', css.includes('.keyboard-nav .password-control:focus-within') && css.includes('outline:2px solid var(--focus-ring)') && css.includes('border-color:#d5dee7;box-shadow:none')],

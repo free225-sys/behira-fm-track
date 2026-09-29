@@ -1,7 +1,7 @@
 # Passation Codex — clôture design UI
 
 - **Date :** 16 septembre 2026
-- **Auteur :** Design (Grok / Wilkam)
+- **Auteur :** Design (Grok / Responsable projet Démo)
 - **Statut :** Chantier design clos après passe corrective. Raccord données / formules / périmètres : Codex.
 - **Contrat :** pas de modification de `app/lib/supabase/data.ts`. Pas de scores, paliers ou pondérations inventés côté UI.
 

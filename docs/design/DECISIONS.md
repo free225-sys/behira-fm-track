@@ -19,7 +19,7 @@ Ne jamais supprimer ni réécrire une décision actée. Toute évolution doit pr
 ## DEC-015 — Accueil = Santé du bâtiment pour tous les personas
 
 - **Date :** 31 août 2026
-- **Auteur :** Revue produit, à valider par Wilkam
+- **Auteur :** Revue produit, à valider par Responsable projet Démo
 - **Statut :** **Proposé — implémenté dans le miroir**
 - **Périmètre :** landing, Accueil, scores, parcours multi-profils
 - **Contexte :** DEC-009 et DEC-011 faisaient atterrir le Facility Manager sur À traiter. L’outil était lu comme un registre d’anomalies. La vocation réelle est la santé du bâtiment.
@@ -37,7 +37,7 @@ Ne jamais supprimer ni réécrire une décision actée. Toute évolution doit pr
 
 
 - **Date :** 30 août 2026
-- **Auteur :** Wilkam, consigné par le Dev Lead
+- **Auteur :** Responsable projet Démo, consigné par le Dev Lead
 - **Statut :** **Adopté**
 - **Périmètre :** destinations autonomes Équipements, Coûts, Utilisateurs et droits, Seuils et paramètres
 - **Contexte :** les six arbitrages du contrat `DEC-002_CONTRAT_DESTINATIONS.md` ont été validés avant toute extension de la navigation.
@@ -54,7 +54,7 @@ Ne jamais supprimer ni réécrire une décision actée. Toute évolution doit pr
 ## DEC-013 — Accent de marque teal (clôture DEC-001)
 
 - **Date :** 29 août 2026
-- **Auteur :** Revue design, à valider par Wilkam
+- **Auteur :** Revue design, à valider par Responsable projet Démo
 - **Statut :** **Proposé — implémenté dans le miroir**
 - **Périmètre :** tokens de marque `--mark`, `--teal`, `--accent`
 - **Contexte :** DEC-001 laissait `--orange #ee8b2d` et `--mark #f3a33c` ouverts. Le spécimen cible remplace l’orange de marque par une rampe teal, distincte du triplet `warning`.
@@ -67,13 +67,13 @@ Ne jamais supprimer ni réécrire une décision actée. Toute évolution doit pr
 - **Fichiers concernés :** `app/globals.css`, `app/design-system/page.tsx`, `scripts/audit-visual-styles.mjs`
 - **Impacts attendus :** B teal, AZ teal, kicker login teal. Pas de changement métier.
 - **Contrôles attendus :** `pnpm audit:visual`, contraste B navy/mark ≥ 4,5:1, recette visuelle avant publication.
-- **Suite proposée :** validation Wilkam puis publication.
+- **Suite proposée :** validation Responsable projet Démo puis publication.
 
 ## DEC-012 — Pastilles d’état et flux pleine largeur
 
 
 - **Date :** 29 août 2026
-- **Auteur :** Revue design externe, à valider par Wilkam
+- **Auteur :** Revue design externe, à valider par Responsable projet Démo
 - **Statut :** **Proposé — implémenté dans le miroir**
 - **Périmètre :** Badge de dossier, Flux opérationnel (À traiter)
 - **Contexte :** Le rail 3 px + icône (DESIGN-008) restait illisible en file et en tête de dossier. Le flux était coincé dans la colonne décision, d’où un défilement horizontal du pipeline.
@@ -84,13 +84,13 @@ Ne jamais supprimer ni réécrire une décision actée. Toute évolution doit pr
 - **Fichiers concernés :** `app/globals.css`, `app/page.tsx`, `app/components/WorkflowAnalytics.tsx`, `scripts/audit-visual-styles.mjs`
 - **Impacts attendus :** pastilles lisibles ; pipeline sans scroll à 1440. Aucun rôle, droit, donnée ou workflow.
 - **Contrôles attendus :** `pnpm audit:visual`, `pnpm verify:personas`, recette À traiter 1440 / 1024 / 768.
-- **Suite proposée :** validation Wilkam.
+- **Suite proposée :** validation Responsable projet Démo.
 
 ## DEC-011 — Santé & performance sur Accueil
 
 
 - **Date :** 29 août 2026
-- **Auteur :** Revue design externe, à valider par Wilkam
+- **Auteur :** Revue design externe, à valider par Responsable projet Démo
 - **Statut :** **Proposé — implémenté dans le miroir**
 - **Périmètre :** Accueil Facility Manager, À traiter, badges de comptage
 - **Contexte :** DEC-007 place la santé après les files sur À traiter. Le bloc y concurrençait la file. Les badges de comptage (`3 AGENTS`, `ACTION REQUISE`) n’étaient pas des états de dossier : le rail + icône les rendaient illisibles dans les cartes KPI.
@@ -103,13 +103,13 @@ Ne jamais supprimer ni réécrire une décision actée. Toute évolution doit pr
 - **Fichiers concernés :** `app/page.tsx`, `app/globals.css`, `scripts/audit-visual-styles.mjs`
 - **Impacts attendus :** Accueil = état du bâtiment ; À traiter = file. Aucun rôle, droit, donnée ou workflow.
 - **Contrôles attendus :** `pnpm audit:visual`, `pnpm verify:personas`, recette Accueil 1440 / 768 / 375, badges dossier toujours visibles dans le registre et la file.
-- **Suite proposée :** après validation Wilkam, passer à Adopté.
+- **Suite proposée :** après validation Responsable projet Démo, passer à Adopté.
 
 ## DEC-010 — Couches du système de design
 
 
 - **Date :** 29 août 2026
-- **Auteur :** Revue design externe, à valider par Wilkam
+- **Auteur :** Revue design externe, à valider par Responsable projet Démo
 - **Statut :** **Proposé — implémenté dans le miroir**
 - **Périmètre :** Tokens `:root`, chrome, mouvement, spécimen designer
 - **Contexte :** Les tokens de lot 1 existent mais le chrome, le glyphe B, les durées et l’empilement restaient en hexadécimal dispersé. La DA demandait `--brand-foreground`. DEC-001 (orange vs glyphe) n’est pas tranché. Les ~500 hex hors `:root` sur les écrans métier ne sont **pas** migrés ici.
@@ -128,8 +128,8 @@ Ne jamais supprimer ni réécrire une décision actée. Toute évolution doit pr
 
 
 - **Date :** 29 août 2026
-- **Auteur :** Revue design externe, à valider par Wilkam
-- **Statut :** **Proposé — implémenté dans le miroir, arbitrage Wilkam requis pour adoption**
+- **Auteur :** Revue design externe, à valider par Responsable projet Démo
+- **Statut :** **Proposé — implémenté dans le miroir, arbitrage Responsable projet Démo requis pour adoption**
 - **Périmètre :** Chrome applicatif, titres de page, landing Facility Manager
 - **Contexte :** DEC-008 a unifié le catalogue et le `<h1>`, mais a laissé deux bandes navy empilées (navigation 64 px + topbar 68 à 78 px) et un second titre dans le contenu (`Bonjour …`, `Dossiers à traiter`, `Situation du bâtiment`). DESIGN-011 avait déjà identifié cette duplication. Le Facility Manager atterrit sur `manager` (À traiter) sans que cela soit consigné.
 - **Décision ou question :**
@@ -141,12 +141,12 @@ Ne jamais supprimer ni réécrire une décision actée. Toute évolution doit pr
 - **Fichiers concernés :** `app/page.tsx`, `app/globals.css`, `scripts/audit-visual-styles.mjs`
 - **Impacts attendus :** chrome navy ramené à 64–68 px ; premier dossier plus haut sur portable ; vocabulaire menu = H1 sans écho dans la page. Aucun changement de rôle, droit, donnée ou workflow.
 - **Contrôles attendus :** `pnpm audit:visual`, `pnpm verify:personas`, recette 1440 / 1024 / 768 / 375, premier dossier entier à 1366×768, contraste du topbar clair, pastille Démo toujours visible.
-- **Suite proposée :** après validation Wilkam, passer le statut à Adopté. Le lot tokens (hex hors `:root`) reste le suivant.
+- **Suite proposée :** après validation Responsable projet Démo, passer le statut à Adopté. Le lot tokens (hex hors `:root`) reste le suivant.
 
 ## DEC-008 — Navigation et en-tête stabilisés
 
 - **Date :** 29 août 2026
-- **Auteur :** Wilkam — arbitrage produit/UX
+- **Auteur :** Responsable projet Démo — arbitrage produit/UX
 - **Statut :** **Adopté — complète DEC-002 pour la nomenclature principale**
 - **Périmètre :** Navigation principale, titres globaux, logo et en-tête applicatif
 - **Contexte :** La nomenclature issue de DEC-002 variait encore selon le persona et mélangeait destinations principales, actions contextuelles et onglet analytique interne. L'en-tête répétait également plusieurs fois l'identité et le rôle de l'utilisateur.
@@ -169,7 +169,7 @@ Ne jamais supprimer ni réécrire une décision actée. Toute évolution doit pr
 ## DEC-007 — Priorité opérationnelle dans le cockpit Facility Manager
 
 - **Date :** 29 août 2026
-- **Auteur :** Wilkam (arbitrage), consigné par le Dev Lead
+- **Auteur :** Responsable projet Démo (arbitrage), consigné par le Dev Lead
 - **Statut :** **Adopté — clôt DEC-005 et confirme DEC-004**
 - **Périmètre :** Première page du cockpit Facility Manager après authentification
 - **Contexte :** DEC-005 demandait de choisir entre la vue d'ensemble d'abord et la priorité opérationnelle. La recette a montré que, avec la santé en premier, le premier dossier actionnable n'était pas entièrement visible sur plusieurs écrans portables courants.
@@ -183,8 +183,8 @@ Ne jamais supprimer ni réécrire une décision actée. Toute évolution doit pr
 ## DEC-006 — Mode sombre hors périmètre, définitivement
 
 - **Date :** 29 août 2026
-- **Auteur :** Wilkam (arbitrage), consigné par le Designer
-- **Statut :** **Adopté — non rediscutable sans nouvelle décision de Wilkam**
+- **Auteur :** Responsable projet Démo (arbitrage), consigné par le Designer
+- **Statut :** **Adopté — non rediscutable sans nouvelle décision de Responsable projet Démo**
 - **Périmètre :** Thème visuel de l'application
 - **Contexte :** L'analyse de la maquette d'origine (V0, `fmtrackv2_4lot3lpipelineparacteur.html`) a montré que celle-ci était sombre par défaut (`#080b12` à `#1e2540`) avec un commutateur `data-theme` et un bouton « ☀ Mode clair ». Cette bascule n'a pas survécu au portage vers la V2, qui est claire et mono-thème : zéro occurrence de `prefers-color-scheme` ou de `data-theme` dans `app/globals.css`. La revue de dérive V0 → V2 posait la question de son rétablissement.
 - **Décision ou question :** **Le mode sombre n'est pas réintroduit.** L'application reste mono-thème claire. Aucun lot ne sera ouvert pour le rétablir, et l'écart avec la V0 est assumé.
@@ -198,22 +198,22 @@ Ne jamais supprimer ni réécrire une décision actée. Toute évolution doit pr
 
 - **Date :** 29 août 2026
 - **Auteur :** Dev Lead
-- **Statut :** **Proposé — arbitrage de Wilkam requis, non acté**
+- **Statut :** **Proposé — arbitrage de Responsable projet Démo requis, non acté**
 - **Périmètre :** Première page du cockpit Facility Manager après authentification
 - **Contexte :** DEC-004 a acté l’ordre « contexte, compteurs, file de travail, flux, tendances ». La restructuration du cockpit au commit `6dcd654` place désormais « Santé & Performance » avant les compteurs et la file de travail. Ce choix donne immédiatement l’état du bâtiment, du parc technique et de l’équipe, mais il modifie une séquence déjà adoptée et ne peut donc pas devenir canonique par le seul fait du code.
-- **Décision ou question :** Wilkam doit choisir entre les deux options suivantes :
+- **Décision ou question :** Responsable projet Démo doit choisir entre les deux options suivantes :
   - **Option A — priorité opérationnelle DEC-004 :** contexte → compteurs → file de travail → flux → santé et tendances ;
   - **Option B — vue d’ensemble d’abord :** santé et performance → compteurs → file de travail → flux et tendances.
 - **Proposition du Dev Lead :** retenir l’option B si le cockpit doit d’abord répondre à « quel est l’état du bâtiment ? », avec des cartes compactes et actionnables ; retenir l’option A si la priorité absolue reste « quel dossier dois-je traiter maintenant ? ». L’implémentation actuelle de l’option B demeure provisoire jusqu’à l’arbitrage.
 - **Fichiers concernés :** `app/page.tsx`, `app/globals.css`
 - **Impacts attendus :** Ordre de lecture, hauteur avant la file de travail, perception de la priorité métier. Aucun impact sur les rôles, les droits, les données ou le workflow.
 - **Contrôles attendus :** Valider le premier écran à 1440, 1024, 768 et 375 px ; mesurer la position de la première action de file ; conserver un seul titre visible par écran et le plancher typographique de 12 px.
-- **Suite proposée :** Après choix de Wilkam, passer le statut de cette entrée à « Adopté » dans une nouvelle décision ou ajouter une entrée qui confirme explicitement le maintien de DEC-004.
+- **Suite proposée :** Après choix de Responsable projet Démo, passer le statut de cette entrée à « Adopté » dans une nouvelle décision ou ajouter une entrée qui confirme explicitement le maintien de DEC-004.
 
 ## DEC-004 — Navigation en bandeau haut sur desktop
 
 - **Date :** 29 août 2026
-- **Auteur :** wilkam
+- **Auteur :** Responsable projet Démo
 - **Statut :** Adopté
 - **Périmètre :** Coquille applicative, desktop au-dessus de 700 px
 - **Contexte :** La direction artistique demande une « barre latérale stable sur desktop ». Le rail occupe 244 px fixes, ce qui a contraint le registre à basculer en cartes structurées dès 1280 px au lot 2, au prix d'une page deux fois plus haute à 1024 px. Le rail laissait par ailleurs près de 200 px de vide pour les profils à deux entrées. Mesures comparées sur la largeur de ligne du registre : 696 px avec le rail à 1024 px, 940 px avec le bandeau ; le tableau à six colonnes tient jusqu'à 961 px au lieu de céder à 1280 px.
@@ -231,7 +231,7 @@ Ne jamais supprimer ni réécrire une décision actée. Toute évolution doit pr
 ## DEC-003 — Plancher typographique à 12 px
 
 - **Date :** 29 août 2026
-- **Auteur :** Wilkam — Design
+- **Auteur :** Responsable projet Démo — Design
 - **Statut :** Adopté
 - **Périmètre :** Ensemble de l'interface, y compris badges et métadonnées
 - **Contexte :** L'inventaire révèle encore de nombreuses tailles inférieures à 12 px, au détriment de la lisibilité et de l'accessibilité.
@@ -244,7 +244,7 @@ Ne jamais supprimer ni réécrire une décision actée. Toute évolution doit pr
 ## DEC-002 — Nomenclature unique des destinations
 
 - **Date :** 28 août 2026
-- **Auteur :** Wilkam — Design
+- **Auteur :** Responsable projet Démo — Design
 - **Statut :** Adopté
 - **Périmètre :** Sidebar, titre principal, titre du document et futures routes
 - **Contexte :** Une même destination porte actuellement plusieurs appellations et certaines entrées changent de nature selon le profil. Les routes ne doivent pas figer ces noms historiques.

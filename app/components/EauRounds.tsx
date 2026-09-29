@@ -248,7 +248,7 @@ export function EauRounds({ agentName, draftNote, onSubmit }: { agentName: strin
             subtitle="Deux étapes · local et coffret"
             badge={<Badge tone="neutral">BROUILLON LOCAL</Badge>}
           />
-          <p className="ria-round-note">Contrôle quotidien, lundi à samedi · échéance 23:59 · heure d’Abidjan. Les réglages des pressostats et les essais spécialisés relèvent de SECURISYS. Pression de référence retenue : 5 bar, confirmation SECURISYS attendue.</p>
+          <p className="ria-round-note">Contrôle quotidien, lundi à samedi · échéance 23:59 · heure d’Abidjan. Les réglages des pressostats et les essais spécialisés relèvent de Prestataire Incendie Démo. Pression de référence retenue : 5 bar, confirmation Prestataire Incendie Démo attendue.</p>
           <SyncStatusNotice state="demo-volatile" label="État de la ronde incendie" />
           <StepRail labels={riaSteps} step={riaStep} onStep={setRiaStep} />
           <section className="surpresseur-layout">
