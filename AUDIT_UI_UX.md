@@ -180,6 +180,46 @@ Navigation réelle (`app/page.tsx`) : E, W et R n’ont que Accueil et Rondes. F
 - Constat : plusieurs refus passent par `flash(...)` (photo, confirmation, stockage) sans bloc `role="alert"` dans le formulaire. RIA, lui, a un `role="alert"` dans la carte.
 - Correction : même motif d’alerte que RIA, dans la carte, en plus ou à la place du flash. Texte inchangé.
 
+### UX-019 — Deuxième bande navy sous la navigation
+
+- Écrans : Accueil, Dossiers. Profils : tous ceux qui voient ces pages. Largeurs : toutes. Catégorie : design system. Gravité : majeur.
+- Constat : la navigation est déjà le chrome navy. `HomeHeroBanner` est appelé avec `bleed` (`BuildingHealthCockpit.tsx` 293) et `.home-hero-banner.is-bleed` repeint `background: var(--chrome)` (`globals.css` 3591–3595). `.dossiers-hero.is-bleed` fait la même chose (`DossiersWorkspace.tsx` 93, `globals.css` 3894–3898). Décision en vigueur : une seule bande navy, l’en-tête de page sur surface claire.
+- Correction : retirer le fond `--chrome` de ces héros. Garder le titre, les actions et le score sur `--surface`. Le bouton principal qui était inversé (blanc sur navy) reprend le bouton primaire habituel.
+- Fichiers : `BuildingHealthCockpit.tsx`, `DossiersWorkspace.tsx`, `globals.css`.
+
+### UX-020 — La cloche et des boutons de panneau disparaissent sous 700 px
+
+- Écrans : tous, barre du haut et en-têtes de panneaux. Profils : tous. Largeurs : 390 et 360 (le seuil est 700 px, donc aussi une partie de la tablette étroite). Catégorie : responsive. Gravité : majeur.
+- Constat : dans `@media (max-width:700px)`, `globals.css` ligne 171 contient `.icon-button{display:none}` et `.panel-head button{display:none}`. La cloche est un `IconButton` (`NotificationCenter.tsx`). Les actions d’en-tête de panneau ne s’affichent plus. Aucune règle plus basse ne les rétablit.
+- Correction : ne pas masquer un contrôle qui est la seule entrée d’une fonction. Le passer en 44 px et le garder visible, ou le déplacer dans le menu Plus avec le même libellé. Ne pas supprimer les notifications.
+- Fichiers : `globals.css`, `NotificationCenter.tsx` si le déplacement est nécessaire.
+
+### UX-021 — « Coûts » et « Registre » ouvrent Dossiers
+
+- Écrans : Paramètres (« ouvrir les coûts »), liens vers `costs` ou `registry`. Profils : A, F. Largeurs : toutes. Catégorie : navigation. Gravité : majeur.
+- Constat : `hiddenNavKeys` retire Registre et Coûts de la barre (`page.tsx` 303). `navigate` réécrit ces deux vues vers Dossiers, onglet Tous (`page.tsx` 1060–1062). Le bouton des paramètres appelle pourtant `navigate('costs')` (1768). L’écran `CostsWorkspace` (1765) n’est pas atteint par ce chemin.
+- Correction d’affichage et de navigation : soit le libellé dit « Voir les dossiers », soit le bouton ouvre vraiment l’écran Coûts déjà écrit. Ne pas laisser un libellé qui ment. Pas de nouveau calcul financier.
+- Fichiers : `page.tsx`, `ParametersWorkspace.tsx`.
+
+### UX-022 — Boutons de décision qui ne font rien
+
+- Écran : fiche, zone de décision financière de démonstration. Profils : F, A. Largeurs : toutes. Catégorie : bouton. Gravité : majeur.
+- Constat : « Demander un complément » et « Refuser » n’ont ni `onClick` ni `disabled` (`page.tsx` 2718). « Valider » ne fait que `setDecisionDone(true)` en local. On croit qu’une décision part.
+- Correction : tant que l’action n’est pas raccordée, bouton désactivé et une ligne « Décision non disponible dans cet écran ». Ne pas simuler un enregistrement. Si le circuit connecté existe déjà ailleurs (`ConnectedCostsWorkspace`), renvoyer vers lui plutôt que dupliquer un bouton mort.
+- Fichiers : `page.tsx`.
+
+### UX-023 — Titre de page coupé, et cartes de contrôle trop larges
+
+- Écrans : bandeau (tous profils) ; contrôles WILO DEC-020. Largeurs : 834 pour le titre ; 360 et 390 pour les cartes. Catégorie : responsive. Gravité : mineur.
+- Constat : `.topbar h1` est en `nowrap` + ellipsis à toute largeur ; le retour à la ligne n’est que sous 430 px. À 834 le titre peut être tronqué. `.control-choice` part de `minmax(260px, 1fr)` (`globals.css` vers 5465) : sur 360 px moins les marges, la grille dépasse.
+- Correction : titre sur deux lignes dès que la largeur ne tient pas ; cartes de contrôle en une colonne sous 430 px, boutons toujours à 44 px. DEC-020 inchangé.
+
+### UX-024 — Seuil financier écrit en dur dans l’écran Dossiers
+
+- Écran : Dossiers. Profils : F, A. Largeurs : toutes. Catégorie : UX. Gravité : mineur.
+- Constat : `DossiersWorkspace.tsx` porte `threshold = 400000` en valeur par défaut, alors que l’écran reçoit déjà le seuil du paramètre (`page.tsx` vers 1742). Une valeur de seuil ne doit pas être recopiée dans un composant.
+- Correction : utiliser uniquement la propriété reçue. Pas d’autre montant.
+
 ## 3. Incohérences transverses
 
 | Sujet | Versions en présence | Cible unique |
@@ -193,6 +233,8 @@ Navigation réelle (`app/page.tsx`) : E, W et R n’ont que Accueil et Rondes. F
 | Pastille d’état de saisie | Six libellés | Une pastille, trois tons de badge existants |
 | Action de fiche | Bloc workflow + carte « Action principale » | Une action principale |
 | Attente | « Enregistrement… » seul dans le bouton | Bouton + ligne de statut |
+| Bande navy | Chrome + héros Accueil et Dossiers en `--chrome` | Chrome seul ; héros sur `--surface` |
+| Destination Coûts / Registre | Libellé d’écran, réécriture vers Dossiers | Libellé = écran réellement ouvert |
 
 ## 4. Lots
 
@@ -216,17 +258,17 @@ UX-007, UX-008, UX-009, UX-010, UX-012, UX-018.
 
 Acceptation : la maquette Eau ne contredit plus le connecté ; le réarmement ne s’invente pas ; RIA et IRR suivent le geste WILO pour « non vérifié » sans toucher DEC-020 ni DEC-022 ; « Terminer » reflète la condition d’envoi déjà codée ; pastilles harmonisées.
 
-### Lot 4 — Files et accueil terrain
+### Lot 4 — Files, accueil terrain, destinations
 
-UX-013, UX-014, UX-015.
+UX-013, UX-014, UX-015, UX-021, UX-022, UX-024.
 
-Acceptation : l’accueil R ne présente plus une ronde du 16 septembre comme réelle ; le FM voit une file à la fois ; « Sain » ne réapparaît pas dans le secours démo.
+Acceptation : l’accueil R ne présente plus une ronde du 16 septembre comme réelle ; le FM voit une file à la fois ; « Sain » ne réapparaît pas dans le secours démo ; un bouton « Coûts » ouvre les coûts ou change de libellé ; aucun bouton de décision n’a l’air actif s’il n’enregistre rien ; le seuil affiché est celui reçu, pas un 400 000 recopié.
 
-### Lot 5 — Responsive des rondes
+### Lot 5 — Responsive et bande navy
 
-UX-016, UX-017, puis contrôle 1440 / 1024 / 834 / 390 / 360 des écrans touchés par les lots 1 à 4.
+UX-016, UX-017, UX-019, UX-020, UX-023, puis contrôle 1440 / 1024 / 834 / 390 / 360 des écrans touchés par les lots 1 à 4.
 
-Acceptation : pas de second bandeau navy ; cibles 44 px ; pas de débordement horizontal de page sur les formulaires WILO, RIA, IRR, GE.
+Acceptation : une seule bande navy ; la cloche et les actions de panneau restent atteignables à 390 et 360 ; cibles 44 px ; pas de débordement horizontal de page sur les formulaires WILO, RIA, IRR, GE ; le titre de page n’est pas coupé à 834.
 
 ### Lot 6 — Seconde passe
 
