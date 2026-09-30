@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { Badge, BrandIcon, Button } from './ui';
+import { Badge, BrandIcon, Button, Card } from './ui';
 
 export type TreatmentBranch = 'interne-sans-cout' | 'interne-avec-cout' | 'prestataire' | 'non-choisie';
 
@@ -17,6 +17,64 @@ export const SAVING_STATUS_TEXT = 'Enregistrement en cours. Restez sur cette pag
 export function SavingStatus({ busy }: { busy: boolean }) {
   if (!busy) return null;
   return <p className="saving-status" role="status">{SAVING_STATUS_TEXT}</p>;
+}
+
+export type OverviewActionInput = {
+  readOnly: boolean;
+  receiving: boolean;
+  reviewingReopened: boolean;
+  reopenAvailable: boolean;
+  proofRequiresAttention: boolean;
+  overThreshold: boolean;
+  ge01Connected: boolean;
+  hasNextStatus: boolean;
+};
+
+export function overviewActionMode(input: OverviewActionInput) {
+  const duplicate = input.receiving || input.reviewingReopened || input.reopenAvailable || (!input.proofRequiresAttention && !input.overThreshold && (input.ge01Connected || input.hasNextStatus));
+  const showCardButton = !input.readOnly && !duplicate;
+  const consultation = input.readOnly && !input.reopenAvailable;
+  const kicker = consultation ? 'PROCHAINE ÉTAPE' : showCardButton ? 'ACTION PRINCIPALE' : 'RAPPEL';
+  const reminder = input.receiving
+    ? 'À faire dans le panneau de réception ci-dessous.'
+    : (input.reviewingReopened || input.reopenAvailable)
+      ? 'À faire dans le panneau de réouverture.'
+      : input.ge01Connected
+        ? 'À faire dans le bloc Continuité de traitement.'
+        : 'À faire avec « Valider l’étape », en haut de la fiche.';
+  return { showCardButton, consultation, kicker, reminder };
+}
+
+export function DossierOverviewAction({
+  title,
+  responsibleLine,
+  externalActor,
+  primaryLabel,
+  busy,
+  onPrimary,
+  ...modeInput
+}: OverviewActionInput & {
+  title: string;
+  responsibleLine: string;
+  externalActor: string | null;
+  primaryLabel: string;
+  busy: boolean;
+  onPrimary: () => void;
+}) {
+  const mode = overviewActionMode(modeInput);
+  return (
+    <Card as="article" className="next-step-card">
+      <p className="design-kicker">{mode.kicker}</p>
+      <h3>{title}</h3>
+      <p>{responsibleLine}</p>
+      {externalActor ? <small>Acteur externe concerné : {externalActor}</small> : null}
+      {mode.consultation
+        ? <div className="next-step-read-only" role="note">Consultation uniquement · aucune action métier accordée</div>
+        : mode.showCardButton
+          ? <><Button type="button" aria-busy={busy} disabled={busy} onClick={onPrimary}>{busy ? 'Enregistrement…' : primaryLabel}</Button><SavingStatus busy={busy} /></>
+          : <p className="next-step-reminder">{mode.reminder}</p>}
+    </Card>
+  );
 }
 
 export function DossierActionBoard({

@@ -17,7 +17,7 @@ function useUiSession(audience: UiSession['audience'], name: string) {
 import { createContext, useContext, FormEvent, useEffect, useId, useMemo, useRef, useState, type ReactNode, useCallback } from 'react';
 import { AntiZombieSummary } from './components/AntiZombieSummary';
 import { type AntiZombieSummaryData } from './components/anti-zombie-contract';
-import { DossierActionBoard, DossierProofSnapshot, DossierTreatmentStrip, SavingStatus, type TreatmentBranch } from './components/DossierContinuity';
+import { DossierActionBoard, DossierOverviewAction, DossierProofSnapshot, DossierTreatmentStrip, SavingStatus, type TreatmentBranch } from './components/DossierContinuity';
 import { DossierOriginMeasures } from './components/DossierOriginMeasures';
 import { DossiersWorkspace, dossierActionLabel, type DossiersTab } from './components/DossiersWorkspace';
 import { AccessWorkspace } from './components/AccessWorkspace';
@@ -2802,8 +2802,6 @@ function Detail({ anomaly, decision, decisionThreshold, persistenceMode, persist
   const criticalClosureLocked = nextStatusOption === 'Clôturée' && anomaly.priority === 'Critique' && !anomaly.proof;
   const proofRequiresAttention = anomaly.proofPending || criticalClosureLocked;
   const primaryActionLabel = receiving ? 'Réceptionner l’intervention' : reviewingReopened ? 'Réexaminer le dossier' : reopenAvailable ? 'Rouvrir le dossier' : proofRequiresAttention ? 'Ouvrir les preuves' : overThreshold ? 'Examiner la décision financière' : nextStatusOption ? `Valider : ${nextStatus}` : 'Consulter les repères du dossier';
-  const upperAction = Boolean((ge01Connected && !reviewingReopened && !receiving) || receiving || reopenAvailable || reviewingReopened || (!readOnly && nextStatusOption));
-  const showCardButton = !readOnly && !upperAction;
   const runPrimaryAction = () => {
     if(receiving){document.getElementById('dossier-reception-panel')?.scrollIntoView({behavior:'smooth',block:'center'});return;}
     if (reviewingReopened || reopenAvailable) { document.getElementById('dossier-reopen-panel')?.scrollIntoView({ behavior:'smooth', block:'center' }); return; }
@@ -2836,7 +2834,7 @@ function Detail({ anomaly, decision, decisionThreshold, persistenceMode, persist
         <Card as="article" className="dossier-diagnostic-card"><div  className="panel-head"><div><p className="design-kicker">DIAGNOSTIC & INTERVENTION</p><h3>Progression métier</h3></div><Badge tone={statusTone(anomaly.status)}>{workflow[currentStep]}</Badge></div><div className="diagnostic-state"><span><BrandIcon name="activity" /></span><div><b>{anomaly.diagnosis ? 'Diagnostic enregistré' : 'Diagnostic technique attendu'}</b><p>{anomaly.diagnosis ?? 'Aucun diagnostic confirmé n’est disponible. Consultez l’historique pour les événements du dossier.'}</p></div></div></Card>
       </div>
       <aside className="dossier-decision-column">
-        <Card as="article" className="next-step-card"><p className="design-kicker">{showCardButton || (readOnly && !reopenAvailable) ? 'ACTION PRINCIPALE' : 'RAPPEL'}</p><h3>{reopenAvailable ? 'Réouverture possible' : nextActionFor(anomaly)}</h3><p>{!canonicalResponsible(anomaly) ? 'Facility Manager doit d’abord attribuer un responsable interne autorisé.' : `Responsable interne actuel : ${canonicalResponsible(anomaly)}.`}</p>{externalActorConcerned(anomaly) && <small>Acteur externe concerné : {externalActorConcerned(anomaly)}</small>}{readOnly && !reopenAvailable ? <div className="next-step-read-only" role="note">Consultation uniquement · aucune action métier accordée</div> : showCardButton ? <><Button type="button" className="" aria-busy={busy} disabled={busy} onClick={runPrimaryAction}>{busy ? 'Enregistrement…' : primaryActionLabel}</Button><SavingStatus busy={busy} /></> : <p className="next-step-reminder">L’action se fait plus haut sur cette fiche. Ce bloc ne lance rien.</p>}</Card>
+        <DossierOverviewAction readOnly={readOnly} receiving={Boolean(receiving)} reviewingReopened={Boolean(reviewingReopened)} reopenAvailable={Boolean(reopenAvailable)} proofRequiresAttention={proofRequiresAttention} overThreshold={overThreshold} ge01Connected={ge01Connected} hasNextStatus={Boolean(nextStatusOption)} title={reopenAvailable ? 'Réouverture possible' : nextActionFor(anomaly)} responsibleLine={!canonicalResponsible(anomaly) ? 'Facility Manager doit d’abord attribuer un responsable interne autorisé.' : `Responsable interne actuel : ${canonicalResponsible(anomaly)}.`} externalActor={externalActorConcerned(anomaly)} primaryLabel={primaryActionLabel} busy={busy} onPrimary={runPrimaryAction} />
         <Card as="article" className="recurrence-card"><div><span><BrandIcon name="refresh" /></span><p><b>Récurrence à confirmer</b><small>Historique insuffisant</small></p></div><p>Aucune récurrence n’est affirmée sans événements métier datés.</p></Card>
       </aside>
     </section>}

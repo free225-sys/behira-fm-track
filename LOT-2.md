@@ -7,6 +7,7 @@ Branche `grok/audit-ui-2026-09-30`. UX-004, UX-005, UX-006, UX-011. UX-034 et UX
 - `permitted` n’a pas changé. Le bouton « Confirmer le diagnostic » (et les autres commandes du même panneau) n’est rendu que si l’étape est permise.
 - S’il manque le commentaire, le bouton reste désactivé. Au-dessus : « Le commentaire est obligatoire. Acteur attendu : … ». L’acteur est celui du résumé déjà normalisé.
 - Affectation : s’il existe des agents habilités et qu’aucun n’est choisi, la même ligne le dit. S’il n’y en a aucun, la phrase déjà là (« Aucun agent actif… ») reste la seule, pour ne pas doubler le statut.
+- Traitement : « Choisissez la décision financière approuvée. » seulement s’il existe un coût approuvé non choisi. « Choisissez l’entreprise. » seulement s’il existe des entreprises et qu’aucune n’est choisie. « Aucun coût approuvé… » et « Aucune entreprise éligible… » ne sont pas doublés.
 - Si l’utilisateur n’est pas l’acteur, la phrase reste visible : « Cette étape attend le diagnostic de l’agent affecté » ou « le Facility Manager », suivie de « Acteur attendu : … ». Pas de bouton à la place.
 
 ## UX-005 — La mesure d’origine, si le rapport est déjà chargé
@@ -14,7 +15,7 @@ Branche `grok/audit-ui-2026-09-30`. UX-004, UX-005, UX-006, UX-011. UX-034 et UX
 - Seul changement de requête : `source_report_id` ajouté au `select` existant de `anomalies` dans `app/lib/supabase/data.ts`. Lecture seule. Aucun autre appel, aucun autre filtre.
 - Les checks viennent de `checksByReportId`, déjà rempli par la requête `report_checks` des rapports chargés. Ils sont recopiés sur le dossier (`originChecks`), avec la référence du rapport si elle est dans ce même chargement.
 - La fiche affiche, en lecture seule, chaque check qui a une valeur numérique : libellé, valeur, unité, état (Conforme, Alerte, Critique, Non applicable, Non vérifié). Un texte ou un booléen n’est pas converti en nombre. La description enregistrée n’est pas modifiée.
-- Sans rapport relié dans ce chargement : « Mesure d’origine non reliée à cette fiche ». Rapport relié sans mesure chiffrée : la référence, puis « Le rapport relié ne contient pas de mesure chiffrée. » Pas de navigation nouvelle vers la ronde.
+- Sans `sourceReportId` : « Mesure d’origine non reliée à cette fiche ». Identifiant présent mais rapport absent du chargement : « Rapport d’origine relié ; ses mesures ne sont pas disponibles sur cette fiche. » Rapport chargé sans mesure chiffrée : la référence, puis « Le rapport relié ne contient pas de mesure chiffrée. » Pas de navigation nouvelle vers la ronde.
 
 ## UX-006 — Une seule phrase d’attente
 
@@ -24,15 +25,17 @@ Branche `grok/audit-ui-2026-09-30`. UX-004, UX-005, UX-006, UX-011. UX-034 et UX
 
 ## UX-011 — Une seule action principale
 
-- Quand le bloc du haut porte déjà l’action (traitement du dossier, réception, réouverture, ou « Valider l’étape » dans l’en-tête), la carte de la vue d’ensemble devient un rappel : kicker « RAPPEL », pas de bouton.
-- La carte ne garde un bouton que s’il n’y a pas déjà cette action plus haut. La consultation sans droit reste la note « Consultation uniquement », sans bouton.
+- La carte devient un rappel seulement si son geste est le même que celui du haut : réception, réouverture, traitement connecté, ou « Valider l’étape ».
+- Elle garde son bouton quand il mène ailleurs : « Ouvrir les preuves » si une preuve attend, « Examiner la décision financière » si le montant dépasse le seuil.
+- Le rappel dit où agir : « À faire avec « Valider l’étape », en haut de la fiche. », « À faire dans le panneau de réception ci-dessous. », « À faire dans le panneau de réouverture. », « À faire dans le bloc Continuité de traitement. »
+- En consultation, le kicker est « PROCHAINE ÉTAPE », avec la note « Consultation uniquement ». Pas de bouton.
 - Qui peut lancer l’action n’a pas changé : `permitted`, `isManager`, `isAgent`, `readOnly`.
 
 ## Fichiers
 
 - `app/components/Ge01WorkflowPanel.tsx`
-- `app/components/DossierContinuity.tsx` (`SavingStatus`)
-- `app/components/DossierOriginMeasures.tsx` (nouveau)
+- `app/components/DossierContinuity.tsx` (`SavingStatus`, `DossierOverviewAction`)
+- `app/components/DossierOriginMeasures.tsx`
 - `app/components/ReopenDossierPanel.tsx`
 - `app/components/InterventionReceptionPanel.tsx`
 - `app/components/ConnectedCostsWorkspace.tsx`
@@ -41,14 +44,14 @@ Branche `grok/audit-ui-2026-09-30`. UX-004, UX-005, UX-006, UX-011. UX-034 et UX
 - `app/page.tsx`
 - `app/lib/supabase/data.ts` (colonne `source_report_id` et lecture des checks déjà chargés)
 - `app/globals.css`
-- `scripts/verify-dossier-fiche-ui.mjs` (nouveau)
+- `scripts/verify-dossier-fiche-ui.mjs`
 - `package.json` (`verify:dossier-fiche`)
 - `AUDIT_UI_UX.md` (UX-034, UX-035)
 
 ## Scripts
 
-- Ajout : `node scripts/verify-dossier-fiche-ui.mjs` (ou `pnpm verify:dossier-fiche`). Il rend le panneau de diagnostic sans commentaire, le même panneau si l’agent n’est pas l’acteur, l’attente de réouverture, et les mesures (nombre affiché, texte « 11,6 V » ignoré). Il vérifie qu’`anomalies` et `report_checks` n’ont pas gagné d’appel.
-- Inchangés, relancés : `audit-visual-styles`, `verify-personas`, `verify-auth`, `verify-lot0-ui`, `verify-lot1-ui`, `verify-wilo-observations`, `verify-input-rules`, `verify-anti-zombie.ts`, `verify-connected-water-ui`, `verify-irr-ui`, `verify-round-choice-ui`.
+- `node scripts/verify-dossier-fiche-ui.mjs` rend le diagnostic sans commentaire, l’agent qui n’est pas l’acteur, les deux motifs de traitement, la preuve en attente (bouton conservé), le cas « Valider » seul (rappel sans bouton), la consultation, et les trois phrases de mesure.
+- Inchangés à la première livraison, et non rejoués pour cette reprise hors `verify-dossier-fiche-ui` et `tsc` : `audit-visual-styles`, `verify-personas`, `verify-auth`, `verify-lot0-ui`, `verify-lot1-ui`, `verify-wilo-observations`, `verify-input-rules`, `verify-anti-zombie.ts`, `verify-connected-water-ui`, `verify-irr-ui`, `verify-round-choice-ui`.
 
 ## Reportés
 
@@ -59,6 +62,11 @@ Branche `grok/audit-ui-2026-09-30`. UX-004, UX-005, UX-006, UX-011. UX-034 et UX
 
 ## À regarder
 
-- Fiche en démonstration : la description reste telle quelle, et la ligne « Mesure d’origine non reliée à cette fiche » est sous le constat. La carte de droite est un rappel ; « Valider l’étape » est dans l’en-tête.
+- ANO-0231 en démonstration, preuve déjà acceptée, sans décision au-dessus du seuil : le rappel dit d’utiliser « Valider l’étape » en haut. Ce n’est pas un second bouton.
+- Même fiche si la preuve est en attente : la carte garde « Ouvrir les preuves ».
 - Diagnostic connecté, commentaire vide : « Confirmer le diagnostic » est grisé, la ligne dit pourquoi et nomme l’acteur attendu.
-- Pendant un enregistrement : le bouton dit « Enregistrement… » et la phrase « Restez sur cette page » est à côté.
+- Autoriser le traitement, coût approuvé non choisi : le bouton est grisé et la ligne le dit.
+
+## Reprise
+
+Revue Claude du commit `ad0a54d`. M1, M2, m1, m2, m3. Pas de changement de `permitted`, ni de requête autre que la colonne déjà ajoutée.

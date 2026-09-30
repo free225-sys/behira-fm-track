@@ -20,9 +20,11 @@ export function DossierOriginMeasures({ sourceReportId, sourceReportReference, c
   checks?: OperationalReportCheck[];
 }) {
   const measures = numericOriginChecks(checks);
-  const linked = Boolean(sourceReportId) && (Boolean(sourceReportReference) || measures.length > 0);
-  if (!linked) {
+  if (!sourceReportId) {
     return <p className="origin-measure-missing">Mesure d’origine non reliée à cette fiche</p>;
+  }
+  if (!sourceReportReference && measures.length === 0) {
+    return <p className="origin-measure-missing">Rapport d’origine relié ; ses mesures ne sont pas disponibles sur cette fiche.</p>;
   }
   return (
     <div className="origin-measures">

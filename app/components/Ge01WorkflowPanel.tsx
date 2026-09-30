@@ -8,6 +8,29 @@ import type { OperationalAnomaly } from '../lib/supabase/data';
 
 export type Ge01WorkflowCommand = 'assign' | 'diagnose' | 'branch' | 'start' | 'finish' | 'close';
 export type Ge01TreatmentSelection = { branch: 'internal_without_cost' | 'internal_with_cost' | 'vendor'; costReference: string; vendorCode: string };
+
+export function workflowHoldText(input: {
+  permitted: boolean;
+  proofLocked: boolean;
+  confirming: boolean;
+  command: Ge01WorkflowCommand | null;
+  comment: string;
+  expectedActor: string;
+  assignNeedsChoice: boolean;
+  branch: Ge01TreatmentSelection['branch'] | null;
+  approvedCostCount: number;
+  costChosen: boolean;
+  vendorCount: number;
+  vendorChosen: boolean;
+}) {
+  if (!input.permitted || input.proofLocked || !input.command || input.confirming) return '';
+  const reasons: string[] = [];
+  if (!input.comment.trim()) reasons.push('Le commentaire est obligatoire.');
+  if (input.command === 'assign' && input.assignNeedsChoice) reasons.push('Choisissez le responsable du diagnostic.');
+  if (input.command === 'branch' && input.branch && input.branch !== 'internal_without_cost' && !input.costChosen && input.approvedCostCount > 0) reasons.push('Choisissez la décision financière approuvée.');
+  if (input.command === 'branch' && input.branch === 'vendor' && !input.vendorChosen && input.vendorCount > 0) reasons.push('Choisissez l’entreprise.');
+  return reasons.length ? `${reasons.join(' ')} Acteur attendu : ${input.expectedActor}.` : '';
+}
 export type Ge01WorkflowHandler = (command: Ge01WorkflowCommand, comment: string, requestId: string, treatment?: Ge01TreatmentSelection, employeeCode?: string) => Promise<boolean>;
 
 export function Ge01WorkflowPanel({ anomaly, isManager, isAgent, onSubmit, onRefresh, onOpenProofs, onOpenCosts, busy }: {
@@ -40,12 +63,20 @@ export function Ge01WorkflowPanel({ anomaly, isManager, isAgent, onSubmit, onRef
   const labels = { assign: 'Affecter le diagnostic', diagnose: 'Confirmer le diagnostic', branch: 'Autoriser le traitement choisi', start: vendorWork ? 'Confirmer le début de l’intervention prestataire' : 'Démarrer l’intervention', finish: vendorWork ? 'Consigner le résultat de l’intervention prestataire' : 'Transmettre le compte rendu', close: 'Clôturer le dossier' };
   const permitted = command && (['assign', 'branch', 'close'].includes(command) ? isManager : (isAgent && anomaly.workflow?.assignedToCurrentUser) || isManager);
   const proofLocked = command === 'close' && !anomaly.proof;
-  const holdReasons: string[] = [];
-  if (permitted && !proofLocked && command && !confirming) {
-    if (!comment.trim()) holdReasons.push('Le commentaire est obligatoire.');
-    if (command === 'assign' && !selectedAgent && (anomaly.eligibleDiagnosisAssignees?.length ?? 0) > 0) holdReasons.push('Choisissez le responsable du diagnostic.');
-  }
-  const actionHold = holdReasons.length ? `${holdReasons.join(' ')} Acteur attendu : ${summary.expectedActor}.` : '';
+  const actionHold = workflowHoldText({
+    permitted: Boolean(permitted),
+    proofLocked,
+    confirming,
+    command,
+    comment,
+    expectedActor: summary.expectedActor,
+    assignNeedsChoice: Boolean(command === 'assign' && !selectedAgent && anomaly.eligibleDiagnosisAssignees?.length),
+    branch: command === 'branch' ? treatment.branch : null,
+    approvedCostCount: anomaly.financialOptions?.filter((item) => item.status === 'approved').length ?? 0,
+    costChosen: selectedCost?.status === 'approved',
+    vendorCount: anomaly.eligibleVendors?.length ?? 0,
+    vendorChosen: Boolean(selectedVendor),
+  });
   const submit = async () => {
     if (submitting.current || busy || (command === 'assign' && !selectedAgent)) return;
     submitting.current = true;
