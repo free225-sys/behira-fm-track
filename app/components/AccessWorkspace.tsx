@@ -88,6 +88,10 @@ export function AccessWorkspace({ users, audience, embedded = false }: {
     setReason('');
   };
 
+  const prepareReady = audience === 'administration' && adminAction === 'create'
+    ? !hasFieldErrors(validateAccessCreate({ name, email, reason }))
+    : !hasFieldErrors(validateAccessAction({ selectedUserId, reason }));
+
   return <section className={`access-workspace${embedded ? ' is-embedded' : ''}`} aria-labelledby="access-workspace-title">
     <header className="access-workspace-hero">
       <div>
@@ -173,7 +177,7 @@ export function AccessWorkspace({ users, audience, embedded = false }: {
 
           <div className="access-security-note" role="note"><BrandIcon name="lock" size={18} /><p><b>Exécution sécurisée hors du navigateur</b></p></div>
           {confirmation && <div className="access-confirmation" role="status"><span aria-hidden="true">✓</span>{confirmation}</div>}
-          <Button type="submit">{audience === 'facility' ? 'Envoyer la proposition' : adminAction === 'create' ? 'Préparer la création' : 'Préparer la désactivation'}</Button>
+          <Button type="submit" disabled={!prepareReady}>{audience === 'facility' ? 'Envoyer la proposition' : adminAction === 'create' ? 'Préparer la création' : 'Préparer la désactivation'}</Button>
           <small className="access-simulation-note">Simulation locale · aucun compte, rôle ou périmètre réel n’est modifié.</small>
         </form>
       </Card>

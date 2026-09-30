@@ -125,9 +125,10 @@ export function StartRoundPicker({
   if (switching && choices.length <= 1) {
     const only = choices[0];
     return (
-      <div className="start-round-picker is-switch is-readonly field is-select" ref={rootRef}>
+      <div className="start-round-picker is-switch is-readonly" ref={rootRef}>
+        <span className="start-round-legend">{legend}</span>
         <p className="start-round-switch is-readonly">
-          <span>{only ? `${legend} : ${only.label}` : 'Aucune ronde disponible pour ce profil.'}</span>
+          <span>{only ? only.label : 'Aucune ronde disponible pour ce profil.'}</span>
         </p>
         <small>{only ? 'Seule ronde de votre périmètre.' : 'Aucune ronde de ce périmètre n’est livrée.'}</small>
       </div>
