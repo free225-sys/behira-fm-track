@@ -43,7 +43,7 @@ function IrrQuestion({ field, draft, onAnswer, onReason }: {
 }
 
 /** Ronde IRR-01 (irrigation / espaces verts) : même principes que GE-01 et WILO-01 (trois choix, motif, brouillon local). */
-export function IrrForm({ isTest = false, offlineSync, flash }: { isTest?: boolean; offlineSync: OfflineSyncApi; flash: (text: string) => void }) {
+export function IrrForm({ isTest = false, demonstration = false, offlineSync, flash }: { isTest?: boolean; demonstration?: boolean; offlineSync: OfflineSyncApi; flash: (text: string) => void }) {
   const draftKey = `round:eau_incendie:IRR-01${isTest ? ':recette' : ''}`;
   const [draft, setDraft] = useState<IrrDraft | null>(null);
   const [step, setStep] = useState(0);
@@ -51,6 +51,7 @@ export function IrrForm({ isTest = false, offlineSync, flash }: { isTest?: boole
   const [testAttested, setTestAttested] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [simulated, setSimulated] = useState(false);
   const [confirmAbandon, setConfirmAbandon] = useState(false);
   const lock = useRef(false);
   // Dernier brouillon connu : évite qu'une réponse saisie rapidement écrase la précédente (état périmé).
@@ -75,7 +76,9 @@ export function IrrForm({ isTest = false, offlineSync, flash }: { isTest?: boole
   const goTo = (next: number) => { setStep(next); progressRef.current?.scrollIntoView({ block: 'start', behavior: 'instant' }); };
 
   if (!draft) return <Card role="status">Chargement du brouillon IRR-01…</Card>;
-  const syncStatus = <OfflineSyncStatus enabled online={offlineSync.online} running={offlineSync.running} counts={offlineSync.counts} latestIssue={offlineSync.latestIssue} latestRoundReceipt={offlineSync.latestRoundReceipt} onRetry={() => void offlineSync.retryFailed().then(() => offlineSync.synchronize())} />;
+  const syncStatus = <OfflineSyncStatus enabled={!demonstration} online={offlineSync.online} running={offlineSync.running} counts={offlineSync.counts} latestIssue={offlineSync.latestIssue} latestRoundReceipt={offlineSync.latestRoundReceipt} onRetry={() => void offlineSync.retryFailed().then(() => offlineSync.synchronize())} />;
+  const badge = <span className="mockup-label">{demonstration ? 'Démo' : 'Saisie terrain'}</span>;
+  if (simulated) return <section aria-label="Ronde IRR-01"><RoundPilotHeader title="IRR-01 · Ronde irrigation et jardinières" subtitle="Quatre étapes · local technique puis jardinières" badge={badge} />{isTest && <Badge tone="orange">RECETTE — DONNÉES FICTIVES</Badge>}{syncStatus}<Card role="status"><h3>Simulation de ronde terminée</h3><p>Aucune donnée enregistrée.</p></Card></section>;
   if (draft.queued) return <>{syncStatus}<Card role="status"><h3>Ronde IRR-01 enregistrée</h3><p>Elle sera transmise une seule fois dès que la connexion le permet. Facility Manager pourra ensuite la lire.</p><Button variant="secondary" onClick={() => { const next = emptyIrrDraft(); change(next); setStep(0); }}>Nouvelle ronde</Button></Card></>;
 
   const latest = () => draftRef.current ?? draft;
@@ -91,6 +94,11 @@ export function IrrForm({ isTest = false, offlineSync, flash }: { isTest?: boole
     if (!confirmed) { setError('Confirmez les observations avant l’envoi.'); return; }
     if (findings.length && !draft.photoExceptionReason.trim()) { setError('Indiquez le motif d’absence de photo ; vous pourrez joindre une preuve au dossier après synchronisation.'); return; }
     if (findings.length) { const problem = reasonProblem(draft.photoExceptionReason, 'Motif d’absence de photo'); if (problem) { setError(problem); return; } }
+    if (demonstration) {
+      setSimulated(true);
+      flash('Simulation de ronde terminée — aucune donnée enregistrée.');
+      return;
+    }
     lock.current = true; setBusy(true);
     try {
       const checks = irrChecks(draft);
@@ -112,7 +120,7 @@ export function IrrForm({ isTest = false, offlineSync, flash }: { isTest?: boole
   };
 
   return <section aria-label="Ronde IRR-01">
-    <RoundPilotHeader title="IRR-01 · Ronde irrigation et jardinières" subtitle="Quatre étapes · local technique puis jardinières" badge={<span className="mockup-label">Saisie terrain</span>} />
+    <RoundPilotHeader title="IRR-01 · Ronde irrigation et jardinières" subtitle="Quatre étapes · local technique puis jardinières" badge={badge} />
     {isTest && <Badge tone="orange">RECETTE — DONNÉES FICTIVES</Badge>}
     {syncStatus}
     <div ref={progressRef} className="surpresseur-progress connected-round-progress" aria-label="Étapes IRR">

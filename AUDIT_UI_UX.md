@@ -253,9 +253,9 @@ Acceptation : un bouton grisé dit pourquoi et qui agit ; la fiche montre la mes
 
 ### Lot 3 — Formulaires de ronde alignés
 
-UX-007, UX-008, UX-009, UX-010, UX-012, UX-018, UX-027, UX-028.
+UX-007, UX-008, UX-009, UX-010, UX-012, UX-018, UX-027, UX-028, UX-029, UX-030.
 
-Acceptation : la maquette Eau ne contredit plus le connecté, et « Valider la maquette » n’a pas l’air disponible si la saisie est incomplète ; le réarmement ne s’invente pas ; RIA et IRR suivent le geste WILO pour « non vérifié » sans toucher DEC-020 ni DEC-022 ; « Terminer » et « Transmettre » (WILO et RND-LET) reflètent la condition d’envoi déjà codée ; pastilles harmonisées.
+Acceptation : la maquette Eau ne contredit plus le connecté, et « Valider la maquette » n’a pas l’air disponible si la saisie est incomplète ; le réarmement ne s’invente pas ; RIA et IRR suivent le geste WILO pour « non vérifié » sans toucher DEC-020 ni DEC-022 ; « Terminer » et « Transmettre » (WILO et RND-LET) reflètent la condition d’envoi déjà codée ; pastilles harmonisées ; le toast de succès et la bulle de saisie ne recouvrent pas le bouton d’envoi.
 
 ### Lot 4 — Files, accueil terrain, destinations
 
@@ -265,11 +265,11 @@ Acceptation : l’accueil R ne présente plus une ronde du 16 septembre comme r�
 
 ### Lot 5 — Responsive, chrome fixe, toasts
 
-UX-016, UX-017, UX-020, UX-023, UX-025, UX-029, UX-030, puis contrôle 1440 / 1024 / 834 / 390 / 360 des écrans touchés par les lots 1 à 4.
+UX-016, UX-017, UX-020, UX-023, UX-025, UX-031, UX-032, UX-033, puis contrôle 1440 / 1024 / 834 / 390 / 360 des écrans touchés par les lots 1 à 4.
 
 UX-019 n’est plus dans ce lot (DEC-023).
 
-Acceptation : la cloche et les actions de panneau restent atteignables à 390 et 360 ; le contenu mobile n’est pas masqué par la barre du bas ; cibles 44 px ; pas de débordement horizontal de page sur les formulaires WILO, RIA, IRR, GE ; le titre de page n’est pas coupé à 834 ; le toast de succès et la bulle de saisie ne recouvrent pas le bouton d’envoi. Les bandeaux navy d’Accueil et de Dossiers restent.
+Acceptation : la cloche et les actions de panneau restent atteignables à 390 et 360 ; le contenu mobile n’est pas masqué par la barre du bas ; cibles 44 px ; pas de débordement horizontal de page sur les formulaires WILO, RIA, IRR, GE ; le titre de page n’est pas coupé à 834. Les bandeaux navy d’Accueil et de Dossiers restent. Paramètres : la pastille « Lecture seule » ne contredit plus les interrupteurs, l’onglet ne laisse plus le bloc Accès dessous, et « Préparer » n’a pas l’air prêt à vide.
 
 ### Lot 6 — Seconde passe
 
@@ -315,11 +315,11 @@ Axes du §4 de la mission. Chaque case est un `UX-xxx` ou « RAS » suivi de ce 
 | Utilisateurs et droits | RAS — miroir, `demo/068`, `demo/096` | RAS — préparation de compte renvoie aux Paramètres | RAS — actions neutralisées dans le miroir | RAS — pas de sélecteur de rôle libre | RAS — entrée Plus | RAS — `demo/082`, `demo/096` | RAS — primitives d’accès | RAS — le miroir dit que l’administration réelle est ailleurs | RAS — tableau lisible sans info seulement en couleur | RAS — miroir vide ou liste démo, pas une erreur muette |
 | Paramètres | RAS — onglets, `demo/012`, `demo/030` | RAS — le seuil financier n’est pas un champ éditable | RAS — pas de bouton Enregistrer mort sur le seuil | RAS — onglets de familles | RAS — réservé à Administration | RAS — `demo/048` | RAS — mêmes onglets que Pilotage | RAS — une famille absente est écrite | RAS — onglets accessibles | RAS — historique non raccordé est dit |
 | Paramètres — Règles | RAS — texte long, `demo/013` | RAS — lecture, pas une grille de champs | RAS — pas d’action d’enregistrement | RAS — onglet Règles | RAS — reste dans Paramètres | RAS — `demo/031`, `demo/049` | RAS — corps 12 px minimum | RAS — on sait que ce n’est pas éditable ici | RAS — titres de sections | RAS — pas d’état d’erreur (lecture) |
-| Paramètres — Notifications | RAS — liste de réglages, `demo/014` | RAS — libellés de canaux | RAS — pas de sauvegarde silencieuse dans le miroir | RAS — onglet | RAS — idem | RAS — `demo/032`, `demo/050` | RAS — interrupteurs du design system s’ils sont là, sinon texte | RAS — une notification non branchée est dite | RAS — chaque ligne a un texte | RAS — lecture |
-| Paramètres — Zones | RAS — liste de zones, `demo/015` | RAS — nom de zone si le formulaire est là | RAS — créer désactivé ou expliqué dans le miroir | RAS — onglet Zones | RAS — idem | RAS — `demo/033`, `demo/051` | RAS — même champ | RAS — une zone sans équipement se voit | RAS — champ nom associé | RAS — liste vide prévue |
-| Paramètres — Journal d’audit | RAS — table, `demo/016` | RAS — pas de saisie | RAS — pas d’export mort | RAS — onglet | RAS — idem | RAS — table qui peut déborder, à revoir au lot 5 si le contrôle 390 le montre (`demo/052`) | RAS — même table que le registre | RAS — on comprend que c’est une trace | RAS — en-têtes de colonnes | RAS — journal vide a une ligne |
-| Paramètres — Préparer un compte | RAS — formulaire, `demo/017` | RAS — identité, rôle, libellés | RAS — préparer n’envoie pas dans le miroir sans le dire | RAS — rôle proposé, pas un nouveau composant | RAS — onglet | RAS — `demo/035`, `demo/053` | RAS — `Field` | RAS — le compte n’est pas créé en silence | RAS — champs obligatoires signalés par l’erreur de validation | RAS — erreur de validation |
-| Paramètres — Préparer une désactivation | RAS — formulaire, `demo/018` | RAS — justification | RAS — l’action est nommée désactivation | RAS — choix du compte | RAS — onglet | RAS — `demo/036`, `demo/054` | RAS — bouton dangereux si l’action est destructive | RAS — la justification est demandée | RAS — zone de motif libellée | RAS — validation du motif |
+| Paramètres — Notifications | UX-032 — le bloc Accès reste affiché sous l’onglet, `demo/014`, `demo/032`, `demo/050` | RAS — chaque règle a un libellé, un déclencheur et un public | UX-031 — pastille « LECTURE SEULE » alors que les interrupteurs s’enregistrent sur l’appareil | RAS — interrupteur `role="switch"` et case « E-mail (simulé) » | RAS — onglet Notifications | UX-025 — la dernière règle passe sous la barre, `demo/050` | RAS — interrupteurs `notif-switch` | RAS — la phrase dit que l’e-mail n’est pas envoyé | RAS — interrupteur nommé, case dans un libellé | RAS — règle active, coupée, e-mail grisé si la règle est coupée |
+| Paramètres — Zones | UX-032 — `demo/015`, `demo/033`, `demo/051` | RAS — pas de formulaire : la phrase remplace la liste | RAS — pas de bouton créer | RAS — pas de sélecteur de zone | RAS — onglet Zones | RAS — la phrase tient en 390, `demo/051` ; le reste de page suit UX-025 | RAS — carte et titre habituels | RAS — « Le plan de zones n’est pas raccordé. Aucune liste canonique n’est exposée » | RAS — titre « Référentiel de zones » | RAS — l’absence de liste est écrite |
+| Paramètres — Journal d’audit | UX-032 — `demo/016`, `demo/034`, `demo/052` | RAS — pas de saisie | RAS — pas de bouton d’export | RAS — pas de filtre | RAS — onglet Journal d’audit | RAS — pas de tableau, donc pas de colonnes qui débordent, `demo/052` | RAS — carte habituelle | RAS — « Historique persistant indisponible » | RAS — le titre et la phrase portent l’information, il n’y a pas d’en-têtes manquants | RAS — l’absence est écrite, pas une table vide |
+| Paramètres — Préparer un compte | UX-032 — ce n’est pas un onglet Paramètres : bouton du bloc Accès, visible aussi quand l’onglet est Journal, `demo/017`, `demo/053` | RAS — nom, e-mail, rôle, périmètre, justification, via `Field` | UX-033 — « Préparer la création » a l’air prêt à vide | RAS — rôle et périmètre sont le `Select` existant | RAS — action dans Accès, pas une destination de la barre | RAS — pile en 390, champs en pleine largeur, `demo/053` | RAS — `Field` et `Select` | RAS — « Simulation locale · aucun compte réel n’est modifié » | RAS — chaque champ a son libellé ; l’erreur après envoi a `role="alert"` | RAS — confirmation si la demande est complète, erreurs si le motif est trop court |
+| Paramètres — Préparer une désactivation | UX-032 — même bloc Accès, `demo/018`, `demo/054` | RAS — profil concerné et justification | UX-033 — « Préparer la désactivation » a l’air prêt sans motif | RAS — le profil est le `Select` existant | RAS — même bloc Accès | RAS — pile en 390, `demo/054` | RAS — bouton primaire : dans le miroir rien n’est désactivé, le texte le dit | RAS — « les comptes et les droits ne sont pas encore modifiés » | RAS — justification libellée | RAS — motif trop court refusé, puis phrase de confirmation |
 | Registre | RAS — grille partagée, pas dans la barre (clé masquée) | RAS — recherche | RAS — une ligne ouvre le dossier | RAS — recherche, pas un filtre fantôme | UX-021 — `navigate('registry')` réécrit vers Dossiers | RAS — repli avec responsable (contrôle visuel) | RAS — même grille que le contrôle « grille du registre » | RAS — on cherche un dossier, on ne croit pas ouvrir un autre produit | RAS — champ de recherche libellé | RAS — aucun résultat a un texte |
 | Notifications (cloche) | RAS — panneau ancré à la cloche | RAS — pas de saisie | UX-020 — la cloche est un `IconButton` masqué sous 700 px | RAS — aucun | UX-020 — seule entrée des notifications | UX-020 | RAS — même panneau | RAS — vide explicite dans `NotificationCenter` | UX-020 — plus de bouton, plus de nom accessible | RAS — vide, erreur, liste |
 | Spécimen `/design-system` | RAS — page hors produit, lue dans `app/design-system/page.tsx` | RAS — les champs du spécimen sont des exemples | RAS — les variantes primaire, secondaire, discret sont côte à côte | RAS — le `Select` Behira y est montré | RAS — pas dans la barre produit (contrôle visuel) | RAS — pas une capture d’atlas ; la page suit `.content` | RAS — c’est la référence, pas une variante | RAS — légendes à côté des exemples | RAS — spécimen non exposé comme tâche | RAS — pas d’état métier |
@@ -371,6 +371,27 @@ Les UX-001 à UX-024 restent valables. Les captures qui les montrent sont citée
 - Constat : `connecte/irr-1440.jpg` et `connecte/irr-380.jpg`. `#input-guard-message` est fixe, centré, à 96 px du bas (`globals.css`). Sur l’étape synthèse elle se pose sur « ← Précédent » et « Terminer la ronde ». En 380 px le fil ne montre que trois puces alors que la page est à l’étape 4 (déjà UX-017 : il faut faire défiler).
 - Correction : ancrer le message au champ, ou le réserver au-dessus des actions, avec `role="status"`. Ne pas changer `input-rules`.
 - Fichiers : `app/components/InputGuard.tsx`, `app/globals.css`.
+
+### UX-031 — « Lecture seule » alors que les notifications se règlent
+
+- Écran : Paramètres, onglet Notifications. Profil : Administration, démonstration. Largeurs : 1440, 834, 390. Catégorie : UX. Gravité : majeur.
+- Constat : `demo/014`, `demo/032`, `demo/050`. L’en-tête affiche « LECTURE SEULE » dès que l’onglet n’est pas Accès (`ParametersWorkspace.tsx`), mais `ErrorNotificationRules` est monté avec `canEdit`. Les interrupteurs et « E-mail (simulé) » s’enregistrent sur l’appareil.
+- Correction : retirer la pastille sur cet onglet, ou vraiment verrouiller les interrupteurs. Ne pas envoyer d’e-mail.
+- Fichiers : `app/components/ParametersWorkspace.tsx`, `app/components/NotificationCenter.tsx`.
+
+### UX-032 — L’onglet Paramètres ne remplace pas la page
+
+- Écran : Paramètres Administration, démonstration. Largeurs : 1440, 834, 390. Catégorie : mise en page. Gravité : majeur.
+- Constat : `page.tsx` rend `AccessWorkspace` sous `ParametersWorkspace` pour l’Administration en démonstration. Zones, Journal et Notifications ne montrent qu’une carte, puis tout le bloc comptes. `demo/015`, `demo/016`, `demo/017`, `demo/018`, `demo/052`, `demo/053`. « Préparer un compte » et « Préparer une désactivation » ne sont pas des onglets : ce sont les deux boutons de ce bloc, déjà visibles quand l’onglet affiché est Journal.
+- Correction : le contenu de l’onglet occupe la page. Le bloc Accès reste sur l’onglet Accès.
+- Fichiers : `app/page.tsx`.
+
+### UX-033 — « Préparer » a l’air prêt alors que le motif est vide
+
+- Écran : bloc Accès, création et désactivation. Profil : Administration. Largeurs : toutes. Catégorie : bouton. Gravité : mineur.
+- Constat : `demo/017`, `demo/018`, `demo/053`, `demo/054`. « Préparer la création » et « Préparer la désactivation » sont actifs sans nom ni justification. Le refus n’arrive qu’après le clic (`validateAccessCreate` / `validateAccessAction`). Même idée que UX-027. La mention « Simulation locale » est juste : aucun compte n’est créé.
+- Correction : désactiver le bouton tant que les champs exigés sont vides, ou le dire avant le clic. Ne pas créer de compte.
+- Fichiers : `app/components/AccessWorkspace.tsx`.
 
 ### Ce qui a été regardé et ne devient pas un constat
 

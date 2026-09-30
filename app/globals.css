@@ -4213,15 +4213,31 @@ button.executive-metric.is-link:hover{
 .start-round-picker.is-switch.is-open .start-round-switch>i{margin-bottom:0;margin-top:3px;transform:rotate(225deg)}
 .start-round-switch:disabled{cursor:not-allowed;opacity:.6}
 .start-round-error{margin:0 8px 8px;color:var(--danger-text);font-size:var(--font-size-label)}
-.start-round-panel.is-catalog .start-round-item.is-selected,.start-round-panel.is-catalog .start-round-item[aria-selected="true"]{background:var(--teal);color:var(--brand-foreground)}
-.start-round-panel.is-catalog .start-round-item.is-selected small,.start-round-panel.is-catalog .start-round-item[aria-selected="true"] small{color:inherit}
-.start-round-panel.is-catalog .start-round-item:hover{background:var(--surface-emphasis);color:var(--brand-strong)}
-.start-round-panel.is-catalog .start-round-item.is-selected:hover{background:var(--teal);color:var(--brand-foreground)}
+.start-round-panel.is-catalog .start-round-item.is-selected b,
+.start-round-panel.is-catalog .start-round-item.is-selected small,
+.start-round-panel.is-catalog .start-round-item[aria-selected="true"] b,
+.start-round-panel.is-catalog .start-round-item[aria-selected="true"] small{color:var(--brand-foreground);background:transparent}
+.start-round-panel.is-catalog .start-round-item.is-selected,
+.start-round-panel.is-catalog .start-round-item[aria-selected="true"]{background:var(--teal);color:var(--brand-foreground)}
+.start-round-panel.is-catalog .start-round-item:hover:not(.is-selected):not([aria-selected="true"]),
+.start-round-panel.is-catalog .start-round-item.is-active:not(.is-selected):not([aria-selected="true"]){background:var(--surface-muted);color:var(--foreground)}
+.start-round-panel.is-catalog .start-round-item:hover:not(.is-selected):not([aria-selected="true"]) b,
+.start-round-panel.is-catalog .start-round-item.is-active:not(.is-selected):not([aria-selected="true"]) b{color:var(--foreground)}
+.start-round-panel.is-catalog .start-round-item.is-selected:hover,
+.start-round-panel.is-catalog .start-round-item[aria-selected="true"]:hover{background:var(--teal);color:var(--brand-foreground)}
+.start-round-switch.is-readonly{cursor:default}
+.start-round-picker.is-readonly small{display:block;font-weight:400;color:var(--foreground-muted)}
+.round-toolbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px 24px;flex-wrap:wrap;margin:0 0 16px}
+.round-toolbar .round-choice-bar{flex:1 1 280px;max-width:420px;margin:0}
+.round-toolbar .demo-scenario-bar{margin:0;padding:0;justify-content:flex-start}
+.round-toolbar .demo-scenario-line{flex-direction:column;align-items:stretch;gap:7px}
 .round-choice-bar{max-width:420px;margin:0 0 16px}
 .round-choice-bar .field{margin:0}
-.round-column{min-width:0}
+.round-column{min-width:0;align-self:start}
+.round-desk-layout{align-items:start}
+.round-desk-layout .surpresseur-form-card{min-height:0;height:auto}
 .round-history{grid-column:1 / -1}
-.start-round-copy b{font-size:var(--font-size-title);font-weight:700;line-height:1.2}
+.start-round-copy b{color:var(--foreground);font-size:var(--font-size-label);font-weight:600;line-height:1.2}
 .start-round-copy small{display:block;font-weight:400;font-size:var(--font-size-label);color:var(--foreground-muted)}
 .start-round-pill{
   flex-shrink:0;font-size:var(--font-size-label);font-weight:700;padding:2px 8px;border-radius:6px;white-space:nowrap;
@@ -4229,9 +4245,11 @@ button.executive-metric.is-link:hover{
 .start-round-pill.is-bad{background:var(--danger-surface);color:var(--danger-text)}
 .start-round-pill.is-sig{background:var(--info-surface);color:var(--brand)}
 .start-round-pill.is-mute{background:var(--surface-muted);color:var(--foreground-muted)}
+.start-round-panel.is-catalog .start-round-item.is-selected .start-round-pill,
+.start-round-panel.is-catalog .start-round-item[aria-selected="true"] .start-round-pill{background:transparent;color:var(--brand-foreground);box-shadow:inset 0 0 0 1px var(--brand-foreground)}
 .start-round-sep{height:1px;background:var(--border);margin:6px 8px}
 .start-round-item.is-free{width:100%}
-.start-round-item.is-free b{font-size:var(--font-size-subtitle);color:var(--brand)}
+.start-round-item.is-free b{font-size:var(--font-size-label);font-weight:600;color:var(--foreground)}
 
 .building-health-cockpit.is-facility .kpi-strip .health-kpi>span{
   margin-top:4px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--foreground);

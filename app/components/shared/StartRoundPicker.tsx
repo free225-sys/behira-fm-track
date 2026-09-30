@@ -21,7 +21,7 @@ export const ROUND_CHOICES: Record<'eau_incendie' | 'electricite' | 'rondes_assi
     { id: 'GE-01', label: 'GE-01 · Électricité', hint: 'Groupe électrogène' },
   ],
   rondes_assistance: [
-    { id: 'RND-LET', label: 'RND-LET · Rondes', hint: 'Cleaning et jardinage' },
+    { id: 'RND-LET', label: 'RND-LET · Rondes', hint: 'Nettoyage et jardinage' },
   ],
 };
 
@@ -73,6 +73,7 @@ export function StartRoundPicker({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const labelId = useId();
+  const fieldLabelId = useId();
   const listId = useId();
   const switching = value !== undefined;
   const sorted = useMemo(
@@ -119,6 +120,18 @@ export function StartRoundPicker({
     };
   }, [open]);
 
+  if (switching && choices.length <= 1) {
+    const only = choices[0];
+    return (
+      <div className="start-round-picker is-switch is-readonly field is-select" ref={rootRef}>
+        <p className="start-round-switch is-readonly">
+          <span>{only ? `Ronde à effectuer : ${only.label}` : 'Aucune ronde disponible pour ce profil.'}</span>
+        </p>
+        <small>{only ? 'Seule ronde de votre périmètre.' : 'Aucune ronde de ce périmètre n’est livrée.'}</small>
+      </div>
+    );
+  }
+
   const chooseRound = (round: TodaysRound) => {
     const id = choices.length ? choiceForRound(round, choices) : null;
     if (id) onChoose?.(id);
@@ -133,6 +146,10 @@ export function StartRoundPicker({
   };
 
   const startPrimary = () => {
+    if (!switching && choices.length === 1 && allDone) {
+      onChoose?.(choices[0].id);
+      return;
+    }
     if (switching) {
       setCatalog(true);
       setOpen((next) => !next);
@@ -190,10 +207,11 @@ export function StartRoundPicker({
   };
 
   return (
-    <div className={`start-round-picker${switching ? ' is-switch' : ''}${open ? ' is-open' : ''}`} ref={rootRef}>
+    <div className={`start-round-picker${switching ? ' is-switch field is-select' : ''}${open ? ' is-open' : ''}`} ref={rootRef}>
+      {switching ? <span id={fieldLabelId}>Ronde à effectuer</span> : null}
       <div className="start-round-actions">
         {opensPanel ? (
-          <button ref={triggerRef} type="button" className={switching ? 'start-round-switch' : 'primary-button'} onClick={startPrimary} onKeyDown={onTriggerKeyDown} aria-expanded={open} aria-haspopup="listbox" aria-controls={open ? listId : undefined} aria-label={switching ? 'Ronde à effectuer' : undefined} aria-invalid={switching && choices.length === 0 ? true : undefined} disabled={switching && choices.length === 0}>
+          <button ref={triggerRef} type="button" className={switching ? 'start-round-switch' : 'primary-button'} onClick={startPrimary} onKeyDown={onTriggerKeyDown} aria-expanded={open} aria-haspopup="listbox" aria-controls={open ? listId : undefined} aria-labelledby={switching ? fieldLabelId : undefined} aria-invalid={switching && choices.length === 0 ? true : undefined} disabled={switching && choices.length === 0}>
             {switching ? <span>{primaryLabel}</span> : primaryLabel}
             {switching ? <i aria-hidden="true" /> : !singleDue ? <span className="start-round-caret" aria-hidden="true" /> : null}
           </button>
@@ -260,6 +278,11 @@ export function StartRoundPicker({
             <>
               <div className="start-round-sep" />
               <button type="button" className="start-round-item is-free" onClick={() => {
+                if (choices.length === 1) {
+                  onChoose?.(choices[0].id);
+                  close(true);
+                  return;
+                }
                 if (choices.length === 0) {
                   onOffPlan?.();
                   close(true);

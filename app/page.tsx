@@ -2911,23 +2911,21 @@ function Report({ initialRound = null, isTest = false, persona, agentName, repor
   const current = useContext(ConnectedPresentation);
   const ria = <RiaRoundSpace isTest={isTest} manager={persona.id==='facility'} enabled={connected} offlineSync={offlineSync} onRefresh={onRefresh} onOpenAnomaly={onOpenAnomaly}/>;
   if (persona.id === 'facility') return <><WiloRoundInbox key={String(isTest)} isTest={isTest} manager enabled={connected} onOpenAnomaly={onOpenAnomaly}/><WiloRoundInbox key={`irr-${isTest}`} equipment="IRR-01" isTest={isTest} manager enabled={connected} onOpenAnomaly={onOpenAnomaly}/><RiaRoundNavigation ria={ria}><Ge01ReportInbox reports={reports.filter(r=>r.equipmentCode==='GE-01')} connected={connected} onReview={onReview} onRead={onRead} onLoadProof={onLoadProof} planning={planning} onAssign={onAssign} onOpenAnomaly={onOpenAnomaly} onRefresh={onRefresh} /></RiaRoundNavigation></>;
-  if (persona.id === 'electricite') return <><div className="round-choice-bar"><Field label="Ronde à effectuer" size="select"><StartRoundPicker rounds={[]} choices={ROUND_CHOICES.electricite} value="GE-01" onChoose={() => undefined} /></Field></div><Ge01AgentForm equipment={current.health?.equipment.find(item => item.code === 'GE-01')} reports={current.source?.reports} isTest={isTest} agentName={agentName} persistenceEnabled={persistenceEnabled} offlineSync={offlineSync} flash={flash} /></>;
+  if (persona.id === 'electricite') return <><div className="round-choice-bar"><StartRoundPicker rounds={[]} choices={ROUND_CHOICES.electricite} value="GE-01" /></div><Ge01AgentForm equipment={current.health?.equipment.find(item => item.code === 'GE-01')} reports={current.source?.reports} isTest={isTest} agentName={agentName} persistenceEnabled={persistenceEnabled} offlineSync={offlineSync} flash={flash} /></>;
   if (isTest && persona.id!=='eau_incendie') return <Card role="status">La saisie des rondes de votre périmètre n’est pas encore disponible dans l’espace Recette. Aucune donnée de test ne sera envoyée en Exploitation.</Card>;
-  if (persona.id === 'eau_incendie') return <>
-    {!persistenceEnabled && <DemoScenarioSelect />}
-    <EauRoundDesk
+  if (persona.id === 'eau_incendie') return <EauRoundDesk
       initialRound={initialRound}
       isTest={isTest}
       persistenceEnabled={persistenceEnabled}
       offlineSync={offlineSync}
       flash={flash}
+      toolbarEnd={!persistenceEnabled ? <DemoScenarioSelect /> : null}
       renderDemo={(id) => <DemoEauForm asset={id === 'RIA-01' ? 'ria' : 'wilo'} />}
       renderWilo={(history) => <ResettableLegacyReport isTest={isTest} persona={persona} onNavigate={onNavigate} persistenceEnabled={persistenceEnabled} offlineSync={offlineSync} flash={flash} history={history} />}
       renderRia={() => <RiaRoundSpace columnHistory isTest={isTest} manager={false} enabled={connected} offlineSync={offlineSync} onRefresh={onRefresh} onOpenAnomaly={onOpenAnomaly} />}
       renderHistory={(equipment) => <WiloRoundInbox equipment={equipment} isTest={isTest} manager={false} enabled={connected} receiptId={offlineSync.latestRoundReceipt?.queueId} onOpenAnomaly={onOpenAnomaly} />}
-    />
-  </>;
-  return <><div className="round-choice-bar"><Field label="Ronde à effectuer" size="select"><StartRoundPicker rounds={[]} choices={ROUND_CHOICES.rondes_assistance} value="RND-LET" onChoose={() => undefined} /></Field></div><ResettableLegacyReport persona={persona} onNavigate={onNavigate} persistenceEnabled={persistenceEnabled} offlineSync={offlineSync} flash={flash} /></>;
+    />;
+  return <><div className="round-choice-bar"><StartRoundPicker rounds={[]} choices={ROUND_CHOICES.rondes_assistance} value="RND-LET" /></div><ResettableLegacyReport persona={persona} onNavigate={onNavigate} persistenceEnabled={persistenceEnabled} offlineSync={offlineSync} flash={flash} /></>;
 }
 
 

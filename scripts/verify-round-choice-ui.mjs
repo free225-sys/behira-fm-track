@@ -18,6 +18,7 @@ assert.match(page, /columnHistory/, 'RIA agent range l’historique en colonne')
 assert.match(page, /history=\{history\}/, 'WILO reçoit l’historique dans la colonne de droite');
 assert.match(page, /ROUND_CHOICES\.electricite/, 'GE-01 utilise le même sélecteur');
 assert.match(page, /ROUND_CHOICES\.rondes_assistance/, 'RND-LET utilise le même sélecteur');
+assert.doesNotMatch(page, /Field label="Ronde à effectuer"/, 'le sélecteur n’est pas enfermé dans un label');
 
 const dir = resolve(root, '../../tmp/round-choice-ui');
 await mkdir(dir, { recursive: true });
@@ -92,8 +93,45 @@ try {
     await page.locator('.irr-field').filter({ hasText: 'Coffret irrigation' }).getByRole('button', { name: 'Sec', exact: true }).click();
     await page.waitForFunction(() => Object.keys(window.saved).includes('round:eau_incendie:IRR-01:recette'));
     await page.getByRole('button', { name: 'Ronde à effectuer' }).click();
+    const contrast = await page.evaluate(() => {
+      const option = document.querySelector('.start-round-item.is-selected');
+      const title = option?.querySelector('b');
+      const hint = option?.querySelector('small');
+      const pill = option?.querySelector('.start-round-pill');
+      const parse = (value) => {
+        const match = value?.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+        if (!match) return null;
+        return { rgb: [Number(match[1]), Number(match[2]), Number(match[3])], alpha: match[4] == null ? 1 : Number(match[4]) };
+      };
+      const lum = (rgb) => {
+        const channel = (value) => { const s = value / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; };
+        const [r, g, b] = rgb.map(channel);
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      };
+      const ratio = (foreground, background) => {
+        if (!foreground || !background) return 0;
+        const hi = Math.max(lum(foreground), lum(background));
+        const lo = Math.min(lum(foreground), lum(background));
+        return (hi + 0.05) / (lo + 0.05);
+      };
+      const optionBg = parse(option ? getComputedStyle(option).backgroundColor : '');
+      const against = (node) => {
+        if (!node || !optionBg) return 0;
+        const fg = parse(getComputedStyle(node).color);
+        const own = parse(getComputedStyle(node).backgroundColor);
+        const bg = own && own.alpha > 0.2 ? own.rgb : optionBg.rgb;
+        return ratio(fg?.rgb ?? null, bg);
+      };
+      const idle = document.querySelector('.start-round-item:not(.is-selected) b');
+      return { title: against(title), hint: against(hint), pill: against(pill), idle: idle ? getComputedStyle(idle).color : '' };
+    });
+    assert.ok(contrast.title >= 4.5, `contraste du titre choisi ${contrast.title}`);
+    assert.ok(contrast.hint >= 4.5, `contraste de l’aide choisie ${contrast.hint}`);
+    assert.ok(contrast.pill >= 4.5, `contraste de la pastille ${contrast.pill}`);
+    assert.equal(contrast.idle, 'rgb(23, 33, 51)', 'les autres titres restent en encre foncée');
     await page.getByRole('option', { name: /WILO-01/ }).click();
     await page.getByText('Formulaire WILO-01').waitFor();
+    assert.equal(await page.getByRole('button', { name: 'Ronde à effectuer' }).getAttribute('aria-expanded'), 'false', 'la liste se ferme après le choix');
     assert.equal(await page.getByText('RECETTE — DONNÉES FICTIVES').count(), 1, 'le mode Recette reste monté avec le brouillon IRR');
     await page.getByRole('button', { name: 'Ronde à effectuer' }).click();
     await page.getByRole('option', { name: /IRR-01/ }).click();
