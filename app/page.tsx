@@ -1,5 +1,4 @@
 'use client';
-import { IrrForm } from './components/IrrRound';
 import { WiloRoundInbox } from './components/WiloRoundInbox';
 import type { Ge01AssignmentHandler } from './components/Ge01Planning';
 import type { Ge01Operations } from './lib/ge01/operations';
@@ -25,7 +24,7 @@ import { BuildingHealthCockpit, ScoreRing } from './components/BuildingHealthCoc
 import { DomainPointsSummary } from './components/DomainPointsSummary';
 import { RoundDateTimeFields } from './components/shared/RoundDateTimeFields';
 import { reasonProblem } from './lib/input-rules';
-import { DemoScenarioProvider, DemoScenarioSelect, EquipmentTable, InsufficientNote, ReportTrackingLine, RoundPilotHeader, SegmentedControl, StartRoundPicker, useDemoScoreScenario } from './components/shared';
+import { DemoScenarioProvider, DemoScenarioSelect, EquipmentTable, InsufficientNote, ReportTrackingLine, RoundPilotHeader, SegmentedControl, StartRoundPicker, ROUND_CHOICES, useDemoScoreScenario, type RoundChoiceId } from './components/shared';
 import { DEMO_THRESHOLD, demoHomeSnapshot, demoReportTracking, demoRoundsFor, sessionForAudience } from './lib/ui-contract/fixtures.ts';
 import type { TodaysRound, UiSession } from './lib/ui-contract/building-health.ts';
 import { asciiInitials, displayAssetCode, displayAssetText, formatCompactMoney, formatTime, formatWeekdayDate, palierFromScore, roundStateLabel, roundSubjectLabel, scoreFigure, statusBadgeTone, statusLabel, thresholdPosition } from './lib/ui-contract/display.ts';
@@ -33,6 +32,7 @@ import { reportStageLabel } from './lib/report-stage';
 import { WiloSupplement } from './components/WiloSupplement';
 import { activeWiloFields, buildWiloChecks, measuredNumber, noActiveLeak, pumpAvailability, WILO_DERIVED_CONTROLS, wiloPressureState, wiloSupplementFindings, type WiloAnswers } from './lib/wilo/report';
 import { EauRounds } from './components/EauRounds';
+import { EauRoundDesk } from './components/EauRoundDesk';
 import { Ge01AgentForm, Ge01ReportInbox } from './components/Ge01Pilot';
 import { RiaRoundNavigation, RiaRoundSpace } from './components/RiaRound';
 import { CostsWorkspace, type CostReviewInput, type CostSubmissionInput } from './components/CostsWorkspace';
@@ -768,14 +768,14 @@ function RequiredPasswordChange({ requirement, onComplete, onSignOut }: {
   );
 }
 
-function LiveHealthCockpit({ session, onNavigate, actionCount, causeActions, bannerExtras, children }: { session: UiSession; onNavigate: (view: View) => void; actionCount?: number; causeActions?: ReactNode; bannerExtras?: ReactNode; children?: ReactNode }) {
+function LiveHealthCockpit({ session, onNavigate, actionCount, causeActions, bannerExtras, children }: { session: UiSession; onNavigate: (view: View, options?: { round?: RoundChoiceId }) => void; actionCount?: number; causeActions?: ReactNode; bannerExtras?: ReactNode; children?: ReactNode }) {
   const { scenario } = useDemoScoreScenario();
   const current = useContext(ConnectedPresentation);
   const snapshot = current.live ? current.health : demoHomeSnapshot(session, scenario);
   // Accueil agent : mêmes actions que la liste « À faire » (action canonique attribuée à l'agent), pas les décisions FM.
   const agentPendingActions = current.source?.anomalies.filter(a => a.status !== 'Clôturée' && (a.workflow?.assignedToCurrentUser || a.workflow?.actionAssignedToCurrentUser)).length ?? 0;
   if (!snapshot) return <InsufficientNote title="Santé non calculable" detail="Le paramètre financier ou le périmètre serveur n’est pas encore disponible." />;
-  return <BuildingHealthCockpit snapshot={snapshot} session={session} onNavigate={onNavigate} rounds={current.live ? current.source?.ge01Operations.rounds ?? [] : demoRoundsFor(session)} roundsConfigured={!current.live || Boolean(current.source?.ge01Operations.policyVersion)} syncContent={current.sync} actionCount={current.live ? (['electricite','eau_incendie','rondes_assistance'].includes(session.audience) ? agentPendingActions : snapshot.pendingDecisions ?? current.source?.workOrders.filter(w=>w.status!=='Terminé').length ?? 0) : actionCount} causeActions={causeActions} bannerExtras={bannerExtras}>{children}{current.live && <InsufficientNote title="Planning GE-01" detail="Du lundi au samedi, avant 23:59 (heure d’Abidjan). Seule la ronde quotidienne GE-01 est planifiée ici." />}</BuildingHealthCockpit>;
+  return <BuildingHealthCockpit snapshot={snapshot} session={session} onNavigate={onNavigate} rounds={current.live ? current.source?.ge01Operations.rounds ?? [] : demoRoundsFor(session)} roundsConfigured={!current.live || Boolean(current.source?.ge01Operations.policyVersion)} syncContent={current.sync} actionCount={current.live ? (['electricite','eau_incendie','rondes_assistance'].includes(session.audience) ? agentPendingActions : snapshot.pendingDecisions ?? current.source?.workOrders.filter(w=>w.status!=='Terminé').length ?? 0) : actionCount} causeActions={causeActions} bannerExtras={bannerExtras}>{children}{current.live && session.audience === 'eau_incendie' && <InsufficientNote title="Planning des rondes" detail="Le planning chargé ici ne contient que GE-01. Les formulaires WILO-01, RIA-01 et IRR-01 restent disponibles hors planning." />}{current.live && session.audience === 'rondes_assistance' && <InsufficientNote title="Planning des rondes" detail="Le planning chargé ici ne contient que GE-01. La saisie RND-LET reste disponible hors planning." />}{current.live && session.audience !== 'eau_incendie' && session.audience !== 'rondes_assistance' && <InsufficientNote title="Planning GE-01" detail="Du lundi au samedi, avant 23:59 (heure d’Abidjan). Seule la ronde quotidienne GE-01 est planifiée ici." />}</BuildingHealthCockpit>;
 }
 
 function LiveEquipmentWorkspace({ session }: { session: UiSession }) {
@@ -797,6 +797,7 @@ export default function Home() {
   const [signOutConfirm, setSignOutConfirm] = useState(false);
   const signOutCancelRef = useRef<HTMLButtonElement>(null);
   const [view, setView] = useState<View>('workspace');
+  const [reportChoice, setReportChoice] = useState<RoundChoiceId | null>(null);
   const [previousView, setPreviousView] = useState<View>('registry');
   const [personaId, setPersonaId] = useState<PersonaId>('facility');
   const [anomalies, setAnomalies] = useState(seedAnomalies);
@@ -1049,7 +1050,7 @@ export default function Home() {
     return haystack.includes(query.toLowerCase()) && (priorityFilter === 'Toutes' || a.priority === priorityFilter) && (statusFilter === 'Tous' || a.status === statusFilter);
   }), [anomalies, query, priorityFilter, statusFilter]);
 
-  const navigate = (next: View, options?: { queue?: ManagerQueue }) => {
+  const navigate = (next: View, options?: { queue?: ManagerQueue; round?: RoundChoiceId }) => {
     const permitted = allowedViewsByPersona[personaId].includes(next) || primaryNavKeysByPersona[personaId].includes(next);
     if (next !== 'detail' && !permitted) {
       setToast('Accès masqué pour ce rôle de démonstration.');
@@ -1057,6 +1058,7 @@ export default function Home() {
       return;
     }
     setMoreNavOpen(false);
+    if (next === 'report' && options?.round) setReportChoice(options.round);
     if (next === 'registry' || next === 'costs') {
       setDossiersTab('tous');
       setView('manager');
@@ -1768,7 +1770,7 @@ export default function Home() {
             <ParametersWorkspace parameter={financialDecisionParameter} onOpenCosts={() => navigate('costs')} />
             {personaId === 'administration' && session.mode === 'demo' ? <AccessWorkspace users={personas.map((item) => ({ id:item.id, name:item.name, initials:item.initials, role:item.role, scope:item.scope }))} audience="administration" /> : null}
           </>}
-          {view === 'report' && <><Report key={`${session.userId ?? 'demo'}:${personaId}:${recipeMode}`} isTest={recipeMode} persona={persona} agentName={session.displayName ?? persona.name} reports={reports} connected={session.mode === 'supabase' && dataState === 'live'} onNavigate={navigate} persistenceEnabled={session.mode === 'supabase'} offlineSync={offlineSync} flash={flash} onReview={handleGe01Review} onRead={handleGe01Read} onLoadProof={handleGe01Proof} planning={presentationSource?.ge01Operations} onAssign={handleGe01Assignment} onOpenAnomaly={(reference) => openDetail(reference, 'report')} onRefresh={retryOperationalData} />{(personaId === 'electricite' || personaId === 'eau_incendie') && <InternalVendorReportPanel anomalies={anomalies.filter(item => (personaId === 'electricite' ? ['GE-01'] : ['WILO-01','RIA-01','IRR-01']).includes(displayAssetCode(item.asset)) && item.status !== 'Clôturée')} vendors={vendorReferences} canUpload={effectiveCanUploadVendorReport} busy={mutationBusy} onSubmit={persistVendorReport} />}</>}
+          {view === 'report' && <><Report key={`${session.userId ?? 'demo'}:${personaId}:${recipeMode}`} initialRound={reportChoice} isTest={recipeMode} persona={persona} agentName={session.displayName ?? persona.name} reports={reports} connected={session.mode === 'supabase' && dataState === 'live'} onNavigate={navigate} persistenceEnabled={session.mode === 'supabase'} offlineSync={offlineSync} flash={flash} onReview={handleGe01Review} onRead={handleGe01Read} onLoadProof={handleGe01Proof} planning={presentationSource?.ge01Operations} onAssign={handleGe01Assignment} onOpenAnomaly={(reference) => openDetail(reference, 'report')} onRefresh={retryOperationalData} />{(personaId === 'electricite' || personaId === 'eau_incendie') && <InternalVendorReportPanel anomalies={anomalies.filter(item => (personaId === 'electricite' ? ['GE-01'] : ['WILO-01','RIA-01','IRR-01']).includes(displayAssetCode(item.asset)) && item.status !== 'Clôturée')} vendors={vendorReferences} canUpload={effectiveCanUploadVendorReport} busy={mutationBusy} onSubmit={persistVendorReport} />}</>}
           {view === 'detail' && <Detail key={`${selected.id}-${selected.status}-${selected.workflow?.version}-${selected.proof}-${selected.proofPending}-${selected.proofQueued}`} anomaly={selected} decision={escalations.find((item) => item.anomaly === selected.id && (!selected.treatment || item.costReference === selected.treatment.costReference)) ?? null} decisionThreshold={decisionThreshold} persistenceMode={session.mode === 'supabase' && dataState === 'live' ? 'server' : 'demo'} persistenceEnabled={session.mode === 'supabase'} offlineSync={offlineSync} readOnly={personaId === 'administration'} canReopen={session.mode === 'supabase' && dataState === 'live' && (personaId === 'facility' || personaId === 'administration')} canVerify={personaId === 'facility' && session.mode === 'supabase'} busy={mutationBusy} onBack={() => navigate(previousView)} onStatus={(status) => void persistWorkflowStatus(status)} onProof={persistProof} onConsultProof={consultProof} onVerify={verifyProof} onReception={persistReception} onReopen={persistReopenDossier} onReviewReopened={persistReviewReopenedDossier} onOpenCosts={() => navigate('costs')} onGe01Workflow={persistGe01Workflow} onRefresh={() => { void syncOperationalData().catch((error) => flash(mutationError(error))); }} isManager={personaId === 'facility'} isAgent={personaId === 'electricite' || personaId === 'eau_incendie'} />}
           </>}
         </div>
@@ -2878,17 +2880,17 @@ function MeasureRange({ label, value, min, max, unit, embedded = false }: { labe
   </article>;
 }
 
-function DesignEauReport() {
-  const [submitted,setSubmitted] = useState(false);
+function DemoEauForm({ asset }: { asset: 'wilo' | 'ria' }) {
+  const [submitted, setSubmitted] = useState(false);
   return <div className="rounds-page">
-    <DemoScenarioSelect />
     <p className="visually-hidden">MODULE PILOTE · SURPRESSEUR</p>
-    <EauRounds agentName="Agent Eau & Incendie Démo" draftNote="Brouillon temporaire dans cette page" onSubmit={() => setSubmitted(true)} />
+    <EauRounds asset={asset} showTabs={false} agentName="Agent Eau & Incendie Démo" draftNote="Brouillon temporaire dans cette page" onSubmit={() => setSubmitted(true)} />
     {submitted && <div className="prototype-success" role="status"><span>✓</span><div><b>Simulation de ronde terminée</b><small>Aucune donnée n’a été enregistrée dans Supabase ni mise en file hors ligne.</small></div><button onClick={() => setSubmitted(false)}>Continuer la revue</button></div>}
   </div>;
 }
 
-function Report({ isTest = false, persona, agentName, reports, connected, onNavigate, persistenceEnabled, offlineSync, flash, onReview, onRead, onLoadProof, planning, onAssign, onOpenAnomaly, onRefresh }: {
+function Report({ initialRound = null, isTest = false, persona, agentName, reports, connected, onNavigate, persistenceEnabled, offlineSync, flash, onReview, onRead, onLoadProof, planning, onAssign, onOpenAnomaly, onRefresh }: {
+  initialRound?: RoundChoiceId | null;
   isTest?:boolean;
   persona:Persona;
   agentName:string;
@@ -2909,12 +2911,23 @@ function Report({ isTest = false, persona, agentName, reports, connected, onNavi
   const current = useContext(ConnectedPresentation);
   const ria = <RiaRoundSpace isTest={isTest} manager={persona.id==='facility'} enabled={connected} offlineSync={offlineSync} onRefresh={onRefresh} onOpenAnomaly={onOpenAnomaly}/>;
   if (persona.id === 'facility') return <><WiloRoundInbox key={String(isTest)} isTest={isTest} manager enabled={connected} onOpenAnomaly={onOpenAnomaly}/><WiloRoundInbox key={`irr-${isTest}`} equipment="IRR-01" isTest={isTest} manager enabled={connected} onOpenAnomaly={onOpenAnomaly}/><RiaRoundNavigation ria={ria}><Ge01ReportInbox reports={reports.filter(r=>r.equipmentCode==='GE-01')} connected={connected} onReview={onReview} onRead={onRead} onLoadProof={onLoadProof} planning={planning} onAssign={onAssign} onOpenAnomaly={onOpenAnomaly} onRefresh={onRefresh} /></RiaRoundNavigation></>;
-  if (persona.id === 'electricite') return <Ge01AgentForm equipment={current.health?.equipment.find(item => item.code === 'GE-01')} reports={current.source?.reports} isTest={isTest} agentName={agentName} persistenceEnabled={persistenceEnabled} offlineSync={offlineSync} flash={flash} />;
+  if (persona.id === 'electricite') return <><div className="round-choice-bar"><Field label="Ronde à effectuer" size="select"><StartRoundPicker rounds={[]} choices={ROUND_CHOICES.electricite} value="GE-01" onChoose={() => undefined} /></Field></div><Ge01AgentForm equipment={current.health?.equipment.find(item => item.code === 'GE-01')} reports={current.source?.reports} isTest={isTest} agentName={agentName} persistenceEnabled={persistenceEnabled} offlineSync={offlineSync} flash={flash} /></>;
   if (isTest && persona.id!=='eau_incendie') return <Card role="status">La saisie des rondes de votre périmètre n’est pas encore disponible dans l’espace Recette. Aucune donnée de test ne sera envoyée en Exploitation.</Card>;
-  if (persona.id === 'eau_incendie' && !persistenceEnabled) return <DesignEauReport />;
-  const irr = connected ? <><IrrForm key={`irr-form-${isTest}`} isTest={isTest} offlineSync={offlineSync} flash={flash}/><WiloRoundInbox key={`irr-${isTest}`} equipment="IRR-01" isTest={isTest} manager={false} enabled={connected} receiptId={offlineSync.latestRoundReceipt?.queueId} onOpenAnomaly={onOpenAnomaly}/></> : <Card role="status">La ronde IRR-01 nécessite une connexion avec le compte réel habilité. Aucun contrôle n’est simulé.</Card>;
-  if (persona.id === 'eau_incendie') return <RiaRoundNavigation existingLabel="WILO-01 · Eau" ria={ria} irr={irr}><ResettableLegacyReport isTest={isTest} persona={persona} onNavigate={onNavigate} persistenceEnabled={persistenceEnabled} offlineSync={offlineSync} flash={flash}/><WiloRoundInbox key={String(isTest)} isTest={isTest} manager={false} enabled={connected} receiptId={offlineSync.latestRoundReceipt?.queueId} onOpenAnomaly={onOpenAnomaly}/></RiaRoundNavigation>;
-  return <ResettableLegacyReport persona={persona} onNavigate={onNavigate} persistenceEnabled={persistenceEnabled} offlineSync={offlineSync} flash={flash} />;
+  if (persona.id === 'eau_incendie') return <>
+    {!persistenceEnabled && <DemoScenarioSelect />}
+    <EauRoundDesk
+      initialRound={initialRound}
+      isTest={isTest}
+      persistenceEnabled={persistenceEnabled}
+      offlineSync={offlineSync}
+      flash={flash}
+      renderDemo={(id) => <DemoEauForm asset={id === 'RIA-01' ? 'ria' : 'wilo'} />}
+      renderWilo={(history) => <ResettableLegacyReport isTest={isTest} persona={persona} onNavigate={onNavigate} persistenceEnabled={persistenceEnabled} offlineSync={offlineSync} flash={flash} history={history} />}
+      renderRia={() => <RiaRoundSpace columnHistory isTest={isTest} manager={false} enabled={connected} offlineSync={offlineSync} onRefresh={onRefresh} onOpenAnomaly={onOpenAnomaly} />}
+      renderHistory={(equipment) => <WiloRoundInbox equipment={equipment} isTest={isTest} manager={false} enabled={connected} receiptId={offlineSync.latestRoundReceipt?.queueId} onOpenAnomaly={onOpenAnomaly} />}
+    />
+  </>;
+  return <><div className="round-choice-bar"><Field label="Ronde à effectuer" size="select"><StartRoundPicker rounds={[]} choices={ROUND_CHOICES.rondes_assistance} value="RND-LET" onChoose={() => undefined} /></Field></div><ResettableLegacyReport persona={persona} onNavigate={onNavigate} persistenceEnabled={persistenceEnabled} offlineSync={offlineSync} flash={flash} /></>;
 }
 
 
@@ -3029,8 +3042,9 @@ function ResettableLegacyReport(props: Parameters<typeof LegacyReport>[0]) {
   return <LegacyReport key={generation} {...props} onAbandoned={() => setGeneration((value) => value + 1)} />;
 }
 
-function LegacyReport({ isTest=false, persona, onNavigate, persistenceEnabled, offlineSync, flash, onAbandoned }: {
+function LegacyReport({ isTest=false, persona, onNavigate, persistenceEnabled, offlineSync, flash, onAbandoned, history = null }: {
   onAbandoned?: () => void;
+  history?: ReactNode;
   isTest?:boolean;
   persona:Persona;
   onNavigate:(v:View)=>void;
@@ -3342,6 +3356,7 @@ function LegacyReport({ isTest=false, persona, onNavigate, persistenceEnabled, o
       <aside className="surpresseur-aside">
         <Card as="article" className="next-action-card"><p className="design-kicker">À SURVEILLER</p><span className="next-action-icon"><BrandIcon name="circleAlert" /></span><h3>{persistenceEnabled ? 'Réarmement provisoire' : 'Pompe P1 indisponible'}</h3><p>{persistenceEnabled ? 'Un réarmement ne suffit pas à clôturer une anomalie. Le diagnostic et la preuve restent nécessaires.' : 'Deuxième défaut en sept jours. Le réarmement provisoire ne permet pas la clôture.'}</p>{!persistenceEnabled && <div><span>Responsable pressenti</span><b>Agent Eau & Incendie</b></div>}</Card>
         <Card as="article" className="score-explain-card is-compact"><div><span>{displayAssetCode('DEMO-EAU')}</span><b>Indisponible</b></div><p className="analytics-note">Aucune valeur de score n’est affichée avant validation de la méthode et de ses données sources.</p></Card>
+        {history}
       </aside>
     </section>
     {roundSubmitted && <div className="prototype-success" role="status"><span><BrandIcon name="check" /></span><div><b>{persistenceEnabled ? displayedReferences?.reportReference ? `Ronde ${displayedReferences.reportReference} synchronisée` : 'Ronde placée dans la file de synchronisation' : 'Simulation de ronde terminée'}</b><small>{persistenceEnabled ? displayedReferences?.anomalyReference ? `Constat ${displayedReferences.anomalyReference} transmis à Facility Manager.` : displayedReferences?.reportReference ? 'Ronde enregistrée sans constat séparé.' : 'Un seul envoi est autorisé ; la référence apparaîtra après synchronisation.' : 'Aucune donnée n’a été enregistrée sur le serveur.'}</small></div><button onClick={startNextRound}>Nouvelle ronde</button></div>}

@@ -17,7 +17,11 @@ const stamp=(s:string)=>new Intl.DateTimeFormat('fr-FR',{timeZone:'Africa/Abidja
 const baseDraftKey='ria:daily:v1';
 const message=(e:unknown)=>e instanceof Error?e.message:typeof e==='object'&&e&&'message' in e?String(e.message):'Opération impossible. Réessayez.';
 
-export function RiaRoundSpace({isTest=false,manager,enabled,offlineSync,onRefresh,onOpenAnomaly}:{isTest?:boolean;manager:boolean;enabled:boolean;offlineSync:ReturnType<typeof useOfflineSync>;onRefresh:()=>void;onOpenAnomaly:(id:string)=>void}) {
+function RoundScoreCard({ code }: { code: string }) {
+  return <aside className="score-explain-card is-compact"><div><span>{code}</span><b>Indisponible</b></div><p className="analytics-note">Aucune valeur de score n’est affichée avant validation de la méthode et de ses données sources.</p></aside>;
+}
+
+export function RiaRoundSpace({isTest=false,manager,enabled,offlineSync,onRefresh,onOpenAnomaly,columnHistory=false}:{isTest?:boolean;manager:boolean;enabled:boolean;offlineSync:ReturnType<typeof useOfflineSync>;onRefresh:()=>void;onOpenAnomaly:(id:string)=>void;columnHistory?:boolean}) {
  const [rounds,setRounds]=useState<Round[]>([]),[error,setError]=useState(''),[loading,setLoading]=useState(false),[selected,setSelected]=useState<string|null>(null);
  const refresh=useCallback(async()=>{
    if(!enabled)return;setLoading(true);setError('');
@@ -29,17 +33,19 @@ export function RiaRoundSpace({isTest=false,manager,enabled,offlineSync,onRefres
  useEffect(()=>{void refresh();},[refresh,offlineSync.latestRoundReceipt]);
  if(!enabled)return <Card role="status">La ronde RIA-01 nécessite une connexion avec le compte réel habilité. Aucun contrôle n’est simulé.</Card>;
  const report=rounds.find(r=>r.id===selected);
- return <section aria-label="Ronde RIA-01">
-  <RoundPilotHeader title="RIA-01 · Réseau incendie" subtitle="Cinq étapes · contrôle quotidien" badge={<span className="mockup-label">Saisie terrain</span>}/><Card><p>Cadence à confirmer · heure d’Abidjan. Les réglages des pressostats et les essais spécialisés relèvent de SECURISYS.</p><p>Valeur de pression de référence à confirmer par SECURISYS.</p></Card>
-  {!manager&&<RiaForm key={String(isTest)} isTest={isTest} offlineSync={offlineSync} rounds={rounds}/>}
-  <Card><h3>{manager?'Rapports RIA à examiner':'Historique RIA-01'}</h3><Button variant="secondary" disabled={loading} onClick={()=>void refresh()}>Actualiser les rapports RIA</Button>
+ const history=<Card className="round-history"><h3>{manager?'Rapports RIA à examiner':'Historique RIA-01'}</h3><Button variant="secondary" disabled={loading} onClick={()=>void refresh()}>Actualiser les rapports RIA</Button>
    {error&&<p role="alert">{error}</p>}{loading&&<p role="status">Chargement…</p>}{!loading&&!error&&rounds.length===0&&<p>Aucun rapport RIA-01 reçu.</p>}
    {rounds.map(r=><div key={r.id}><Button variant="ghost" onClick={()=>setSelected(r.id)}>{r.reference} · {stamp(r.performedAt)}</Button><p>{reportStageLabel({reviewedAt:r.reviewedAt,returnReason:r.returnReason,readAt:r.readAt,confirmedAt:r.confirmedAt})}</p></div>)}
-  </Card>
-  {report&&<RiaReview isTest={isTest} key={report.id} report={report} manager={manager} onOpenAnomaly={onOpenAnomaly} onDone={()=>{void refresh();onRefresh();}}/>}
- </section>;
+  </Card>;
+ const review=report?<RiaReview isTest={isTest} key={report.id} report={report} manager={manager} onOpenAnomaly={onOpenAnomaly} onDone={()=>{void refresh();onRefresh();}}/>:null;
+ const main=<>
+  <RoundPilotHeader title="RIA-01 · Réseau incendie" subtitle="Cinq étapes · contrôle quotidien" badge={<span className="mockup-label">Saisie terrain</span>}/><Card><p>Cadence à confirmer · heure d’Abidjan. Les réglages des pressostats et les essais spécialisés relèvent de SECURISYS.</p><p>Valeur de pression de référence à confirmer par SECURISYS.</p></Card>
+  {!manager&&<RiaForm key={String(isTest)} isTest={isTest} offlineSync={offlineSync} rounds={rounds} hideScore={columnHistory}/>}
+ </>;
+ if(columnHistory&&!manager)return <section className="surpresseur-layout" aria-label="Ronde RIA-01"><div className="round-column">{main}</div><aside className="surpresseur-aside"><RoundScoreCard code="RIA-01"/>{history}{review}</aside></section>;
+ return <section aria-label="Ronde RIA-01">{main}{history}{review}</section>;
 }
-export function RiaForm({isTest=false,offlineSync:s,rounds=[]}:{isTest?:boolean;offlineSync:ReturnType<typeof useOfflineSync>;rounds?:Round[]}) {
+export function RiaForm({isTest=false,offlineSync:s,rounds=[],hideScore=false}:{isTest?:boolean;offlineSync:ReturnType<typeof useOfflineSync>;rounds?:Round[];hideScore?:boolean}) {
  const draftKey=baseDraftKey+(isTest?':recette':'');
  const [testAttested,setTestAttested]=useState(false);
  const [draft,setDraft]=useState<RiaDraft|null>(null),[error,setError]=useState(''),[saveState,setSaveState]=useState('Chargement du brouillon…'),[busy,setBusy]=useState(false),[confirmed,setConfirmed]=useState(false),[step,setStep]=useState(0);
@@ -93,7 +99,7 @@ export function RiaForm({isTest=false,offlineSync:s,rounds=[]}:{isTest?:boolean;
    <p role="status" className="field-hint">{saveState}</p>{step>0&&<Button variant="secondary" onClick={()=>setStep(step-1)}>Précédent</Button>}{step<4?<Button onClick={()=>setStep(step+1)}>Continuer</Button>:<Button disabled={busy||!confirmed||(isTest&&!testAttested)} onClick={()=>void submit()}>{busy?'Mise en file…':'Transmettre le rapport RIA'}</Button>}
    {!draft.queued&&<div className="ge-abandon">{confirmAbandon?<div className="vendor-cancel-confirm" role="alertdialog" aria-label="Abandonner le brouillon ?"><p>Abandonner ce brouillon ? Toutes les réponses saisies sur cet appareil seront effacées. Rien n’a été envoyé.</p><button type="button" className="secondary-button" onClick={()=>setConfirmAbandon(false)}>Garder le brouillon</button><button type="button" className="danger-button" onClick={()=>{void writes.current.catch(()=>{}).then(()=>s.deleteDraft(draftKey)).then(()=>{setDraft(emptyRiaDraft());setStep(0);setFurthestStep(0);setConfirmed(false);setConfirmAbandon(false);setSaveState('Brouillon abandonné. Aucune donnée n’a été envoyée.');}).catch(e=>setError(message(e)));}}>Abandonner</button></div>:<button type="button" className="ghost-button ge-abandon-button" disabled={busy} onClick={()=>setConfirmAbandon(true)}>Abandonner le brouillon</button>}</div>}
   </>}{error&&<p role="alert">{error}</p>}
- <aside className="score-explain-card is-compact"><div><span>RIA-01</span><b>Indisponible</b></div><p className="analytics-note">Aucune valeur de score n’est affichée avant validation de la méthode et de ses données sources.</p></aside>
+ {!hideScore&&<RoundScoreCard code="RIA-01"/>}
  </Card>;
 }
 export function RiaReview({isTest=false,report:r,manager,onDone,onOpenAnomaly}:{isTest?:boolean;report:Round;manager:boolean;onDone:()=>void;onOpenAnomaly:(id:string)=>void}) {

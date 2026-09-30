@@ -11,4 +11,4 @@ export { ReportTrackingLine } from './ReportTrackingLine';
 export { RoundPilotHeader } from './RoundPilotHeader';
 export { ScoreScale } from './ScoreScale';
 export { SegmentedControl } from './SegmentedControl';
-export { StartRoundPicker } from './StartRoundPicker';
+export { StartRoundPicker, ROUND_CHOICES, choiceForRound, type RoundChoice, type RoundChoiceId } from './StartRoundPicker';

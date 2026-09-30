@@ -97,9 +97,10 @@ function CheckGrid({ items, checks, onCycle }: { items: Array<[string, string, s
   );
 }
 
-export function EauRounds({ agentName, draftNote, onSubmit }: { agentName: string; draftNote: string; onSubmit: () => void }) {
+export function EauRounds({ agentName, draftNote, onSubmit, asset: assetProp, showTabs = true }: { agentName: string; draftNote: string; onSubmit: () => void; asset?: Asset; showTabs?: boolean }) {
   const stamp = ge01NowStamp();
-  const [asset, setAsset] = useState<Asset>('wilo');
+  const [assetState, setAsset] = useState<Asset>('wilo');
+  const asset = assetProp ?? assetState;
   const [wiloStep, setWiloStep] = useState(0);
   const [riaStep, setRiaStep] = useState(0);
   const [wiloDate, setWiloDate] = useState(stamp.date);
@@ -132,10 +133,10 @@ export function EauRounds({ agentName, draftNote, onSubmit }: { agentName: strin
 
   return (
     <>
-      <div className="workspace-tabs parameters-tabs round-asset-tabs" role="tablist" aria-label="Équipement de la ronde">
+      {showTabs && <div className="workspace-tabs parameters-tabs round-asset-tabs" role="tablist" aria-label="Équipement de la ronde">
         <button type="button" role="tab" aria-selected={asset === 'wilo'} className={asset === 'wilo' ? 'active' : ''} onClick={() => setAsset('wilo')}>{wiloCode} · Eau</button>
         <button type="button" role="tab" aria-selected={asset === 'ria'} className={asset === 'ria' ? 'active' : ''} onClick={() => setAsset('ria')}>{riaCode} · Incendie</button>
-      </div>
+      </div>}
 
       {asset === 'wilo' ? (
         <>

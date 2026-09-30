@@ -41,6 +41,8 @@ import {
   ControlValidityBadge,
   ScoreScale,
   StartRoundPicker,
+  ROUND_CHOICES,
+  type RoundChoiceId,
 } from './shared';
 
 export type HealthAudience = AudienceId;
@@ -157,7 +159,7 @@ export function BuildingHealthCockpit({
 }: {
   snapshot: HealthPresentation;
   session: UiSession;
-  onNavigate: (view: HealthView) => void;
+  onNavigate: (view: HealthView, options?: { round?: RoundChoiceId }) => void;
   rounds?: TodaysRound[];
   actionCount?: number;
   causeActions?: ReactNode;
@@ -271,8 +273,11 @@ export function BuildingHealthCockpit({
     </div>
   ) : null;
 
+  const roundChoices = session.audience === 'eau_incendie' || session.audience === 'electricite' || session.audience === 'rondes_assistance'
+    ? ROUND_CHOICES[session.audience]
+    : [];
   const bannerActions = agent
-    ? <StartRoundPicker rounds={rounds} onSelect={() => onNavigate('report')} onOffPlan={() => onNavigate('report')} />
+    ? <StartRoundPicker rounds={rounds} choices={roundChoices} onChoose={(id) => onNavigate('report', { round: id })} />
     : causeColumn || admin ? null : <button type="button" className="health-link" onClick={() => onNavigate(copy.primary.view)}>{copy.primary.label} →</button>;
 
   const filteredEquipment = ranked.filter((item) => {

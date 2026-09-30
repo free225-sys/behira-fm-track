@@ -2,6 +2,21 @@
 
 Ne jamais supprimer ni réécrire une décision actée. Toute évolution doit prendre la forme d'une nouvelle entrée qui complète ou remplace explicitement une décision antérieure.
 
+## DEC-023 — Bandeau d'accueil bleu marine conservé
+
+- **Date :** 30 septembre 2026
+- **Auteur :** Wilkam, relayé par la revue Claude du lot d’audit UI (UX-019 rejeté)
+- **Statut :** **Adopté — précise DEC-009**
+- **Périmètre :** Accueil et Dossiers
+- **Contexte :** DEC-009 dit « une seule bande navy ». Le bandeau d’accueil navy (`is-bleed`) a été livré ensuite (clôture design du 16/09, DESIGN-071) et figure sur la préproduction validée. UX-019 proposait de le retirer. Les documents se contredisaient.
+- **Décision :**
+  - la barre de navigation reste la **seule bande de navigation** ;
+  - le bandeau d’en-tête bleu marine est **admis sur Accueil et sur Dossiers** ;
+  - les autres écrans restent sur fond clair ;
+  - UX-019 est rejeté : on ne retire pas ces deux bandeaux.
+- **Fichiers concernés :** aucun changement de code. `BuildingHealthCockpit.tsx`, `DossiersWorkspace.tsx` et `.home-hero-banner.is-bleed` / `.dossiers-hero.is-bleed` restent en l’état.
+- **Impacts attendus :** aucun changement visuel. Le lot 5 n’inclut plus le retrait de ces bandeaux.
+
 ## DEC-022 — Précision de DEC-019 : fusion WILO par déduction, pas par suppression de mesures
 
 - **Date :** 30 septembre 2026

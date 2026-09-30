@@ -1,11 +1,11 @@
 # AUDIT UI/UX — BEHIRA FM Track
 
-Phase A uniquement. Aucun correctif de code dans ce document.
+Phase A, version 2 (30/09/2026). L’inventaire et les constats UX-001 à UX-024 sont inchangés dans leur fond. Cette version ajoute la matrice de couverture (§6) et la passe visuelle de l’atlas (§7, à partir de UX-025). Le lot 1 est livré à part dans `LOT-1.md`.
 
-- Référence : `behira-ui-source.zip`, `VERSION.txt` — branche porteur `integration/livraison1-design077`, commit `c8821ad` (arbre `dbc87bd473f6cfa3921272a739682784e92aae40`).
-- En cas d’écart avec GitHub (`main` du 29/08, `mirror/checkpoint-a2373c2`), le zip fait foi.
-- `atlas-captures.zip` n’était pas dans la livraison. Les constats viennent du code du zip, pas d’une reprise visuelle aux trois largeurs. Les largeurs citées sont celles où la structure ou le CSS produit le défaut. Une passe capture reste nécessaire avant de clore un lot.
-- Hors périmètre : `supabase/`, rôles, permissions, statuts, calculs, formats, brouillons, synchronisation, mode Recette. DEC-020 (trois choix sur les cartes de contrôle) et DEC-022 (questions WILO déduites) restent en place.
+- Référence code : commit `478c846` (zip, arbre identique à `c8821ad`). Branche de travail `grok/audit-ui-2026-09-30`.
+- Atlas : `atlas-captures-jpg.zip`, 150 JPEG de démonstration (1440, 834, 390) + 8 JPEG connectés WILO/IRR. `INDEX.md` décrit chaque fichier. Le dossier `preproduction/` du zip est vide (compte réel, non versionné) ; les trois vues y sont décrites. La coupe jointe hors dépôt confirme la plage 3,0–4,5 bar de la maquette (UX-008).
+- Les captures pleine page collent parfois le chrome `position:fixed` (barre du bas, toast, bulle de saisie) au milieu du défilement. Un bandeau navy « au milieu » d’une longue page n’est pas retenu comme défaut s’il s’agit de la barre fixe. Les constats UX-025 et suivants ne gardent que ce que le code confirme.
+- Hors périmètre : `supabase/`, rôles, permissions, statuts, calculs, formats, brouillons, synchronisation, mode Recette. DEC-020 et DEC-022 restent en place. UX-019 est rejeté (DEC-023).
 
 Profils : Administration, Facility Manager, Agent Électricité, Agent Eau & Incendie, Agente Rondes & Assistance.
 
@@ -180,12 +180,11 @@ Navigation réelle (`app/page.tsx`) : E, W et R n’ont que Accueil et Rondes. F
 - Constat : plusieurs refus passent par `flash(...)` (photo, confirmation, stockage) sans bloc `role="alert"` dans le formulaire. RIA, lui, a un `role="alert"` dans la carte.
 - Correction : même motif d’alerte que RIA, dans la carte, en plus ou à la place du flash. Texte inchangé.
 
-### UX-019 — Deuxième bande navy sous la navigation
+### UX-019 — Deuxième bande navy sous la navigation — rejeté (DEC-023)
 
-- Écrans : Accueil, Dossiers. Profils : tous ceux qui voient ces pages. Largeurs : toutes. Catégorie : design system. Gravité : majeur.
-- Constat : la navigation est déjà le chrome navy. `HomeHeroBanner` est appelé avec `bleed` (`BuildingHealthCockpit.tsx` 293) et `.home-hero-banner.is-bleed` repeint `background: var(--chrome)` (`globals.css` 3591–3595). `.dossiers-hero.is-bleed` fait la même chose (`DossiersWorkspace.tsx` 93, `globals.css` 3894–3898). Décision en vigueur : une seule bande navy, l’en-tête de page sur surface claire.
-- Correction : retirer le fond `--chrome` de ces héros. Garder le titre, les actions et le score sur `--surface`. Le bouton principal qui était inversé (blanc sur navy) reprend le bouton primaire habituel.
-- Fichiers : `BuildingHealthCockpit.tsx`, `DossiersWorkspace.tsx`, `globals.css`.
+- Écrans : Accueil, Dossiers. Profils : tous ceux qui voient ces pages. Largeurs : toutes. Catégorie : design system. Gravité : clos.
+- Constat (inchangé) : `HomeHeroBanner` avec `bleed` et `.dossiers-hero.is-bleed` reprennent `background: var(--chrome)` sous la navigation. Captures : `demo/001_administration_desktop_accueil.jpg`, `demo/055_facility-manager_desktop_accueil.jpg`, `demo/004_administration_desktop_dossiers.jpg`.
+- Décision du porteur : on garde ces bandeaux. DEC-023 précise DEC-009 : la barre de navigation reste la seule bande de navigation ; le bandeau d’en-tête bleu marine est admis sur Accueil et Dossiers ; les autres écrans restent sur fond clair. Aucun correctif.
 
 ### UX-020 — La cloche et des boutons de panneau disparaissent sous 700 px
 
@@ -233,7 +232,7 @@ Navigation réelle (`app/page.tsx`) : E, W et R n’ont que Accueil et Rondes. F
 | Pastille d’état de saisie | Six libellés | Une pastille, trois tons de badge existants |
 | Action de fiche | Bloc workflow + carte « Action principale » | Une action principale |
 | Attente | « Enregistrement… » seul dans le bouton | Bouton + ligne de statut |
-| Bande navy | Chrome + héros Accueil et Dossiers en `--chrome` | Chrome seul ; héros sur `--surface` |
+| Bande navy | Chrome + héros Accueil et Dossiers en `--chrome` | DEC-023 : barre = seule bande de navigation ; bandeau d’en-tête navy admis sur Accueil et Dossiers uniquement |
 | Destination Coûts / Registre | Libellé d’écran, réécriture vers Dossiers | Libellé = écran réellement ouvert |
 
 ## 4. Lots
@@ -254,21 +253,23 @@ Acceptation : un bouton grisé dit pourquoi et qui agit ; la fiche montre la mes
 
 ### Lot 3 — Formulaires de ronde alignés
 
-UX-007, UX-008, UX-009, UX-010, UX-012, UX-018.
+UX-007, UX-008, UX-009, UX-010, UX-012, UX-018, UX-027, UX-028.
 
-Acceptation : la maquette Eau ne contredit plus le connecté ; le réarmement ne s’invente pas ; RIA et IRR suivent le geste WILO pour « non vérifié » sans toucher DEC-020 ni DEC-022 ; « Terminer » reflète la condition d’envoi déjà codée ; pastilles harmonisées.
+Acceptation : la maquette Eau ne contredit plus le connecté, et « Valider la maquette » n’a pas l’air disponible si la saisie est incomplète ; le réarmement ne s’invente pas ; RIA et IRR suivent le geste WILO pour « non vérifié » sans toucher DEC-020 ni DEC-022 ; « Terminer » et « Transmettre » (WILO et RND-LET) reflètent la condition d’envoi déjà codée ; pastilles harmonisées.
 
 ### Lot 4 — Files, accueil terrain, destinations
 
-UX-013, UX-014, UX-015, UX-021, UX-022, UX-024.
+UX-013, UX-014, UX-015, UX-021, UX-022, UX-024, UX-026.
 
-Acceptation : l’accueil R ne présente plus une ronde du 16 septembre comme réelle ; le FM voit une file à la fois ; « Sain » ne réapparaît pas dans le secours démo ; un bouton « Coûts » ouvre les coûts ou change de libellé ; aucun bouton de décision n’a l’air actif s’il n’enregistre rien ; le seuil affiché est celui reçu, pas un 400 000 recopié.
+Acceptation : l’accueil R ne présente plus une ronde du 16 septembre comme réelle, et le compteur de zones ne contredit pas les pastilles ; le FM voit une file à la fois ; « Sain » ne réapparaît pas dans le secours démo ; un bouton « Coûts » ouvre les coûts ou change de libellé ; aucun bouton de décision n’a l’air actif s’il n’enregistre rien ; le seuil affiché est celui reçu, pas un 400 000 recopié.
 
-### Lot 5 — Responsive et bande navy
+### Lot 5 — Responsive, chrome fixe, toasts
 
-UX-016, UX-017, UX-019, UX-020, UX-023, puis contrôle 1440 / 1024 / 834 / 390 / 360 des écrans touchés par les lots 1 à 4.
+UX-016, UX-017, UX-020, UX-023, UX-025, UX-029, UX-030, puis contrôle 1440 / 1024 / 834 / 390 / 360 des écrans touchés par les lots 1 à 4.
 
-Acceptation : une seule bande navy ; la cloche et les actions de panneau restent atteignables à 390 et 360 ; cibles 44 px ; pas de débordement horizontal de page sur les formulaires WILO, RIA, IRR, GE ; le titre de page n’est pas coupé à 834.
+UX-019 n’est plus dans ce lot (DEC-023).
+
+Acceptation : la cloche et les actions de panneau restent atteignables à 390 et 360 ; le contenu mobile n’est pas masqué par la barre du bas ; cibles 44 px ; pas de débordement horizontal de page sur les formulaires WILO, RIA, IRR, GE ; le titre de page n’est pas coupé à 834 ; le toast de succès et la bulle de saisie ne recouvrent pas le bouton d’envoi. Les bandeaux navy d’Accueil et de Dossiers restent.
 
 ### Lot 6 — Seconde passe
 
@@ -276,5 +277,105 @@ Réinspection de l’inventaire. Écarts nouveaux seulement. Pas de chantier cos
 
 ## 5. Questions
 
-1. L’atlas (1440, 834, 390, plus les trois vues préproduction) n’était pas joint. Les lots pourront être revus au code et aux contrôles, pas à ces images, tant qu’il n’est pas là. Faut-il l’attendre avant le lot 1, ou avancer et comparer quand il arrive ?
-2. Pour UX-005 : confirmer que l’on n’ajoute pas d’appel serveur. L’affichage se limite aux checks déjà présents en mémoire (rapport lié par `anomalyReference`). Si aucun rapport n’est chargé sur la fiche, la ligne « non reliée » suffit-elle ?
+1. Atlas : reçu. La passe visuelle est au §7. Les trois JPEG de préproduction ne sont pas dans le zip ; la description d’INDEX suffit pour UX-001 à UX-003, déjà au lot 1.
+2. UX-005 : tranché. Pas de nouvel appel. Une colonne `source_report_id` pourra être ajoutée à la requête existante des dossiers dans `app/lib/supabase/data.ts` au lot 2, rien d’autre. Sans rapport relié : la ligne « Mesure d'origine non reliée à cette fiche ».
+
+## 6. Matrice de couverture
+
+Axes du §4 de la mission. Chaque case est un `UX-xxx` ou « RAS » suivi de ce qui a été vérifié (code du zip et, quand l’atlas a une capture, le fichier cité). Aucune case vide. Les largeurs 1024 et 360 ne sont pas dans l’atlas (1440, 834, 390) : le responsive à ces deux largeurs est lu dans les media queries, pas sur une capture.
+
+| Écran | Mise en page | Formulaires | Boutons | Sélecteurs | Navigation | Responsive | Design system | UX | Accessibilité | États |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Connexion | RAS — carte centrée, pas de second chrome (`demo/001` est déjà connecté ; porte lue dans `app/page.tsx` auth) | RAS — e-mail, mot de passe, libellés visibles | RAS — entrer, afficher/masquer, comptes démo | RAS — pas de liste déroulante sur la porte | RAS — pas de barre produit avant session | RAS — `verify-auth` 390/768/1440, champs en 100 % sous 700 px | RAS — primitives `Field`/`Button`, pas de panneau navy (contrôle visuel) | RAS — comptes fictifs et mot de passe commun affichés | RAS — bouton afficher a un nom, focus clavier unique (`verify-auth`) | RAS — erreur, chargement et succès ont un texte (`verify-auth`) |
+| Mot de passe temporaire | RAS — même carte que la porte | RAS — règles écrites à côté des champs | RAS — envoi désactivé tant que les règles échouent | RAS — aucun | RAS — retour à la connexion | RAS — même empilement que la porte | RAS — mêmes champs que la connexion | RAS — on comprend qu’il faut changer le mot de passe avant d’entrer | RAS — erreurs reliées aux champs | RAS — erreur de robustesse et verrouillage première connexion |
+| Accueil — santé | UX-019 clos — bandeau navy conservé (DEC-023), `demo/001`, `demo/055` | RAS — pas de formulaire hors recherche équipements FM | UX-001 — le CTA de ronde ignorait le choix | UX-001 — sélecteur d’accueil | RAS — Accueil actif dans la barre | UX-025 — barre du bas sur le contenu mobile (`demo/037`, `demo/083`) | UX-019 clos ; pastilles de palier cohérentes | RAS — l’action du jour est dans le bandeau (`demo/118`) | RAS — anneau de score a un `aria-label` | RAS — score non calculable a une phrase, pas un faux chiffre |
+| Sélecteur « Démarrer une ronde » | RAS — panneau sous le bouton, largeur bornée | RAS — ce n’est pas un formulaire | UX-001 — hors planning n’ouvrait aucun choix | UX-001, UX-002 | RAS — mène à Rondes | RAS — panneau recalé sous 700 px | RAS — focus, survol, désactivé et erreur alignés sur « Espace de travail » (lot 1) | UX-001 | RAS — `aria-expanded`, options, Échap | RAS — rondes faites désactivées, liste vide = alerte |
+| Arbitrages (accueil Administration) | UX-019 clos — `demo/003_administration_desktop_arbitrages.jpg` | RAS — pas de saisie sur cet accueil | RAS — « Ouvrir Pilotage » est le lien principal | RAS — aucun sélecteur de ronde (profil A) | RAS — le libellé de barre est Arbitrages, pas Rondes | UX-025 — `demo/037`, `demo/039` | UX-019 clos | RAS — le nombre d’arbitrages est dans le bonjour | RAS — liens de cartes sont des boutons nommés | RAS — file vide a une phrase, pas une carte fantôme |
+| Dossiers — file | RAS — liste + filtres, `demo/004`, `demo/057` | RAS — recherche et filtres ont un libellé | RAS — une ligne ouvre la fiche | RAS — onglets À traiter / Tous / Clôturés | RAS — Dossiers actif | UX-020, UX-023 — titre et actions sous 700 px | UX-019 clos sur le héros, `demo/004` | RAS — le premier dossier est l’action | RAS — onglets en `tablist` (pastilles) | RAS — file filtrée vide a un texte ; clôturés vides lisibles (`demo/006`) |
+| Fiche — vue d’ensemble | UX-011 — deux actions principales, `demo/007`, `demo/060` | UX-004, UX-005 — diagnostic et mesure d’origine | UX-004, UX-006 | RAS — pas de sélecteur de ronde | RAS — retour vers la file | UX-023 — trois colonnes puis pile | RAS — badges de statut existants | UX-011 | RAS — bouton occupé sans `aria-busy` (UX-006) | RAS — lecture seule Administration sans bouton d’écriture |
+| Fiche — Coûts & décision | RAS — onglet dans la même fiche, grille lue dans `page.tsx` | UX-022 — commentaire de décision | UX-022 — Demander un complément / Refuser sans action | RAS — branche de décision en trois boutons | RAS — onglet interne, pas une route | RAS — pile sous 700 px | RAS — mêmes cartes que le reste de la fiche | UX-022 | RAS — boutons sans nom trompeur une fois désactivés (lot 4) | RAS — démo locale distincte du circuit connecté |
+| Fiche — Preuves | RAS — matrice de preuves dans l’onglet | RAS — dépôt avec motif si pas de fichier | RAS — déposer / consulter selon le droit | RAS — aucun | RAS — onglet Preuves | RAS — exigence en pile sur 390 (`demo/043`) | RAS — même `Card` | RAS — « preuve attendue » n’est pas généralisée (contrôle anti-zombie) | RAS — le bouton consulter a le nom du fichier | RAS — absente, déposée, en file, erreur de chargement |
+| Fiche — Historique | RAS — liste verticale, pas d’événements inventés | RAS — pas de saisie | RAS — pas d’action sur une ligne | RAS — aucun | RAS — onglet Historique | RAS — lignes qui passent à la ligne | RAS — même grille d’historique | RAS — un dossier sans historique le dit | RAS — dates en texte, pas seulement une couleur | RAS — vide explicite |
+| Réception | RAS — panneau dans la fiche, pas une page | RAS — champs du panneau `InterventionReceptionPanel` | UX-006 — « Enregistrement… » seul | RAS — choix déjà posés, pas un nouveau sélecteur | RAS — reste sur la fiche | RAS — boutons en pile sous 700 px | RAS — `Button` primaire / secondaire | RAS — on voit ce qu’on réceptionne | UX-006 — pas de `role="status"` | RAS — occupé, erreur, succès |
+| Réouverture | RAS — `ReopenDossierPanel` sous la fiche close | RAS — motif obligatoire | UX-006 | RAS — aucun | RAS — reste sur la fiche | RAS — même pile | RAS — bouton dangereux distinct | RAS — réouvrir n’est pas l’action par défaut | UX-006 | RAS — droit réservé FM/A connectés, sinon panneau absent |
+| Rapport prestataire | RAS — panneau sous la ronde des agents habilités | RAS — fichier, motif, libellés | RAS — déposer désactivé sans droit (`page.tsx`) | RAS — choix du constat déjà listé | RAS — pas une destination de barre | RAS — formulaire en une colonne sous 700 px | RAS — mêmes champs que le dépôt de preuve | RAS — le refus de droit est une phrase, pas un bouton mort silencieux | RAS — input fichier a un libellé | RAS — non habilité, envoi, erreur |
+| Rondes GE-01 agent | RAS — formulaire + aside contexte, `demo/098` | RAS — date, mesures, DEC-020, brouillon | RAS — Continuer / Terminer reflètent l’étape | RAS — une seule ronde (GE-01), même composant que l’accueil (lot 1) | RAS — Rondes actif | UX-017 — fil d’étapes étroit (`demo/112`) | UX-007 — pastille « DÉMO SANS SAUVEGARDE » | RAS — l’étape courante est marquée | RAS — progression `aria-current` | RAS — brouillon, recette, transmis |
+| WILO connecté | UX-003 — historique sous la grille, colonne droite vide (`connecte/wilo-1440.jpg`, INDEX préproduction 01) | UX-007, UX-009, UX-010, UX-012 | UX-012 ; UX-029 — toast sur le bouton | UX-001, UX-002 | RAS — retour Accueil | UX-003 sous 1100 px ; UX-017 | UX-007 | UX-009 | UX-018 — erreurs en flash | RAS — brouillon, file, transmis |
+| WILO / RIA maquette | UX-008 — maquette différente du connecté (`demo/119`, `demo/125`) | UX-008 — plage 3,0–4,5, bascules | UX-027 — Valider actif à vide (`demo/123`) | UX-002 — second jeu d’onglets | RAS — même page Rondes | UX-017 — « Cinq étapes » et trois puces visibles (`demo/135`) | UX-008 — score avec État / Variation | UX-008 | RAS — onglets `tablist` quand ils sont là | RAS — brouillon local, succès simulé |
+| RIA-01 connecté | UX-003 — historique sous la carte, pas en colonne | UX-010 — Non vérifié dans la rangée | RAS — Transmettre désactivé sans confirmation | UX-002 — onglet local | RAS — même page | UX-017 | UX-007 — toujours « Saisie terrain » | RAS — cadence marquée « à confirmer » | RAS — erreur `role="alert"` dans la carte | RAS — non connecté, chargement, vide, transmis |
+| IRR-01 | UX-003 — pas de colonne (`connecte/irr-1440.jpg`) | UX-010 | RAS — Terminer suit les manques | UX-002 | RAS — même page | UX-017 ; UX-030 — bulle sur les boutons | UX-007 — badge Recette à part | RAS — étapes nommées | UX-030 — la bulle n’est pas un `role="alert"` dans la carte | RAS — chargement du brouillon, non connecté |
+| Saisie rapide RND-LET | RAS — formulaire + aside « Après l’envoi » (`demo/144`) | UX-028 — motif photo vide | UX-028 — Transmettre a l’air prêt | RAS — sélecteur de ronde à une option (lot 1) | RAS — Rondes | RAS — une colonne sous 1100 px | UX-007 — pastille DÉMO / SAISIE RÉELLE | RAS — le circuit après envoi est dans l’aside | UX-018 — refus en flash | RAS — simulation ou file |
+| Accueil R — zones du jour | UX-013 — liste figée (`demo/142`) | RAS — pas de saisie sur les lignes | UX-013 — lignes boutons sans destination | RAS — pas le sélecteur de ronde | UX-013 — ne mène pas à RND-LET | RAS — pile en 390 (`demo/148`) | RAS — badges de statut habituels | UX-026 — « 4 / 6 » contredit les pastilles | RAS — le compteur n’est pas le nom accessible des lignes | RAS — la liste n’a pas d’état vide (elle est en dur) |
+| File FM des rondes | UX-014 — quatre historiques empilés (`demo/061`, `demo/062`) | RAS — l’examen est dans la carte, pas un second formulaire | RAS — lire / retourner sont dans la carte d’historique | UX-014 — pas le sélecteur du §3.2 | RAS — onglets GE / RIA seulement | UX-014 — page très longue en 390 (`demo/089`) | RAS — mêmes cartes d’inbox | UX-014 | RAS — boutons d’examen nommés | RAS — liste vide « aucun rapport » |
+| Équipements | RAS — tuiles et filtres, `demo/008`, `demo/063` | RAS — recherche et filtre ont un libellé | RAS — une tuile ouvre le détail | RAS — filtre de risque, pas un sélecteur de ronde | RAS — Équipements ou Plus selon le profil | RAS — 2 colonnes puis 1 (`demo/044`, `demo/091`) | UX-015 — repli « Sain » hors de cet écran, vocabulaire de tuile correct ici | RAS — le parc et le compteur d’inconnu sont visibles | RAS — filtre associé à son libellé | RAS — démo, live et liste vide |
+| Pilotage — santé | RAS — analytique + liste d’attention, `demo/009`, `demo/064` | RAS — pas de saisie | RAS — « Ouvrir Équipements » | RAS — onglets Santé / Coûts / Équipe | RAS — Pilotage actif | RAS — une colonne en 390 (`demo/045`) | RAS — pas de légende « Sain » | RAS — on voit quoi surveiller | RAS — onglets nommés | RAS — score non calculable sans chiffre inventé |
+| Pilotage — équipe | RAS — liste, `demo/011`, `demo/066` | RAS — pas de formulaire | RAS — pas d’action morte | RAS — onglet Équipe | RAS — même page | RAS — `demo/047`, `demo/094` | RAS — mêmes onglets que Paramètres | RAS — l’onglet dit qui est dans l’équipe | RAS — noms en texte | RAS — liste démo affichée, pas un spinner infini |
+| Coûts — démo | RAS — l’onglet Pilotage montre la maquette, `demo/010`, `demo/065` | RAS — filtres libellés | UX-006 si envoi | RAS — filtres de coûts | UX-021 — la destination Coûts de Paramètres n’ouvre pas cet écran | RAS — `demo/046`, `demo/093` | RAS — primitives coûts | RAS — pas de budget inventé (contrôle visuel) | RAS — montant en texte, pas seulement une couleur | RAS — démo distincte du connecté |
+| Coûts — connecté | RAS — `ConnectedCostsWorkspace`, pas de capture atlas | RAS — formulaire de saisie et de revue | UX-006 | RAS — décision approuver / renvoyer / refuser | UX-021 | RAS — une colonne sous 700 px (CSS) | RAS — mêmes boutons | RAS — le seuil affiché vient du paramètre | UX-006 | RAS — chargement, erreur, enregistré |
+| Utilisateurs et droits | RAS — miroir, `demo/068`, `demo/096` | RAS — préparation de compte renvoie aux Paramètres | RAS — actions neutralisées dans le miroir | RAS — pas de sélecteur de rôle libre | RAS — entrée Plus | RAS — `demo/082`, `demo/096` | RAS — primitives d’accès | RAS — le miroir dit que l’administration réelle est ailleurs | RAS — tableau lisible sans info seulement en couleur | RAS — miroir vide ou liste démo, pas une erreur muette |
+| Paramètres | RAS — onglets, `demo/012`, `demo/030` | RAS — le seuil financier n’est pas un champ éditable | RAS — pas de bouton Enregistrer mort sur le seuil | RAS — onglets de familles | RAS — réservé à Administration | RAS — `demo/048` | RAS — mêmes onglets que Pilotage | RAS — une famille absente est écrite | RAS — onglets accessibles | RAS — historique non raccordé est dit |
+| Paramètres — Règles | RAS — texte long, `demo/013` | RAS — lecture, pas une grille de champs | RAS — pas d’action d’enregistrement | RAS — onglet Règles | RAS — reste dans Paramètres | RAS — `demo/031`, `demo/049` | RAS — corps 12 px minimum | RAS — on sait que ce n’est pas éditable ici | RAS — titres de sections | RAS — pas d’état d’erreur (lecture) |
+| Paramètres — Notifications | RAS — liste de réglages, `demo/014` | RAS — libellés de canaux | RAS — pas de sauvegarde silencieuse dans le miroir | RAS — onglet | RAS — idem | RAS — `demo/032`, `demo/050` | RAS — interrupteurs du design system s’ils sont là, sinon texte | RAS — une notification non branchée est dite | RAS — chaque ligne a un texte | RAS — lecture |
+| Paramètres — Zones | RAS — liste de zones, `demo/015` | RAS — nom de zone si le formulaire est là | RAS — créer désactivé ou expliqué dans le miroir | RAS — onglet Zones | RAS — idem | RAS — `demo/033`, `demo/051` | RAS — même champ | RAS — une zone sans équipement se voit | RAS — champ nom associé | RAS — liste vide prévue |
+| Paramètres — Journal d’audit | RAS — table, `demo/016` | RAS — pas de saisie | RAS — pas d’export mort | RAS — onglet | RAS — idem | RAS — table qui peut déborder, à revoir au lot 5 si le contrôle 390 le montre (`demo/052`) | RAS — même table que le registre | RAS — on comprend que c’est une trace | RAS — en-têtes de colonnes | RAS — journal vide a une ligne |
+| Paramètres — Préparer un compte | RAS — formulaire, `demo/017` | RAS — identité, rôle, libellés | RAS — préparer n’envoie pas dans le miroir sans le dire | RAS — rôle proposé, pas un nouveau composant | RAS — onglet | RAS — `demo/035`, `demo/053` | RAS — `Field` | RAS — le compte n’est pas créé en silence | RAS — champs obligatoires signalés par l’erreur de validation | RAS — erreur de validation |
+| Paramètres — Préparer une désactivation | RAS — formulaire, `demo/018` | RAS — justification | RAS — l’action est nommée désactivation | RAS — choix du compte | RAS — onglet | RAS — `demo/036`, `demo/054` | RAS — bouton dangereux si l’action est destructive | RAS — la justification est demandée | RAS — zone de motif libellée | RAS — validation du motif |
+| Registre | RAS — grille partagée, pas dans la barre (clé masquée) | RAS — recherche | RAS — une ligne ouvre le dossier | RAS — recherche, pas un filtre fantôme | UX-021 — `navigate('registry')` réécrit vers Dossiers | RAS — repli avec responsable (contrôle visuel) | RAS — même grille que le contrôle « grille du registre » | RAS — on cherche un dossier, on ne croit pas ouvrir un autre produit | RAS — champ de recherche libellé | RAS — aucun résultat a un texte |
+| Notifications (cloche) | RAS — panneau ancré à la cloche | RAS — pas de saisie | UX-020 — la cloche est un `IconButton` masqué sous 700 px | RAS — aucun | UX-020 — seule entrée des notifications | UX-020 | RAS — même panneau | RAS — vide explicite dans `NotificationCenter` | UX-020 — plus de bouton, plus de nom accessible | RAS — vide, erreur, liste |
+| Spécimen `/design-system` | RAS — page hors produit, lue dans `app/design-system/page.tsx` | RAS — les champs du spécimen sont des exemples | RAS — les variantes primaire, secondaire, discret sont côte à côte | RAS — le `Select` Behira y est montré | RAS — pas dans la barre produit (contrôle visuel) | RAS — pas une capture d’atlas ; la page suit `.content` | RAS — c’est la référence, pas une variante | RAS — légendes à côté des exemples | RAS — spécimen non exposé comme tâche | RAS — pas d’état métier |
+| Menu Plus | RAS — panneau, `demo/067` | RAS — pas un formulaire | RAS — chaque entrée est un bouton | RAS — aucun | RAS — Plus regroupe Coûts, Utilisateurs, Registre | UX-025 — `demo/095` coupe l’entrée sous la barre | RAS — mêmes libellés que les écrans | RAS — on voit où mène chaque ligne | RAS — menu bouton avec nom | RAS — fermé par défaut |
+
+## 7. Passe visuelle — constats à partir de UX-025
+
+Les UX-001 à UX-024 restent valables. Les captures qui les montrent sont citées dans la matrice. Ici, seulement ce que l’atlas ajoute.
+
+### UX-025 — Le bas de page mobile passe sous la barre de navigation
+
+- Écrans : tous, en dessous de 700 px. Profils : tous. Largeurs : 390 et 360. Catégorie : responsive. Gravité : majeur.
+- Constat : sous 700 px la navigation est fixe en bas, haute de 72 px (`globals.css` vers la media query 700 px). `.content` ne réserve que 45 px en bas. Les dernières lignes et les boutons sont recouverts. Captures : `demo/083_facility-manager_mobile_accueil.jpg` (le bouton « Soumettre à l’Administration » est coupé), `demo/040_administration_mobile_dossiers.jpg`, `demo/095_facility-manager_mobile_plus.jpg`.
+- Correction : réserver au moins la hauteur de la barre (72 px + safe area) sous le contenu. Ne pas changer la barre elle-même. Même lot que UX-020.
+- Fichiers : `app/globals.css`.
+- Régression : ne pas recouvrir le bandeau d’accueil.
+
+### UX-026 — Le compteur de zones contredit les pastilles
+
+- Écran : Accueil Rondes & Assistance. Profil : R. Largeurs : 1440, 834, 390. Catégorie : UX. Gravité : majeur.
+- Constat : `demo/142_agente-rondes-assistance_desktop_accueil.jpg` affiche « 4 / 6 contrôlées » alors que deux zones seulement sont « Terminé » (Atrium « À vérifier », Jardinières « En cours », Terrasse et Parking « À faire »). Le compteur est en dur, comme la liste (UX-013). Même décalage sur `demo/145` et `demo/148`.
+- Correction : avec UX-013. Tant que la liste n’est pas une source réelle, ne pas afficher un compteur qui ne compte pas les pastilles.
+- Fichiers : `app/page.tsx` (`RoundsAssistanceWorkspace`).
+
+### UX-027 — « Valider la maquette » est actif sur une synthèse vide
+
+- Écran : maquette WILO, étape synthèse. Profil : W en démonstration. Largeurs : toutes. Catégorie : bouton. Gravité : majeur.
+- Constat : `demo/123_agent-eau-incendie_desktop_rondes-wilo-01-eau-etape-5.jpg`. Les étapes 1 à 4 sont marquées faites, la synthèse dit « — bar », « — % », « 0/6 » et « Contrôle incomplet », la case de confirmation est vide, et « Valider la maquette » reste cliquable (`EauRounds.tsx`, le bouton d’envoi n’a pas de `disabled`).
+- Correction : avec UX-008. Désactiver ce bouton dans les mêmes cas que le connecté refuse l’envoi. Ne pas enregistrer.
+- Fichiers : `app/components/EauRounds.tsx`.
+
+### UX-028 — « Transmettre » a l’air prêt sans le motif de photo
+
+- Écran : saisie rapide RND-LET. Profil : R. Largeurs : toutes. Catégorie : bouton. Gravité : mineur.
+- Constat : `demo/144_agente-rondes-assistance_desktop_rondes.jpg`. Le champ « Photo non jointe — motif obligatoire » est vide et « Transmettre à Facility Manager » n’est pas désactivé pour ça (`page.tsx`, `disabled` ne regarde que le brouillon, l’envoi et l’état transmis). La validation native bloque peut-être le submit, mais le bouton a l’air disponible. Même motif que UX-012 sur un autre formulaire.
+- Correction : désactiver le bouton quand le motif obligatoire est vide, avec la phrase déjà prévue. Ne pas changer la charge utile.
+- Fichiers : `app/page.tsx`.
+
+### UX-029 — Le toast de succès recouvre le bouton de la ronde
+
+- Écran : WILO connecté après envoi. Profil : W. Largeurs : 1440 et 380. Catégorie : mise en page. Gravité : mineur.
+- Constat : `connecte/wilo-1440.jpg`. `.prototype-success` est fixe en bas à droite et passe sur le bouton (il reste « Ronde trans »). Le bandeau dit pourtant 72 % et « 6 conformes sur 6 ».
+- Correction : le toast ne doit pas couvrir l’action principale. Le décaler au-dessus de la barre mobile et de la rangée d’actions, ou le mettre dans le flux sous le formulaire. Texte inchangé.
+- Fichiers : `app/globals.css` (`.prototype-success`).
+
+### UX-030 — La bulle de saisie recouvre les boutons d’IRR
+
+- Écran : IRR-01, synthèse. Profil : W. Largeurs : 1440 et 380. Catégorie : formulaire. Gravité : mineur.
+- Constat : `connecte/irr-1440.jpg` et `connecte/irr-380.jpg`. `#input-guard-message` est fixe, centré, à 96 px du bas (`globals.css`). Sur l’étape synthèse elle se pose sur « ← Précédent » et « Terminer la ronde ». En 380 px le fil ne montre que trois puces alors que la page est à l’étape 4 (déjà UX-017 : il faut faire défiler).
+- Correction : ancrer le message au champ, ou le réserver au-dessus des actions, avec `role="status"`. Ne pas changer `input-rules`.
+- Fichiers : `app/components/InputGuard.tsx`, `app/globals.css`.
+
+### Ce qui a été regardé et ne devient pas un constat
+
+- `connecte/wilo-pressure-1440.jpg` montre 2,8 bar hors plage 4,5–5,5 et un second relevé au format du navigateur (mm/dd/yyyy). La plage est celle du connecté (UX-008 à l’envers : ici c’est le bon formulaire). Le format de l’input date suit la locale du poste de capture, pas un libellé en dur. Non retenu.
+- `demo/103_agent-electricite_desktop_rondes-unique-etape-6.jpg` : « 09/30/2026 » et « 12:23 PM » sont le même input natif. Non retenu.
+- Bandeau navy « au milieu » de `demo/018` : artefact de capture pleine page sur un en-tête fixe. Non retenu.
+- Double libellé « Arbitrages » sur `demo/001` et `demo/003` : le bandeau est celui que DEC-023 conserve. Non retenu comme défaut à corriger.
+
