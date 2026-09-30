@@ -186,3 +186,43 @@ export function writeLastConfirmedGe01(
   }
   return memoryCache;
 }
+
+type ReportLike = {
+  equipmentCode: string;
+  reportStatus: string;
+  performedAt: string;
+  isTest?: boolean;
+  checks: Array<{ code: string; status: string; valueNumeric?: number; valueText?: string; valueBoolean?: boolean }>;
+};
+
+/**
+ * E6 — contexte « dernier relevé » reconstruit à partir du dernier rapport GE-01 reçu par le serveur,
+ * pour l'espace (réel / recette) courant. Aucune valeur n'est inventée : un contrôle absent reste null.
+ */
+export function lastContextFromReports(reports: ReportLike[] | null | undefined, isTest = false): Ge01LastContext {
+  const latest = (reports ?? [])
+    .filter((report) => report.equipmentCode === 'GE-01' && Boolean(report.isTest) === isTest && report.reportStatus !== 'draft' && report.performedAt)
+    .sort((a, b) => b.performedAt.localeCompare(a.performedAt))[0];
+  if (!latest) return { ...EMPTY_LAST_CONTEXT };
+  const check = (code: string) => latest.checks.find((item) => item.code === code);
+  const numeric = (code: string) => {
+    const value = check(code)?.valueNumeric;
+    return typeof value === 'number' && Number.isFinite(value) ? value : null;
+  };
+  const start = check('demarrage_reussi');
+  const lastStartOutcome: Ge01LastContext['lastStartOutcome'] = !start ? null
+    : start.status === 'not_checked' ? 'not_performed'
+      : start.status === 'ok' ? 'success' : 'failed';
+  const finalStatus = check('statut_global')?.valueText;
+  return normalizeLastContext({
+    engineHours: numeric('heures_moteur'),
+    performedOn: latest.performedAt.slice(0, 10),
+    controlStatus: finalStatus ? (finalStatus === 'Opérationnel' ? 'ok' : 'anomalie') : null,
+    fuelLevel: numeric('niveau_carburant'),
+    oilLevel: numeric('niveau_huile'),
+    waterTemperature: numeric('temperature_eau'),
+    batteryVoltage: numeric('tension_batterie'),
+    lastStartOutcome,
+    dmcNextDate: null,
+  });
+}

@@ -55,6 +55,8 @@ export function StartRoundPicker({
       ? `Démarrer la ronde ${openRounds[0].equipmentCode as EquipmentCode}`
       : 'Démarrer une ronde';
 
+  const opensPanel = !allDone && !singleDue;
+
   useEffect(() => {
     if (!open) return undefined;
     const onKey = (event: KeyboardEvent) => {
@@ -86,9 +88,16 @@ export function StartRoundPicker({
   return (
     <div className="start-round-picker" ref={rootRef}>
       <div className="start-round-actions">
-        <button type="button" className="primary-button" onClick={startPrimary} aria-expanded={open} aria-haspopup="dialog" aria-controls={open ? labelId : undefined}>
-          {primaryLabel} <span className="start-round-caret" aria-hidden="true" />
-        </button>
+        {/* C2 — le chevron n'apparaît que si le bouton ouvre réellement la liste des rondes. */}
+        {opensPanel ? (
+          <button type="button" className="primary-button" onClick={startPrimary} aria-expanded={open} aria-haspopup="dialog" aria-controls={open ? labelId : undefined}>
+            {primaryLabel} <span className="start-round-caret" aria-hidden="true" />
+          </button>
+        ) : (
+          <button type="button" className="primary-button" onClick={startPrimary}>
+            {primaryLabel}
+          </button>
+        )}
       </div>
       {open ? (
         <div className="start-round-panel" role="dialog" aria-labelledby={labelId}>

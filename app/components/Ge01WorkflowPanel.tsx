@@ -50,7 +50,7 @@ export function Ge01WorkflowPanel({ anomaly, isManager, isAgent, onSubmit, onRef
     }
     } finally { submitting.current = false; }
   };
-  return <Card as="section" className="ge01-workflow-panel" aria-label="Traitement GE-01">
+  return <Card as="section" className="ge01-workflow-panel" aria-label="Traitement du dossier">
     <DossierActionBoard nextAction={proofAction || receptionAction ? summary.nextAction : command ? labels[command] : anomaly.status === 'Clôturée' ? 'Dossier clôturé' : 'Action à actualiser'} expectedActor={summary.expectedActor} responsible={anomaly.antiZombieSummary?.responsible ?? null} deadline={summary.deadlineOrSla} delayed={summary.isDelayed} closed={anomaly.status === 'Clôturée'} primaryLabel="Ouvrir les preuves" onPrimary={onOpenProofs} readOnly={!permitted && !proofAction} busy={busy}>
     <div className="ge01-workflow-refresh"><Button variant="secondary" disabled={busy} onClick={onRefresh}>Actualiser le dossier</Button></div>
     {receptionAction && <p>La réception de cette intervention attend le Facility Manager.</p>}
@@ -60,9 +60,9 @@ export function Ge01WorkflowPanel({ anomaly, isManager, isAgent, onSubmit, onRef
       <Button className="ge01-open-proofs" disabled={busy} onClick={onOpenProofs}>Ouvrir les preuves</Button>
     </>}
     {command === 'assign' && <p>Le responsable choisi réalisera le diagnostic. Le dossier reste en qualification jusqu’au choix du traitement par le Facility Manager.</p>}
-    {anomaly.treatment && <div className="ge01-treatment-summary"><p><strong>{treatmentLabel} autorisée</strong> · {anomaly.treatment.workOrderReference}</p>{anomaly.treatment.branch !== 'internal_without_cost' && <p>{anomaly.treatment.costReference} · {money(anomaly.treatment.amount)}{anomaly.treatment.vendorLabel ? ` · ${anomaly.treatment.vendorLabel}` : ''}</p>}<p>{anomaly.treatment.comment}</p>{vendorWork && <p>Agent Électricité Démo reste responsable du suivi interne. Il consigne le début, le résultat et le justificatif à contrôler par Facility Manager Démo.</p>}</div>}
-    {command === 'branch' && <p>Facility Manager Démo choisit le traitement après le diagnostic. Une intervention avec coût nécessite une décision financière approuvée de ce dossier.</p>}
-    {proofLocked && <p role="status">{isManager ? 'Consultez et acceptez la preuve dans l’onglet Preuves avant de clôturer.' : 'Déposez le justificatif dans l’onglet Preuves. Facility Manager Démo pourra ensuite le vérifier et clôturer le dossier.'}</p>}
+    {anomaly.treatment && <div className="ge01-treatment-summary"><p><strong>{treatmentLabel} autorisée</strong> · {anomaly.treatment.workOrderReference}</p>{anomaly.treatment.branch !== 'internal_without_cost' && <p>{anomaly.treatment.costReference} · {money(anomaly.treatment.amount)}{anomaly.treatment.vendorLabel ? ` · ${anomaly.treatment.vendorLabel}` : ''}</p>}<p>{anomaly.treatment.comment}</p>{vendorWork && <p>Évariste reste responsable du suivi interne. Il consigne le début, le résultat et le justificatif à contrôler par Faustin.</p>}</div>}
+    {command === 'branch' && <p>Faustin choisit le traitement après le diagnostic. Une intervention avec coût nécessite une décision financière approuvée de ce dossier.</p>}
+    {proofLocked && <p role="status">{isManager ? 'Consultez et acceptez la preuve dans l’onglet Preuves avant de clôturer.' : 'Déposez le justificatif dans l’onglet Preuves. Faustin pourra ensuite le vérifier et clôturer le dossier.'}</p>}
     {command && !permitted && <p>Cette étape attend {command === 'diagnose' ? 'le diagnostic de l’agent affecté' : 'le Facility Manager'}.</p>}
     {permitted && !proofLocked && <>
       {command === 'assign' && <Field label="Responsable du diagnostic">
@@ -86,11 +86,11 @@ export function Ge01WorkflowPanel({ anomaly, isManager, isAgent, onSubmit, onRef
           {!anomaly.financialOptions?.some(c => c.status === 'approved') && <p role="status">Aucun coût approuvé disponible. Enregistrez le coût et faites-le arbitrer dans l’espace Coûts.</p>}
           <Button variant="secondary" disabled={busy || confirming} onClick={onOpenCosts}>Consulter les coûts</Button>
         </>}
-        {treatment.branch === 'vendor' && <Field label="Entreprise référencée pour GE-01"><Select value={treatment.vendorCode} disabled={busy || confirming} onChange={e => changeTreatment({ vendorCode: e.target.value })}>
+        {treatment.branch === 'vendor' && <Field label="Entreprise référencée pour cet équipement"><Select value={treatment.vendorCode} disabled={busy || confirming} onChange={e => changeTreatment({ vendorCode: e.target.value })}>
           <option value="">Sélectionner l’entreprise</option>
           {(anomaly.eligibleVendors ?? []).map(v => <option key={v.code} value={v.code}>{v.label}</option>)}
         </Select></Field>}
-        {treatment.branch === 'vendor' && !anomaly.eligibleVendors?.length && <p role="status">Aucune entreprise éligible n’est référencée pour GE-01.</p>}
+        {treatment.branch === 'vendor' && !anomaly.eligibleVendors?.length && <p role="status">Aucune entreprise éligible n’est référencée pour cet équipement.</p>}
       </div>}
       <Field label={command === 'diagnose' ? 'Diagnostic et constat terrain' : command === 'finish' ? 'Intervention réalisée et résultat' : 'Commentaire de décision'}>
         <textarea required value={comment} disabled={busy || confirming} onChange={(event) => { setComment(event.target.value); requestId.current = null; }} />

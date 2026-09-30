@@ -5400,3 +5400,85 @@ h1{
 .wilo-unverified-link{border:0;background:none;padding:0;color:var(--brand);font-size:var(--font-size-label);font-weight:600;cursor:pointer}
 .wilo-unverified-toggle{display:flex;align-items:center;gap:8px;color:var(--foreground-muted);font-size:var(--font-size-label)}
 @media (max-width:760px){.choice-chip{flex:1 1 calc(50% - 6px)}}
+
+/* ==========================================================================
+   Lot T1 — Revue UX terrain du 30/09/2026 (espaces Agent Électricité / Eau & Incendie)
+   Couche additive : ne modifie aucun token existant. Voir FROM-DESIGN DESIGN-082.
+   ========================================================================== */
+.ge-form-card-body{display:contents}
+/* E2 — champs de mesure : zone de saisie de 48 px au lieu de 24 px */
+.ge-measure-input input{min-height:var(--control-height-lg);padding:0 var(--space-3)}
+.ge-measure-head label{font:inherit;color:inherit;cursor:pointer}
+/* E4 — récapitulatif : libellé et valeur sur deux lignes, compteurs espacés */
+.ge-review-list>li>div{display:grid;gap:2px;min-width:0}
+.ge-review-list>li>div>span{color:var(--foreground-muted);font-size:var(--font-size-label)}
+.ge-review-list>li>div>b{font-size:var(--font-size-body);overflow-wrap:anywhere}
+.ge-review-hero>div{display:grid;gap:2px}
+.ge-review-counts{flex-wrap:wrap}
+.ge-review-counts>li{display:flex;align-items:baseline;gap:4px}
+/* E9 — « Résultat de l’essai » et « Dernier essai » ne sont plus collés */
+.ge-step-inline-ref{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}
+/* E3 — étapes futures visiblement inactives */
+.ge-progress button:disabled{cursor:default;opacity:.55}
+/* Zones tactiles ≥ 44 px pour les cases « Mesure impossible » et la confirmation */
+.ge-unavailable-toggle,.ge-confirmation{min-height:44px;align-items:center}
+.ge-unavailable-toggle input,.ge-confirmation input{width:22px;height:22px;margin-top:0}
+/* Saisie mobile : 16 px minimum pour éviter le zoom automatique d’iOS (DEC-003 reste le plancher de lecture) */
+@media (max-width:767px),(pointer:coarse){
+  input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea{font-size:16px!important}
+}
+/* Récapitulatif : badge et « Modifier » empilés à droite, le libellé occupe la colonne gauche */
+.ge-review-list>li>div{grid-row:1 / span 2;align-self:center}
+.ge-review-list>li>:not(div){grid-column:2;justify-self:end}
+/* E1 — compteur non renseigné : tiret discret, distinct des boutons − et + */
+.count-stepper-value.is-empty{color:var(--foreground-muted);font-weight:var(--font-weight-regular);font-size:var(--font-size-label)}
+/* C1 — le bandeau « bleed » (marge négative de 30 px) ne recouvre plus le sélecteur « Espace de travail » */
+.content:has(> .recette-space) .home-hero-banner.is-bleed{margin-top:0}
+/* C14 — formulaire rapport prestataire */
+.field-required{color:var(--danger);font-weight:var(--font-weight-bold)}
+.field-required-legend{margin:0 0 var(--space-2);color:var(--foreground-muted);font-size:var(--font-size-label)}
+.field-required-legend span{color:var(--danger);font-weight:var(--font-weight-bold)}
+.vendor-summary-count{color:var(--foreground-muted)}
+.vendor-summary-count.is-ok{color:var(--success)}
+.vendor-cost-input input{border:0!important;min-height:var(--control-height)}
+.vendor-cost-echo{color:var(--foreground);font-weight:var(--font-weight-medium)}
+.vendor-report-form-actions .primary-button,.vendor-report-form-actions .secondary-button,.vendor-report-form-actions .danger-button{font-size:var(--font-size-body);min-height:var(--control-height-lg)}
+.vendor-cancel-confirm{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2);width:100%;padding:var(--space-3);border:1px solid var(--warning-border);border-radius:var(--radius-sm);background:var(--warning-surface)}
+.vendor-cancel-confirm p{flex:1 1 100%;margin:0;font-size:var(--font-size-body)}
+.danger-button{border:1px solid var(--danger);border-radius:var(--radius-sm);padding:0 var(--space-4);background:var(--danger);color:#fff;font-weight:var(--font-weight-medium);cursor:pointer}
+.danger-button:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px}
+/* C4 — onglet « Suivies » de l'espace agent */
+.act-bar.is-mute{background:var(--border-strong)}
+.agent-followed-note{margin:0 0 var(--space-2);color:var(--foreground-muted);font-size:var(--font-size-label)}
+/* C11 — abandon du brouillon de ronde */
+.ge-abandon{display:flex;justify-content:flex-end;margin-top:var(--space-2)}
+.ge-abandon .vendor-cancel-confirm{width:100%}
+.ge-abandon-button{min-height:var(--touch-min,44px);color:var(--danger)}
+.danger-button,.vendor-cancel-confirm .secondary-button{min-height:var(--control-height-lg);font-size:var(--font-size-body)}
+/* Dossier — étapes du cycle lisibles sur mobile : grille 3 × 2 au lieu d'un rail tronqué sans barre de défilement */
+@media (max-width:600px){
+  .dossier-workflow{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-2);overflow:visible}
+  .dossier-workflow>div{min-width:0!important;white-space:normal}
+  .dossier-workflow>div b{overflow:visible;text-overflow:clip;white-space:normal;overflow-wrap:anywhere}
+}
+/* DEC-020 — contrôles de base WILO à trois choix explicites */
+.control-choice-grid{display:grid;gap:var(--space-3);grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.control-choice{display:grid;gap:var(--space-2);padding:var(--space-3);border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface)}
+.control-choice.is-anomaly{border-color:var(--warning-border);background:var(--warning-surface)}
+.control-choice>p{display:grid;gap:2px;margin:0}
+.control-choice>p small{color:var(--foreground-muted);font-size:var(--font-size-label)}
+.control-choice .choice-set{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-2)}
+.control-choice .choice-chip{min-height:44px}
+.control-choice .choice-chip.is-anomaly.is-selected{border-color:var(--warning-border);background:var(--warning-surface);color:var(--warning)}
+.control-choice .choice-chip.is-selected{border-color:var(--brand);background:var(--surface-emphasis);color:var(--brand-strong);font-weight:var(--font-weight-bold)}
+.surpresseur-fields>.field-hint{font-size:var(--font-size-label);color:var(--foreground-muted);margin:var(--space-2) 0 0}
+.ge-abandon{width:100%;flex-wrap:wrap}
+.ge-abandon-button{max-width:100%;white-space:normal}
+.ge-abandon{box-sizing:border-box;padding:0 var(--space-4) var(--space-3)}
+
+/* 30/09 recette V35 : la barre d’onglets défilait aussi verticalement sur mobile (marge -1px des boutons). */
+@media (max-width:700px){.workspace-tabs{overflow-x:auto;overflow-y:hidden}}
+
+/* 30/09 : message du garde-fou de saisie (caractère refusé). */
+.input-guard-message{position:fixed;left:50%;bottom:96px;z-index:var(--z-modal);max-width:min(92vw,520px);padding:10px 14px;border-radius:var(--radius-md);background:var(--foreground);color:var(--surface);font-size:var(--font-size-label);box-shadow:var(--shadow-float);transform:translateX(-50%);opacity:0;pointer-events:none;transition:opacity .2s}
+.input-guard-message[data-visible="true"]{opacity:1}

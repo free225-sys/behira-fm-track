@@ -28,6 +28,8 @@ export function adaptCanonicalAntiZombieSummary(
   // GE-01 proof review/closure enforce an FM assignee; show that role, not a guessed name.
   const nextActionAssignee = row.is_closed || row.next_action_missing ? null
     : row.next_action_assigned_profile_name?.trim() || (
+      // Une qualification créée par un agent n'a pas encore de titulaire : elle revient au Facility Manager.
+      row.next_action_code === 'QUALIFY_ASSIGN' ||
       row.next_action_assigned_profile_id && ['QUALIFY_ASSIGN', 'CHOOSE_TREATMENT_BRANCH', 'GE01_REVIEW_PROOF', 'GE01_CLOSE'].includes(row.next_action_code ?? '')
         ? 'Facility Manager' : null
     );

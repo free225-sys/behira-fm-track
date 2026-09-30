@@ -5,6 +5,7 @@ import { RoundPilotHeader } from './shared/RoundPilotHeader';
 import { RoundDateTimeFields } from './shared/RoundDateTimeFields';
 import { OfflineSyncStatus } from './OfflineSyncStatus';
 import { RIA_FIELDS, RIA_PHOTOS, riaHasAnomaly, emptyRiaDraft, riaPayload, type RiaDraft, type RiaPhoto } from '../lib/ria/report';
+import { reportStageLabel } from '../lib/report-stage';
 import type { useOfflineSync } from '../lib/offline/useOfflineSync';
 import { getBrowserSupabaseClient } from '../lib/supabase/client';
 import type { Json } from '../lib/supabase/database.types';
@@ -29,20 +30,22 @@ export function RiaRoundSpace({isTest=false,manager,enabled,offlineSync,onRefres
  if(!enabled)return <Card role="status">La ronde RIA-01 nécessite une connexion avec le compte réel habilité. Aucun contrôle n’est simulé.</Card>;
  const report=rounds.find(r=>r.id===selected);
  return <section aria-label="Ronde RIA-01">
-  <RoundPilotHeader title="RIA-01 · Réseau incendie" subtitle="Cinq étapes · contrôle quotidien" badge={<span className="mockup-label">Saisie terrain</span>}/><Card><p>Cadence à confirmer · heure d’Abidjan. Les réglages des pressostats et les essais spécialisés relèvent de Prestataire Incendie Démo.</p><p>Valeur de pression de référence à confirmer par Prestataire Incendie Démo.</p></Card>
+  <RoundPilotHeader title="RIA-01 · Réseau incendie" subtitle="Cinq étapes · contrôle quotidien" badge={<span className="mockup-label">Saisie terrain</span>}/><Card><p>Cadence à confirmer · heure d’Abidjan. Les réglages des pressostats et les essais spécialisés relèvent de SECURISYS.</p><p>Valeur de pression de référence à confirmer par SECURISYS.</p></Card>
   {!manager&&<RiaForm key={String(isTest)} isTest={isTest} offlineSync={offlineSync} rounds={rounds}/>}
   <Card><h3>{manager?'Rapports RIA à examiner':'Historique RIA-01'}</h3><Button variant="secondary" disabled={loading} onClick={()=>void refresh()}>Actualiser les rapports RIA</Button>
    {error&&<p role="alert">{error}</p>}{loading&&<p role="status">Chargement…</p>}{!loading&&!error&&rounds.length===0&&<p>Aucun rapport RIA-01 reçu.</p>}
-   {rounds.map(r=><div key={r.id}><Button variant="ghost" onClick={()=>setSelected(r.id)}>{r.reference} · {stamp(r.performedAt)}</Button><p>{r.reviewedAt?'Contrôle validé par le FM':r.returnReason?`Nouveau contrôle demandé : ${r.returnReason}`:r.readAt?'Lu — examen FM en cours':r.confirmedAt?'Reçu — revue FM attendue':'Photos en cours de réception'}</p></div>)}
+   {rounds.map(r=><div key={r.id}><Button variant="ghost" onClick={()=>setSelected(r.id)}>{r.reference} · {stamp(r.performedAt)}</Button><p>{reportStageLabel({reviewedAt:r.reviewedAt,returnReason:r.returnReason,readAt:r.readAt,confirmedAt:r.confirmedAt})}</p></div>)}
   </Card>
   {report&&<RiaReview isTest={isTest} key={report.id} report={report} manager={manager} onOpenAnomaly={onOpenAnomaly} onDone={()=>{void refresh();onRefresh();}}/>}
  </section>;
 }
-export function RiaForm({demo=false,isTest=false,offlineSync:s,rounds=[]}:{demo?:boolean;isTest?:boolean;offlineSync:ReturnType<typeof useOfflineSync>;rounds?:Round[]}) {
+export function RiaForm({isTest=false,offlineSync:s,rounds=[]}:{isTest?:boolean;offlineSync:ReturnType<typeof useOfflineSync>;rounds?:Round[]}) {
  const draftKey=baseDraftKey+(isTest?':recette':'');
  const [testAttested,setTestAttested]=useState(false);
  const [draft,setDraft]=useState<RiaDraft|null>(null),[error,setError]=useState(''),[saveState,setSaveState]=useState('Chargement du brouillon…'),[busy,setBusy]=useState(false),[confirmed,setConfirmed]=useState(false),[step,setStep]=useState(0);
  const [furthestStep,setFurthestStep]=useState(0);
+ const [confirmAbandon,setConfirmAbandon]=useState(false);
+ // Adjust derived progress during render instead of in an effect.
  if(step>furthestStep)setFurthestStep(step);
  const lock=useRef(false),writes=useRef(Promise.resolve());
  useEffect(()=>{let active=true;void s.loadDraft<RiaDraft>(draftKey).then(d=>{if(active){setDraft(d?.value??emptyRiaDraft());setSaveState('Brouillon chargé');}}).catch(e=>setError(message(e)));return()=>{active=false;};},[s.loadDraft,draftKey]);
@@ -67,9 +70,9 @@ export function RiaForm({demo=false,isTest=false,offlineSync:s,rounds=[]}:{demo?
   if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size<1||file.size>10485760){setError('Photo : JPG, PNG ou WebP, 10 Mo maximum.');return;}
   change({...draft,photos:[...draft.photos.filter(p=>p.purpose!==purpose),{id:crypto.randomUUID(),purpose,file}]});
  };
- return <Card><div className="panel-head"><div><h3>{draft.queued?(demo?'Simulation de ronde terminée':'Ronde transmise'):'Contrôle quotidien du réseau incendie'}</h3><p>Réalisation : {stamp(draft.performedAt)}</p></div></div>
-  <OfflineSyncStatus enabled={!demo} online={s.online} running={s.running} counts={s.counts} latestIssue={s.latestIssue} latestRoundReceipt={receipt} onRetry={()=>void s.retryFailed().then(()=>s.synchronize())}/>
-  {draft.queued?<><p role="status">{demo?'Simulation locale terminée. Aucun rapport transmis ni mis en file hors ligne.':confirmedReference?`${confirmedReference} — rapport et photos confirmés par le serveur.`:'Rapport protégé dans la file d’envoi. Attendez la confirmation serveur.'}</p><Button variant="secondary" disabled={!demo&&!confirmedReference} onClick={()=>{const next=emptyRiaDraft();setTestAttested(false);change(next);setStep(0);setFurthestStep(0);}}>Nouvelle ronde hors planning</Button></>:<>
+ return <Card><div className="panel-head"><div><h3>{draft.queued?'Ronde transmise':'Contrôle quotidien du réseau incendie'}</h3><p>Réalisation : {stamp(draft.performedAt)}</p></div></div>
+  <OfflineSyncStatus enabled online={s.online} running={s.running} counts={s.counts} latestIssue={s.latestIssue} latestRoundReceipt={receipt} onRetry={()=>void s.retryFailed().then(()=>s.synchronize())}/>
+  {draft.queued?<><p role="status">{confirmedReference?`${confirmedReference} — rapport et photos confirmés par le serveur.`:'Rapport protégé dans la file d’envoi. Attendez la confirmation serveur.'}</p><Button variant="secondary" disabled={!confirmedReference} onClick={()=>{const next=emptyRiaDraft();setTestAttested(false);change(next);setStep(0);setFurthestStep(0);}}>Nouvelle ronde hors planning</Button></>:<>
    <div className="surpresseur-progress connected-round-progress" aria-label="Étapes RIA">{labels.map((label,i)=><button type="button" key={label} className={i===step?'active':i<step?'done':''} disabled={i>Math.max(step,furthestStep)} aria-current={i===step?'step':undefined} onClick={()=>setStep(i)}><span>{i<step?'✓':i+1}</span><b>{label}</b></button>)}</div>
   <fieldset disabled={busy}><legend>{labels[step]}</legend><div className="two-fields">
     {step===0&&<RoundDateTimeFields value={draft.performedAt} onChange={performedAt=>change({...draft,performedAt})}/>}
@@ -88,6 +91,7 @@ export function RiaForm({demo=false,isTest=false,offlineSync:s,rounds=[]}:{demo?
    </>}
    </fieldset>
    <p role="status" className="field-hint">{saveState}</p>{step>0&&<Button variant="secondary" onClick={()=>setStep(step-1)}>Précédent</Button>}{step<4?<Button onClick={()=>setStep(step+1)}>Continuer</Button>:<Button disabled={busy||!confirmed||(isTest&&!testAttested)} onClick={()=>void submit()}>{busy?'Mise en file…':'Transmettre le rapport RIA'}</Button>}
+   {!draft.queued&&<div className="ge-abandon">{confirmAbandon?<div className="vendor-cancel-confirm" role="alertdialog" aria-label="Abandonner le brouillon ?"><p>Abandonner ce brouillon ? Toutes les réponses saisies sur cet appareil seront effacées. Rien n’a été envoyé.</p><button type="button" className="secondary-button" onClick={()=>setConfirmAbandon(false)}>Garder le brouillon</button><button type="button" className="danger-button" onClick={()=>{void writes.current.catch(()=>{}).then(()=>s.deleteDraft(draftKey)).then(()=>{setDraft(emptyRiaDraft());setStep(0);setFurthestStep(0);setConfirmed(false);setConfirmAbandon(false);setSaveState('Brouillon abandonné. Aucune donnée n’a été envoyée.');}).catch(e=>setError(message(e)));}}>Abandonner</button></div>:<button type="button" className="ghost-button ge-abandon-button" disabled={busy} onClick={()=>setConfirmAbandon(true)}>Abandonner le brouillon</button>}</div>}
   </>}{error&&<p role="alert">{error}</p>}
  <aside className="score-explain-card is-compact"><div><span>RIA-01</span><b>Indisponible</b></div><p className="analytics-note">Aucune valeur de score n’est affichée avant validation de la méthode et de ses données sources.</p></aside>
  </Card>;
@@ -130,7 +134,7 @@ export function RiaReview({isTest=false,report:r,manager,onDone,onOpenAnomaly}:{
  </Card>;
 }
 
-export function RiaRoundNavigation({children,ria,existingLabel='GE-01 · Électricité'}:{children:ReactNode;ria:ReactNode;existingLabel?:string}) {
- const [tab,setTab]=useState<'existing'|'ria'>('existing');
- return <><div className="workspace-tabs" role="tablist" aria-label="Équipement de la ronde"><button role="tab" aria-selected={tab==='existing'} className={tab==='existing'?'active':''} onClick={()=>setTab('existing')}>{existingLabel}</button><button role="tab" aria-selected={tab==='ria'} className={tab==='ria'?'active':''} onClick={()=>setTab('ria')}>RIA-01 · Incendie</button></div>{tab==='ria'?ria:children}</>;
+export function RiaRoundNavigation({children,ria,irr,existingLabel='GE-01 · Électricité'}:{children:ReactNode;ria:ReactNode;irr?:ReactNode;existingLabel?:string}) {
+ const [tab,setTab]=useState<'existing'|'ria'|'irr'>('existing');
+ return <><div className="workspace-tabs" role="tablist" aria-label="Équipement de la ronde"><button role="tab" aria-selected={tab==='existing'} className={tab==='existing'?'active':''} onClick={()=>setTab('existing')}>{existingLabel}</button><button role="tab" aria-selected={tab==='ria'} className={tab==='ria'?'active':''} onClick={()=>setTab('ria')}>RIA-01 · Incendie</button>{irr?<button role="tab" aria-selected={tab==='irr'} className={tab==='irr'?'active':''} onClick={()=>setTab('irr')}>IRR-01 · Irrigation</button>:null}</div>{tab==='ria'?ria:tab==='irr'&&irr?irr:children}</>;
 }

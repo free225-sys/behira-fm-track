@@ -1,0 +1,106 @@
+{
+  "source": "8c5512a",
+  "target": "feat/ge01-pilot",
+  "tests": [
+    {
+      "test": "audit-visual-styles.mjs",
+      "passed": true,
+      "exitCode": 0,
+      "output": "✓ Focus unique 2 px\n✓ Focus limité à la navigation clavier\n✓ Déclencheur persona sans anneau interne\n✓ Carte Direction sans double signal\n✓ Escalade Facility Manager sans double signal\n✓ Champ focalisé sans anneau CSS interne\n✓ Timeline active sans halo additionnel\n✓ Titre global alimenté par le catalogue canonique\n✓ Réserve navigation mobile présente\n✓ Grille du registre partagée\n✓ Repli du registre avec responsable\n✓ Continuité du traitement au plancher 12 px\n✓ Titres tronqués proprement\n✓ Références équipement insécables\n✓ Shell sans rail latéral résiduel\n✓ Navigation unique et état courant accessible\n✓ Nomenclature principale DEC-008 stable\n✓ Logo renvoyant vers Accueil\n✓ CTA de ronde limité à l’Accueil autorisé\n✓ En-tête de page sur surface claire\n✓ Accueil sans titre jumeau\n✓ Hero À traiter sans second titre\n✓ DEC-015 : tous les profils arrivent sur Accueil\n✓ Hero Facility Manager sans bande navy collée\n✓ Menu Plus prêt pour le catalogue groupé\n✓ Environnement de démonstration visible\n✓ Triplets sémantiques déclarés\n✓ Encres sémantiques consommées\n✓ Badges immunisés contre les encres de conteneur\n✓ DESIGN-051 : mentions italique sans sceau\n✓ DESIGN-051 : lavis et encre sémantique, aucune découpe ni flou\n✓ Flux opérationnel hors colonne décision\n✓ Aucun mécanisme de thème sombre (DEC-006)\n✓ Bandeau des rondes borné au retrait mobile\n✓ Étapes de ronde défilables sur mobile\n✓ Champs métier longs compressibles\n✓ DEC-003 maintenue à 12 px\n✓ Libellés des sept files au plancher 12 px\n✓ DEC-007 À traiter sans bloc santé\n✓ DESIGN-041/044 : cockpit commun sur Accueil\n✓ File Facility Manager élargie\n✓ Ticket actif identifié par deux canaux\n✓ Pipeline renforcé et connecté\n✓ Gravité représentée par des barres accessibles\n✓ Cartes Facility Manager sans ombre lourde\n✓ Ruban de compteurs relié à la file\n✓ Compteur actif pétrole\n✓ Monogrammes de file au triplet\n✓ Glyphes de badge distincts\n✓ Focus du ruban non clippé\n✓ Sept files visibles dans la liste\n✓ Branches de décision interactives\n✓ Zébrure anti-dossier-zombie maintenue\n✓ Historique insuffisant explicitement encadré\n✓ Bandeau Surpresseur aligné sur le retrait grand écran\n✓ Badge Administration non compressible\n✓ Tokens chrome et marque-foreground déclarés\n✓ Bandeau consomme le chrome tokenisé\n✓ Glyphe B distinct du teal courant (DEC-013)\n✓ Durées d’animation tokenisées\n✓ Spécimen hors navigation produit\n✓ Primitives UI partagées\n✓ Destination Équipements sur primitives et tokens\n✓ Équipements dans Plus sans étendre les profils terrain\n✓ Destination Coûts sur primitives et tokens\n✓ Coûts dans Plus sans étendre les profils terrain\n✓ Coûts sans budget ou paiement inventé\n✓ Montant du dossier raccordé à l’arbitrage existant\n✓ Seuil financier unique et non modifiable silencieusement\n✓ Destination Utilisateurs et droits sur primitives et tokens\n✓ Accès utilisateur dans Plus sans profils terrain\n✓ Administration cliente neutralisée dans le miroir\n✓ Destination Seuils et paramètres sur primitives et tokens\n✓ Seuils et paramètres réservés à Administration\n✓ Paramètre financier unique et non éditable dans le miroir\n✓ Familles de paramètres absentes explicitement signalées\n✓ Synthèse anti-dossier-zombie prioritaire dans le dossier central\n✓ Onglets du dossier accessibles\n✓ Historique du dossier canonique avec repli honnête\n✓ Preuve attendue non généralisée\n✓ Refus de preuve explicite dans la file agent\n✓ Actions du dossier conformes au rôle et au verrou critique\n✓ Score WILO sans collision de disposition\n✓ Actions principales tactiles sur mobile\n✓ Porte d’authentification sans panneau navy\n✓ Menu compact sans double bordure\n✓ Accueil FM sans bandeau opérationnel doublon\n✓ Analytique santé unique sur Pilotage\n✓ Parc Pilotage pointe vers Équipements\n✓ Dossier sans seconde bande navy\n✓ Destinations Plus sans titre jumeau\n✓ Rondes sans bande navy\n✓ Rondes sans bandeau ni score dupliqué\n\n93 contrôles statiques de bordure/focus réussis.\n"
+    },
+    {
+      "test": "verify-design-contract.mjs",
+      "passed": true,
+      "exitCode": 0,
+      "output": "Contrat DESIGN-040/041/046/048/049/051 et Lucide vérifié sur 43 fichiers applicatifs.\n"
+    },
+    {
+      "test": "verify-personas.mjs",
+      "passed": true,
+      "exitCode": 0,
+      "output": "✓ Personas métier\n✓ Espaces personnalisés\n✓ Modules initiaux\n✓ Référentiel prestataires sans accès direct\n✓ Décisions Administration\n✓ Parcours terrain et preuve\n✓ Cycle métier\n✓ États opérationnels\n✓ Droits visibles par persona\n✓ Responsive\n✓ Accessibilité clavier\n✓ Listbox persona accessible\n✓ Groupes de personas\n✓ Matrice de dépôt nominative visible\n✓ Aucun persona ou portail prestataire\n✓ Polish Direction et Facility Manager\n✓ Pilote Surpresseur et saisie directe\n✓ Aucun parcours d’import de reporting\n✓ Délégation et dossier cible\n✓ Clôture design des cockpits\n✓ Navigation analytique du tableau de bord\n✓ Destination Équipements limitée à Administration et Facility Manager\n✓ Destination Coûts limitée à Administration et Facility Manager\n✓ Destination Utilisateurs et droits conforme à la délégation\n✓ Destination Seuils et paramètres réservée à Administration\n✓ Dossier central P6 sans seconde source métier\n✓ Double mission Agente Rondes & Assistance\n✓ Résilience terrain sans promesse hors ligne fictive\n✓ Mesures Surpresseur explicables\n✓ Verrou critique et retour Direction\n✓ Badges structurés\n✓ Focus P2 et protection navigation mobile\n✓ Sélecteur natif persona supprimé\n✓ Contrastes sémantiques et badges ≥ 4,5:1\n✓ Aucune clé Supabase codée en dur dans le frontend\n✓ Couverture responsive 390px\n✓ Couverture responsive 768px\n✓ Couverture responsive 1440px\n\n38 contrôles persona réussis.\n"
+    },
+    {
+      "test": "verify-agent-work-orders.mjs",
+      "passed": true,
+      "exitCode": 0,
+      "output": "✓ projection typée des ordres de travail\n✓ profil canonique résolu côté serveur\n✓ file limitée aux ordres attribués ou au suivi prestataire du profil connecté\n✓ statuts métier existants uniquement\n✓ RLS complétée par un filtre explicite\n✓ références OT et anomalie conservées\n✓ file réelle injectée dans l’espace agent\n✓ chargement et file vide explicites\n✓ actions simulées isolées du mode réel\n✓ cycle réel rattaché à la référence canonique\n✓ preuve terrain mise dans la file hors ligne existante\n✓ états de preuve distincts\n✓ acceptation et refus Facility Manager visibles\n✓ motif de refus obligatoire côté interface\n✓ métadonnées de preuve projetées depuis la source canonique\n✓ bucket privé imposé pour la consultation\n✓ lien de consultation temporaire sans URL publique\n✓ consultation image et PDF proposée dans le dossier\n✓ preuve consultable depuis la file personnelle de l’agent\n✓ états accepté, refusé et à valider conservés\n✓ refus visible dans la carte agent\n✓ motif canonique du refus affiché sans invention\n✓ nouveau dépôt présenté comme remplacement\n✓ historique canonique projeté depuis anomaly_history\n✓ libellé, acteur, étape et heure proviennent des référentiels métier\n✓ historique réel injecté dans le dossier\n✓ état indisponible conservé uniquement en absence d’événement\n✓ données de démonstration séparées\n\n28 contrôles C9-FIX-06 réussis.\n"
+    },
+    {
+      "test": "verify-ge01-pilot.ts",
+      "passed": true,
+      "exitCode": 0,
+      "output": "GE-01: 22 champs, essai quotidien, AUTO, N/A mensuel, offline et lecture Faustin vérifiés.\n"
+    },
+    {
+      "test": "verify-anti-zombie.ts",
+      "passed": true,
+      "exitCode": 0,
+      "output": "✓ dossier actif complet\n✓ dossier en retard\n✓ dossier bloqué complet\n✓ dossier bloqué sans acteur\n✓ dossier bloqué sans motif\n✓ dossier sans responsable\n✓ dossier sans échéance\n✓ dossier sans historique\n✓ projection canonique C6 adaptée sans recalcul métier\n✓ 15 assertions : rôle FM si nom masqué, nom visible prioritaire, aucune affectation inventée\n✓ acteur attendu distinct du responsable, sans attribution inventée\n✓ chargement live refusé si la projection est absente ou dupliquée\n✓ projection canonique partagée Facility Manager, registre et dossier central\n✓ neuf informations visibles, valeurs de repli et alerte de blocage présentes\n✓ contrôle statique desktop, mobile, clavier et absence de tooltip\n\n13 contrôles AntiZombieSummary réussis.\n"
+    },
+    {
+      "test": "verify-auth.mjs",
+      "passed": true,
+      "exitCode": 0,
+      "output": "✓ Connexion et états\n✓ Afficher / masquer\n✓ Mot de passe oublié\n✓ Invitation et robustesse\n✓ Déconnexion et réinitialisation\n✓ Session locale\n✓ Cinq comptes fictifs internes\n✓ Domaine non réel\n✓ DESIGN-041 : arrivée sur Accueil pour chaque rôle\n✓ Protection des vues\n✓ Aucun compte Lecture seule\n✓ Mode démonstration explicite\n✓ Préproduction sans démo visible si le repli est désactivé\n✓ Marque technique absente des textes visibles\n✓ Supabase local branché\n✓ Première connexion verrouillée\n✓ Mot de passe robuste obligatoire\n✓ Déverrouillage Auth confirmé\n✓ Persona imposé par RLS\n✓ Session synchronisée entre onglets\n✓ Interface périmée invalidée\n✓ Message de reprise explicite\n✓ Utilisateur revérifié avant mutation\n✓ Responsive 390 / 768 / 1440\n✓ Focus clavier unique\n✓ Aucun secret Supabase\n\n26 contrôles d’authentification réussis.\n"
+    },
+    {
+      "test": "verify-offline-sync.mjs",
+      "passed": true,
+      "exitCode": 0,
+      "output": "✓ file IndexedDB versionnée\n✓ données isolées par utilisateur\n✓ états pending/syncing/synced/failed/conflict\n✓ reprise des synchronisations interrompues\n✓ relance progressive bornée\n✓ conflit sans écrasement\n✓ synchronisation automatique au retour réseau\n✓ brouillons de ronde persistants\n✓ rondes raccordées à la file réelle\n✓ identifiant de ronde stable dans le brouillon\n✓ horodatage métier stable dans le brouillon\n✓ identifiant stable transmis à la file\n✓ verrou synchrone contre les clics répétés\n✓ boutons verrouillés pendant et après la transmission\n✓ références serveur restituées à l’écran\n✓ dernier reçu de ronde restauré depuis la file\n✓ confirmation globale porte les références\n✓ formulaire déjà synchronisé restauré comme transmis\n✓ nouvelle ronde explicitement distinguée du reçu précédent\n✓ preuves raccordées à la file réelle\n✓ chemin de preuve déterministe\n✓ identifiants uniques côté base\n✓ empreinte anti-réutilisation\n✓ RPC ronde sous RLS invoker\n✓ RPC preuve durcie\n✓ aucun droit anon\n✓ ancienne simulation réseau supprimée\n\n27 contrôles P7B hors ligne réussis.\n"
+    },
+    {
+      "test": "verify-resilience.mjs",
+      "passed": true,
+      "exitCode": 0,
+      "output": "✓ Contrat partagé des six états\n✓ Démonstration explicitement volatile\n✓ Mode serveur sans fausse promesse hors ligne\n✓ Échec et reprise accessibles\n✓ Rondes raccordées à la file hors ligne\n✓ Actions terrain identifiées comme simulation\n✓ Preuve mise en file avec états et retry\n✓ Confirmation serveur réservée au succès réel\n✓ Reprise réseau et conflits explicites\n✓ Aucun ancien libellé trompeur\n✓ Responsive et mouvement réduit\n✓ Design system respecté\n\n12 contrôles de résilience terrain réussis.\n"
+    },
+    {
+      "test": "verify-font-assets.mjs",
+      "passed": true,
+      "exitCode": 0,
+      "output": "✓ /fonts/geist-sans/Geist-Variable.woff2 — HTTP 200, 69652 octets\n✓ /fonts/geist-mono/GeistMono-Variable.woff2 — HTTP 200, 71368 octets\n\nLes polices Geist sont servies sans erreur réseau.\n",
+      "baseUrl": "http://127.0.0.1:3001"
+    },
+    {
+      "test": "verify-financial-decisions.mjs",
+      "passed": true,
+      "exitCode": 0,
+      "output": "C10 financial decisions verification passed (threshold, RLS, idempotency, history, live UI and generated types).\n"
+    }
+  ],
+  "integrity": {
+    "businessFilesUnchanged": 14,
+    "callbacksUnchanged": 7,
+    "workflowGuardsUnchanged": 6
+  },
+  "tooling": {
+    "eslint": "passed, no warnings",
+    "typescript": "passed",
+    "build": "passed, client chunk warning >500 kB"
+  },
+  "browserChecks": {
+    "proofs": 2,
+    "expectedActor": "Facility Manager",
+    "internalResponsible": "Agent Électricité",
+    "consultHeight": 44,
+    "correctedDepositHeight": 44,
+    "proofFocus": "dossier-evidence-panel",
+    "refusalWithoutReason": "disabled",
+    "agentValidationActions": "absent",
+    "fmValidationActions": "present",
+    "internalWithoutCost": "Intervention interne sans coût autorisée",
+    "closedExpectedActor": "Aucun acteur attendu",
+    "proofMobileViewport": 390,
+    "proofMobileScrollWidth": 375,
+    "proofDesktopViewport": 1440,
+    "proofDesktopScrollWidth": 1425,
+    "scope": "isolated application components, no server writes"
+  },
+  "followUpTimeInput": {
+    "lint": "passed",
+    "typescript": "passed",
+    "browser": "TIME_INPUT_CORRECTION.json"
+  }
+}

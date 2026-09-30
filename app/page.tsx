@@ -1,4 +1,5 @@
 'use client';
+import { IrrForm } from './components/IrrRound';
 import { WiloRoundInbox } from './components/WiloRoundInbox';
 import type { Ge01AssignmentHandler } from './components/Ge01Planning';
 import type { Ge01Operations } from './lib/ge01/operations';
@@ -23,15 +24,17 @@ import { AccessWorkspace } from './components/AccessWorkspace';
 import { BuildingHealthCockpit, ScoreRing } from './components/BuildingHealthCockpit';
 import { DomainPointsSummary } from './components/DomainPointsSummary';
 import { RoundDateTimeFields } from './components/shared/RoundDateTimeFields';
+import { reasonProblem } from './lib/input-rules';
 import { DemoScenarioProvider, DemoScenarioSelect, EquipmentTable, InsufficientNote, ReportTrackingLine, RoundPilotHeader, SegmentedControl, StartRoundPicker, useDemoScoreScenario } from './components/shared';
 import { DEMO_THRESHOLD, demoHomeSnapshot, demoReportTracking, demoRoundsFor, sessionForAudience } from './lib/ui-contract/fixtures.ts';
 import type { TodaysRound, UiSession } from './lib/ui-contract/building-health.ts';
 import { asciiInitials, displayAssetCode, displayAssetText, formatCompactMoney, formatTime, formatWeekdayDate, palierFromScore, roundStateLabel, roundSubjectLabel, scoreFigure, statusBadgeTone, statusLabel, thresholdPosition } from './lib/ui-contract/display.ts';
+import { reportStageLabel } from './lib/report-stage';
 import { WiloSupplement } from './components/WiloSupplement';
-import { activeWiloFields, buildWiloChecks, measuredNumber, wiloPressureState, wiloSupplementFindings, type WiloAnswers } from './lib/wilo/report';
-import { useDemoRoundSync } from './lib/demo-round-sync';
+import { activeWiloFields, buildWiloChecks, measuredNumber, noActiveLeak, pumpAvailability, WILO_DERIVED_CONTROLS, wiloPressureState, wiloSupplementFindings, type WiloAnswers } from './lib/wilo/report';
+import { EauRounds } from './components/EauRounds';
 import { Ge01AgentForm, Ge01ReportInbox } from './components/Ge01Pilot';
-import { RiaForm, RiaRoundNavigation, RiaRoundSpace } from './components/RiaRound';
+import { RiaRoundNavigation, RiaRoundSpace } from './components/RiaRound';
 import { CostsWorkspace, type CostReviewInput, type CostSubmissionInput } from './components/CostsWorkspace';
 import { EquipmentWorkspace } from './components/EquipmentWorkspace';
 import { NotificationBell } from './components/NotificationCenter';
@@ -481,6 +484,10 @@ function expectedActorFor(anomaly:Anomaly) {
 function nextActionFor(anomaly:Anomaly) {
   if (anomaly.workflow?.actionCode === 'RECEIVE_INTERVENTION') return 'Réceptionner l’intervention';
   if (anomaly.workflow?.actionCode === 'REVIEW_REOPENED_DOSSIER') return 'Réexaminer le dossier rouvert';
+  // Qualification en trois temps (tous équipements) : l'action canonique prime sur le statut « À qualifier ».
+  if (anomaly.workflow?.actionCode === 'PERFORM_DIAGNOSIS') return 'Réaliser et confirmer le diagnostic';
+  if (anomaly.workflow?.actionCode === 'CHOOSE_TREATMENT_BRANCH') return 'Choisir le traitement';
+  if (anomaly.workflow?.actionCode === 'QUALIFY_ASSIGN') return 'Qualifier et affecter un responsable interne';
   if (anomaly.status === 'Clôturée') return 'Aucune action — dossier clôturé';
   if (anomaly.status === 'À qualifier') return canonicalResponsible(anomaly) ? 'Examiner le rapport et qualifier' : 'Qualifier et affecter un responsable interne';
   if (anomaly.status === 'Affectée' && !canonicalResponsible(anomaly)) return 'Affecter un responsable interne';
@@ -765,8 +772,10 @@ function LiveHealthCockpit({ session, onNavigate, actionCount, causeActions, ban
   const { scenario } = useDemoScoreScenario();
   const current = useContext(ConnectedPresentation);
   const snapshot = current.live ? current.health : demoHomeSnapshot(session, scenario);
+  // Accueil agent : mêmes actions que la liste « À faire » (action canonique attribuée à l'agent), pas les décisions FM.
+  const agentPendingActions = current.source?.anomalies.filter(a => a.status !== 'Clôturée' && (a.workflow?.assignedToCurrentUser || a.workflow?.actionAssignedToCurrentUser)).length ?? 0;
   if (!snapshot) return <InsufficientNote title="Santé non calculable" detail="Le paramètre financier ou le périmètre serveur n’est pas encore disponible." />;
-  return <BuildingHealthCockpit snapshot={snapshot} session={session} onNavigate={onNavigate} rounds={current.live ? current.source?.ge01Operations.rounds ?? [] : demoRoundsFor(session)} roundsConfigured={!current.live || Boolean(current.source?.ge01Operations.policyVersion)} syncContent={current.sync} actionCount={current.live ? snapshot.pendingDecisions ?? current.source?.workOrders.filter(w=>w.status!=='Terminé').length ?? 0 : actionCount} causeActions={causeActions} bannerExtras={bannerExtras}>{children}{current.live && <InsufficientNote title="Planning GE-01" detail="Du lundi au samedi, avant 23:59 (heure d’Abidjan). Seule la ronde quotidienne GE-01 est planifiée ici." />}</BuildingHealthCockpit>;
+  return <BuildingHealthCockpit snapshot={snapshot} session={session} onNavigate={onNavigate} rounds={current.live ? current.source?.ge01Operations.rounds ?? [] : demoRoundsFor(session)} roundsConfigured={!current.live || Boolean(current.source?.ge01Operations.policyVersion)} syncContent={current.sync} actionCount={current.live ? (['electricite','eau_incendie','rondes_assistance'].includes(session.audience) ? agentPendingActions : snapshot.pendingDecisions ?? current.source?.workOrders.filter(w=>w.status!=='Terminé').length ?? 0) : actionCount} causeActions={causeActions} bannerExtras={bannerExtras}>{children}{current.live && <InsufficientNote title="Planning GE-01" detail="Du lundi au samedi, avant 23:59 (heure d’Abidjan). Seule la ronde quotidienne GE-01 est planifiée ici." />}</BuildingHealthCockpit>;
 }
 
 function LiveEquipmentWorkspace({ session }: { session: UiSession }) {
@@ -791,6 +800,7 @@ export default function Home() {
   const [previousView, setPreviousView] = useState<View>('registry');
   const [personaId, setPersonaId] = useState<PersonaId>('facility');
   const [anomalies, setAnomalies] = useState(seedAnomalies);
+  const openAnomalyCount = anomalies.filter((item) => item.status !== 'Clôturée').length;
   const [equipmentItems, setEquipmentItems] = useState(fallbackEquipment);
   const [vendorReferences, setVendorReferences] = useState(fallbackVendors);
   const [workOrders, setWorkOrders] = useState<OperationalWorkOrder[]>([]);
@@ -1232,7 +1242,7 @@ export default function Home() {
         await advanceAnomalyWorkflow(client, selected.id, targets[command], command === 'branch' ? `Branche A — interne sans coût. ${comment}` : comment);
       }
       await syncOperationalData();
-      flash('Étape GE-01 enregistrée dans le dossier.');
+      flash('Étape enregistrée dans le dossier.');
       return true;
     } catch (error) {
       flash(`Étape non confirmée : ${mutationError(error)}. Actualisez le dossier avant de réessayer.`);
@@ -1713,7 +1723,7 @@ export default function Home() {
       <main className={`main-column${view === 'manager' || view === 'registry' ? ' is-dossiers-page' : ''}`}>
         <header className="topbar">
           <div className="topbar-title"><h1>{pageTitle}</h1><p>{pageSubtitle}</p></div>
-          <div className="top-actions">{session.mode === 'demo' ? <PersonaSwitcher value={personaId} onChange={changePersona} /> : <div className={`authenticated-persona data-${dataState}`} title={`${session.email} · ${dataState === 'live' ? `données ${supabaseIntegration.environmentLabel}` : 'données métier indisponibles'}`}><span>{persona.initials}</span><p><b>{persona.name}</b><small>{dataState === 'live' ? `${supabaseIntegration.environmentLabel} · ${referenceCounts.anomalies} anomalies visibles` : dataState === 'loading' ? `Connexion à ${supabaseIntegration.environmentLabel}…` : `Erreur de chargement · ${persona.role}`}</small></p></div>}<NotificationBell personaId={personaId} anomalies={anomalies} equipment={equipmentItems} dataState={dataState} canConfigure={personaId === 'facility' || personaId === 'administration'} canOpenEquipment={allowedViewsByPersona[personaId].includes('equipment')} onOpenAnomaly={(id) => openDetail(id, view === 'detail' ? previousView : view)} onOpenEquipment={() => navigate('equipment')} onOpenHome={() => navigate('workspace')} /><button className="auth-signout-top" onClick={() => setSignOutConfirm(true)} aria-label="Se déconnecter"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 4.5H5.5A1.5 1.5 0 0 0 4 6v8a1.5 1.5 0 0 0 1.5 1.5H8"/><path d="M8.5 10H16m0 0-2.4-2.4M16 10l-2.4 2.4"/></svg></button></div>
+          <div className="top-actions">{session.mode === 'demo' ? <PersonaSwitcher value={personaId} onChange={changePersona} /> : <div className={`authenticated-persona data-${dataState}`} title={`${session.email} · ${dataState === 'live' ? `données ${supabaseIntegration.environmentLabel}` : 'données métier indisponibles'}`}><span>{nameInitials(persona.name, persona.initials)}</span><p><b>{persona.name}</b><small>{dataState === 'live' ? `${supabaseIntegration.environmentLabel} · ${openAnomalyCount} dossier${openAnomalyCount > 1 ? 's' : ''} ouvert${openAnomalyCount > 1 ? 's' : ''} dans votre périmètre` : dataState === 'loading' ? `Connexion à ${supabaseIntegration.environmentLabel}…` : `Erreur de chargement · ${persona.role}`}</small></p></div>}<NotificationBell personaId={personaId} anomalies={anomalies} equipment={equipmentItems} dataState={dataState} canConfigure={personaId === 'facility' || personaId === 'administration'} canOpenEquipment={allowedViewsByPersona[personaId].includes('equipment')} onOpenAnomaly={(id) => openDetail(id, view === 'detail' ? previousView : view)} onOpenEquipment={() => navigate('equipment')} onOpenHome={() => navigate('workspace')} /><button className="auth-signout-top" onClick={() => setSignOutConfirm(true)} aria-label="Se déconnecter"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 4.5H5.5A1.5 1.5 0 0 0 4 6v8a1.5 1.5 0 0 0 1.5 1.5H8"/><path d="M8.5 10H16m0 0-2.4-2.4M16 10l-2.4 2.4"/></svg></button></div>
         </header>
 
         <div className="content">
@@ -1759,7 +1769,7 @@ export default function Home() {
             {personaId === 'administration' && session.mode === 'demo' ? <AccessWorkspace users={personas.map((item) => ({ id:item.id, name:item.name, initials:item.initials, role:item.role, scope:item.scope }))} audience="administration" /> : null}
           </>}
           {view === 'report' && <><Report key={`${session.userId ?? 'demo'}:${personaId}:${recipeMode}`} isTest={recipeMode} persona={persona} agentName={session.displayName ?? persona.name} reports={reports} connected={session.mode === 'supabase' && dataState === 'live'} onNavigate={navigate} persistenceEnabled={session.mode === 'supabase'} offlineSync={offlineSync} flash={flash} onReview={handleGe01Review} onRead={handleGe01Read} onLoadProof={handleGe01Proof} planning={presentationSource?.ge01Operations} onAssign={handleGe01Assignment} onOpenAnomaly={(reference) => openDetail(reference, 'report')} onRefresh={retryOperationalData} />{(personaId === 'electricite' || personaId === 'eau_incendie') && <InternalVendorReportPanel anomalies={anomalies.filter(item => (personaId === 'electricite' ? ['GE-01'] : ['WILO-01','RIA-01','IRR-01']).includes(displayAssetCode(item.asset)) && item.status !== 'Clôturée')} vendors={vendorReferences} canUpload={effectiveCanUploadVendorReport} busy={mutationBusy} onSubmit={persistVendorReport} />}</>}
-          {view === 'detail' && <Detail key={`${selected.id}-${selected.status}-${selected.workflow?.version}-${selected.proof}-${selected.proofPending}-${selected.proofQueued}`} anomaly={selected} decision={escalations.find((item) => item.anomaly === selected.id && (!selected.treatment || item.costReference === selected.treatment.costReference)) ?? null} decisionThreshold={decisionThreshold} persistenceMode={session.mode === 'supabase' && dataState === 'live' ? 'server' : 'demo'} persistenceEnabled={session.mode === 'supabase'} offlineSync={offlineSync} readOnly={personaId === 'administration'} canReopen={session.mode === 'supabase' && dataState === 'live' && (personaId === 'facility' || personaId === 'administration')} canVerify={personaId === 'facility' && session.mode === 'supabase'} busy={mutationBusy} onBack={() => navigate(previousView)} onStatus={(status) => void persistWorkflowStatus(status)} onProof={persistProof} onConsultProof={consultProof} onVerify={verifyProof} onReception={persistReception} onReopen={persistReopenDossier} onReviewReopened={persistReviewReopenedDossier} onOpenCosts={() => navigate('costs')} onGe01Workflow={persistGe01Workflow} onRefresh={() => { void syncOperationalData().catch((error) => flash(mutationError(error))); }} isManager={personaId === 'facility'} isAgent={personaId === 'electricite'} />}
+          {view === 'detail' && <Detail key={`${selected.id}-${selected.status}-${selected.workflow?.version}-${selected.proof}-${selected.proofPending}-${selected.proofQueued}`} anomaly={selected} decision={escalations.find((item) => item.anomaly === selected.id && (!selected.treatment || item.costReference === selected.treatment.costReference)) ?? null} decisionThreshold={decisionThreshold} persistenceMode={session.mode === 'supabase' && dataState === 'live' ? 'server' : 'demo'} persistenceEnabled={session.mode === 'supabase'} offlineSync={offlineSync} readOnly={personaId === 'administration'} canReopen={session.mode === 'supabase' && dataState === 'live' && (personaId === 'facility' || personaId === 'administration')} canVerify={personaId === 'facility' && session.mode === 'supabase'} busy={mutationBusy} onBack={() => navigate(previousView)} onStatus={(status) => void persistWorkflowStatus(status)} onProof={persistProof} onConsultProof={consultProof} onVerify={verifyProof} onReception={persistReception} onReopen={persistReopenDossier} onReviewReopened={persistReviewReopenedDossier} onOpenCosts={() => navigate('costs')} onGe01Workflow={persistGe01Workflow} onRefresh={() => { void syncOperationalData().catch((error) => flash(mutationError(error))); }} isManager={personaId === 'facility'} isAgent={personaId === 'electricite' || personaId === 'eau_incendie'} />}
           </>}
         </div>
       </main>
@@ -1797,6 +1807,13 @@ function PersonaWorkspace({ persona, anomalies, equipment, vendors, canUploadVen
 
 function AnswerStrip({ todo, risk, due, proof }: { todo:string; risk:string; due:string; proof:string }) {
   return <section className="answer-strip" aria-label="Résumé opérationnel"><div><span>À FAIRE</span><b>{todo}</b></div><div className="risk"><span>RISQUE</span><b>{risk}</b></div><div><span>ÉCHÉANCE</span><b>{due}</b></div><div className="proof"><span>PREUVE MANQUANTE</span><b>{proof}</b></div></section>;
+}
+
+/** Initiales à partir du nom affiché (« Sylvain DOUANE » → « SD ») ; repli sur les initiales du rôle. */
+function nameInitials(name:string, fallback:string) {
+  const parts = name.normalize('NFD').replace(/\p{M}/gu, '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length < 2) return fallback;
+  return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
 }
 
 function formatMoney(value:number) {
@@ -2112,12 +2129,15 @@ function AgentWorkspace({ onOpen, persona, anomalies, equipment, vendors, canUpl
   const agentKey = persona.id as 'electricite'|'eau_incendie';
   const current = useContext(ConnectedPresentation);
   const [demoTasks, setTasks] = useState(agentTaskSets[agentKey]);
-  const assigned = anomalies.filter(a=>a.workflow?.assignedToCurrentUser && a.status !== 'Clôturée');
+  // C4 — « À faire » : dossiers dont l'agent est responsable OU dont la prochaine action lui revient.
+  const assigned = anomalies.filter(a=>(a.workflow?.assignedToCurrentUser || a.workflow?.actionAssignedToCurrentUser) && a.status !== 'Clôturée');
+  // Dossiers ouverts du périmètre (déjà filtrés par RLS) dont l'action revient à quelqu'un d'autre : suivis en lecture seule.
+  const followed = current.live ? anomalies.filter(a=>a.status !== 'Clôturée' && !assigned.includes(a) && !(current.source?.workOrders ?? []).some(w=>w.anomalyReference===a.id)) : [];
   const tasks: AgentTask[] = current.live ? [...new Map<string, AgentTask>([
     ...(current.source?.workOrders ?? []).map(w=>[w.anomalyReference, {...w, id:w.anomalyReference}] as const),
     ...assigned.map(a=>[a.id, {id:a.id,asset:a.asset,title:a.title,due:a.due,risk:a.priority,status:'À faire' as const,proof:a.proof,proofPending:a.proofPending,delayed:a.delayed,detail:a.antiZombieSummary?.nextAction ?? a.description}] as const),
   ]).values()] : demoTasks;
-  const [tab, setTab] = useState<'todo'|'done'|'hist'>('todo');
+  const [tab, setTab] = useState<'todo'|'done'|'watch'|'hist'>('todo');
   const [action, setAction] = useState<{type:'measure'|'proof'|'escalate'|'reset'; id:string}|null>(null);
   const [note, setNote] = useState('');
   const visible = tasks.filter((task) => tab === 'done' ? task.status === 'Terminé' : task.status !== 'Terminé').slice().sort((a, b) => Number(Boolean(b.delayed)) - Number(Boolean(a.delayed)));
@@ -2146,14 +2166,20 @@ function AgentWorkspace({ onOpen, persona, anomalies, equipment, vendors, canUpl
       <div className="workspace-tabs parameters-tabs agent-action-tabs" role="tablist">
         <button type="button" role="tab" aria-selected={tab === 'todo'} className={tab === 'todo' ? 'active' : ''} onClick={() => setTab('todo')}>À faire <span>{tasks.filter((task) => task.status !== 'Terminé').length}</span></button>
         <button type="button" role="tab" aria-selected={tab === 'done'} className={tab === 'done' ? 'active' : ''} onClick={() => setTab('done')}>Terminées <span>{tasks.filter((task) => task.status === 'Terminé').length}</span></button>
+        {followed.length > 0 && <button type="button" role="tab" aria-selected={tab === 'watch'} className={tab === 'watch' ? 'active' : ''} onClick={() => setTab('watch')}>Suivies <span>{followed.length}</span></button>}
         <button type="button" role="tab" aria-selected={tab === 'hist'} className={tab === 'hist' ? 'active' : ''} onClick={() => setTab('hist')}>Historique des rondes</button>
       </div>
-      {tab !== 'hist' ? (
-        <div className="agent-task-list">{visible.length === 0 ? <div className="empty-state compact"><span>✓</span><h3>Tout est terminé</h3><p>Aucune action dans cette file.</p></div> : visible.map((task) => <article key={task.id} className={`act-row${task.delayed ? ' late' : ''}`}><span className={`act-bar ${task.delayed ? 'is-bad' : task.status === 'Terminé' ? 'is-ok' : 'is-sig'}`} /><div className="task-copy"><div className="task-status"><Badge tone={task.delayed ? 'critical' : task.status === 'Terminé' ? 'success' : task.status === 'Rétabli provisoirement' ? 'orange' : 'blue'}>{task.delayed ? 'En retard' : tab === 'todo' && task.status === 'À faire' ? 'À faire' : task.status}</Badge><span className="task-ref">{task.id}</span></div><h3>{displayAssetCode(task.asset)}, {task.title}</h3><p>{task.detail}</p><div className="facts"><span>Risque : <b>{task.risk}</b></span><span>Échéance : <b className={task.delayed ? 'late-text' : undefined}>{task.due}</b></span><span>Preuve : <b>{task.proofPending ? 'À valider' : task.proof ? 'Jointe' : 'Manquante'}</b></span></div></div>{current.live ? <div className="task-actions"><Button onClick={()=>onOpen(task.id)}>Ouvrir le dossier</Button></div> : tab === 'todo' && <div className="task-actions"><button type="button" onClick={() => {setAction({type:'measure',id:task.id});setNote('')}}>Saisie rapide</button>{agentKey === 'eau_incendie' && task.asset === 'DEMO-EAU' && <button type="button" className="reset-action" onClick={() => {setAction({type:'reset',id:task.id});setNote('')}}>↻ Réarmement provisoire</button>}<button type="button" onClick={() => {setAction({type:'proof',id:task.id});setNote('')}}>Ajouter une preuve</button><button type="button" onClick={() => {setAction({type:'escalate',id:task.id});setNote('')}}>{task.escalated ? '✓ Escalade envoyée' : 'Escalader au FM'}</button></div>}</article>)}</div>
+      {tab === 'watch' ? (
+        <div className="agent-task-list agent-followed-list">
+          <p className="agent-followed-note">Dossiers ouverts de votre périmètre dont la prochaine action revient à un autre acteur. Lecture seule.</p>
+          {followed.map((anomaly) => <article key={anomaly.id} className={`act-row${anomaly.delayed ? ' late' : ''}`}><span className={`act-bar ${anomaly.delayed ? 'is-bad' : 'is-mute'}`} /><div className="task-copy"><div className="task-status"><Badge tone={anomaly.delayed ? 'critical' : 'neutral'}>{anomaly.delayed ? 'En retard' : anomaly.status}</Badge><span className="task-ref">{anomaly.id}</span></div><h3>{displayAssetCode(anomaly.asset)}, {anomaly.title}</h3><p>Prochaine action : <b>{anomaly.antiZombieSummary?.nextAction ?? 'À définir'}</b>{anomaly.antiZombieSummary?.expectedActor ? <> · Acteur attendu : <b>{anomaly.antiZombieSummary.expectedActor}</b></> : null}</p><div className="facts"><span>Risque : <b>{anomaly.priority}</b></span><span>Constaté : <b>{anomaly.reported}</b></span><span>Échéance : <b className={anomaly.delayed ? 'late-text' : undefined}>{anomaly.due}</b></span></div></div><div className="task-actions"><Button variant="secondary" onClick={()=>onOpen(anomaly.id)}>Ouvrir le dossier</Button></div></article>)}
+        </div>
+      ) : tab !== 'hist' ? (
+        <div className="agent-task-list">{visible.length === 0 ? <div className="empty-state compact"><span>✓</span><h3>{tab === 'todo' && followed.length ? 'Aucune action ne vous est affectée' : 'Tout est terminé'}</h3><p>{tab === 'todo' && followed.length ? `${followed.length} dossier${followed.length > 1 ? 's' : ''} de votre périmètre ${followed.length > 1 ? 'sont suivis' : 'est suivi'} par un autre acteur : onglet « Suivies ».` : 'Aucune action dans cette file.'}</p></div> : visible.map((task) => <article key={task.id} className={`act-row${task.delayed ? ' late' : ''}`}><span className={`act-bar ${task.delayed ? 'is-bad' : task.status === 'Terminé' ? 'is-ok' : 'is-sig'}`} /><div className="task-copy"><div className="task-status"><Badge tone={task.delayed ? 'critical' : task.status === 'Terminé' ? 'success' : task.status === 'Rétabli provisoirement' ? 'orange' : 'blue'}>{task.delayed ? 'En retard' : tab === 'todo' && task.status === 'À faire' ? 'À faire' : task.status}</Badge><span className="task-ref">{task.id}</span></div><h3>{displayAssetCode(task.asset)}, {task.title}</h3><p>{task.detail}</p><div className="facts"><span>Risque : <b>{task.risk}</b></span><span>Échéance : <b className={task.delayed ? 'late-text' : undefined}>{task.due}</b></span><span>Preuve : <b>{task.proofPending ? 'À valider' : task.proof ? 'Jointe' : 'Manquante'}</b></span></div></div>{current.live ? <div className="task-actions"><Button onClick={()=>onOpen(task.id)}>Ouvrir le dossier</Button></div> : tab === 'todo' && <div className="task-actions"><button type="button" onClick={() => {setAction({type:'measure',id:task.id});setNote('')}}>Saisie rapide</button>{agentKey === 'eau_incendie' && task.asset === 'DEMO-EAU' && <button type="button" className="reset-action" onClick={() => {setAction({type:'reset',id:task.id});setNote('')}}>↻ Réarmement provisoire</button>}<button type="button" onClick={() => {setAction({type:'proof',id:task.id});setNote('')}}>Ajouter une preuve</button><button type="button" onClick={() => {setAction({type:'escalate',id:task.id});setNote('')}}>{task.escalated ? '✓ Escalade envoyée' : 'Escalader au FM'}</button></div>}</article>)}</div>
       ) : (
         <div className="agent-round-history">
           {current.live && current.pendingRounds?.map(item => <p className="report-tracking-line" key={item.id}><span>{formatHistoryMoment(item.sentAt)}</span><span>GE-01 · conservé sur cet appareil, envoi en attente de confirmation.</span></p>)}
-          {current.live ? (current.source?.reports.length ? current.source.reports.slice(0,5).map(report=><p className="report-tracking-line" key={report.id}><span className="report-tracking-when">{formatHistoryMoment(report.submittedAt ?? report.performedAt)}</span><span className="report-tracking-ref">{report.equipmentCode} · {report.reference}</span><span className="report-tracking-stage">{report.review ? report.review.decision === 'conform' ? 'Examiné — conforme' : 'Qualifié — anomalie ouverte' : report.ge01Status?.readAt ? 'Lu par le FM — examen attendu' : report.ge01Status?.confirmedAt ? 'Confirmé par le serveur — lecture non attestée' : 'Reçu — réception des preuves à confirmer'}</span></p>) : <p className="empty">Aucun rapport confirmé par le serveur.</p>) : history.length === 0 ? <p className="empty">Aucun rapport dans cet historique.</p> : history.map((item) => <ReportTrackingLine key={item.clientMutationId} item={item} onView={() => onNavigate('report')} />)}
+          {current.live ? (current.source?.reports.length ? current.source.reports.slice(0,5).map(report=><p className="report-tracking-line" key={report.id}><span className="report-tracking-when">{formatHistoryMoment(report.submittedAt ?? report.performedAt)}</span><span className="report-tracking-ref">{report.equipmentCode} · {report.reference}</span><span className="report-tracking-stage">{reportStageLabel({ reviewDecision: report.review?.decision ?? null, readAt: report.ge01Status?.readAt, confirmedAt: report.ge01Status?.confirmedAt })}</span></p>) : <p className="empty">Aucun rapport confirmé par le serveur.</p>) : history.length === 0 ? <p className="empty">Aucun rapport dans cet historique.</p> : history.map((item) => <ReportTrackingLine key={item.clientMutationId} item={item} onView={() => onNavigate('report')} />)}
           <div className="hl-foot"><button type="button" className="health-link" onClick={() => onNavigate('report')}>Voir tout l’historique</button></div>
         </div>
       )}
@@ -2167,8 +2193,11 @@ function InternalVendorReportPanel({ anomalies, vendors, canUpload, busy, onSubm
   const formId = useId();
   const fileInputRef = useRef<HTMLInputElement|null>(null);
   const [open, setOpen] = useState(false);
-  const [anomalyReference, setAnomalyReference] = useState(anomalies[0]?.id ?? '');
-  const [vendorCode, setVendorCode] = useState(vendors[0]?.code ?? '');
+  // C14 — aucune présélection : l'agent choisit explicitement l'anomalie et l'entreprise.
+  const [anomalyReference, setAnomalyReference] = useState('');
+  const [vendorCode, setVendorCode] = useState('');
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const sectionRef = useRef<HTMLElement|null>(null);
   const [reportType, setReportType] = useState<VendorReportInput['reportType']>('intervention_report');
   const [reportDate, setReportDate] = useState(new Date().toISOString().slice(0,10));
   const [summary, setSummary] = useState('');
@@ -2222,10 +2251,23 @@ function InternalVendorReportPanel({ anomalies, vendors, canUpload, busy, onSubm
     setReportDate(new Date().toISOString().slice(0,10));
   };
 
+  const dirty = Boolean(anomalyReference || vendorCode || summary.trim() || reserveNotes.trim() || cost.trim() || file);
   const cancel = () => {
+    // C14 — ne jamais effacer une saisie sans confirmation.
+    if (dirty && !confirmCancel) { setConfirmCancel(true); return; }
     resetForm();
+    setAnomalyReference(''); setVendorCode(''); setConfirmCancel(false);
     setOpen(false);
   };
+
+  useEffect(() => {
+    // Sur mobile le formulaire s'ouvre en bas d'une page longue : l'amener à l'écran et placer le focus sur le premier champ.
+    if (!open) return;
+    const node = sectionRef.current;
+    if (!node) return;
+    node.scrollIntoView({ block: 'start', behavior: 'instant' });
+    node.querySelector<HTMLElement>('button[role="combobox"], input, textarea')?.focus({ preventScroll: true });
+  }, [open]);
 
   const submit = async (event:FormEvent) => {
     event.preventDefault();
@@ -2271,19 +2313,20 @@ function InternalVendorReportPanel({ anomalies, vendors, canUpload, busy, onSubm
     </section>;
   }
 
-  return <section id={formId} className={`panel internal-vendor-report ${canUpload ? 'is-authorized' : ''}`}>
+  return <section ref={sectionRef} id={formId} className={`panel internal-vendor-report ${canUpload ? 'is-authorized' : ''}`}>
     <div className="panel-head"><div><h3>Rapport d’intervention d’une entreprise</h3><p>Dépôt interne au nom d’un prestataire référencé</p><p className="vendor-access-note">Les prestataires n’ont pas d’accès direct : un agent autorisé dépose le rapport, Facility Manager contrôle la preuve.</p></div><div className="vendor-report-head-actions">{canUpload ? null : <Badge tone="neutral">Droit non attribué</Badge>}<button type="button" className="health-link" aria-expanded={true} onClick={() => setOpen(false)}>Réduire</button></div></div>
     {!canUpload ? <div className="permission-empty"><p>Ce profil ne dispose pas du droit nominatif de dépôt. Agent Électricité et Agent Eau & Incendie sont les seuls agents internes habilités.</p><button className="secondary-button" type="button" disabled>Déposer un rapport prestataire</button></div> :
     <form className="internal-vendor-form" onSubmit={submit} noValidate>
+      <p className="field-required-legend"><span aria-hidden="true">*</span> Champ obligatoire</p>
       <div className="two-fields">
-        <label className={`field ${fieldErrors.anomalyReference ? 'is-invalid' : ''}`}>Anomalie<Select value={anomalyReference} aria-invalid={Boolean(fieldErrors.anomalyReference)} aria-describedby={fieldErrors.anomalyReference ? `${formId}-anomaly` : undefined} onChange={(event) => { setAnomalyReference(event.target.value); if (fieldErrors.anomalyReference) setFieldErrors((current) => ({ ...current, anomalyReference: undefined })); }}>{anomalies.length ? anomalies.map((item) => <option key={item.id} value={item.id}>{item.id} · {displayAssetCode(item.asset)} · {item.title}</option>) : <option value="">Aucune anomalie ouverte</option>}</Select><FieldError id={`${formId}-anomaly`} message={fieldErrors.anomalyReference} /></label>
-        <label className={`field ${fieldErrors.vendorCode ? 'is-invalid' : ''}`}>Entreprise concernée<Select value={vendorCode} aria-invalid={Boolean(fieldErrors.vendorCode)} aria-describedby={fieldErrors.vendorCode ? `${formId}-vendor` : undefined} onChange={(event) => { setVendorCode(event.target.value); if (fieldErrors.vendorCode) setFieldErrors((current) => ({ ...current, vendorCode: undefined })); }}>{vendors.length ? vendors.map((vendor) => <option key={vendor.code} value={vendor.code}>{vendor.label && vendor.label !== vendor.code ? `${vendor.label} · ${vendor.code}` : vendor.code}</option>) : <option value="">Aucun prestataire</option>}</Select><FieldError id={`${formId}-vendor`} message={fieldErrors.vendorCode} /></label>
+        <label className={`field ${fieldErrors.anomalyReference ? 'is-invalid' : ''}`}><span>Anomalie<span className="field-required" aria-hidden="true"> *</span></span><Select value={anomalyReference} aria-invalid={Boolean(fieldErrors.anomalyReference)} aria-describedby={fieldErrors.anomalyReference ? `${formId}-anomaly` : undefined} onChange={(event) => { setAnomalyReference(event.target.value); if (fieldErrors.anomalyReference) setFieldErrors((current) => ({ ...current, anomalyReference: undefined })); }}>{anomalies.length ? [<option key="" value="" disabled>Choisir une anomalie…</option>, ...anomalies.map((item) => <option key={item.id} value={item.id}>{item.id} · {displayAssetCode(item.asset)} · {item.title} · {item.priority} · {item.reported}</option>)] : <option value="">Aucune anomalie ouverte</option>}</Select><FieldError id={`${formId}-anomaly`} message={fieldErrors.anomalyReference} /></label>
+        <label className={`field ${fieldErrors.vendorCode ? 'is-invalid' : ''}`}><span>Entreprise concernée<span className="field-required" aria-hidden="true"> *</span></span><Select value={vendorCode} aria-invalid={Boolean(fieldErrors.vendorCode)} aria-describedby={fieldErrors.vendorCode ? `${formId}-vendor` : undefined} onChange={(event) => { setVendorCode(event.target.value); if (fieldErrors.vendorCode) setFieldErrors((current) => ({ ...current, vendorCode: undefined })); }}>{vendors.length ? [<option key="" value="" disabled>Choisir l’entreprise…</option>, ...vendors.map((vendor) => <option key={vendor.code} value={vendor.code}>{vendor.label && vendor.label !== vendor.code ? `${vendor.label} · ${vendor.code}` : vendor.code}</option>)] : <option value="">Aucun prestataire</option>}</Select><FieldError id={`${formId}-vendor`} message={fieldErrors.vendorCode} /></label>
       </div>
       <div className="two-fields">
         <label className="field">Nature du document<Select value={reportType} onChange={(event) => setReportType(event.target.value as VendorReportInput['reportType'])}><option value="intervention_report">Rapport d’intervention</option><option value="pv">Procès-verbal</option><option value="quote">Devis</option><option value="photo_bundle">Dossier photos</option></Select></label>
-        <label className={`field ${fieldErrors.reportDate ? 'is-invalid' : ''}`}>Date du rapport<input type="date" className="native-date-input" max={new Date().toISOString().slice(0,10)} value={reportDate} aria-invalid={Boolean(fieldErrors.reportDate)} aria-describedby={fieldErrors.reportDate ? `${formId}-date` : undefined} onChange={(event) => { setReportDate(event.target.value); if (fieldErrors.reportDate) setFieldErrors((current) => ({ ...current, reportDate: undefined })); }} /><FieldError id={`${formId}-date`} message={fieldErrors.reportDate} /></label>
+        <label className={`field ${fieldErrors.reportDate ? 'is-invalid' : ''}`}><span>Date du rapport<span className="field-required" aria-hidden="true"> *</span></span><input type="date" className="native-date-input" max={new Date().toISOString().slice(0,10)} value={reportDate} aria-invalid={Boolean(fieldErrors.reportDate)} aria-describedby={fieldErrors.reportDate ? `${formId}-date` : undefined} onChange={(event) => { setReportDate(event.target.value); if (fieldErrors.reportDate) setFieldErrors((current) => ({ ...current, reportDate: undefined })); }} /><FieldError id={`${formId}-date`} message={fieldErrors.reportDate} /></label>
       </div>
-      <label className={`field ${fieldErrors.summary ? 'is-invalid' : ''}`}>Résumé de l’intervention<textarea value={summary} maxLength={2000} aria-invalid={Boolean(fieldErrors.summary)} aria-describedby={fieldErrors.summary ? `${formId}-summary` : undefined} onChange={(event) => { setSummary(event.target.value); if (fieldErrors.summary) setFieldErrors((current) => ({ ...current, summary: undefined })); }} placeholder="Diagnostic, action réalisée, essais et résultat — 20 caractères minimum." /><FieldError id={`${formId}-summary`} message={fieldErrors.summary} /></label>
+      <label className={`field ${fieldErrors.summary ? 'is-invalid' : ''}`}><span>Résumé de l’intervention<span className="field-required" aria-hidden="true"> *</span></span><textarea value={summary} maxLength={2000} aria-invalid={Boolean(fieldErrors.summary)} aria-describedby={fieldErrors.summary ? `${formId}-summary` : undefined} onChange={(event) => { setSummary(event.target.value); if (fieldErrors.summary) setFieldErrors((current) => ({ ...current, summary: undefined })); }} placeholder="Diagnostic, action réalisée, essais et résultat." /><small className={`field-hint vendor-summary-count ${summary.trim().length >= 20 ? 'is-ok' : ''}`} aria-live="polite">{summary.trim().length} / 20 caractères minimum</small><FieldError id={`${formId}-summary`} message={fieldErrors.summary} /></label>
       <div className="two-fields">
         <div className={`field ${fieldErrors.reserveNotes ? 'is-invalid' : ''}`}>
           <span className="field-label" id={`${formId}-reserves-label`}>Réserves éventuelles</span>
@@ -2293,10 +2336,10 @@ function InternalVendorReportPanel({ anomalies, vendors, canUpload, busy, onSubm
           </div>
           {hasReserves ? <><input aria-labelledby={`${formId}-reserves-label`} value={reserveNotes} maxLength={500} aria-invalid={Boolean(fieldErrors.reserveNotes)} aria-describedby={fieldErrors.reserveNotes ? `${formId}-reserves` : undefined} onChange={(event) => { setReserveNotes(event.target.value); if (fieldErrors.reserveNotes) setFieldErrors((current) => ({ ...current, reserveNotes: undefined })); }} placeholder="Détail de la réserve à lever" /><FieldError id={`${formId}-reserves`} message={fieldErrors.reserveNotes} /></> : <small className="field-hint">Aucune réserve ne sera enregistrée pour ce rapport.</small>}
         </div>
-        <label className={`field ${fieldErrors.cost ? 'is-invalid' : ''}`}>Coût indiqué<input type="number" min="0" step="1" inputMode="numeric" value={cost} aria-invalid={Boolean(fieldErrors.cost)} aria-describedby={fieldErrors.cost ? `${formId}-cost` : `${formId}-cost-hint`} onChange={(event) => { setCost(event.target.value); if (fieldErrors.cost) setFieldErrors((current) => ({ ...current, cost: undefined })); }} /><small id={`${formId}-cost-hint`} className={`field-hint ${costPosition === 'at_or_above' ? 'is-warning' : costPosition === 'below' ? 'is-ok' : ''}`}>{costPosition === 'at_or_above' ? `Montant supérieur ou égal au seuil de ${thresholdLabel} : la décision revient à l’Administration.` : costPosition === 'below' ? `Sous le seuil de ${thresholdLabel} : la décision reste au Facility Manager.` : `Montant en FCFA, si le rapport en mentionne un. Seuil : ${thresholdLabel}.`}</small><FieldError id={`${formId}-cost`} message={fieldErrors.cost} /></label>
+        <label className={`field ${fieldErrors.cost ? 'is-invalid' : ''}`}><span>Coût indiqué</span><span className="ge-inline-unit vendor-cost-input"><input type="number" min="0" step="1" inputMode="numeric" value={cost} aria-invalid={Boolean(fieldErrors.cost)} aria-describedby={fieldErrors.cost ? `${formId}-cost` : `${formId}-cost-hint`} onChange={(event) => { setCost(event.target.value); if (fieldErrors.cost) setFieldErrors((current) => ({ ...current, cost: undefined })); }} /><b aria-hidden="true">FCFA</b></span>{cost.trim() && Number.isFinite(Number(cost)) ? <small className="field-hint vendor-cost-echo">Soit {formatMoney(Number(cost))}</small> : null}<small id={`${formId}-cost-hint`} className={`field-hint ${costPosition === 'at_or_above' ? 'is-warning' : costPosition === 'below' ? 'is-ok' : ''}`}>{costPosition === 'at_or_above' ? `Montant supérieur ou égal au seuil de ${thresholdLabel} : la décision revient à l’Administration.` : costPosition === 'below' ? `Sous le seuil de ${thresholdLabel} : la décision reste au Facility Manager.` : `Montant en FCFA, si le rapport en mentionne un. Seuil : ${thresholdLabel}.`}</small><FieldError id={`${formId}-cost`} message={fieldErrors.cost} /></label>
       </div>
       <div className={`field vendor-dropzone-field ${fieldErrors.file ? 'is-invalid' : ''}`}>
-        <span className="field-label" id={`${formId}-file-label`}>Rapport, PV ou photo</span>
+        <span className="field-label" id={`${formId}-file-label`}>Rapport, PV ou photo<span className="field-required" aria-hidden="true"> *</span></span>
         <div className={`vendor-dropzone ${dragging ? 'is-dragging' : ''} ${file ? 'has-file' : ''}`} onDragOver={(event) => { event.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={(event) => { event.preventDefault(); setDragging(false); const dropped = event.dataTransfer.files?.[0] ?? null; if (dropped) acceptFile(dropped); }}>
           {file ? <div className="vendor-dropzone-file"><BrandIcon name="files" size={18} /><div><b>{file.name}</b><small>{Math.max(1, Math.round(file.size / 1024))} Ko</small></div><button type="button" className="health-link" onClick={() => acceptFile(null)}>Retirer</button></div>
             : <div className="vendor-dropzone-empty"><b>Déposer le rapport, le PV ou la photo</b><small id={`${formId}-file-hint`}>PDF, JPG, PNG ou WebP · 10 Mo maximum</small><button type="button" className="secondary-button" onClick={() => fileInputRef.current?.click()}>Choisir un fichier</button></div>}
@@ -2307,8 +2350,14 @@ function InternalVendorReportPanel({ anomalies, vendors, canUpload, busy, onSubm
       {error ? <p className="vendor-report-error" role="alert">{error}</p> : null}
       <div className="vendor-report-form-actions">
         <small className="vendor-report-action-note">Facility Manager validera la preuve après dépôt.</small>
-        <button type="button" className="secondary-button" disabled={busy || localBusy} onClick={cancel}>Annuler</button>
-        <button className="primary-button" disabled={busy || localBusy}>{busy || localBusy ? 'Dépôt en cours…' : 'Déposer le rapport'}</button>
+        {confirmCancel ? <div className="vendor-cancel-confirm" role="alertdialog" aria-live="assertive" aria-label="Abandonner la saisie ?">
+          <p>Abandonner la saisie ? Les informations remplies seront effacées.</p>
+          <button type="button" className="secondary-button" onClick={() => setConfirmCancel(false)}>Continuer la saisie</button>
+          <button type="button" className="danger-button" onClick={cancel}>Abandonner</button>
+        </div> : <>
+          <button type="button" className="secondary-button" disabled={busy || localBusy} onClick={cancel}>Annuler</button>
+          <button className="primary-button" disabled={busy || localBusy}>{busy || localBusy ? 'Dépôt en cours…' : 'Déposer le rapport'}</button>
+        </>}
       </div>
     </form>}
   </section>;
@@ -2689,7 +2738,8 @@ function Manager({ anomalies, tab, setTab, onOpen, escalations = [], fieldReques
 function Detail({ anomaly, decision, decisionThreshold, persistenceMode, persistenceEnabled, offlineSync, onBack, onStatus, onProof, onConsultProof, onVerify, onReception, onReopen, onReviewReopened, onGe01Workflow, onOpenCosts, onRefresh, isManager, isAgent, readOnly = false, canReopen = false, canVerify = false, busy = false }: { anomaly:Anomaly; decision:Escalation|null; decisionThreshold:number; persistenceMode:'demo'|'server'; persistenceEnabled:boolean; offlineSync:ReturnType<typeof useOfflineSync>; onBack:()=>void; onStatus:(s:Status)=>void; onProof:(file:File)=>Promise<SyncStatusState>; onConsultProof:(proof:OperationalProof)=>Promise<string>; onVerify:(decision:'accepted'|'rejected',comment:string)=>Promise<boolean>; onReception:ReceptionHandler; onReopen:(reason:string,requestId:string)=>Promise<boolean>; onReviewReopened:(comment:string,requestId:string)=>Promise<boolean>; onGe01Workflow:Ge01WorkflowHandler; onOpenCosts:()=>void; onRefresh:()=>void; isManager:boolean; isAgent:boolean; readOnly?:boolean; canReopen?:boolean; canVerify?:boolean; busy?:boolean }) {
   const connectedPresentation = useContext(ConnectedPresentation);
   const nextStep:Partial<Record<Status,Status>> = { 'À qualifier':'Affectée', 'Affectée':'En intervention', 'En intervention':'En validation', 'En validation':'Clôturée' };
-  const ge01Connected = anomaly.asset === 'GE-01' && persistenceMode === 'server';
+  // 30/09/2026 : parcours de dossier gouverné pour tous les équipements (plus seulement GE-01).
+  const ge01Connected = persistenceMode === 'server';
   const reviewingReopened = persistenceMode === 'server' && isManager && anomaly.workflow?.actionCode === 'REVIEW_REOPENED_DOSSIER' && anomaly.workflow.actionAssignedToCurrentUser;
   const receiving = persistenceMode === 'server' && isManager && anomaly.workflow?.actionCode === 'RECEIVE_INTERVENTION' && anomaly.workflow.actionAssignedToCurrentUser;
   const reopenAvailable = canReopen && anomaly.status === 'Clôturée';
@@ -2761,7 +2811,7 @@ function Detail({ anomaly, decision, decisionThreshold, persistenceMode, persist
     <section className="dossier-workflow" aria-label="Cycle du dossier">{workflow.map((item,index) => <div key={item} className={index < currentStep ? 'done' : index === currentStep ? 'current' : ''}><span>{index < currentStep ? <BrandIcon name="check" /> : index+1}</span><b>{item}</b></div>)}</section>
     <OfflineSyncStatus enabled={persistenceEnabled} online={offlineSync.online} running={offlineSync.running} counts={offlineSync.counts} latestIssue={offlineSync.latestIssue} latestRoundReceipt={offlineSync.latestRoundReceipt} onRetry={() => void offlineSync.retryFailed().then(() => offlineSync.synchronize())} />
     {anomaly.priority === 'Critique' && !anomaly.proof && <section className="critical-banner dossier-critical"><span><BrandIcon name="circleAlert" /></span><div><b>Clôture verrouillée jusqu’à l’acceptation de la preuve</b><p>{anomaly.proofPending ? 'Une preuve a été déposée et attend le contrôle de Facility Manager.' : anomaly.proofQueued ? 'Une preuve est protégée sur cet appareil et attend sa synchronisation.' : 'La matrice des preuves exige une pièce conforme avant clôture.'}</p></div>{!readOnly && !anomaly.proofPending && !anomaly.proofQueued && <button disabled={busy} onClick={chooseProof}><BrandIcon name="plus" /> Ajouter une preuve</button>}</section>}
-    {receiving && <div id="dossier-reception-panel"><InterventionReceptionPanel summary={anomaly.interventionResult?.summary ?? ''} proofRequired={anomaly.asset==='GE-01'||anomaly.priority==='Critique'} proofAccepted={anomaly.proof} busy={busy} onSubmit={onReception} onOpenProofs={()=>setSection('evidence')} /></div>}
+    {receiving && <div id="dossier-reception-panel"><InterventionReceptionPanel summary={anomaly.interventionResult?.summary ?? ''} proofRequired proofAccepted={anomaly.proof} busy={busy} onSubmit={onReception} onOpenProofs={()=>setSection('evidence')} /></div>}
     {reopenAvailable && <div id="dossier-reopen-panel"><ReopenDossierPanel mode="reopen" busy={busy} onSubmit={onReopen} /></div>}
     {reviewingReopened && <div id="dossier-reopen-panel"><ReopenDossierPanel mode="review" busy={busy} onSubmit={onReviewReopened} /></div>}
     {ge01Connected && !reviewingReopened && !receiving && <Ge01WorkflowPanel key={`${anomaly.id}-${anomaly.workflow?.version}`} anomaly={anomaly} isManager={isManager} isAgent={isAgent} onSubmit={onGe01Workflow} onRefresh={onRefresh} onOpenProofs={() => setSection('evidence')} onOpenCosts={() => setSection('finance')} busy={busy} />}
@@ -2813,7 +2863,7 @@ function Detail({ anomaly, decision, decisionThreshold, persistenceMode, persist
       <Card as="aside" className="proof-matrix-card"><p className="design-kicker">EXIGENCE APPLIQUÉE</p><h3>{anomaly.asset}</h3>{expectedProof ? <ul><li><span><BrandIcon name="check" /></span>{expectedProof}</li></ul> : <div className="compact-insufficient-state"><b>Preuve attendue non définie</b><p>La règle contextuelle doit être confirmée avant d’afficher une matrice.</p></div>}</Card>
     </section>}
 
-    {section === 'history' && <Card id="dossier-history-panel" role="tabpanel" as="section" className="dossier-history"><div  className="panel-head"><div><h3>Historique du dossier</h3><p>Événements métier canoniques, datés et attribués</p></div><span className="panel-count">{historyEvents.length} événement{historyEvents.length > 1 ? 's' : ''} canonique{historyEvents.length > 1 ? 's' : ''}</span></div>{historyEvents.length > 0 ? <div className="history-grid dossier-history-grid" aria-label="Événements métier du dossier">{historyEvents.map((event,index) => <article key={event.id} className={index === 0 ? 'current' : 'done'}><span aria-hidden="true">{index === 0 ? '•' : <BrandIcon name="check" />}</span><div className="history-event-copy"><b>{event.label}</b><small>{formatHistoryMoment(event.occurredAt)} · {event.actor ?? 'Auteur non renseigné'} · {event.stage ?? 'Étape non renseignée'}</small>{event.comment && <p>{event.comment}</p>}</div><em>{event.code}</em></article>)}</div> : <><div className="dossier-history-missing" role="note"><span><BrandIcon name="activity" /></span><div><b>Historique métier indisponible</b><p>Aucune source chargée ne fournit actuellement l’action, l’acteur, l’étape et l’horodatage complets. Les repères ci-dessous ne remplacent pas un journal métier.</p></div></div><div className="dossier-current-markers" aria-label="Repères disponibles hors historique"><article><span>R</span><div><b>Constat d’origine</b><small>{anomaly.reported} · auteur non renseigné</small></div><em>REPÈRE DOSSIER</em></article><article className="current"><span>{currentStep+1}</span><div><b>Étape actuelle : {anomaly.status}</b><small>Date et auteur de transition non disponibles</small></div><em>ÉTAT ACTUEL</em></article></div></>}</Card>}
+    {section === 'history' && <Card id="dossier-history-panel" role="tabpanel" as="section" className="dossier-history"><div  className="panel-head"><div><h3>Historique du dossier</h3><p>Chaque étape du dossier, datée et attribuée</p></div><span className="panel-count">{historyEvents.length} événement{historyEvents.length > 1 ? 's' : ''}</span></div>{historyEvents.length > 0 ? <div className="history-grid dossier-history-grid" aria-label="Événements métier du dossier">{historyEvents.map((event,index) => <article key={event.id} className={index === 0 ? 'current' : 'done'} data-event-code={event.code}><span aria-hidden="true">{index === 0 ? '•' : <BrandIcon name="check" />}</span><div className="history-event-copy"><b>{event.label}</b><small>{formatHistoryMoment(event.occurredAt)} · {event.actor ?? 'Auteur non renseigné'} · {event.stage ?? 'Étape non renseignée'}</small>{event.comment && <p>{event.comment}</p>}</div></article>)}</div> : <><div className="dossier-history-missing" role="note"><span><BrandIcon name="activity" /></span><div><b>Historique métier indisponible</b><p>Aucune source chargée ne fournit actuellement l’action, l’acteur, l’étape et l’horodatage complets. Les repères ci-dessous ne remplacent pas un journal métier.</p></div></div><div className="dossier-current-markers" aria-label="Repères disponibles hors historique"><article><span>R</span><div><b>Constat d’origine</b><small>{anomaly.reported} · auteur non renseigné</small></div><em>REPÈRE DOSSIER</em></article><article className="current"><span>{currentStep+1}</span><div><b>Étape actuelle : {anomaly.status}</b><small>Date et auteur de transition non disponibles</small></div><em>ÉTAT ACTUEL</em></article></div></>}</Card>}
   </>;
 }
 
@@ -2828,14 +2878,14 @@ function MeasureRange({ label, value, min, max, unit, embedded = false }: { labe
   </article>;
 }
 
-function DesignEauReport({persona,onNavigate,flash}:{persona:Persona;onNavigate:(v:View)=>void;flash:(message:string)=>void}) {
- const demoSync=useDemoRoundSync();
- return <div className="rounds-page">
- <p role="status">DÉMONSTRATION LOCALE · Données fictives · Aucun import, aucune transmission serveur. Brouillon temporaire dans cette page.</p>
- <p className="visually-hidden">MODULE PILOTE · SURPRESSEUR</p>
- <RiaRoundNavigation existingLabel="WILO-01 · Eau" ria={<><RoundPilotHeader title="RIA-01 · Réseau incendie" subtitle="Cinq étapes · démonstration locale" badge={<span className="mockup-label">DÉMO</span>}/><RiaForm demo offlineSync={demoSync}/></>}>
- <LegacyReport persona={persona} onNavigate={onNavigate} persistenceEnabled={false} offlineSync={demoSync} flash={flash}/>
- </RiaRoundNavigation></div>;
+function DesignEauReport() {
+  const [submitted,setSubmitted] = useState(false);
+  return <div className="rounds-page">
+    <DemoScenarioSelect />
+    <p className="visually-hidden">MODULE PILOTE · SURPRESSEUR</p>
+    <EauRounds agentName="Agent Eau & Incendie Démo" draftNote="Brouillon temporaire dans cette page" onSubmit={() => setSubmitted(true)} />
+    {submitted && <div className="prototype-success" role="status"><span>✓</span><div><b>Simulation de ronde terminée</b><small>Aucune donnée n’a été enregistrée dans Supabase ni mise en file hors ligne.</small></div><button onClick={() => setSubmitted(false)}>Continuer la revue</button></div>}
+  </div>;
 }
 
 function Report({ isTest = false, persona, agentName, reports, connected, onNavigate, persistenceEnabled, offlineSync, flash, onReview, onRead, onLoadProof, planning, onAssign, onOpenAnomaly, onRefresh }: {
@@ -2858,12 +2908,13 @@ function Report({ isTest = false, persona, agentName, reports, connected, onNavi
 }) {
   const current = useContext(ConnectedPresentation);
   const ria = <RiaRoundSpace isTest={isTest} manager={persona.id==='facility'} enabled={connected} offlineSync={offlineSync} onRefresh={onRefresh} onOpenAnomaly={onOpenAnomaly}/>;
-  if (persona.id === 'facility') return <><WiloRoundInbox key={String(isTest)} isTest={isTest} manager enabled={connected} onOpenAnomaly={onOpenAnomaly}/><RiaRoundNavigation ria={ria}><Ge01ReportInbox reports={reports.filter(r=>r.equipmentCode==='GE-01')} connected={connected} onReview={onReview} onRead={onRead} onLoadProof={onLoadProof} planning={planning} onAssign={onAssign} onOpenAnomaly={onOpenAnomaly} onRefresh={onRefresh} /></RiaRoundNavigation></>;
-  if (persona.id === 'electricite') return <Ge01AgentForm equipment={current.health?.equipment.find(item => item.code === 'GE-01')} isTest={isTest} agentName={agentName} persistenceEnabled={persistenceEnabled} offlineSync={offlineSync} flash={flash} />;
+  if (persona.id === 'facility') return <><WiloRoundInbox key={String(isTest)} isTest={isTest} manager enabled={connected} onOpenAnomaly={onOpenAnomaly}/><WiloRoundInbox key={`irr-${isTest}`} equipment="IRR-01" isTest={isTest} manager enabled={connected} onOpenAnomaly={onOpenAnomaly}/><RiaRoundNavigation ria={ria}><Ge01ReportInbox reports={reports.filter(r=>r.equipmentCode==='GE-01')} connected={connected} onReview={onReview} onRead={onRead} onLoadProof={onLoadProof} planning={planning} onAssign={onAssign} onOpenAnomaly={onOpenAnomaly} onRefresh={onRefresh} /></RiaRoundNavigation></>;
+  if (persona.id === 'electricite') return <Ge01AgentForm equipment={current.health?.equipment.find(item => item.code === 'GE-01')} reports={current.source?.reports} isTest={isTest} agentName={agentName} persistenceEnabled={persistenceEnabled} offlineSync={offlineSync} flash={flash} />;
   if (isTest && persona.id!=='eau_incendie') return <Card role="status">La saisie des rondes de votre périmètre n’est pas encore disponible dans l’espace Recette. Aucune donnée de test ne sera envoyée en Exploitation.</Card>;
-  if (persona.id === 'eau_incendie' && !persistenceEnabled) return <DesignEauReport persona={persona} onNavigate={onNavigate} flash={flash} />;
-  if (persona.id === 'eau_incendie') return <RiaRoundNavigation existingLabel="WILO-01 · Eau" ria={ria}><LegacyReport isTest={isTest} persona={persona} onNavigate={onNavigate} persistenceEnabled={persistenceEnabled} offlineSync={offlineSync} flash={flash}/><WiloRoundInbox key={String(isTest)} isTest={isTest} manager={false} enabled={connected} receiptId={offlineSync.latestRoundReceipt?.queueId} onOpenAnomaly={onOpenAnomaly}/></RiaRoundNavigation>;
-  return <LegacyReport persona={persona} onNavigate={onNavigate} persistenceEnabled={persistenceEnabled} offlineSync={offlineSync} flash={flash} />;
+  if (persona.id === 'eau_incendie' && !persistenceEnabled) return <DesignEauReport />;
+  const irr = connected ? <><IrrForm key={`irr-form-${isTest}`} isTest={isTest} offlineSync={offlineSync} flash={flash}/><WiloRoundInbox key={`irr-${isTest}`} equipment="IRR-01" isTest={isTest} manager={false} enabled={connected} receiptId={offlineSync.latestRoundReceipt?.queueId} onOpenAnomaly={onOpenAnomaly}/></> : <Card role="status">La ronde IRR-01 nécessite une connexion avec le compte réel habilité. Aucun contrôle n’est simulé.</Card>;
+  if (persona.id === 'eau_incendie') return <RiaRoundNavigation existingLabel="WILO-01 · Eau" ria={ria} irr={irr}><ResettableLegacyReport isTest={isTest} persona={persona} onNavigate={onNavigate} persistenceEnabled={persistenceEnabled} offlineSync={offlineSync} flash={flash}/><WiloRoundInbox key={String(isTest)} isTest={isTest} manager={false} enabled={connected} receiptId={offlineSync.latestRoundReceipt?.queueId} onOpenAnomaly={onOpenAnomaly}/></RiaRoundNavigation>;
+  return <ResettableLegacyReport persona={persona} onNavigate={onNavigate} persistenceEnabled={persistenceEnabled} offlineSync={offlineSync} flash={flash} />;
 }
 
 
@@ -2972,7 +3023,14 @@ type RoundDraft = {
   photoExceptionReason?:string;
 };
 
-function LegacyReport({ isTest=false, persona, onNavigate, persistenceEnabled, offlineSync, flash }: {
+/** C11 — enveloppe qui remonte un formulaire vierge après abandon du brouillon. */
+function ResettableLegacyReport(props: Parameters<typeof LegacyReport>[0]) {
+  const [generation, setGeneration] = useState(0);
+  return <LegacyReport key={generation} {...props} onAbandoned={() => setGeneration((value) => value + 1)} />;
+}
+
+function LegacyReport({ isTest=false, persona, onNavigate, persistenceEnabled, offlineSync, flash, onAbandoned }: {
+  onAbandoned?: () => void;
   isTest?:boolean;
   persona:Persona;
   onNavigate:(v:View)=>void;
@@ -2991,6 +3049,7 @@ function LegacyReport({ isTest=false, persona, onNavigate, persistenceEnabled, o
   const [photoExceptionReason,setPhotoExceptionReason]=useState('');
   const [step, setStep] = useState(0);
   const [furthestStep, setFurthestStep] = useState(0);
+  // Progression dérivée ajustée pendant le rendu plutôt que dans un effet.
   if (step > furthestStep) setFurthestStep(step);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -2999,15 +3058,17 @@ function LegacyReport({ isTest=false, persona, onNavigate, persistenceEnabled, o
   const [performedAt, setPerformedAt] = useState('');
   const [startedAfterReceiptId, setStartedAfterReceiptId] = useState<string>();
   const [draftReady, setDraftReady] = useState(!persistenceEnabled);
-  const [pressure, setPressure] = useState('');
-  const [tankLevel, setTankLevel] = useState('');
-  const [observation, setObservation] = useState(persistenceEnabled || surpresseurAccess ? '' : surpresseurAccess ? 'Vibration légère sur la pompe P1 au démarrage.' : isRoundsAssistance ? 'Présence d’eau stagnante près de l’accès jardin nord.' : 'Mode AUTO confirmé. Tension batterie à contrôler au prochain démarrage.');
+  const [pressure, setPressure] = useState(persistenceEnabled ? '' : '2.8');
+  const [tankLevel, setTankLevel] = useState(persistenceEnabled ? '' : '72');
+  const [observation, setObservation] = useState(persistenceEnabled ? '' : surpresseurAccess ? 'Vibration légère sur la pompe P1 au démarrage.' : isRoundsAssistance ? 'Présence d’eau stagnante près de l’accès jardin nord.' : 'Mode AUTO confirmé. Tension batterie à contrôler au prochain démarrage.');
   const [quickTitle, setQuickTitle] = useState(persistenceEnabled ? '' : isRoundsAssistance ? 'Eau stagnante près de l’accès' : 'Tension batterie à contrôler');
   const [quickPriority, setQuickPriority] = useState<Priority>('Moyenne');
   const [quickZone, setQuickZone] = useState(isRoundsAssistance ? 'Jardin nord' : 'Local groupe électrogène');
   const [quickControlType, setQuickControlType] = useState(isRoundsAssistance ? 'Propreté & état' : 'Ronde préventive');
-  const [confirmed, setConfirmed] = useState(false);
-  const [checks, setChecks] = useState<Record<string,boolean|null>>({ auto:null, p1:null, p2:null, leak:null, valves:null, alarm:null });
+  const [confirmed, setConfirmed] = useState(!persistenceEnabled);
+  const [checks, setChecks] = useState<Record<string,boolean|null>>(persistenceEnabled
+    ? { auto:null, p1:null, p2:null, leak:null, valves:null, alarm:null }
+    : { auto:true, p1:false, p2:true, leak:true, valves:true, alarm:true });
   const currentEquipmentCode = surpresseurAccess ? 'WILO-01' : isRoundsAssistance ? 'RND-LET' : 'GE-01';
   const latestReceiptMatchesEquipment = offlineSync.latestRoundReceipt?.equipmentCode === currentEquipmentCode && (offlineSync.latestRoundReceipt?.isTest===true)===isTest;
   const explicitNewRoundAfterLatestReceipt = Boolean(
@@ -3066,6 +3127,20 @@ function LegacyReport({ isTest=false, persona, onNavigate, persistenceEnabled, o
     void deleteDraft(draftId);
   }, [deleteDraft, draftId, persistenceEnabled, restoredRoundReceipt]);
 
+  const [confirmAbandon, setConfirmAbandon] = useState(false);
+  const abandonDraft = async () => {
+    submissionLockRef.current = true;
+    try {
+      if (persistenceEnabled) await deleteDraft(draftId);
+    } catch {
+      submissionLockRef.current = false;
+      flash('Le brouillon n’a pas pu être supprimé de cet appareil. Réessayez.');
+      return;
+    }
+    flash('Brouillon abandonné. Aucune donnée n’a été envoyée.');
+    onAbandoned?.();
+  };
+
   const finalizeQueuedRound = async () => {
     await deleteDraft(draftId);
     setSubmitted(true);
@@ -3077,6 +3152,7 @@ function LegacyReport({ isTest=false, persona, onNavigate, persistenceEnabled, o
     event.preventDefault();
     if (submissionLockRef.current || roundSubmitted) return;
     if(!photoExceptionReason.trim()){flash('Indiquez le motif d’absence de photo à ce stade du signalement.');return;}
+    { const problem = reasonProblem(photoExceptionReason, 'Motif d’absence de photo'); if (problem) { flash(problem); return; } }
     submissionLockRef.current = true;
     setSubmitting(true);
     if (!persistenceEnabled) { setSubmitted(true); setSubmitting(false); return; }
@@ -3112,11 +3188,33 @@ function LegacyReport({ isTest=false, persona, onNavigate, persistenceEnabled, o
   const pressureState = wiloPressureState(pressure);
   const tankValue = measuredNumber(tankLevel) ?? Number.NaN;
   const hasPressureAlert = pressureState === 'alert' || pressureState === 'critical';
+  // Règle WILO 28/09 : sous 4 ou au-dessus de 6 bar = critique. Proposition seulement, le FM qualifie.
+  const proposedPriority: Priority = pressureState === 'critical' ? 'Critique' : hasPressureAlert || checks.p1 === false ? 'Haute' : 'Moyenne';
   const supplementFindings = wiloSupplementFindings(wiloAnswers, pressure);
   let supplementError = '';
   try { if (persistenceEnabled) buildWiloChecks(pressure,tankLevel,checks,wiloAnswers,wiloReasons,photoExceptionReason,performedAt); } catch (e) { supplementError = e instanceof Error ? e.message : 'Contrôles complémentaires à renseigner.'; }
   const completedChecks = Object.values(checks).filter((value) => value === true).length;
-  const reviewedChecks = Object.values(checks).filter((value) => value !== null).length;
+  const controlReason = (key:string) => (wiloReasons[key.toUpperCase()] || (WILO_DERIVED_CONTROLS[key] ? wiloReasons[WILO_DERIVED_CONTROLS[key]] : '') || '').trim();
+  const reviewedChecks = Object.entries(checks).filter(([key, value]) => value !== null || Boolean(controlReason(key))).length;
+  // DEC-020 : trois choix explicites (Conforme / Anomalie / Non vérifié), sans bascule ni présélection.
+  const renderControl = (key:string, title:string, detail:string) => {
+    const unverified = checks[key] === null && wiloAnswers[`CTRL_${key.toUpperCase()}`] === 'unknown';
+    const choose = (value:'ok'|'ko'|'unknown') => {
+      setChecks((items) => ({ ...items, [key]: value === 'unknown' ? null : value === 'ok' }));
+      setWiloAnswers((a) => ({ ...a, [`CTRL_${key.toUpperCase()}`]: value === 'unknown' ? 'unknown' : '' }));
+      if (value !== 'unknown') setWiloReasons((a) => ({ ...a, [key.toUpperCase()]: '' }));
+    };
+    return <div key={key} className={`control-choice ${checks[key] === false ? 'is-anomaly' : ''}`} role="group" aria-label={title}>
+      <p><b>{title}</b><small>{detail}</small></p>
+      <div className="choice-set">
+        <button type="button" className={`choice-chip ${checks[key] === true ? 'is-selected' : ''}`} aria-pressed={checks[key] === true} onClick={() => choose('ok')}>Conforme</button>
+        <button type="button" className={`choice-chip ${checks[key] === false ? 'is-selected is-anomaly' : ''}`} aria-pressed={checks[key] === false} onClick={() => choose('ko')}>Anomalie</button>
+        <button type="button" className={`choice-chip ${unverified ? 'is-selected' : ''}`} aria-pressed={unverified} onClick={() => choose('unknown')}>Non vérifié</button>
+      </div>
+      {checks[key] === null && !unverified ? <small className="field-hint">À contrôler pendant la ronde.</small> : null}
+      {unverified ? <Field label={`Motif — ${title}`}><input value={wiloReasons[key.toUpperCase()] ?? ''} onChange={(e) => setWiloReasons((a) => ({ ...a, [key.toUpperCase()]: e.target.value }))} placeholder="Précisez pourquoi le contrôle n’a pas pu être effectué" /></Field> : null}
+    </div>;
+  };
   const hasTankAlert = ['Bas','Très bas / manque d’eau'].includes(wiloAnswers.ETAT_BACHE);
   const hasCheckAlert = Object.values(checks).some((value) => value === false);
   const incompleteRound = (pressure.trim() === '' ? !wiloReasons.PRESSION_RESEAU?.trim() : !Number.isFinite(pressureValue)) || (tankLevel.trim() === '' ? !wiloReasons.NIVEAU_BACHE?.trim() : !Number.isFinite(tankValue) || tankValue > 100) || reviewedChecks < 6 || Boolean(supplementError);
@@ -3150,7 +3248,7 @@ function LegacyReport({ isTest=false, persona, onNavigate, persistenceEnabled, o
         performedAt,
         summary:observation.trim(),
         checks:buildWiloChecks(pressure,tankLevel,checks,wiloAnswers,wiloReasons,photoExceptionReason,performedAt),
-        ...(anomalyTitle ? { anomaly:{ title:anomalyTitle, description:observation.trim() || 'Écart relevé pendant la ronde WILO-01.', priority:hasPressureAlert || checks.p1 === false ? 'Haute' as const : 'Moyenne' as const } } : {}),
+        ...(anomalyTitle ? { anomaly:{ title:anomalyTitle, description:observation.trim() || 'Écart relevé pendant la ronde WILO-01.', priority:proposedPriority } } : {}),
       }, submissionId);
       await finalizeQueuedRound();
     } catch (error) {
@@ -3229,16 +3327,17 @@ function LegacyReport({ isTest=false, persona, onNavigate, persistenceEnabled, o
 
     <section className="surpresseur-layout">
       <Card as="article" className="surpresseur-form-card">
-        <div className="surpresseur-section-head"><div><span>ÉTAPE {step+1} SUR 5</span><h3>{steps[step]}</h3></div><span className="mockup-label">{persistenceEnabled ? 'SAISIE RÉELLE' : 'DÉMO INTERACTIVE'}</span></div>
+        <div className="surpresseur-section-head"><div><span>ÉTAPE {step+1} SUR 5</span><h3>{steps[step]}</h3></div><span className="mockup-label">{persistenceEnabled ? (isTest ? 'SAISIE RECETTE' : 'SAISIE RÉELLE') : 'DÉMO INTERACTIVE'}</span></div>
         {step === 0 && <div className="surpresseur-fields"><div className="context-grid"><div><span>Agent</span><b>{persona.name}</b><small>{persona.role}</small></div><div><span>Horodatage</span><b>Heure d’Abidjan</b><small>Date et heure conservées</small></div><div><span>Synchronisation</span><b>{offlineSync.online ? 'Réseau disponible' : 'Hors ligne'}</b><small>{persistenceEnabled ? 'File idempotente active' : 'Démonstration'}</small></div></div><RoundDateTimeFields value={performedAt} onChange={setPerformedAt}/><div className="surpresseur-callout"><span><BrandIcon name="info" /></span><p><b>{persistenceEnabled ? 'Contrôle terrain' : 'Point d’attention transmis'}</b><small>{persistenceEnabled ? 'Vérifiez les pompes et relevez la pression observée. Ne déclarez que les écarts constatés.' : 'Vérifier la récidive du défaut pompe P1 et la pression de refoulement.'}</small></p></div></div>}
-        {step === 1 && <div className="surpresseur-fields"><div className="measure-grid"><label><span>Pression réseau</span><div><input required value={pressure} inputMode="decimal" onChange={(event) => setPressure(event.target.value)} /><b>bar</b></div><small>Plage normale : 4,5 à 5,5 bar, bornes incluses.</small><MeasureRange embedded label="Pression réseau" value={pressure.trim() === '' ? Number.NaN : pressureValue} min={4.5} max={5.5} unit="bar" /></label><label><span>Niveau bâche</span><div><input required value={tankLevel} inputMode="numeric" onChange={(event) => setTankLevel(event.target.value)} /><b>%</b></div><small>Pourcentage réellement mesuré, de 0 à 100 %. Ne pas le déduire du niveau visuel.</small><MeasureRange embedded label="Niveau de bâche" value={tankLevel.trim() === '' ? Number.NaN : tankValue} min={0} max={100} unit="%" /></label></div>{hasPressureAlert && <div className="measure-alert"><span><BrandIcon name="circleAlert" /></span><div><b>Écart détecté automatiquement</b><small>La pression saisie est hors de la plage métier. Un constat sera proposé à Facility Manager.</small></div></div>}</div>}
-        {step === 2 && <div className="surpresseur-fields"><div className="check-grid">{[['auto','Mode automatique actif','Commande générale'],['p1','Pompe P1 disponible','Pompe prioritaire'],['p2','Pompe P2 disponible','Pompe de secours'],['leak','Absence de fuite active','Collecteur et raccords']].map(([key,title,detail]) => <button type="button" key={key} className={checks[key] === null ? 'unreviewed' : checks[key] ? 'checked' : 'unchecked'} onClick={() => setCheck(key)}><span>{checks[key] === null ? <BrandIcon name="circleAlert" /> : checks[key] ? <BrandIcon name="check" /> : <BrandIcon name="circleAlert" />}</span><p><b>{title}</b><small>{detail}</small></p><em>{checks[key] === null ? 'À contrôler' : checks[key] ? 'Conforme' : 'À signaler'}</em></button>)}</div></div>}
-        {step === 3 && <div className="surpresseur-fields"><div className="check-grid compact">{[['valves','Vannes en position normale','Aspiration et refoulement'],['alarm','Aucune alarme active','Coffret et supervision']].map(([key,title,detail]) => <button type="button" key={key} className={checks[key] === null ? 'unreviewed' : checks[key] ? 'checked' : 'unchecked'} onClick={() => setCheck(key)}><span>{checks[key] === null ? <BrandIcon name="circleAlert" /> : checks[key] ? <BrandIcon name="check" /> : <BrandIcon name="circleAlert" />}</span><p><b>{title}</b><small>{detail}</small></p><em>{checks[key] === null ? 'À contrôler' : checks[key] ? 'Conforme' : 'À signaler'}</em></button>)}</div><Field label={null}>Observation terrain<textarea value={observation} onChange={(event) => setObservation(event.target.value)} placeholder="Observation factuelle ou précision sur un écart." /></Field>{hasWiloFinding?<><p>La photo du constat peut être jointe au dossier après synchronisation.</p><Field label="Photo non jointe — motif obligatoire"><textarea maxLength={2000} value={photoExceptionReason} onChange={e=>setPhotoExceptionReason(e.target.value)}/></Field></>:<p>Aucune photo requise sans anomalie.</p>}</div>}
-        {step === 4 && <div className="surpresseur-fields"><div className="round-summary"><div><span>MESURES</span><b className={hasPressureAlert ? 'warning' : ''}>{pressure.trim() ? `${pressure} bar` : 'Valeur non renseignée'}</b><small>{pressure.trim() ? 'Pression réseau' : 'À COMPLÉTER'}</small></div><div><span>NIVEAU</span><b>{tankLevel.trim() ? `${tankLevel} %` : 'Valeur non renseignée'}</b><small>{tankLevel.trim() ? 'Bâche de stockage' : 'À COMPLÉTER'}</small></div><div><span>CONTRÔLES DE BASE</span><b>{completedChecks} sur 6</b><small>{reviewedChecks} sur 6 vérifiés · observations complémentaires listées ci-dessous</small></div></div>{incompleteRound ? <div className="surpresseur-callout"><span><BrandIcon name="info" /></span><p><b>Contrôle incomplet</b><small>{supplementError || 'Renseignez les mesures et les contrôles avant de conclure.'}</small></p></div> : hasWiloFinding ? <div className="proposed-finding"><span><BrandIcon name="circleAlert" /></span><div><p>CONSTAT PROPOSÉ</p><h4>{hasPressureAlert ? 'Pression WILO hors plage attendue' : 'Écart constaté pendant la ronde'}</h4><small>Priorité proposée : {hasPressureAlert || checks.p1 === false ? 'Haute' : 'Moyenne'} · Transmission à Facility Manager.</small></div><Badge tone="orange">À QUALIFIER</Badge></div> : <div className="surpresseur-callout"><span><BrandIcon name="check" /></span><p><b>Aucun écart déclaré</b><small>La ronde sera conservée sans créer d’anomalie.</small></p></div>}<>{isTest&&<label className="confirmation-line"><input type="checkbox" checked={testAttested} onChange={e=>setTestAttested(e.target.checked)}/><span>Je confirme que les données sont fictives, réservées à la Recette.</span></label>}</><label className="confirmation-line"><input type="checkbox" checked={roundConfirmed} onChange={(event) => {setConfirmed(event.target.checked);setConfirmedSnapshot(confirmationSignature);}} /><span>Je confirme que les valeurs correspondent à la ronde réalisée sur WILO-01.</span></label></div>}
+        {step === 1 && <div className="surpresseur-fields"><div className="measure-grid"><label><span>Pression affichée au coffret</span><div><input required value={pressure} inputMode="decimal" onChange={(event) => setPressure(event.target.value)} /><b>bar</b></div><small>Plage normale : 4,5 à 5,5 bar, bornes incluses. Le manomètre mécanique est relevé à part, étape suivante : un écart de plus de 0,7 bar signale un capteur à vérifier.</small><MeasureRange embedded label="Pression affichée au coffret" value={pressure.trim() === '' ? Number.NaN : pressureValue} min={4.5} max={5.5} unit="bar" /></label><label><span>Niveau bâche</span><div><input required value={tankLevel} inputMode="numeric" onChange={(event) => setTankLevel(event.target.value)} /><b>%</b></div><small>Pourcentage réellement mesuré, de 0 à 100 %. Ne pas le déduire du niveau visuel.</small><MeasureRange embedded label="Niveau de bâche" value={tankLevel.trim() === '' ? Number.NaN : tankValue} min={0} max={100} unit="%" /></label></div>{hasPressureAlert && <div className="measure-alert"><span><BrandIcon name="circleAlert" /></span><div><b>Écart détecté automatiquement</b><small>{pressureState === 'critical' ? 'Pression critique (sous 4 ou au-dessus de 6 bar) : un second relevé est demandé ci-dessous, au moins 10 minutes après le premier. Si vous ne pouvez pas l’attendre, cochez « Mesure impossible à relever » et donnez le motif. Un constat critique sera proposé à Facility Manager.' : 'La pression saisie est hors de la plage métier. Un constat sera proposé à Facility Manager.'}</small></div></div>}</div>}
+        {step === 2 && <div className="surpresseur-fields"><div className="control-choice-grid">{renderControl('auto','Mode automatique actif','Commande générale')}</div><p className="field-hint">La disponibilité de P1 et P2 et l’absence de fuite active sont déduites de l’état observé des pompes et du détail de fuite ci-dessous.</p></div>}
+        {step === 3 && <div className="surpresseur-fields"><div className="control-choice-grid">{renderControl('valves','Vannes en position normale','Aspiration et refoulement')}{renderControl('alarm','Aucune alarme active','Coffret et supervision')}</div><Field label={null}>Observation terrain<textarea value={observation} onChange={(event) => setObservation(event.target.value)} placeholder="Observation factuelle ou précision sur un écart." /></Field>{hasWiloFinding?<><p>La photo du constat peut être jointe au dossier après synchronisation.</p><Field label="Photo non jointe — motif obligatoire"><textarea maxLength={2000} value={photoExceptionReason} onChange={e=>setPhotoExceptionReason(e.target.value)}/></Field></>:<p>Aucune photo requise sans anomalie.</p>}</div>}
+        {step === 4 && <div className="surpresseur-fields"><div className="round-summary"><div><span>MESURES</span><b className={hasPressureAlert ? 'warning' : ''}>{pressure.trim() ? `${pressure} bar` : 'Valeur non renseignée'}</b><small>{pressure.trim() ? 'Pression réseau' : 'À COMPLÉTER'}</small></div><div><span>NIVEAU</span><b>{tankLevel.trim() ? `${tankLevel} %` : 'Valeur non renseignée'}</b><small>{tankLevel.trim() ? 'Bâche de stockage' : 'À COMPLÉTER'}</small></div><div><span>CONTRÔLES DE BASE</span><b>{completedChecks} conforme{completedChecks > 1 ? 's' : ''} sur 6</b><small>{reviewedChecks} sur 6 renseignés (conforme, anomalie ou motif) · observations complémentaires listées ci-dessous</small></div></div>{incompleteRound ? <div className="surpresseur-callout"><span><BrandIcon name="info" /></span><p><b>Contrôle incomplet</b><small>{supplementError || 'Renseignez les mesures et les contrôles avant de conclure.'}</small></p></div> : hasWiloFinding ? <div className="proposed-finding"><span><BrandIcon name="circleAlert" /></span><div><p>CONSTAT PROPOSÉ</p><h4>{hasPressureAlert ? 'Pression WILO hors plage attendue' : 'Écart constaté pendant la ronde'}</h4><small>Priorité proposée : {proposedPriority} · Transmission à Facility Manager.</small></div><Badge tone="orange">À QUALIFIER</Badge></div> : <div className="surpresseur-callout"><span><BrandIcon name="check" /></span><p><b>Aucun écart déclaré</b><small>La ronde sera conservée sans créer d’anomalie.</small></p></div>}<>{isTest&&<label className="confirmation-line"><input type="checkbox" checked={testAttested} onChange={e=>setTestAttested(e.target.checked)}/><span>Je confirme que les données sont fictives, réservées à la Recette.</span></label>}</><label className="confirmation-line"><input type="checkbox" checked={roundConfirmed} onChange={(event) => {setConfirmed(event.target.checked);setConfirmedSnapshot(confirmationSignature);}} /><span>Je confirme que les valeurs correspondent à la ronde réalisée sur WILO-01.</span></label></div>}
         {step === 1 && <details className="round-details"><summary>Une mesure ne peut pas être relevée</summary><p>Ne déduisez pas un pourcentage du niveau visuel. Une mesure absente reste absente et peut empêcher le calcul de santé.</p>{[['PRESSION_RESEAU','Pression coffret'],['NIVEAU_BACHE','Niveau de bâche en %']].map(([code,label])=><Field key={code} label={`Motif de non-relevé — ${label}`}><input value={wiloReasons[code]??''} onChange={e=>setWiloReasons(a=>({...a,[code]:e.target.value}))}/></Field>)}</details>}
-        {step < 4 && <WiloSupplement pressure={pressure} step={step} answers={wiloAnswers} reasons={wiloReasons} onChange={(code,value)=>{setWiloAnswers(a=>({...a,[code]:value}));if(code==='ETAT_P1'||code==='ETAT_P2')setChecks(a=>({...a,[code==='ETAT_P1'?'p1':'p2']:!value||value==='unknown'?null:['Marche','Arrêt disponible'].includes(value)}));}} onReason={(code,value)=>setWiloReasons(a=>({...a,[code]:value}))}/>}
+        {step < 4 && <WiloSupplement pressure={pressure} step={step} answers={wiloAnswers} reasons={wiloReasons} onChange={(code,value)=>{setWiloAnswers(a=>({...a,[code]:value,...(code==='ETAT_P2'?{SECOURS_DISPONIBLE:!value?'':value==='unknown'?'unknown':pumpAvailability(value)?'Oui':'Non'}:{})}));if(code==='ETAT_P1'||code==='ETAT_P2')setChecks(a=>({...a,[code==='ETAT_P1'?'p1':'p2']:pumpAvailability(value)}));if(code==='FUITE_DETAIL')setChecks(a=>({...a,leak:noActiveLeak(value)}));}} onReason={(code,value)=>setWiloReasons(a=>({...a,[code]:value,...(code==='ETAT_P2'?{SECOURS_DISPONIBLE:value}:{})}))}/>}
         {step === 4 && <details className="round-details" open><summary>Observations complémentaires enregistrées</summary>{activeWiloFields(wiloAnswers,pressure).map(([code,label])=><p key={code}>{label} : {wiloAnswers[code]==='unknown'?`Non vérifié — ${wiloReasons[code]??''}`:wiloAnswers[code]==='yes'?'Oui':wiloAnswers[code]==='no'?'Non':wiloAnswers[code]||'Valeur non renseignée · À COMPLÉTER'}</p>)}</details>}
         <div className="surpresseur-actions"><Button variant="secondary" type="submit" className="" disabled={step === 0 || submitting || roundSubmitted} onClick={() => setStep((value) => Math.max(0,value-1))}>← Précédent</Button><p><span className={`status-dot ${persistenceEnabled && offlineSync.online ? 'online' : 'local'}`} /> {persistenceEnabled ? draftReady ? 'Brouillon local automatique' : 'Chargement du brouillon…' : 'Simulation locale'}</p>{step < 4 ? <Button type="submit" className="" disabled={submitting || roundSubmitted} onClick={() => setStep((value) => Math.min(4,value+1))}>Continuer →</Button> : <Button type="submit" className="" disabled={!draftReady || submitting || roundSubmitted} aria-busy={submitting} onClick={() => void submitSurpresseurRound()}>{submitting ? 'Transmission…' : roundSubmitted ? 'Ronde transmise' : 'Terminer la ronde'}</Button>}</div>
+        {!roundSubmitted && <div className="ge-abandon">{confirmAbandon ? <div className="vendor-cancel-confirm" role="alertdialog" aria-label="Abandonner le brouillon ?"><p>Abandonner ce brouillon ? Toutes les réponses saisies sur cet appareil seront effacées. Rien n’a été envoyé.</p><button type="button" className="secondary-button" onClick={() => setConfirmAbandon(false)}>Garder le brouillon</button><button type="button" className="danger-button" onClick={() => void abandonDraft()}>Abandonner</button></div> : <button type="button" className="ghost-button ge-abandon-button" disabled={submitting} onClick={() => setConfirmAbandon(true)}>Abandonner le brouillon</button>}</div>}
       </Card>
       <aside className="surpresseur-aside">
         <Card as="article" className="next-action-card"><p className="design-kicker">À SURVEILLER</p><span className="next-action-icon"><BrandIcon name="circleAlert" /></span><h3>{persistenceEnabled ? 'Réarmement provisoire' : 'Pompe P1 indisponible'}</h3><p>{persistenceEnabled ? 'Un réarmement ne suffit pas à clôturer une anomalie. Le diagnostic et la preuve restent nécessaires.' : 'Deuxième défaut en sept jours. Le réarmement provisoire ne permet pas la clôture.'}</p>{!persistenceEnabled && <div><span>Responsable pressenti</span><b>Agent Eau & Incendie</b></div>}</Card>

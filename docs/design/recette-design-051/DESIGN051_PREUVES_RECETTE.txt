@@ -1,0 +1,109 @@
+- banner:
+  - strong: QA locale · aucun accès serveur · aucun dossier rouvert
+  - text: Profil
+  - combobox "Profil":
+    - generic: Facility Manager
+  - text: État de contrôle
+  - combobox "État de contrôle":
+    - generic: Correction attendue
+  - text: Largeur
+  - combobox "Largeur":
+    - generic: "390"
+  - status: Aucune action
+- main:
+  - button "Choose File"
+  - button "← Retour à la file"
+  - generic: Moyenne
+  - generic: ANO-2026-000009
+  - heading "Vérification locale du dossier GE-01" [level=2]
+  - paragraph: GE-01 · Environnement de test
+  - region "Cycle du dossier":
+    - generic: Constat
+    - generic: Qualification
+    - generic: Décision
+    - generic: Intervention
+    - generic: "5"
+    - generic: Preuve
+    - generic: "6"
+    - generic: Clôture
+  - status:
+    - generic: Mode démonstration
+    - generic: Les interactions de cette vue ne sont pas enregistrées sur le serveur métier.
+  - region "Traitement GE-01":
+    - article:
+      - paragraph: PROCHAINE ACTION
+      - heading "Déposer la preuve corrigée" [level=3]
+      - term: Acteur attendu
+      - definition: Agent Électricité
+      - term: Responsable interne
+      - definition: Agent Électricité
+      - term: Échéance
+      - definition: Échéance non renseignée
+      - paragraph: Le responsable interne du dossier n’est pas forcément l’acteur de la prochaine action.
+      - button "Actualiser le dossier"
+      - paragraph: État de vérification reconstitué en mémoire uniquement.
+      - button "Ouvrir les preuves"
+      - paragraph:
+        - strong: Intervention prestataire autorisée
+        - text: · OT-2026-000009
+      - paragraph: CST-2026-000009 · 400 000 FCFA · Prestataire Démo
+      - paragraph: "Test fictif : intervention Prestataire Démo sur le coût approuvé de 400 000 FCFA. Agent Électricité assure le suivi. Aucun engagement réel."
+      - paragraph: Évariste reste responsable du suivi interne. Il consigne le début, le résultat et le justificatif à contrôler par Faustin.
+  - region "Synthèse de pilotage":
+    - generic: AZ
+    - paragraph: CONTINUITÉ DE TRAITEMENT
+    - heading "Synthèse de pilotage" [level=4]
+    - generic: NORMALE
+    - term: Prochaine action
+    - definition: Déposer la preuve corrigée
+    - generic: État de vérification reconstitué en mémoire uniquement.
+    - term: Acteur attendu
+    - definition: Agent Électricité
+    - term: Responsable interne
+    - definition: Agent Électricité
+    - term: SLA / Échéance
+    - definition: Échéance non renseignée
+    - term: Acteur bloquant
+    - definition: Aucun blocage déclaré
+    - term: Étape actuelle
+    - definition: En validation
+    - generic: Dossier ouvert
+    - term: Motif du blocage ou du retard
+    - definition: Aucun retard ou blocage signalé
+    - term: Preuve attendue
+    - definition: Justificatif de contrôle GE-01
+    - term: Dernière activité
+    - definition: Historique indisponible
+  - tablist "Sections du dossier":
+    - tab "Vue d’ensemble"
+    - tab "Coûts & décision"
+    - tab "Preuves 2" [selected]
+    - tab "Historique"
+  - tabpanel [active]:
+    - article:
+      - heading "Preuves du dossier" [level=3]
+      - paragraph: Fichiers privés consultables uniquement par les profils autorisés
+      - button "Déposer la preuve corrigée"
+      - status "État du dépôt de preuve":
+        - generic: Connexion requise pour enregistrer
+        - generic: Cette action écrit directement sur le serveur. Aucun mode hors ligne ni reprise automatique dans cette version.
+      - generic "Fichiers de preuve enregistrés":
+        - article:
+          - generic: PDF
+          - generic: PRV-2026-000011
+          - generic: Document PDF · 11/09/2026 03:43:47
+          - emphasis: "Motif : Correction de recette attendue"
+          - generic: REFUSÉE
+          - button "Consulter"
+        - article:
+          - generic: PDF
+          - generic: PRV-2026-000010
+          - generic: Document PDF · 11/09/2026 03:38:59
+          - emphasis: "Motif : Test fictif : justificatif à compléter pour identifier Prestataire Démo et préciser le résultat du contrôle GE-01. Déposer une version corrigée"
+          - generic: REFUSÉE
+          - button "Consulter"
+    - complementary:
+      - paragraph: EXIGENCE APPLIQUÉE
+      - heading "GE-01" [level=3]
+      - list:
+        - text: Justificatif de contrôle GE-01

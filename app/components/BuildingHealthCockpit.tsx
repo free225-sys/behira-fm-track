@@ -128,7 +128,10 @@ function atRiskCaption(atRisk: BuildingHealthSnapshot['atRisk']) {
   return [ventilation, hidden].filter(Boolean).join(' · ');
 }
 
-function agentHello(count: number) {
+function agentHello(count: number, pendingRounds = 0) {
+  // E7 — ne pas annoncer « aucune action » quand une ronde du jour reste à faire.
+  if (count <= 0 && pendingRounds === 1) return 'Bonjour, 1 ronde vous attend aujourd’hui';
+  if (count <= 0 && pendingRounds > 1) return `Bonjour, ${pendingRounds} rondes vous attendent aujourd’hui`;
   if (count <= 0) return 'Bonjour, aucune action ne vous attend';
   if (count === 1) return 'Bonjour, 1 action vous attend';
   return `Bonjour, ${count} actions vous attendent`;
@@ -206,7 +209,7 @@ export function BuildingHealthCockpit({
   const bannerTitle = admin
     ? 'Arbitrages'
     : agent
-      ? agentHello(actionCount)
+      ? agentHello(actionCount, rounds.filter((round) => round.state !== 'done').length)
       : undefined;
   const bannerKicker = admin ? weekday : agent ? undefined : `${copy.kicker}, ${weekday}`;
   const bannerMeta = admin

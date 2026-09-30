@@ -14,6 +14,7 @@ const {
   formatEngineHours,
   formatShortDate,
   formatYesterdayValue,
+  lastContextFromReports,
   lastStartLabel,
   readLastConfirmedGe01,
   resetLastConfirmedGe01Cache,
@@ -113,8 +114,25 @@ check('valeurs d’hier pour les mesures', () => {
   assert.equal(lastStartLabel(null), '—')
 })
 
+check('contexte connecté reconstruit depuis le dernier rapport serveur (E6)', () => {
+  const mk = (performedAt, fuel, isTest = false, start = 'ok') => ({ equipmentCode: 'GE-01', reportStatus: 'submitted', performedAt, isTest, checks: [
+    { code: 'niveau_carburant', status: 'ok', valueNumeric: fuel },
+    { code: 'heures_moteur', status: 'ok', valueNumeric: 1300 },
+    { code: 'demarrage_reussi', status: start },
+    { code: 'statut_global', status: 'ok', valueText: 'Opérationnel' },
+  ] })
+  const ctx = lastContextFromReports([mk('2026-09-27T10:00:00Z', 60), mk('2026-09-28T13:00:00Z', 70), mk('2026-09-29T08:00:00Z', 10, true)])
+  assert.equal(ctx.fuelLevel, 70)
+  assert.equal(ctx.engineHours, 1300)
+  assert.equal(ctx.performedOn, '2026-09-28')
+  assert.equal(ctx.lastStartOutcome, 'success')
+  assert.equal(ctx.oilLevel, null)
+  assert.equal(lastContextFromReports([mk('2026-09-29T08:00:00Z', 10, true, 'not_checked')], true).lastStartOutcome, 'not_performed')
+  assert.deepEqual(lastContextFromReports([]), EMPTY_LAST_CONTEXT)
+})
+
 if (failed) {
   console.error(`${failed} contrôle(s) Contexte GE-01 en échec`)
   process.exit(1)
 }
-console.log('9 contrôles Contexte GE-01 réussis.')
+console.log('10 contrôles Contexte GE-01 réussis.')

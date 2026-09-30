@@ -2,7 +2,7 @@
 
 - **Date :** 30 août 2026
 - **Auteur :** Dev Lead
-- **Statut :** Validé par Responsable projet Démo le 30 août 2026 — P2 à P5 livrés localement
+- **Statut :** Validé par Wilkam le 30 août 2026 — P2 à P5 livrés localement
 - **Références :** DEC-002, DEC-008, DEV-003 et DEV-009
 
 ## 1. Objet du lot

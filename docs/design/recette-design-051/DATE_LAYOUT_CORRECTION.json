@@ -1,0 +1,76 @@
+{
+  "checks": [
+    {
+      "dates": [
+        {
+          "contained": true,
+          "width": 326
+        },
+        {
+          "contained": true,
+          "width": 188
+        }
+      ],
+      "scrollWidth": 390,
+      "width": 390
+    },
+    {
+      "dates": [
+        {
+          "contained": true,
+          "width": 696
+        },
+        {
+          "contained": true,
+          "width": 188
+        }
+      ],
+      "scrollWidth": 768,
+      "width": 768
+    },
+    {
+      "dates": [
+        {
+          "contained": true,
+          "width": 276
+        },
+        {
+          "contained": true,
+          "width": 188
+        }
+      ],
+      "scrollWidth": 920,
+      "width": 920
+    },
+    {
+      "dates": [
+        {
+          "contained": true,
+          "width": 310.66668701171875
+        },
+        {
+          "contained": true,
+          "width": 188
+        }
+      ],
+      "scrollWidth": 1024,
+      "width": 1024
+    },
+    {
+      "dates": [
+        {
+          "contained": true,
+          "width": 449.3333435058594
+        },
+        {
+          "contained": true,
+          "width": 188
+        }
+      ],
+      "scrollWidth": 1440,
+      "width": 1440
+    }
+  ],
+  "submittedValue": "2026-09-28T12:00",
+  "scope": "isolated shared DateTimeInput and real FM field layout"
+}

@@ -1,0 +1,119 @@
+- banner:
+  - strong: QA locale · aucun accès serveur · aucun dossier rouvert
+  - text: Profil
+  - combobox "Profil":
+    - generic: Facility Manager
+  - text: État de contrôle
+  - combobox "État de contrôle" [active]:
+    - generic: Clôturé
+  - text: Largeur
+  - combobox "Largeur":
+    - generic: "1280"
+  - status: Aucune action
+- main:
+  - button "Choose File"
+  - button "← Retour à la file"
+  - generic: Moyenne
+  - generic: ANO-2026-000009
+  - heading "Vérification locale du dossier GE-01" [level=2]
+  - paragraph: GE-01 · Environnement de test
+  - region "Cycle du dossier":
+    - generic: Constat
+    - generic: Qualification
+    - generic: Décision
+    - generic: Intervention
+    - generic: Preuve
+    - generic: "6"
+    - generic: Clôture
+  - status:
+    - generic: Mode démonstration
+    - generic: Les interactions de cette vue ne sont pas enregistrées sur le serveur métier.
+  - region "Traitement GE-01":
+    - article:
+      - paragraph: PROCHAINE ACTION
+      - heading "Dossier clôturé" [level=3]
+      - term: Acteur attendu
+      - definition: Aucun acteur attendu
+      - term: Responsable interne
+      - definition: Agent Électricité
+      - term: Échéance
+      - definition: Échéance terminée
+      - paragraph: Le responsable interne du dossier n’est pas forcément l’acteur de la prochaine action.
+      - button "Actualiser le dossier"
+      - paragraph:
+        - strong: Intervention prestataire autorisée
+        - text: · OT-2026-000009
+      - paragraph: CST-2026-000009 · 400 000 FCFA · Prestataire Démo
+      - paragraph: "Test fictif : intervention Prestataire Démo sur le coût approuvé de 400 000 FCFA. Agent Électricité assure le suivi. Aucun engagement réel."
+      - paragraph: Évariste reste responsable du suivi interne. Il consigne le début, le résultat et le justificatif à contrôler par Faustin.
+  - region "Synthèse de pilotage":
+    - generic: AZ
+    - paragraph: CONTINUITÉ DE TRAITEMENT
+    - heading "Synthèse de pilotage" [level=4]
+    - generic: NORMALE
+    - term: Prochaine action
+    - definition: Aucune action — dossier clôturé
+    - generic: État de vérification reconstitué en mémoire uniquement.
+    - term: Acteur attendu
+    - definition: Aucun acteur attendu
+    - term: Responsable interne
+    - definition: Agent Électricité
+    - term: SLA / Échéance
+    - definition: Échéance terminée
+    - term: Acteur bloquant
+    - definition: Aucun blocage déclaré
+    - term: Étape actuelle
+    - definition: Clôturée
+    - generic: Dossier clôturé
+    - term: Motif du blocage ou du retard
+    - definition: Aucun retard ou blocage signalé
+    - term: Preuve attendue
+    - definition: Justificatif de contrôle GE-01
+    - term: Dernière activité
+    - definition: Historique indisponible
+  - tablist "Sections du dossier":
+    - tab "Vue d’ensemble" [selected]
+    - tab "Coûts & décision"
+    - tab "Preuves 2"
+    - tab "Historique"
+  - tabpanel:
+    - complementary:
+      - article:
+        - paragraph: IDENTITÉ & RISQUE
+        - generic: Clôturée
+        - term: Équipement
+        - definition: GE-01
+        - term: Zone
+        - definition: Environnement de test
+        - term: Origine
+        - definition: Constat terrain
+        - term: Responsable interne actuel
+        - definition: Agent Électricité
+        - term: Constaté le
+        - definition: 11 septembre 2026
+      - article:
+        - generic: R
+        - generic: Saisie directe
+        - generic: Source traçable · aucun import de reporting
+    - article:
+      - paragraph: CONSTAT D’ORIGINE
+      - heading "Situation observée" [level=3]
+      - generic: 11 septembre 2026
+      - paragraph: État reconstitué à partir de la recette, aucune écriture.
+    - article:
+      - paragraph: DIAGNOSTIC & INTERVENTION
+      - heading "Progression métier" [level=3]
+      - generic: Clôture
+      - text: Diagnostic technique attendu
+      - paragraph: Aucun diagnostic confirmé n’est disponible. Consultez l’historique pour les événements du dossier.
+    - complementary:
+      - article:
+        - paragraph: ACTION PRINCIPALE
+        - heading "Aucune action — dossier clôturé" [level=3]
+        - paragraph: "Responsable interne actuel : Agent Électricité."
+        - button "Consulter les repères du dossier"
+      - article:
+        - paragraph:
+          - generic: Récurrence à confirmer
+          - generic: Historique insuffisant
+        - paragraph: Aucune récurrence n’est affirmée sans événements métier datés.

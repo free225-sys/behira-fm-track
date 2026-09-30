@@ -160,6 +160,11 @@ export function validateGe01Step(draft: Ge01Draft, step: number) {
   if (step === 0) {
     if (!draft.date) errors.date = "La date du contrôle est requise.";
     if (!draft.time) errors.time = "L’heure du contrôle est requise.";
+    // C12 — un contrôle ne peut pas être daté dans le futur (heure d’Abidjan = UTC, 5 min de tolérance d’horloge).
+    if (draft.date && draft.time && !errors.date && !errors.time) {
+      const controlAt = Date.parse(`${draft.date}T${draft.time}:00Z`);
+      if (Number.isFinite(controlAt) && controlAt > Date.now() + 5 * 60_000) errors.time = "La date et l’heure du contrôle ne peuvent pas être dans le futur.";
+    }
     const engineHours = finiteNumber(draft.engineHours);
     if (engineHours === null || engineHours < 0) errors.engineHours = "Saisissez un compteur moteur positif ou nul.";
     const starts = finiteNumber(draft.starts24h);

@@ -1,0 +1,32 @@
+- main:
+  - heading "Recette des contrôles partagés" [level=1]
+  - text: Décision
+  - combobox "Décision":
+    - generic: Coût approuvé · 400 000 FCFA
+  - group "Date contrôlée":
+    - group "Date":
+      - combobox "Jour":
+        - generic: "13"
+      - combobox "Mois":
+        - generic: septembre
+      - combobox "Année":
+        - generic: "2026"
+  - group "Date libre":
+    - group "Date":
+      - combobox "Jour":
+        - generic: "12"
+      - combobox "Mois":
+        - generic: septembre
+      - combobox "Année":
+        - generic: "2026"
+  - group "Échéance":
+    - group "Date":
+      - combobox "Jour":
+        - generic: "14"
+      - combobox "Mois":
+        - generic: septembre
+      - combobox "Année":
+        - generic: "2026"
+    - textbox "Heure": 12:00
+  - button "Vérifier le formulaire" [active]
+  - status: "{\"decision\":\"approved\",\"date\":\"2026-09-13\",\"dateLibre\":\"2026-09-12\",\"due\":\"2026-09-14T12:00\"}"

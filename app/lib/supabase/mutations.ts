@@ -152,10 +152,9 @@ export async function submitQueuedFieldRound(
     p_priority_label: payload.anomaly?.priority,
   };
   if (payload.equipmentCode === 'RIA-01' && payload.riaEvidence !== undefined) {
-    if(payload.isTest) throw new Error('Les tests RIA utilisent la base de recette locale isolée.');
     const { riaManifest } = await import('../ria/report');
     const manifest = await riaManifest(payload.riaEvidence);
-    const result = await client.rpc('submit_ria_round_offline', {p_id:clientMutationId,p_performed_at:payload.performedAt,p_summary:payload.summary,p_checks:args.p_checks,p_manifest:manifest});
+    const result = await client.rpc('submit_ria_round_offline', {p_id:clientMutationId,p_performed_at:payload.performedAt,p_summary:payload.summary,p_checks:args.p_checks,p_manifest:manifest,p_is_test:payload.isTest===true,p_test_attested:payload.testAttested===true});
     if(result.error) throw result.error;
     const receipt=asRpcResult(result.data);
     if(typeof receipt.report_id!=='string') throw new Error('Identifiant du rapport RIA manquant.');

@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import { Badge } from './ui';
+import { Badge, BrandIcon } from './ui';
 
 import { normalizeAntiZombieSummary, type AntiZombieSummaryData } from './anti-zombie-contract';
 
@@ -38,7 +38,7 @@ export function AntiZombieSummary({ data, variant = 'standard', hideMissing = fa
   return (
     <section className={`anti-zombie-summary anti-zombie-${variant}`} aria-labelledby={headingId} tabIndex={0}>
       <header className="anti-zombie-summary-head">
-        <span aria-hidden="true">AZ</span>
+        <span aria-hidden="true"><BrandIcon name="activity" size={16} /></span>
         <div>
           <p>CONTINUITÉ DE TRAITEMENT</p>
           <h4 id={headingId}>Synthèse de pilotage</h4>

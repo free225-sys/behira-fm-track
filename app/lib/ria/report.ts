@@ -1,3 +1,4 @@
+import { reasonError, reasonProblem } from '../input-rules';
 import type { FieldCheckInput, FieldRoundPayload } from '../offline/types';
 
 export const RIA_VERSION = 'ria.20260917.v1';
@@ -27,7 +28,7 @@ export function riaChecks(d:RiaDraft):FieldCheckInput[] {
   const checks:FieldCheckInput[] = RIA_FIELDS.map(([code,label,type]) => {
     const value=d.answers[code];
     if (!value || value==='unknown') {
-      if (!d.reasons[code]?.trim()) throw new Error(`${label} : renseignez le contrôle ou le motif de non-vérification.`);
+      { const problem = reasonError(d.reasons[code], label); if (problem) throw new Error(problem); }
       return {code,label,status:'not_checked',notes:d.reasons[code].trim()};
     }
     if(type==='number') {
@@ -48,6 +49,7 @@ export function riaChecks(d:RiaDraft):FieldCheckInput[] {
   derived('gmp_off',!mode||mode==='unknown'?undefined:mode==='Off');
   derived('valves_open',[d.answers.suction,d.answers.discharge].some(x=>!x||x==='unknown')?undefined:d.answers.suction==='yes'&&d.answers.discharge==='yes');
   derived('leak',!d.answers.leak_kind||d.answers.leak_kind==='unknown'?undefined:d.answers.leak_kind!=='Aucune');
+  if(d.photoExceptionReason?.trim()){ const problem = reasonProblem(d.photoExceptionReason, 'Motif d’absence de photo'); if (problem) throw new Error(problem); }
   if(d.photoExceptionReason?.trim()) checks.push({code:'PHOTO_EXCEPTION',label:'Motif d’impossibilité de photo',status:'ok',valueText:d.photoExceptionReason.trim()});
   return checks;
 }

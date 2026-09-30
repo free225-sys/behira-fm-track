@@ -25,8 +25,10 @@ export function CountStepper({
   className?: string;
   onChange: (value: string) => void;
 }) {
+  // Valeur vide = non renseignée : on affiche « — » (jamais un 0 implicite) et « − » permet de saisir le minimum en un appui.
+  const empty = value === '';
   const count = Math.max(min, Math.trunc(Number(value) || 0));
-  const atMin = count <= min;
+  const atMin = !empty && count <= min;
 
   function setCount(next: number) {
     onChange(String(Math.max(min, Math.trunc(next))));
@@ -38,7 +40,7 @@ export function CountStepper({
       setCount(count + 1);
     } else if (event.key === 'ArrowDown' || event.key === 'ArrowLeft') {
       event.preventDefault();
-      setCount(count - 1);
+      setCount(empty ? min : count - 1);
     } else if (event.key === 'Home') {
       event.preventDefault();
       setCount(min);
@@ -59,26 +61,27 @@ export function CountStepper({
           className="count-stepper-btn ge-stepper-btn"
           aria-label={ariaMinus}
           disabled={atMin}
-          onClick={() => setCount(count - 1)}
+          onClick={() => setCount(empty ? min : count - 1)}
         >
           −
         </button>
         <span
-          className="count-stepper-value ge-stepper-value"
+          className={['count-stepper-value ge-stepper-value', empty ? 'is-empty' : ''].filter(Boolean).join(' ')}
           role="spinbutton"
           tabIndex={0}
           aria-valuemin={min}
-          aria-valuenow={count}
+          aria-valuenow={empty ? undefined : count}
+          aria-valuetext={empty ? 'Non renseigné' : undefined}
           aria-live="polite"
           onKeyDown={onKeyDown}
         >
-          {value === '' ? 0 : count}
+          {empty ? '—' : count}
         </span>
         <button
           type="button"
           className="count-stepper-btn ge-stepper-btn"
           aria-label={ariaPlus}
-          onClick={() => setCount(count + 1)}
+          onClick={() => setCount(empty ? min + 1 : count + 1)}
         >
           +
         </button>

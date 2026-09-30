@@ -1,4 +1,5 @@
 import type { FieldCheckInput } from '../offline/types';
+import { reasonError, reasonProblem } from '../input-rules';
 
 // Sources: REF-20260901 decisions 17/09 (S03/S04/S06 WILO),
 // equipment dictionary 09/09 and WILO technical sheet 28/06 for observations.
@@ -7,7 +8,7 @@ export type WiloAnswers = Record<string, string>;
 export const WILO_FIELDS = [
   ['TYPE_RONDE', 'Type de ronde', 'Quotidienne|Après intervention|Contrôle exceptionnel', 0],
   ['MANO_LISIBLE', 'Manomètre lisible', 'Oui|Non', 1],
-  ['PRESSION_MANOMETRE', 'Pression au manomètre (bar)', 'bar', 1],
+  ['PRESSION_MANOMETRE', 'Pression lue au manomètre mécanique (bar)', 'bar', 1],
   ['PRESSION_CONFIRMATION', 'Second relevé de pression coffret (bar)', 'bar', 1],
   ['PRESSION_CONFIRMATION_AT', 'Date et heure du second relevé (Abidjan)', 'datetime', 1],
   ['STABILITE_MANOMETRE', 'Stabilité du manomètre', 'Stable|Oscillation légère|Oscillation importante', 1],
@@ -31,6 +32,25 @@ export const WILO_FIELDS = [
   ['OBSERVATION_REARMEMENT', 'Observation après réarmement', 'Insuffisante|Stable 15 min|Stable 30 min|Stable 1 h', 3],
   ['RECIDIVE_7J', 'Même défaut déjà survenu dans les 7 jours', 'bool', 3],
 ] as const;
+/** DEC-019 : réponses déduites d'une autre question, envoyées au serveur mais plus demandées à l'agent. */
+export const WILO_DERIVED_FIELDS = new Set(['SECOURS_DISPONIBLE']);
+/** DEC-019 : contrôles de base déduits (P1/P2 de l'état observé, fuite du détail de fuite). */
+export const WILO_DERIVED_CONTROLS: Record<string, string> = { p1: 'ETAT_P1', p2: 'ETAT_P2', leak: 'FUITE_DETAIL' };
+/** Disponibilité déduite de l'état observé d'une pompe. */
+export function pumpAvailability(state: string | undefined): boolean | null {
+  if (!state || state === 'unknown') return null;
+  return ['Marche', 'Arrêt disponible'].includes(state);
+}
+/** Absence de fuite active déduite du détail de fuite (un suintement n'est pas une fuite active). */
+export function noActiveLeak(detail: string | undefined): boolean | null {
+  if (!detail || detail === 'unknown') return null;
+  return detail !== 'Fuite continue / flaque';
+}
+/** Champs non affichés : déduits (DEC-019), ou date du second relevé quand ce relevé est déclaré impossible
+ * (son motif vaut pour les deux ; la date est alors envoyée « non vérifiée » avec ce même motif). */
+export function isWiloFieldHidden(code: string, answers: WiloAnswers): boolean {
+  return WILO_DERIVED_FIELDS.has(code) || (code === 'PRESSION_CONFIRMATION_AT' && answers.PRESSION_CONFIRMATION === 'unknown');
+}
 export const WILO_RESET_FIELDS = new Set(['HEURE_REARMEMENT', 'POMPE_REARMEE', 'RESULTAT_REARMEMENT', 'OBSERVATION_REARMEMENT', 'RECIDIVE_7J']);
 export function activeWiloFields(answers: WiloAnswers, pressure = '') {
   return WILO_FIELDS.filter(([code]) => (!WILO_RESET_FIELDS.has(code) || answers.REARMEMENT === 'yes')
@@ -50,9 +70,12 @@ export function wiloPressureState(value: string): 'missing' | 'normal' | 'alert'
 }
 export function wiloSupplementChecks(answers: WiloAnswers, reasons: WiloAnswers, pressure = ''): FieldCheckInput[] {
   return activeWiloFields(answers,pressure).map(([code, label, type]) => {
+    if (code === 'PRESSION_CONFIRMATION_AT' && answers.PRESSION_CONFIRMATION === 'unknown') {
+      return { code, label, status:'not_checked', notes:reasons.PRESSION_CONFIRMATION?.trim() || 'Second relevé non réalisé' };
+    }
     const value = answers[code]?.trim();
     if (!value || value === 'unknown') {
-      if (!reasons[code]?.trim()) throw new Error(`${label} : renseignez le contrôle ou le motif de non-vérification.`);
+      { const problem = reasonError(reasons[code], label); if (problem) throw new Error(problem); }
       return { code, label, status:'not_checked', notes:reasons[code].trim() };
     }
     if (type === 'bar' || type === '%') {
@@ -102,7 +125,7 @@ export function buildWiloChecks(pressure:string, tank:string, controls:Record<st
   }
   const findings = wiloSupplementFindings(answers,pressure);
   const numeric = (code:string,label:string,value:string,unit:string):FieldCheckInput => {
-    if (!value.trim() && reasons[code]?.trim()) return {code,label,status:'not_checked',notes:reasons[code].trim()};
+    if (!value.trim() && reasons[code]?.trim()) { const problem = reasonError(reasons[code], label); if (problem) throw new Error(problem); return {code,label,status:'not_checked',notes:reasons[code].trim()}; }
     const n = measuredNumber(value);
     if (n === null || (unit==='%' && n>100)) throw new Error(`${label} : indiquez une mesure valide${unit==='%'?' de 0 à 100':''}, ou un motif de non-relevé.`);
     const state = code==='PRESSION_RESEAU'?wiloPressureState(value):'normal';
@@ -110,7 +133,14 @@ export function buildWiloChecks(pressure:string, tank:string, controls:Record<st
   };
   const base:FieldCheckInput[] = [numeric('PRESSION_RESEAU','Pression coffret',pressure,'bar'),numeric('NIVEAU_BACHE','Niveau de bâche mesuré',tank,'%')];
   for (const [code,label] of [['auto','Mode automatique actif'],['p1','Pompe P1 disponible'],['p2','Pompe P2 disponible'],['leak','Absence de fuite active'],['valves','Vannes en position normale'],['alarm','Aucune alarme active']]) {
-    if (typeof controls[code]!=='boolean') throw new Error(`${label} : contrôle à renseigner.`);
+    if (typeof controls[code]!=='boolean') {
+      // DEC-020 : « Non vérifié » avec motif ; pour un contrôle déduit, le motif est celui de la question source.
+      const reason = (reasons[code.toUpperCase()] || (WILO_DERIVED_CONTROLS[code] ? reasons[WILO_DERIVED_CONTROLS[code]] : '') || '').trim();
+      if (!reason) throw new Error(`${label} : contrôle à renseigner.`);
+      { const problem = reasonError(reason, label); if (problem) throw new Error(problem); }
+      base.push({code:code.toUpperCase(),label,status:'not_checked',notes:reason});
+      continue;
+    }
     base.push({code:code.toUpperCase(),label,status:controls[code]?'ok':'alert',valueBoolean:controls[code]});
   }
   for (const pump of ['p1','p2']) {
@@ -122,6 +152,7 @@ export function buildWiloChecks(pressure:string, tank:string, controls:Record<st
   const leak = answers.FUITE_DETAIL;
   if (leak && leak!=='unknown') base.push({code:'FUITE_PRESENTE',label:'Fuite présente',status:leak==='Aucune'?'ok':'alert',valueBoolean:leak!=='Aucune'});
   else base.push({code:'FUITE_PRESENTE',label:'Fuite présente',status:'not_checked',notes:reasons.FUITE_DETAIL||'Détail de fuite non vérifié'});
+  if (photoException.trim()) { const problem = reasonProblem(photoException, 'Motif d’absence de photo'); if (problem) throw new Error(problem); }
   if (photoException.trim()) base.push({code:'PHOTO_EXCEPTION',label:'Motif d’impossibilité de photo',status:'ok',valueText:photoException.trim()});
   return [{code:"WILO_RULE_VERSION",label:"Version des règles WILO",status:"ok",valueText:"wilo.20260928.v1"},...base,...extra.map(c=>({...c,status:findings.includes(c.code)?'alert' as const:c.status}))];
 }

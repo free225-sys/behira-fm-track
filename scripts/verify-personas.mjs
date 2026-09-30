@@ -126,6 +126,7 @@ requireAll('Verrou critique et retour Direction', page, [
   "selected.priority === 'Critique' && !selected.proof", 'retour envoyé à Facility Manager', 'Confirmer et notifier Facility Manager',
 ])
 requireAll('Badges structurés', appSource, ['badge-icon', 'badge-label'])
+requireAll('Agent eau/incendie habilité aux étapes de dossier (diagnostic, intervention) — recette V35', page, ["isAgent={personaId === 'electricite' || personaId === 'eau_incendie'}", "anomaly.workflow?.actionCode === 'PERFORM_DIAGNOSIS') return 'Réaliser et confirmer le diagnostic'"])
 requireAll('Focus P2 et protection navigation mobile', css, [
   'outline:2px solid var(--focus-ring)', '.keyboard-nav button:focus-visible', '.main-column{padding-bottom:92px}', '.persona-popover{position:fixed',
 ])

@@ -3896,6 +3896,7 @@ export type Database = {
       examine_ria_report: { Args: { p_report_id: string; p_updated_at: string; p_decision: string; p_reason: string }; Returns: undefined }
       confirm_ria_round: { Args: { p_report_id: string }; Returns: string }
       get_wilo_rounds: { Args: Record<string, never>; Returns: Json }
+      get_irr_rounds: { Args: Record<string, never>; Returns: Json }
       examine_wilo_report: { Args: { p_report_id:string; p_updated_at:string; p_decision:string; p_reason:string }; Returns: undefined }
       submit_ria_round_offline: { Args: { p_id: string; p_performed_at: string; p_summary: string; p_checks: Json; p_manifest: Json; p_is_test?: boolean; p_test_attested?: boolean }; Returns: Json }
       review_health_source: {

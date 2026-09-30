@@ -14,63 +14,64 @@ Statuts : les entrées 062 à 078 sont **En vigueur** (la plus récente l’empo
 
 | id | date | sujet | attendu de | bloque |
 | --- | --- | --- | --- | --- |
-| DESIGN-078 | 2026-09-28 | Parcours Eau & Incendie aligné sur GE-01 | Responsable projet Démo | livré |
+| DESIGN-082 | 2026-09-30 | Lot T1 — revue UX terrain : ronde GE-01, accueil agent, rapport prestataire | Codex (transposition) | En vigueur |
+| DESIGN-078 | 2026-09-28 | Parcours Eau & Incendie aligné sur GE-01 | Wilkam | livré |
 | DESIGN-077 | 2026-09-18 | Pilotage : liste d’attention et carte d’évolution | Codex | En vigueur |
 | DESIGN-076 | 2026-09-18 | Formulaire de rapport prestataire | Codex | En vigueur |
-| DESIGN-075 | 2026-09-18 | En-tête ronde deux niveaux | Responsable projet Démo | livré |
-| DESIGN-074 | 2026-09-18 | Compteur d’entiers compact GE-01 | Responsable projet Démo | livré |
-| DESIGN-073 | 2026-09-17 | Onglets uniques + rayon secondaire unique | Responsable projet Démo | livré |
-| DESIGN-072 | 2026-09-17 | Conformité design : parc, typo, boutons, onglets, densité | Responsable projet Démo | livré |
-| DESIGN-071 | 2026-09-17 | Offset sous barre fixe + carte Contexte GE-01 | Responsable projet Démo | livré |
-| DESIGN-070 | 2026-09-17 | Finitions clôture : Pilotage, Paramètres, Rondes, 380 px | Responsable projet Démo | livré |
+| DESIGN-075 | 2026-09-18 | En-tête ronde deux niveaux | Wilkam | livré |
+| DESIGN-074 | 2026-09-18 | Compteur d’entiers compact GE-01 | Wilkam | livré |
+| DESIGN-073 | 2026-09-17 | Onglets uniques + rayon secondaire unique | Wilkam | livré |
+| DESIGN-072 | 2026-09-17 | Conformité design : parc, typo, boutons, onglets, densité | Wilkam | livré |
+| DESIGN-071 | 2026-09-17 | Offset sous barre fixe + carte Contexte GE-01 | Wilkam | livré |
+| DESIGN-070 | 2026-09-17 | Finitions clôture : Pilotage, Paramètres, Rondes, 380 px | Wilkam | livré |
 | DESIGN-069 | 2026-09-17 | Cohérence documentaire avant intégration Codex | Codex | En vigueur |
-| DESIGN-068 | 2026-09-16 | Spécimen `/design-system` aligné sur la clôture UI | Responsable projet Démo | livré |
-| DESIGN-067 | 2026-09-16 | Passe corrective nav / Dossiers / captures 380 px | Responsable projet Démo | livré |
-| DESIGN-066 | 2026-09-16 | Clôture design, Dossiers recalé, passation Codex | Responsable projet Démo | livré |
-| DESIGN-065 | 2026-09-16 | Recalage fidèle sur les maquettes HTML (seconde passe) | Responsable projet Démo | livré |
-| DESIGN-064 | 2026-09-16 | Alignement maquettes accueil agent / FM / Dossiers / Administration | Responsable projet Démo | livré |
-| DESIGN-063 | 2026-09-16 | Étape C : Pilotage, Paramètres, Coûts, passation Codex | Responsable projet Démo | livré |
-| DESIGN-062 | 2026-09-16 | Étape B : codes canoniques, accueils, Dossiers | Responsable projet Démo | livré |
+| DESIGN-068 | 2026-09-16 | Spécimen `/design-system` aligné sur la clôture UI | Wilkam | livré |
+| DESIGN-067 | 2026-09-16 | Passe corrective nav / Dossiers / captures 380 px | Wilkam | livré |
+| DESIGN-066 | 2026-09-16 | Clôture design, Dossiers recalé, passation Codex | Wilkam | livré |
+| DESIGN-065 | 2026-09-16 | Recalage fidèle sur les maquettes HTML (seconde passe) | Wilkam | livré |
+| DESIGN-064 | 2026-09-16 | Alignement maquettes accueil agent / FM / Dossiers / Administration | Wilkam | livré |
+| DESIGN-063 | 2026-09-16 | Étape C : Pilotage, Paramètres, Coûts, passation Codex | Wilkam | livré |
+| DESIGN-062 | 2026-09-16 | Étape B : codes canoniques, accueils, Dossiers | Wilkam | livré |
 | DESIGN-052 | 2026-09-11 | DateInput / TimeInput / DateTimeInput (Select, wrap, plus d’horloge OS) | Dev Lead | feat/ge01-pilot |
 | DESIGN-051 | 2026-09-11 | Mentions italiques à la place des badges-stickers ; contrat primitives Codex | Dev Lead | feat/ge01-pilot |
 | DESIGN-050 | 2026-09-11 | Badges : ruban/étiquette (pointe + œillet), plus de cran ni sceau | Dev Lead | feat/ge01-pilot |
 | DESIGN-049 | 2026-09-11 | Raccord lot 1 UI → Ge01WorkflowPanel / preuves / nextActionAssignee | Dev Lead | feat/ge01-pilot |
 | DESIGN-048 | 2026-09-11 | Dossier : prochaine action ≠ responsable interne ; traitement et preuves lisibles | Dev Lead | feat/ge01-pilot |
-| DESIGN-046 | 2026-08-31 | Accueil : plus de kicker ni titre jumeau au-dessus du score | Responsable projet Démo | DEC-009 |
-| DESIGN-045 | 2026-08-31 | Notifications d’erreur : file + règles (in-app / e-mail simulé) | Responsable projet Démo | — |
-| DESIGN-044 | 2026-08-31 | Accueil : chiffre + échelle 0–100 + lollipops | Responsable projet Démo | DEC-015 |
-| DESIGN-043 | 2026-08-31 | Score global jauge + courbe du parc ; KPI à mini-repères | Responsable projet Démo | DEC-015 |
-| DESIGN-042 | 2026-08-31 | Accueil : scan du parc en tuiles de score, tous personas | Responsable projet Démo | DEC-015 |
-| DESIGN-041 | 2026-08-31 | Accueil = cockpit Santé du bâtiment, tous personas | Responsable projet Démo | DEC-015 |
-| DESIGN-040 | 2026-08-30 | Listes déroulantes Behira, plus de bleu système | Responsable projet Démo | — |
-| DESIGN-039 | 2026-08-30 | Rondes approfondies : un rail, un score, pas de bandeau doublon | Responsable projet Démo | — |
-| DESIGN-038 | 2026-08-30 | Rondes / Surpresseur : plus de bande navy, étape pétrole | Responsable projet Démo | — |
-| DESIGN-037 | 2026-08-30 | Destinations Plus : un titre, intro plate, onglet pétrole | Responsable projet Démo | — |
-| DESIGN-036 | 2026-08-30 | Dossier central : une navy, un cycle, action claire | Responsable projet Démo | — |
-| DESIGN-035 | 2026-08-30 | Cohérence des destinations : un sujet, une page | Responsable projet Démo | — |
-| DESIGN-034 | 2026-08-30 | Menu compact sans double bordure ; onglet actif pétrole | Responsable projet Démo | — |
-| DESIGN-033 | 2026-08-30 | Porte d’authentification : chrome unique, briefing clair | Responsable projet Démo | — |
-| DESIGN-032 | 2026-08-29 | Bandeau contexte lisible ; score KPI teal | Responsable projet Démo | — |
-| DESIGN-031 | 2026-08-29 | Ruban 3 files lisible ; accent teal (DEC-013) | Responsable projet Démo | DEC-013 |
-| DESIGN-030 | 2026-08-29 | Onglets compact : 4 files + 3 codes + score à droite | Responsable projet Démo | — |
-| DESIGN-029 | 2026-08-29 | 7 files dans le ruban ; file inbox sans onglets coupés | Responsable projet Démo | — |
-| DESIGN-028 | 2026-08-29 | Accessibilité visuelle : contraste, glyphes, focus | Responsable projet Démo | — |
-| DESIGN-027 | 2026-08-29 | Onglet actif : carte interne + monogramme AQ/SLA/PV inversé | Responsable projet Démo | — |
-| DESIGN-026 | 2026-08-29 | Ruban files : une bordure ; actif = surface + rail gauche | Responsable projet Démo | — |
-| DESIGN-025 | 2026-08-29 | Badges capsule + sceau circulaire (forme certifiée) | Responsable projet Démo | — |
-| DESIGN-024 | 2026-08-29 | CSS badges consolidé : pastille unique, tokens, ellipsis | Responsable projet Démo | — |
-| DESIGN-023 | 2026-08-29 | Flux pleine largeur ; badges pastille sans icône | Responsable projet Démo | — |
-| DESIGN-022 | 2026-08-29 | Santé & performance sur Accueil ; badges de comptage retirés | Responsable projet Démo | — |
-| DESIGN-021 | 2026-08-29 | Primitives UI : Button, IconButton, Badge, Field, Card | Responsable projet Démo / Dev Lead | lots 4–6 |
-| DESIGN-020 | 2026-08-29 | Socle de tokens approfondi + spécimen `/design-system` | Responsable projet Démo | DEC-001 |
-| DESIGN-019 | 2026-08-29 | Personnalisation login + en-tête clair | Responsable projet Démo | — |
-| DESIGN-018 | 2026-08-29 | Une bande navy + titres uniques (DEC-009) | Responsable projet Démo / Dev Lead | publication du shell |
+| DESIGN-046 | 2026-08-31 | Accueil : plus de kicker ni titre jumeau au-dessus du score | Wilkam | DEC-009 |
+| DESIGN-045 | 2026-08-31 | Notifications d’erreur : file + règles (in-app / e-mail simulé) | Wilkam | — |
+| DESIGN-044 | 2026-08-31 | Accueil : chiffre + échelle 0–100 + lollipops | Wilkam | DEC-015 |
+| DESIGN-043 | 2026-08-31 | Score global jauge + courbe du parc ; KPI à mini-repères | Wilkam | DEC-015 |
+| DESIGN-042 | 2026-08-31 | Accueil : scan du parc en tuiles de score, tous personas | Wilkam | DEC-015 |
+| DESIGN-041 | 2026-08-31 | Accueil = cockpit Santé du bâtiment, tous personas | Wilkam | DEC-015 |
+| DESIGN-040 | 2026-08-30 | Listes déroulantes Behira, plus de bleu système | Wilkam | — |
+| DESIGN-039 | 2026-08-30 | Rondes approfondies : un rail, un score, pas de bandeau doublon | Wilkam | — |
+| DESIGN-038 | 2026-08-30 | Rondes / Surpresseur : plus de bande navy, étape pétrole | Wilkam | — |
+| DESIGN-037 | 2026-08-30 | Destinations Plus : un titre, intro plate, onglet pétrole | Wilkam | — |
+| DESIGN-036 | 2026-08-30 | Dossier central : une navy, un cycle, action claire | Wilkam | — |
+| DESIGN-035 | 2026-08-30 | Cohérence des destinations : un sujet, une page | Wilkam | — |
+| DESIGN-034 | 2026-08-30 | Menu compact sans double bordure ; onglet actif pétrole | Wilkam | — |
+| DESIGN-033 | 2026-08-30 | Porte d’authentification : chrome unique, briefing clair | Wilkam | — |
+| DESIGN-032 | 2026-08-29 | Bandeau contexte lisible ; score KPI teal | Wilkam | — |
+| DESIGN-031 | 2026-08-29 | Ruban 3 files lisible ; accent teal (DEC-013) | Wilkam | DEC-013 |
+| DESIGN-030 | 2026-08-29 | Onglets compact : 4 files + 3 codes + score à droite | Wilkam | — |
+| DESIGN-029 | 2026-08-29 | 7 files dans le ruban ; file inbox sans onglets coupés | Wilkam | — |
+| DESIGN-028 | 2026-08-29 | Accessibilité visuelle : contraste, glyphes, focus | Wilkam | — |
+| DESIGN-027 | 2026-08-29 | Onglet actif : carte interne + monogramme AQ/SLA/PV inversé | Wilkam | — |
+| DESIGN-026 | 2026-08-29 | Ruban files : une bordure ; actif = surface + rail gauche | Wilkam | — |
+| DESIGN-025 | 2026-08-29 | Badges capsule + sceau circulaire (forme certifiée) | Wilkam | — |
+| DESIGN-024 | 2026-08-29 | CSS badges consolidé : pastille unique, tokens, ellipsis | Wilkam | — |
+| DESIGN-023 | 2026-08-29 | Flux pleine largeur ; badges pastille sans icône | Wilkam | — |
+| DESIGN-022 | 2026-08-29 | Santé & performance sur Accueil ; badges de comptage retirés | Wilkam | — |
+| DESIGN-021 | 2026-08-29 | Primitives UI : Button, IconButton, Badge, Field, Card | Wilkam / Dev Lead | lots 4–6 |
+| DESIGN-020 | 2026-08-29 | Socle de tokens approfondi + spécimen `/design-system` | Wilkam | DEC-001 |
+| DESIGN-019 | 2026-08-29 | Personnalisation login + en-tête clair | Wilkam | — |
+| DESIGN-018 | 2026-08-29 | Une bande navy + titres uniques (DEC-009) | Wilkam / Dev Lead | publication du shell |
 | DESIGN-015 | 2026-08-29 | **GO PUBLICATION** sur `b517167` — socle design clos | — | — |
 | DESIGN-014 | 2026-08-29 | Recette de clôture sur `0c0d9f7` : DESIGN-013 clos, trois régressions nouvelles | Dev Lead | publication |
 | DESIGN-013 | 2026-08-29 | Recette de `ec3ec06` : contrastes validés, trois débordements à 375 px | Dev Lead | publication |
 | DESIGN-012 | 2026-08-29 | Réponse à DEV-002 : badge Démo rétabli, direction artistique corrigée | Dev Lead | — |
 | DESIGN-011 | 2026-08-29 | Bandeau resserré — 403 px de chrome ramenés à 273, avis du dev lead demandé | Dev Lead | — |
-| DESIGN-010 | 2026-08-29 | Navigation en bandeau haut et première page — écart avec la direction artistique | Responsable projet Démo | lot 5 |
+| DESIGN-010 | 2026-08-29 | Navigation en bandeau haut et première page — écart avec la direction artistique | wilkam | lot 5 |
 | DESIGN-009 | 2026-08-29 | Lot 4 — généralisation du socle, et un défaut de mon patch du lot 2 | Dev Lead | lot 5 |
 | DESIGN-008 | 2026-08-28 | Lot 3 — durées d'animation, rampe de composition, badge critique en gris | Dev Lead | — |
 | DESIGN-007 | 2026-08-28 | Triplets sémantiques : trois rôles sur cinq échouent au contraste 4.5:1 | Dev Lead | lot 3 |
@@ -82,6 +83,29 @@ Statuts : les entrées 062 à 078 sont **En vigueur** (la plus récente l’empo
 | DESIGN-001 | 2026-08-28 | Lot 1 — spécification du socle de tokens | Dev Lead | lot 2, écran pilote |
 
 ---
+
+## DESIGN-082 — Lot T1 : revue UX terrain (GE-01, accueil agent, rapport prestataire)
+
+- **Date :** 30 septembre 2026
+- **Auteur :** Revue UX (Claude) pour le porteur de projet
+- **Statut :** En vigueur — à transposer sur le dépôt privé
+- **Périmètre :** frontend uniquement. Aucune mutation, règle RLS, permission, seuil ni format de rapport modifié.
+- **Contexte :** Revue en préproduction (version 32, a2373c2) des comptes Agent Électricité et Agent Eau & Incendie, à 375 px et en desktop. Rapport : `revues/2026-09-30_revue_ux_espaces_agents.md` (projet BEHIRA FM DESIGN).
+- **Corrections appliquées :**
+  - **E1 — Compteur « Démarrages 24 h ».** Une valeur vide s’affiche « — » au lieu de « 0 ». Le principe « aucun zéro implicite » est conservé, et le message « Saisissez un nombre entier positif ou nul » ne contredit plus l’affichage. « − » saisit 0 en un appui. `aria-valuetext="Non renseigné"`. (`shared/CountStepper.tsx`)
+  - **E2 — Champs de mesure GE-01.** Zone de saisie de 48 px au lieu de 24 px ; libellé relié au champ (`label for`). (`Ge01Pilot.tsx`, `globals.css`)
+  - **E3 — Rail d’étapes.** Les étapes futures sont désactivées : elles n’ont plus l’air cliquables sans effet.
+  - **C10 — Changement d’étape.** La page remonte au rail d’étapes au lieu de laisser l’agent en bas du formulaire.
+  - **Validation.** En cas d’erreur, la page défile jusqu’au premier champ en erreur, qui reçoit le focus.
+  - **E4 / E5 — Récapitulatif.** Libellé et valeur sur deux lignes ; date au format JJ/MM/AAAA. Un statut distinct « Non vérifié » remplace « OK » pour les réponses non observées. Les compteurs portent sur toutes les lignes : Conformes / Alertes / Critiques / Non vérifiés. La confirmation n’est plus comptée comme conforme. (`lib/ge01/review.ts`)
+  - **E7 — Titre de l’accueil agent.** « Bonjour, 1 ronde vous attend aujourd’hui » au lieu de « aucune action ne vous attend » quand une ronde du jour reste à faire.
+  - **E9.** « Résultat de l’essai de démarrage » et « Dernier essai » ne sont plus collés.
+  - **C1 — Accueil.** Le bandeau `is-bleed` (marge négative de 30 px) ne recouvre plus le sélecteur « Espace de travail » en mode connecté.
+  - **C2 — Bouton d’action principal.** Le chevron et `aria-haspopup` n’apparaissent que si le bouton ouvre réellement la liste des rondes.
+  - **C14 — Rapport prestataire.** Anomalie et entreprise sans présélection (« Choisir… »). Options d’anomalie complétées par la priorité et la date. Champs obligatoires marqués. Compteur « n / 20 » visible. Unité FCFA dans le champ, avec l’écho « Soit 450 000 FCFA ». « Annuler » demande confirmation dès qu’un champ est rempli. À l’ouverture, le formulaire est amené à l’écran et le premier champ reçoit le focus. Boutons d’action à taille égale.
+  - **Saisie mobile.** Champs en 16 px sous 768 px ou sur écran tactile, pour éviter le zoom d’iOS (plancher de lecture DEC-003 inchangé). Cases « Mesure impossible » et confirmation portées à une zone tactile de 44 px.
+- **Non traité ici (backend, Codex) :** E6. `Ge01AgentForm` initialise `lastContext` à `EMPTY_LAST_CONTEXT` dès que `persistenceEnabled` est vrai (ligne `useState<Ge01LastContext>(persistenceEnabled ? EMPTY_LAST_CONTEXT : …)`). « Hier », « Dernier relevé » et « Dernier essai » restent donc vides en préproduction. Il faut alimenter ce contexte depuis le dernier rapport confirmé.
+- **Contrôles :** `pnpm lint` (0 erreur, 41 avertissements existants), `tsc --noEmit`, `pnpm build`, `audit:visual` 120, `verify:personas` 38, `verify:auth` 21, `verify:lot0` 89, `verify:lot1` 36, `verify:wilo` 34, `verify-ge01-context` 9, `verify-ge01-numeric` 27, `verify-mirror-rounds` 1440 / 380 px réussis. Recette navigateur complémentaire à 380 et 1440 px sur chaque correction.
 
 ## DESIGN-078 — Parcours Eau & Incendie aligné sur GE-01
 
@@ -666,7 +690,7 @@ Une seule déclaration canonique en fin de feuille : pastille 22 px, triplet sé
 
 - **Date :** 29 août 2026
 - **Auteur :** Revue design
-- **Statut :** Livré dans le miroir — **arbitrage Responsable projet Démo** (DEC-012)
+- **Statut :** Livré dans le miroir — **arbitrage Wilkam** (DEC-012)
 - **Périmètre :** `WorkflowAnalytics` sur À traiter, `.badge`
 
 Le flux sort de la colonne décision. Pipeline en 6 colonnes fluides, sans scroll desktop. Badge : pastille triplet, icône masquée, plus de rail 3 px.
@@ -678,7 +702,7 @@ Le flux sort de la colonne décision. Pipeline en 6 colonnes fluides, sans scrol
 
 - **Date :** 29 août 2026
 - **Auteur :** Revue design
-- **Statut :** Livré dans le miroir — **arbitrage Responsable projet Démo** (DEC-011)
+- **Statut :** Livré dans le miroir — **arbitrage Wilkam** (DEC-011)
 - **Périmètre :** Accueil FM, À traiter, badges
 
 Le bloc Santé & performance quitte À traiter (DEC-007) pour Accueil. Les pastilles `SURVEILLANCE`, `ACTION REQUISE`, `3 AGENTS` n’étaient pas des états de dossier : le statut passe en texte coloré (`.kpi-status`) et les comptages en `.panel-count`. Le Badge à rail reste pour priorité, étape, retard, hors délégation.
@@ -704,7 +728,7 @@ Les classes CSS existantes (`primary-button`, `panel`, `badge`, `field`) restent
 
 - **Date :** 29 août 2026
 - **Auteur :** Revue design
-- **Statut :** Livré dans le miroir — **arbitrage Responsable projet Démo** (DEC-010)
+- **Statut :** Livré dans le miroir — **arbitrage Wilkam** (DEC-010)
 - **Périmètre :** `app/globals.css` (`:root` + chrome), `app/design-system/page.tsx`, lien depuis le login
 
 Le socle avait des tokens, pas de couches. Ce lot ajoute chrome, encres sur navy, glyphe vs orange, mouvement et z-index — **mêmes valeurs qu’avant**, nommées. Le spécimen `/design-system` n’entre pas dans le menu produit.
@@ -730,7 +754,7 @@ Le panneau gauche de connexion n’est plus un dégradé + cercles décoratifs :
 
 - **Date :** 29 août 2026
 - **Auteur :** Revue design
-- **Statut :** Livré dans le miroir — **arbitrage Responsable projet Démo requis** (DEC-009)
+- **Statut :** Livré dans le miroir — **arbitrage Wilkam requis** (DEC-009)
 - **Périmètre :** `app/page.tsx`, `app/globals.css`, `scripts/audit-visual-styles.mjs`, `docs/design/DECISIONS.md`
 
 DEC-008 a aligné le menu et le `<h1>`. Il restait deux bandes navy (132 à 146 px) et un second titre dans le contenu. Ce lot ferme ces deux écarts sans toucher aux rôles, droits ou données.
@@ -766,7 +790,7 @@ Cinq assertions ajoutées à `scripts/audit-visual-styles.mjs` : topbar claire, 
 
 **Date :** 29 août 2026 · **Auteur :** Designer · **Nature :** livraison, appliquée sur `app/globals.css`
 
-Responsable projet Démo a demandé de changer l'aspect des badges de statut, partout où ils apparaissent. Les trois exemples cités — « ! Hors délégation », « ◆ À traiter par Facility Manager », « ◆ 2 à traiter » — partageaient la même faiblesse : une pastille entièrement arrondie, une bordure pâle d'un pixel qui ne se voyait pas, et une icône posée dans un disque blanc semi-transparent qui flottait sans rôle.
+Wilkam a demandé de changer l'aspect des badges de statut, partout où ils apparaissent. Les trois exemples cités — « ! Hors délégation », « ◆ À traiter par Facility Manager », « ◆ 2 à traiter » — partageaient la même faiblesse : une pastille entièrement arrondie, une bordure pâle d'un pixel qui ne se voyait pas, et une icône posée dans un disque blanc semi-transparent qui flottait sans rôle.
 
 ### Ce qui change
 
@@ -800,9 +824,9 @@ Corrigé selon la méthode que tu as toi-même retenue : les propriétés de mis
 
 ## DESIGN-016 — Mode sombre : décision de clôture, à ne pas contourner
 
-**Date :** 29 août 2026 · **Auteur :** Designer · **Nature :** consignation d'un arbitrage Responsable projet Démo
+**Date :** 29 août 2026 · **Auteur :** Designer · **Nature :** consignation d'un arbitrage Wilkam
 
-Responsable projet Démo a tranché : **le mode sombre n'est pas introduit**. L'entrée `DEC-006` de `DECISIONS.md` acte la décision.
+Wilkam a tranché : **le mode sombre n'est pas introduit**. L'entrée `DEC-006` de `DECISIONS.md` acte la décision.
 
 Contexte pour Codex : l'analyse de la maquette d'origine (V0) a établi que celle-ci était sombre par défaut avec un commutateur `data-theme`, et que la V2 avait perdu cette bascule au portage. La question du rétablissement était ouverte dans la revue de dérive. Elle est close, dans le sens du statu quo.
 
@@ -857,7 +881,7 @@ Le chantier ouvert par la revue du 28 août est clos. Ce qui était mesuré à l
 
 ### Ce qui reste, et qui n'est pas du design
 
-**DEC-005 attend l'arbitrage de Responsable projet Démo.** Le cockpit place aujourd'hui « Santé & Performance » avant la file de travail, ce qui inverse l'ordre acté en DEC-004. Mesure utile pour trancher — position du premier dossier actionnable :
+**DEC-005 attend l'arbitrage de wilkam.** Le cockpit place aujourd'hui « Santé & Performance » avant la file de travail, ce qui inverse l'ordre acté en DEC-004. Mesure utile pour trancher — position du premier dossier actionnable :
 
 | Écran | Position | Entièrement visible sans défiler |
 | --- | ---: | --- |
@@ -1042,7 +1066,7 @@ Le chrome passe de 273 à **300 px**, soit 25 px de plus que la version qui masq
 - **Statut :** Livré — **avis du dev lead explicitement demandé, voir la fin de l'entrée**
 - **Périmètre :** `app/globals.css`, plus une assertion de `scripts/audit-visual-styles.mjs`
 
-Responsable projet Démo a retenu la navigation en bandeau haut (DESIGN-010) et demandé que le bandeau lui-même soit retravaillé. Voici ce qui a été corrigé.
+wilkam a retenu la navigation en bandeau haut (DESIGN-010) et demandé que le bandeau lui-même soit retravaillé. Voici ce qui a été corrigé.
 
 ### Le vrai défaut : 403 px de chrome, et deux titres qui se répètent
 
@@ -1099,14 +1123,14 @@ Trois points relèvent autant de la tenue du code que du design, et je préfère
 
 - **Date :** 29 août 2026
 - **Auteur :** Designer
-- **Statut :** Proposition — **arbitrage de Responsable projet Démo requis avant implémentation**
+- **Statut :** Proposition — **arbitrage de wilkam requis avant implémentation**
 - **Périmètre :** `app/globals.css`, desktop uniquement (au-dessus de 700 px)
 
 ### Un écart assumé avec la direction artistique
 
 Le document de direction demande explicitement une « barre latérale stable sur desktop ». Cette proposition la remplace par un bandeau horizontal. **C'est un écart au cadrage validé, pas une interprétation.** Il ne doit pas être implémenté sans décision explicite, et il appelle une entrée dans `DECISIONS.md` s'il est retenu.
 
-La référence visuelle fournie par Responsable projet Démo a servi de source de principes, pas de maquette : bandeau de navigation horizontal, bande de contexte sous le menu, compteurs en tête de page, contenu sur fond clair. Aucun élément graphique n'en est repris.
+La référence visuelle fournie par wilkam a servi de source de principes, pas de maquette : bandeau de navigation horizontal, bande de contexte sous le menu, compteurs en tête de page, contenu sur fond clair. Aucun élément graphique n'en est repris.
 
 ### L'argument n'est pas esthétique, il est mesuré
 
@@ -1155,7 +1179,7 @@ C'est la seule vraie objection à cette proposition, et elle ne se résout pas p
 
 - **Fichiers concernés :** `app/globals.css` uniquement — aucun changement de balisage, de logique ni de rôle
 - **Contrôles attendus :** `pnpm lint`, `pnpm build`, `pnpm verify:personas`. Vérifié de mon côté : aucun texte sous 12 px, aucun débordement horizontal sur 10 combinaisons écran × profil à 1440 et 1024 px, barre mobile inchangée à 375 px.
-- **Suite proposée :** Si Responsable projet Démo retient le bandeau, consigner la décision, redescendre le seuil du registre à 960 px et rouvrir la question de la colonne Responsable, aujourd'hui masquée sous 1180 px alors que la largeur le permettrait désormais. Si Responsable projet Démo conserve le rail, le patch est jeté et le lot 5 revient aux encres sémantiques de DESIGN-007.
+- **Suite proposée :** Si wilkam retient le bandeau, consigner la décision, redescendre le seuil du registre à 960 px et rouvrir la question de la colonne Responsable, aujourd'hui masquée sous 1180 px alors que la largeur le permettrait désormais. Si wilkam conserve le rail, le patch est jeté et le lot 5 revient aux encres sémantiques de DESIGN-007.
 
 ---
 
@@ -1410,7 +1434,7 @@ Ils ne relèvent plus de l'encre neutre mais des surfaces sémantiques : `+1 600
 
 - **Date :** 28 août 2026
 - **Auteur :** Designer
-- **Statut :** Arbitré par Responsable projet Démo le 28 août 2026 — voir DEC-002. À implémenter avant le chantier des routes.
+- **Statut :** Arbitré par wilkam le 28 août 2026 — voir DEC-002. À implémenter avant le chantier des routes.
 - **Périmètre :** `navItems`, `pageTitle`, `mobilePageTitle`, en-têtes d'écran
 - **Contexte :** Relevé sur les cinq profils du miroir public, à 1440 px. Chaque destination porte trois à quatre appellations, et deux entrées changent d'écran selon le profil.
 
@@ -1426,7 +1450,7 @@ Ils ne relèvent plus de l'encre neutre mais des surfaces sémantiques : `+1 600
 
   Les cinq entrées mélangent par ailleurs quatre natures d'objet : une file personnelle, une analyse, une base de données, un rôle métier et une tâche. `allowedViewsByPersona` donne 3 entrées à l'Administration, 5 au Facility Manager, 2 aux agents — le profil le plus habilité a la navigation la plus pauvre, et ses deux destinations réelles (validation métier, utilisateurs et paramètres) sont rendues comme des lignes de contenu.
 
-- **Décision ou question :** Adopter un libellé unique par destination, groupé par nature d'objet. **Proposition validée par Responsable projet Démo le 28 août 2026** ; les routes doivent en découler :
+- **Décision ou question :** Adopter un libellé unique par destination, groupé par nature d'objet. **Proposition validée par wilkam le 28 août 2026** ; les routes doivent en découler :
 
   | Aujourd'hui | Proposé | Groupe |
   | --- | --- | --- |
@@ -1493,7 +1517,7 @@ Ils ne relèvent plus de l'encre neutre mais des surfaces sémantiques : `+1 600
   | Titre de page | `--text-page` | 22px | 22 à 25 |
   | Valeur KPI | `--text-display` | 28px | 26 à 40 |
 
-  Plancher absolu : **12 px**, arbitré par Responsable projet Démo (DEC-003). Les tailles 6 à 11 px disparaissent — elles concernent aujourd'hui les libellés de colonne du registre, les sous-titres de la sidebar et les mentions des cartes, c'est-à-dire des informations opérationnelles lues vite, souvent debout.
+  Plancher absolu : **12 px**, arbitré par wilkam (DEC-003). Les tailles 6 à 11 px disparaissent — elles concernent aujourd'hui les libellés de colonne du registre, les sous-titres de la sidebar et les mentions des cartes, c'est-à-dire des informations opérationnelles lues vite, souvent debout.
 
   `--text-label` et `--text-sm` ne sont séparés que d'un pixel parce qu'ils ne se distinguent pas par la taille mais par le traitement : `--text-label` est réservé aux libellés capitalisés et espacés et aux badges, `--text-sm` au texte courant secondaire. Si le lot 2 montre que la distinction ne tient pas visuellement, on fusionne sur 13 px.
 

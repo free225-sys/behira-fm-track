@@ -2,6 +2,142 @@
 
 Ce journal utilise le même gabarit que `FROM-DESIGN.md` et `DECISIONS.md`. Ajouter les nouvelles entrées en tête sans réécrire les entrées historiques.
 
+## DEV-031 — Réceptions et reprise motivée
+
+- **Décision utilisateur :** chantier lancé le 25/09/2026 après proposition du cycle réception FM, clôture ou retour motivé à l’agent.
+- **Interface :** file Réceptions alimentée par l’action canonique RECEIVE_INTERVENTION attribuée au FM. Dossier : compte rendu réel, accès aux preuves, choix accepter/clôturer ou renvoyer, commentaire et confirmation explicite. Composants et tokens existants, aucun CSS ajouté.
+- **Serveur :** décision atomique, version optimiste, idempotence, audit et réception rattachée à l’intervention. FM seul ; Administration et agents consultent selon leurs périmètres. RLS et séparation recette/exploitation. Ancienne voie de clôture bloquée sans réception du dernier travail.
+- **Retour :** même ordre de travail et autorisation financière, nouvelle exécution, ancienne intervention conservée, motif visible pour l’agent. Échéance conservée. Une ancienne preuve acceptée ne couvre pas la reprise.
+- **Périmètre :** GE-01 arrive en réception après validation de son justificatif ; les autres équipements après fin d’intervention, avec maintien des exigences de preuve pour la clôture. Réserves formelles et validation terrain distinctes, pas de réserve créée par un simple retour.
+- **Contrôles :** PostgreSQL isolé en modes réel/recette, rôles, concurrence, rejouage, retour/reprise/clôture, GE et WILO ; navigateur à 1280/380 px ; test GE-01 actualisé pour photo uniquement en cas d’anomalie ; TypeScript, compilation et contrôles design.
+- **Déploiement :** migration additive intervention_reception ; aucun dossier réel accepté, renvoyé ou clôturé par la migration. Garder les reçus et l’audit en cas de retour arrière ; un retour au frontend précédent exige aussi une migration corrective de workflow, car sa clôture directe ne satisfait pas le nouveau verrou.
+
+## DEV-030 — Photos uniquement en cas d’anomalie
+
+- **Décision utilisateur :** 25/09/2026, photos non exigées pour une ronde normale ; photo du constat ou motif d’impossibilité pour une anomalie. Preuves de réparation/clôture inchangées.
+- **Interface :** GE/RIA masquent le dépôt sans anomalie (les pièces déjà jointes restent accessibles). Motif conservé dans le brouillon et dans PHOTO_EXCEPTION. WILO et signalements conservent le dépôt depuis le dossier après synchronisation et demandent le motif de non-disponibilité au stade de la ronde.
+- **Serveur :** suppression des photos systématiques MC4/compteur et coffrets/manomètres ; les écarts numériques et observations déterminent le besoin de preuve. Motif provenant du rapport, jamais un texte ajouté librement au payload de revue. FM, valeurs critiques et complétude toujours requis.
+- **Historique :** aucun fichier, rapport, examen ou dossier supprimé. Les contrôles existants sont évalués avec la nouvelle règle d’admissibilité ; aucune revue automatique. Les observations anciennes restent soumises à leur validité.
+- **Migration :** round_photos_on_anomaly ; vues invoker et RLS conservées, pas de nouvelle permission publique. Retour arrière par migration corrective et version Sites 26, sans effacement des preuves.
+
+## DEV-029 — Raccordement du contrôle quotidien RIA-01
+
+- **Date :** 22 septembre 2026.
+- **Livré :** onglet RIA pour Eau/incendie et FM ; 29 observations, photos privées, brouillon et file hors ligne, réception confirmée, lecture FM, retour motivé et admission du contrôle dans les sources santé.
+- **Règles :** calcul serveur depuis les observations ; inconnu/incomplet conservé sans score ; référence 5 bar signalée en attente SECURISYS. Aucun réglage ni essai spécialisé autorisé par ce formulaire.
+- **Préservé :** parcours GE-01/WILO, périmètres et RLS, primitives et CSS. Pas de validation FM ni de données terrain simulées sur la base distante.
+- **Tests :** 261 scénarios PostgreSQL métier/isolation, 184 recette, TypeScript, 17 contrôles préflight. Tests locaux PGlite ; essai terrain avec transfert réel de photos à effectuer après publication.
+- **Limites :** planification consolidée de toutes les rondes à l'accueil non incluse. Mode manuel justifié nécessite clarification technique avant score. La reprise de confirmation utilise l'identifiant de mutation serveur et un reçu persistant.
+- **Retour arrière :** republier la version Sites 25 ; conserver les tables additives et les rapports RIA éventuels. Ne pas supprimer les observations. La migration modifie aussi le contrôle d'admissibilité RIA (moyenne P1/P2) ; une réversion SQL éventuelle nécessite une migration explicite après analyse.
+
+## DEV-028 — Accès aux rapports depuis les rondes FM
+
+- **Date :** 22 septembre 2026.
+- **Constat terrain :** le menu Rondes affiche bien REP-2026-000010 et ses 22 réponses. La ligne GE-01 des rondes du jour à l'accueil était du texte sans action ; dans la file, cliquer sur un rapport déjà sélectionné ne ramenait pas son détail à l'écran.
+- **Correction :** accès explicite aux rapports GE-01 depuis la ligne de l'accueil connecté FM ; sélection dans la file suivie d'un focus et défilement vers le titre du détail, y compris lors d'un second clic sur le même rapport. Centrage du titre pour éviter le chrome fixe.
+- **Préservé :** lecture sans validation automatique, API/RLS, données terrain, preuves, brouillons, CSS et primitives existantes. Aucun examen FM enregistré pendant la vérification.
+- **Vérification :** contrôle navigateur local de la sélection/focus et du débordement mobile ; TypeScript, préflight et build. Le rapport réel est consultable dans l'onglet de recette ; son incomplétude est distincte de ce problème de navigation.
+
+## DEV-027 — Sources santé et points par domaine
+
+- **Date :** 21 septembre 2026.
+- **Livré :** raccord serveur des contrôles revus WILO/RIA/ASC/IRR, Sécurité, Zones et Continuité ; preuves privées, revues FM immuables et audit ; reprise IRR bornée ; points par domaine affichés dans les blocs existants.
+- **Préservé :** contrat lot 0, poids approuvés, plafond, contrôles GE-01 et sa file hors ligne ; CSS, navigation et primitives sans modification.
+- **Limites :** données réelles insuffisantes ; formulaires guidés de revue des nouvelles sources encore à réaliser. Aucun exemple transformé en donnée terrain ; cas ambigus laissés bloquants. Recette terrain avec les agents toujours à effectuer.
+- **Détail et validation :** [RACCORDEMENT_SANTE_2026-09-21.md](../RACCORDEMENT_SANTE_2026-09-21.md).
+
+## DEV-026 — Moteur santé : règles chiffrées et raccord GE-01
+
+- **Date :** 21 septembre 2026.
+- **Référence :** décisions retenues S01–S13 du classeur REF-20260901, 17/09/2026. Version source et date d'installation conservées séparément.
+- **Livré :** évaluateurs SQL des six équipements et des trois autres domaines, agrégation/arrondi/plafond, pondérations et criticité renseignées, diagnostic des contrôles réels ; calcul GE-01 depuis les réponses et preuves figées par la revue FM.
+- **Limites :** autres fournisseurs de contrôles et domaines non raccordés, score bâtiment encore non calculable ; cas ambigus isolés et non arbitrés. Aucune valeur d'exemple injectée dans les données réelles.
+- **Design :** libellés des diagnostics côté interface ; CSS, primitives et synchronisation conservés.
+- **Détail et retour arrière :** [MOTEUR_SCORE_2026-09-21.md](../MOTEUR_SCORE_2026-09-21.md).
+
+## DEV-025 — Vérification Sylvain et séparation des alertes WILO
+
+- **Date :** 21 septembre 2026
+- **Observation :** profil Eau/incendie limité à WILO-01, RIA-01 et IRR-01 ; dossiers clôturés, preuve acceptée et historique canonique consultables. La page WILO présentait encore une récidive fictive de panne P1 en session réelle, et la synthèse sans contrôles indiquait aucun écart.
+- **Correction :** contexte et conseil WILO génériques en mode connecté, scénario P1 conservé uniquement en démo ; synthèse incomplète explicite ; mesures vides refusées avant mise en file au lieu de leur conversion implicite en zéro.
+- **Validation :** TypeScript, 17 suites du candidat GE-01 et build réussis. Aucune modification CSS, migration, RLS, seuil technique ou format de synchronisation. Aucun envoi terrain réalisé à distance.
+- **Limites :** WILO reste le formulaire historique hors planning ; les rondes planifiées RIA/IRR et leur recette relèvent de la livraison suivante. Recontrôle navigateur du correctif après publication.
+- **Retour arrière :** version Sites 21, sans restauration de base.
+
+## DEV-024 — Recette connectée Administration/FM : données réelles et file FM
+
+- **Date :** 21 septembre 2026
+- **Statut :** correctif testé, préparé pour publication sur la préproduction existante.
+- **Observations :** sélecteur Démo visible en session réelle, points de contrôle Administration fictifs, texte de déconnexion inadapté ; confusion du responsable technique et de l’acteur de la prochaine action dans la file FM.
+- **Correction :** sélecteur réservé à la démo, compteurs serveur ou absences explicites, déconnexion sans remise à zéro Démo, file FM alignée sur la projection canonique. CSS et primitives conservés.
+- **Validation :** TypeScript, 17 suites de préflight, build et 9 tests API locaux. Aucune migration ni modification des RLS.
+- **Limites :** quatre anciennes qualifications C9 sans acteur restent à régulariser ; parcours des trois agents et test terrain à réaliser.
+- **Détail :** [RECETTE_NAVIGATEUR_PREPRODUCTION_2026-09-21.md](../RECETTE_NAVIGATEUR_PREPRODUCTION_2026-09-21.md).
+
+## DEV-023 — Recette connectée locale après DESIGN-077
+
+- **Date :** 21 septembre 2026
+- **Statut :** Docker rétabli, migration d'affectation appliquée après sauvegarde ; préproduction inchangée.
+- **Contrôles :** 29 scénarios Auth/PostgREST/Storage réels réussis ; aucun avertissement ou erreur des advisors de sécurité locaux.
+- **Périmètre :** affectation par périmètre, rondes et preuves privées, renvoi et correction d'arbitrage. Aucune modification UI.
+- **Détails et limites :** [RECETTE_CONNECTEE_DESIGN077_2026-09-21.md](../RECETTE_CONNECTEE_DESIGN077_2026-09-21.md). Parcours navigateur connecté et test terrain encore à réaliser avant ouverture du pilote.
+
+## DEV-022 — Raccord DESIGN-077 et socle backend
+
+- **Date :** 21 septembre 2026
+- **Statut :** Conflits résolus, candidat compilé et testé localement ; préproduction non redéployée.
+- **Références :** base design `818019e741b4effd067822dd9295268b4f21bff8`, backend `e6015fefaae7ea3102510842ba0ad00ba0fa6347`.
+- **Préservé :** design final, en-tête et compteur GE-01, formulaire prestataire, trois onglets Pilotage ; santé/paramètre serveur, brouillons et photos hors ligne, reçus, arbitrages et journal métier.
+- **Contrôles :** 15 suites de préflight, 316 scénarios PostgreSQL isolés, navigateur sur trois largeurs, TypeScript et build.
+- **Détails et limites :** [INTEGRATION_DESIGN077_2026-09-21.md](../INTEGRATION_DESIGN077_2026-09-21.md).
+
+## DEV-021 — Affectation GE-01 par périmètre et reprise après coupure
+
+- **Date :** 21 septembre 2026
+- **Statut :** Implémenté et testé en base isolée ; application à Supabase local bloquée par le démarrage de Docker.
+- **Livré :** sélection serveur des agents actifs habilités ; suppression du code agent imposé ; affectation rejouable sans doublon ; séquence de diagnostic et audit conservés.
+- **Design :** formulaire existant et primitives conservés, aucun changement CSS ; état explicite sans agent habilité.
+- **Contrôles, limites et mise en service :** [LIVRAISON1_AFFECTATION_DIAGNOSTIC_2026-09-21.md](../LIVRAISON1_AFFECTATION_DIAGNOSTIC_2026-09-21.md).
+
+## DEV-020 — Arbitrage renvoyé et correction liée
+
+- **Date :** 18 septembre 2026
+- **Statut :** Raccord serveur local vérifié, non publié
+- **Livré :** renvoi Administration motivé et audité ; dossier repris par le FM ; nouvelle estimation liée et immuable ; compteurs par audience ; confirmation après réponse serveur et reprise idempotente.
+- **Design :** boutons et primitives conservés, aucun changement CSS. La correction s’effectue dans le formulaire financier existant.
+- **Contrôles et déploiement :** [LIVRAISON1_ARBITRAGES_RENVOI_2026-09-18.md](../LIVRAISON1_ARBITRAGES_RENVOI_2026-09-18.md).
+
+## DEV-019 — GE-01 quotidien, photos privées et suivi réel
+
+- **Date :** 18 septembre 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté, migré et vérifié localement ; non déployé à distance
+- **Référence :** DESIGN-069 / `015c253`, décisions retenues du classeur REF-20260901 du 17/09/2026.
+- **Livré :** calendrier GE-01 lundi–samedi 23:59 Africa/Abidjan, suppléance FM motivée, vrais fichiers en brouillon/file, réception complète et reprise idempotente, pièces privées consultables par le FM, lecture et examen distincts, validité de 24 heures hors dimanche. Aucun changement de CSS ou de primitives de Grok.
+- **Contrôles :** 266 scénarios PostgreSQL isolés, 11 scénarios Auth/PostgREST/Storage locaux réels, navigateur/IndexedDB, 15 contrôles du candidat, TypeScript et build. Aucun score bâtiment fabriqué.
+- **Détails, limites et retour arrière :** [LIVRAISON1_GE01_PLANNING_PREUVES_2026-09-18.md](../LIVRAISON1_GE01_PLANNING_PREUVES_2026-09-18.md). Ne pas restaurer un ancien moteur de synchronisation tant que de nouvelles photos restent en file.
+- **Suite :** compléter les autres postes du pilote et effectuer la recette physique GE-01 avec un agent avant ouverture.
+
+## DEV-018 — Corrections DESIGN-069 et premier raccord santé serveur
+
+- **Date :** 17 septembre 2026
+- **Auteur :** Dev Lead
+- **Statut :** Implémenté et vérifié localement ; non déployé à distance
+- **Référence :** design `015c253`, socle GE-01 et correctif Rondes conservés.
+- **Corrections :** scores agents fictifs supprimés, restitution non calculable dans Pilotage > Équipe ; navigation desktop/tablette sticky ; poids 70/15/10/5 explicitement décidés ; synchronisation GE-01 alimentée uniquement par son état réel.
+- **Raccord :** vue d'équipements et RPC `get_building_health_snapshot`, contrat `behira.lot0.v1` complet lu en mode connecté, périmètres et RLS, seuil historisé, compteurs par audience. La démo conserve ses fixtures.
+- **Validation et limites :** voir [LIVRAISON1_SANTE_SERVEUR_2026-09-17.md](../LIVRAISON1_SANTE_SERVEUR_2026-09-17.md). DEC-017 demeure absent comme entrée primaire du journal livré ; aucune décision RH n'est reconstituée ou validée.
+
+## DEV-017 — Référence DESIGN-069 et vérification du §7
+
+- **Date :** 17 septembre 2026
+- **Auteur :** Dev Lead
+- **Statut :** Vérification terminée ; écarts documentés, non corrigés dans ce passage documentaire
+- **Référence :** `015c2531858be84a6bcd37a607bd63b5defd3ecb`, intégrée sans conflit par `21ffae8` dans la copie locale de livraison 1. Remplace `d36fb98` comme référence design courante.
+- **Résultat :** les trois fichiers demandés et `.gitattributes` sont présents. DEC-017 manque comme entrée du journal livré, mais ses règles sont retrouvées dans la passation du 11 septembre. Pilotage affiche encore des scores agents fictifs 88/84/91 dans Santé & scores, hors emplacement Équipe. La navigation reste visible au défilement mais utilise `fixed`, pas `sticky`.
+- **Règle appliquée :** `DESIGN.md` fait foi (12/13 prioritaires), journal limité aux entrées 062–069 en vigueur. Les poids 70/15/10/5 sont décidés ; les points par domaine restent à fournir.
+- **Détail et preuves :** [VERIFICATION_DESIGN069_2026-09-17.md](VERIFICATION_DESIGN069_2026-09-17.md). Aucun changement de code, de RPC, de droits ou de file d'envoi ; correctif Rondes conservé.
+
 ## DEV-016 — P8 : fermeture visuelle du miroir public
 
 - **Date :** 30 août 2026
@@ -216,7 +352,7 @@ Le lot ne crée aucune route réseau autonome : `/couts` reste réservé pour le
 - **Statut :** Implémenté et vérifié localement — non publié
 - **Périmètre :** destination Équipements en lecture pour l'Administration et le Facility Manager
 
-Responsable projet Démo a validé les six recommandations du contrat produit. La décision est consignée dans **DEC-014**. Le lot P2 ajoute une destination **Équipements** groupée sous **Le bâtiment** dans le menu **Plus**. Elle ne remplace aucune des destinations principales et reste absente des trois profils terrain.
+Wilkam a validé les six recommandations du contrat produit. La décision est consignée dans **DEC-014**. Le lot P2 ajoute une destination **Équipements** groupée sous **Le bâtiment** dans le menu **Plus**. Elle ne remplace aucune des destinations principales et reste absente des trois profils terrain.
 
 La vue consomme exclusivement `equipmentItems`, la source déjà utilisée par Accueil et Pilotage. Elle fournit une synthèse calculée sur les scores disponibles, une recherche par code/libellé/état et un filtre sur les états existants. Aucune fraîcheur, intervention, maintenance ou cause n'est inventée : les absences sont affichées comme **Non renseignée** ou **Données insuffisantes**. La destination réutilise `Card`, `Field` et `Badge`, ainsi que les tokens du système vivant et l'accent teal de DEC-013.
 
@@ -244,7 +380,7 @@ Ce lot ne crée aucune route réseau autonome : `/equipements` reste réservé p
 - **Statut :** Checkpoint design reçu et vérifié localement — roadmap produit reprise
 - **Périmètre :** commits `85413e6` et `0580270`, contrat design vivant, recette du miroir et séquencement produit
 
-Le Dev Lead prend acte des deux commits livrés par le design. Les arbitrages **DEC-011**, **DEC-012** et **DEC-013** sont considérés comme clos conformément à la validation de Responsable projet Démo. En particulier, aucune nouvelle surface ne doit redéfinir la marque : `--mark #20b2aa` reste réservé au glyphe B, `--teal #0e6a66` porte l'accent courant, `--accent` reste son alias et le triplet `warning` conserve son rôle métier distinct.
+Le Dev Lead prend acte des deux commits livrés par le design. Les arbitrages **DEC-011**, **DEC-012** et **DEC-013** sont considérés comme clos conformément à la validation de Wilkam. En particulier, aucune nouvelle surface ne doit redéfinir la marque : `--mark #20b2aa` reste réservé au glyphe B, `--teal #0e6a66` porte l'accent courant, `--accent` reste son alias et le triplet `warning` conserve son rôle métier distinct.
 
 Le spécimen `/design-system`, `:root` et les primitives `Button`, `IconButton`, `Badge`, `Field` et `Card` constituent désormais le contrat obligatoire avant toute évolution d'interface. Les entrées DESIGN-030 à DESIGN-032 sont présentes dans la table de suivi de `FROM-DESIGN.md`, mais leurs corps détaillés ne figurent pas dans le journal ; cette lacune documentaire ne rouvre pas les décisions, dont la portée est confirmée par les commits, `DESIGN.md` et `DECISIONS.md`.
 
@@ -283,7 +419,7 @@ Le lot **P1 — Contrat DEC-002** est livré dans `docs/design/DEC-002_CONTRAT_D
 - **Statut :** Implémenté — recette finale et publication en cours
 - **Périmètre :** ordre de lecture du cockpit Facility Manager
 
-Responsable projet Démo a validé l'option A de DEC-005. DEC-007 consigne l'arbitrage sans réécrire l'historique. Le cockpit présente maintenant un contexte opérationnel compact avec le seuil de délégation, puis les compteurs, la file et son dossier actif, le flux opérationnel, et enfin la synthèse Santé & Performance.
+Wilkam a validé l'option A de DEC-005. DEC-007 consigne l'arbitrage sans réécrire l'historique. Le cockpit présente maintenant un contexte opérationnel compact avec le seuil de délégation, puis les compteurs, la file et son dossier actif, le flux opérationnel, et enfin la synthèse Santé & Performance.
 
 La synthèse de santé reste complète, mais ne masque plus la première action sur les écrans portables courants. Son texte est mis à jour pour ne plus affirmer qu'elle précède les files. Un contrôle automatique protège désormais l'ordre canonique.
 
@@ -328,7 +464,7 @@ Les trois régressions bloquantes de DESIGN-014 sont corrigées sans changement 
 - **R2 — Surpresseur :** au palier grand écran, la marge négative et le padding horizontal du bandeau reprennent exactement `clamp(32px,3.2vw,60px)`, la même formule que `.content`. Le contrat est protégé par l’audit statique.
 - **R3 — Administration :** le badge `ACCÈS ADMIN` porte désormais `flex:0 0 auto` et `min-width:max-content`, ce qui interdit sa compression dans `.authority-split`.
 
-L’ordre du cockpit n’est pas déclaré acté. **DEC-005** expose les options « priorité opérationnelle DEC-004 » et « vue d’ensemble d’abord », avec un statut explicitement proposé et un arbitrage demandé à Responsable projet Démo.
+L’ordre du cockpit n’est pas déclaré acté. **DEC-005** expose les options « priorité opérationnelle DEC-004 » et « vue d’ensemble d’abord », avec un statut explicitement proposé et un arbitrage demandé à Wilkam.
 
 ### Contrôles réalisés
 
@@ -338,7 +474,7 @@ L’ordre du cockpit n’est pas déclaré acté. **DEC-005** expose les options
 - aucun fichier Supabase, secret, rôle ou permission modifié ;
 - aucune publication effectuée.
 
-- **Suite proposée :** recette éclair Design sur R1 à R3, arbitrage Responsable projet Démo sur DEC-005, puis publication du checkpoint accepté.
+- **Suite proposée :** recette éclair Design sur R1 à R3, arbitrage Wilkam sur DEC-005, puis publication du checkpoint accepté.
 
 ## DEV-005 — Correctifs de recette mobile du checkpoint `ec3ec06`
 
@@ -437,7 +573,7 @@ Le menu `Plus` ne s'affiche pas encore dans les cinq profils actuels, car aucun 
 - **Auteur :** Dev Lead
 - **Statut :** Décision transmise — refonte structurelle retenue
 - **Périmètre :** Shell de navigation, sémantique de `page.tsx`, catalogue de destinations et contrôle responsive du registre
-- **Contexte :** Responsable projet Démo a retenu la navigation en bandeau haut. Le caractère réversible de la surcharge CSS n'est donc plus un bénéfice suffisant pour conserver deux mises en page concurrentes. La réversibilité doit être assurée par Git, pas par une seconde architecture laissée active dans la feuille de styles. Par ailleurs, `lot5-bandeau-haut.patch` cible l'état produit par les lots 3 et 4, qui ne sont pas encore intégrés dans la branche de développement courante : il doit servir de spécification visuelle jusqu'à consolidation de cette base, et non être forcé sur le code actuel.
+- **Contexte :** Wilkam a retenu la navigation en bandeau haut. Le caractère réversible de la surcharge CSS n'est donc plus un bénéfice suffisant pour conserver deux mises en page concurrentes. La réversibilité doit être assurée par Git, pas par une seconde architecture laissée active dans la feuille de styles. Par ailleurs, `lot5-bandeau-haut.patch` cible l'état produit par les lots 3 et 4, qui ne sont pas encore intégrés dans la branche de développement courante : il doit servir de spécification visuelle jusqu'à consolidation de cette base, et non être forcé sur le code actuel.
 
 ### 1. Shell : refonte propre maintenant
 
@@ -520,52 +656,47 @@ Le contrôle statique peut protéger la présence de ces deux contrats, mais il 
 - **Contrôles attendus :** `pnpm verify:personas`, desktop, tablette, mobile et clavier.
 - **Suite proposée :** Lot 1 — consolidation des tokens sémantiques sur `design/lot-1-tokens`.
 
-## Revue publique WILO/RIA — 28/09/2026
 
-Transposition frontend du correctif privé a3bd818 sur le miroir public. Contrôles WILO, motifs de non-relevé, horodatage de confirmation de pression et tests ; aucun backend importé. [Passation Grok](REVUE_WILO_RIA.md). Aucun déploiement.
+## DEV-032 — Indications de longueur minimale — 28/09/2026
 
-## DEV-20260930 — Miroir jouable du checkpoint déployé a2373c2
+Demande utilisateur : annoncer la longueur minimale dans le champ vide. Placeholders ajoutés aux conclusions de réception, retours, réouvertures, réexamens (10), motifs d’arbitrage et d’accès (12), justifications d’accès et résumés prestataire (20), nom complet (3), nouveaux mots de passe et confirmations (12 ou 16 suivant le parcours). Un rappel permanent accompagne réception/réouverture. Aucun seuil, rôle ou comportement de validation modifié ; aucun CSS ajouté. Le contrôle DEC-007 reconnaît désormais les paramètres optionnels du composant Manager, sans relâcher le contrôle d’absence de santé dans la file.
 
-- **Date :** 30 septembre 2026.
-- **Statut :** livraison du miroir public, DEC-000 ; aucune publication en préproduction dans ce chantier.
-- **Source :** checkpoint privé `a2373c2495603cf755b45cb026bb5e11a2c16e2b` (version applicative 32). Les fichiers frontend sont transposés ; aucun historique privé, backend, migration, export de données ou secret n'est importé. La branche publique conserve les commits design 080/081 déjà livrés.
-- **Anonymisation :** comptes en `.invalid`, noms de rôles Démo, fixtures fictives. Les noms de personnes/prestataires dans les composants et documents sont remplacés sans modifier les décisions historiques. Suppression du rattachement Sites et de l'injection de configuration ; accès distant désactivé dans `app/lib/supabase/config.ts`, y compris si des variables d'environnement existent sur le poste.
 
-### Parcours accessibles
+## DEV-033 — Intégration design a17f95c — 28/09/2026
 
-Connexion locale → sélectionner **Agent Électricité** (`electricite`) → Se connecter → **Rondes** : GE-01 en quatre étapes. Agent **Eau & Incendie** (`eau_incendie`) → Rondes : WILO-01 ; onglet **RIA-01 · Incendie** pour le second formulaire. Aucune saisie n'est envoyée au serveur. Les données ne survivent pas à la fermeture du formulaire. Ne saisir que des données fictives.
+Source vérifiée : a17f95c5bb9086c23b7efd511806bb9042620d1b, branche publique design/lot-1-tokens. Base commune 818019e : DESIGN-062 à 077 déjà dans l’ascendance, sans rejeu ni remplacement des évolutions métier.
 
-### Inventaire des composants de ronde
+- DESIGN-078 : EauRounds.tsx repris exactement de la source, utilisé exclusivement dans la démonstration Eau & Incendie, avec Agent Eau & Incendie Démo. Mesures initiales vides, score indisponible, aucune écriture. Le composant livré ne possède aucun raccord de persistance : les formulaires connectés WILO/RIA restent conservés, ils ne sont pas remplacés par une simulation. Leur transposition visuelle complète reste distincte de cette importation de maquette.
+- 3c2a40c et a17f95c : CSS source intégré (menu hors overflow de la carte et date/heure/Maintenant sous 640 px), applicable aux classes partagées.
+- Conflit app/page.tsx : conservation des mutations, auth, réceptions, champs d’aide et file hors ligne ; raccord du composant livré seulement en démonstration.
+- Conflit verify-personas : contrôle des mesures déplacé vers EauRounds comme dans le design ; autres contrôles d’intégration conservés.
+- data.ts, app/lib, supabase et les composants métier GE-01/shared non modifiés par ce lot. Aucun compte ou nom réel ajouté. Aucun push vers le miroir public.
+- Commandes pnpm exécutées avec pnpm_config_verify_deps_before_run=false pour éviter une réinstallation automatique étrangère à ce lot : audit:visual 120, verify:personas 38, verify:lot0 89, verify:lot1 36, tous verts.
 
-| Fichier / composant | Props | Configuration par équipement / rôle dans le miroir |
-| --- | --- | --- |
-| `app/components/Ge01Pilot.tsx` — `Ge01AgentForm` | `isTest?`, `agentName`, `equipment?`, `persistenceEnabled`, `offlineSync`, `flash` | GE-01 : Contexte → Observations → Essai & AUTO → Récapitulatif. `persistenceEnabled=false` ; agent fictif. Définitions/validations : `app/lib/ge01/report.ts`, seuils : `thresholds.ts`, contexte fictif : `lastContext.ts`. |
-| `app/page.tsx` — `LegacyReport` | `isTest?`, `persona`, `onNavigate`, `persistenceEnabled`, `offlineSync`, `flash` | Formulaire WILO-01 effectivement utilisé par le checkpoint : Contexte → Pression → Pompes → Sécurité → Synthèse. `persistenceEnabled=false`, persona `eau_incendie`. Référence 5 bar ; normal 4,5–5,5 inclus. Mesures vides conservées vides ; aucun score fabriqué. |
-| `app/components/WiloSupplement.tsx` | `step`, `answers`, `reasons`, `pressure`, `onChange`, `onReason` | Champs WILO issus de `app/lib/wilo/report.ts` / `activeWiloFields`. Choix explicites sans présélection ; motifs de non-vérification et second relevé conditionnel. |
-| `app/components/RiaRound.tsx` — `RiaForm` | `demo?`, `isTest?`, `offlineSync`, `rounds?` | RIA-01 : Local → Coffrets → Pressions et pressostats → Pompes et réseau → Synthèse et envoi. Champs : `app/lib/ria/report.ts` / `RIA_FIELDS`. Dans le miroir : `demo=true`, brouillon en mémoire ; confirmation de simulation distincte d'un accusé serveur. |
-| même fichier — `RiaRoundNavigation` | `children`, `ria`, `existingLabel?` | Pour Eau & Incendie, `existingLabel="WILO-01 · Eau"` ; ne pas conserver le défaut GE-01 sur ce persona. |
-| `app/page.tsx` — `DesignEauReport` | `persona`, `onNavigate`, `flash` | Adaptateur du miroir qui compose les deux formulaires déployés. Transport fictif en mémoire via `app/lib/demo-round-sync.ts`, sans IndexedDB ni file réelle. |
-| `app/components/EauRounds.tsx` | `agentName`, `draftNote`, `onSubmit` | Ancienne maquette autonome : WILO cinq étapes, RIA deux étapes. Conservée comme référence design, **non utilisée pour remplacer les formulaires ci-dessus**. |
-| `app/components/shared/RoundPilotHeader.tsx` | `title`, `subtitle`, `badge?` | En-tête à deux niveaux commun GE/WILO/RIA. |
-| `app/components/shared/RoundDateTimeFields.tsx` | `value`, `onChange` | WILO/RIA : ISO UTC, présentation date + heure Abidjan + Maintenant. GE possède les mêmes contrôles dans son formulaire. |
-| `app/components/shared/CountStepper.tsx` | `label`, `value`, `onChange`, `groupLabel`, `ariaMinus`, `ariaPlus`, `min?`, `error?`, `hint?`, `className?` | GE : démarrages et tentatives, entiers seulement. |
-| `app/components/Ge01Pilot.tsx` — `Ge01ReportInbox` | `reports`, `connected`, `onReview`, `onRead`, `onLoadProof`, `planning?`, `onAssign`, `onOpenAnomaly`, `onRefresh` | Réception FM présente dans la source ; aucun rapport réel ni appel serveur dans le miroir. |
-| `app/components/RiaRound.tsx` — `RiaRoundSpace` / `RiaReview` | Space : `isTest?`, `manager`, `enabled`, `offlineSync`, `onRefresh`, `onOpenAnomaly`. Review : `isTest?`, `report`, `manager`, `onDone`, `onOpenAnomaly` | Couches de consultation/revue connectées conservées pour lisibilité frontend, non activées dans cette démo. Le parcours agent utilise directement `RiaForm`. |
-| `app/components/WiloRoundInbox.tsx` | `isTest`, `manager`, `enabled`, `receiptId?`, `onOpenAnomaly` | Historique/lecture/retour WILO présent, désactivé en démonstration. |
 
-### Vérification reproductible
+## DEV-WILO-20260928 — Collecte connectée, cohérence et arbitrages de pression
 
-`pnpm lint`, `pnpm build`, `pnpm verify:personas`, `pnpm verify:auth`.
-Recette navigateur : `npm install --prefix tests/browser --ignore-scripts`, lancer `pnpm dev --port 4190`, puis `node scripts/verify-mirror-rounds.mjs` (Chrome installé, 1440 et 380 px). La variable `MIRROR_TEST_URL` permet une autre adresse locale. Captures générées sous `outputs/mirror-review/` (non versionnées).
+Demande utilisateur : résoudre les écarts de l'audit Eau & Incendie à partir des ressources du projet. Ce lot dépasse l'affichage, conformément à cette demande. EauRounds reste la démonstration ; aucun remplacement du flux connecté. Aucun déploiement.
 
-Le lint conserve les avertissements préexistants ; aucune désactivation globale de règle. Les exceptions ponctuelles documentent l'hydratation du stockage navigateur et la synchronisation des reçus externes. Les rails conservent les étapes atteintes sans effet de synchronisation superflu.
+- LegacyReport/WILO conserve ses cinq étapes, RoundPilotHeader, date Abidjan, file d'envoi et identifiant de reprise. Type de ronde et stabilité du manomètre sont désormais persistés. Ajout des lectures et contrôles manquants (manomètre, charges/états P1/P2, alternance/secours, niveau visuel de bâche, manque d'eau, fuite détaillée, bruit, ballon, coffret, local, réarmement et suivi conditionnel).
+- Données initiales vides ; motifs explicites de non-relevé ; aucun pourcentage déduit d'une catégorie ; zéro réellement mesuré conservé. Pas de score ni de statut opérationnel client. Contradictions P1/P2, fuite et alarme détectées avant l'envoi.
+- Synthèse et anomalie proposée utilisent les mêmes constats, y compris une anomalie de bâche seule. Une confirmation restaurée n'est pas reconduite et une modification impose de reconfirmer.
+- Arbitrages utilisateur : 4,5/5,5 normales ; contrôle de pression critique à dix minutes. Second relevé et date conservés, contrôle serveur dans une migration versionnée. Historique inchangé.
+- Message Recette corrigé pour le périmètre de l'agent. Cela ne prétend pas ouvrir le circuit Recette WILO/RIA ; les protections serveur restent actives.
+- Contrôles : audit:visual 120 ; personas 38 ; lot0 89 ; lot1 36 ; verify:wilo 34 cas ; TypeScript et lint ciblé réussis ; navigateur réel, composants connectés avec transport simulé, 1440/380 px ; 295 scénarios PostgreSQL réussis, dont soumission WILO, périmètre, champs enregistrés, idempotence et décisions de pression. Base PostgreSQL isolée (PGlite), aucune écriture distante ; cela ne constitue pas une recette sur le service Supabase déployé.
 
-### Résultats de livraison du miroir
+Reste à livrer distinctement : revue FM WILO complète et classification serveur de tous les nouveaux constats ; extension Recette WILO/RIA sur toute la chaîne ; formulaire IRR technique/visuel. Une collecte complète ne signifie pas que chaque règle de score ou chaque circuit soit déjà raccordé. Les motifs de non-relevé préservent la collecte sans rendre le contrôle artificiellement admissible.
 
-- `pnpm lint` : réussi, 0 erreur et 41 avertissements existants.
-- `pnpm build` : réussi.
-- `pnpm verify:personas` : 38/38.
-- `pnpm verify:auth` : 21/21, dont verrouillage des accès distants propre au miroir.
-- `node scripts/verify-mirror-rounds.mjs` : réussi à 1440 et 380 px ; GE-01 jusqu'au récapitulatif avec confirmation explicite, WILO à 5 bar normal / 4,4 bar en alerte, RIA sans choix présélectionné, aucun appel distant et aucun débordement horizontal.
-- Contrôle local des 163 fichiers candidats : aucun nom réel recherché, identifiant de projet privé, clé détectée, migration ou configuration de publication inclus. Les fixtures et le mot de passe commun de démonstration sont publics et fictifs.
-- Adaptation spécifique au miroir : initialisation WILO vide même en simulation ; la version connectée privée n'est pas modifiée.
+## DEV-WATER-RECETTE-20260928 — Rondes Eau & Incendie en Recette
+
+Autorisation utilisateur : « on lance alors », après présentation du raccordement Recette. Base : a5d05ead27260504eb75e439695b92c96d945cb4 (DESIGN-080/081 conservés).
+
+- WILO/RIA accessibles à l'agent Eau & Incendie dans l'espace Recette. EauRounds demeure la démonstration ; formulaires connectés, réponses et contrôles métier conservés.
+- Brouillons Recette séparés des clés historiques d'Exploitation ; accusés filtrés par espace ; attestation fictive explicite, décochée à chaque nouvelle ronde. La file utilise toujours l'espace du payload et non celui de l'écran au moment d'une reprise.
+- Migration additive water_rounds_recette : extension GE/WILO/RIA strictement typée, configuration Recette inchangée, attestation et périmètres serveur conservés. RIA : RPC avec deux paramètres optionnels, réception des preuves, historique, lecture/retour/revue FM dans l'espace demandé. Les anciens appels RIA à cinq paramètres restent valables en Exploitation.
+- WILO : historique agent/FM, lecture et demande motivée de nouveau contrôle, journal d'audit, lien vers le dossier pour qualification. Cette lecture ne prétend pas valider un score WILO ; la revue santé complète WILO demeure un chantier distinct.
+- Aucune donnée fictive promue en Exploitation ; aucune donnée réelle, aucun compte ou secret ajouté. Aucun changement aux valeurs d'énumération ni aux règles de score/pression. Aucune publication ni écriture distante.
+- Validation : 310 scénarios PostgreSQL réel/isolation, 243 en mode Recette, 34 WILO, 27 hors ligne ; contrôles visuels 120, personas 38, lot0 89, lot1 36 ; navigateur 1440/380 avec attestation et clés de brouillon ; transport simulé de preuves avec reprise, en réel et Recette ; TypeScript.
+- Limite : PostgreSQL isolé PGlite et transport navigateur simulé, pas une recette du service distant. Supabase advisors --local tenté : connexion refusée à 127.0.0.1:54322, service local absent. Vérification sur environnement Supabase à réaliser avant ouverture aux agents.
+
+Déploiement non effectué. Procédure : sauvegarde DB/Storage et identification de la version frontend en service ; appliquer la migration avant le frontend ; vérifier les périmètres et le parcours agent/FM en Recette ; ouvrir ensuite aux agents. Retour arrière : restaurer l'ancien frontend ; conserver la migration additive et les rapports/audits déjà enregistrés. Ne pas rétrograder ou supprimer la classification des données fictives. En incident d'isolation, désactiver Recette selon la procédure d'exploitation avant toute autre action.

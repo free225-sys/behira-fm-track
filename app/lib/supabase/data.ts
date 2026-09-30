@@ -213,6 +213,14 @@ function formatMoment(value: string | null) {
   }).format(new Date(value)).replace(",", " ·");
 }
 
+/** Action attendue de l'utilisateur courant : attribuée à son profil, ou qualification encore sans titulaire
+ * (constat créé par un agent) quand l'utilisateur est Facility Manager. */
+export function actionIsForCurrentUser(row: { next_action_code?: string | null; next_action_assigned_profile_id?: string | null } | undefined, currentProfileId: string | null | undefined, isFacilityManager: boolean): boolean {
+  if (!row || !currentProfileId) return false;
+  if (row.next_action_assigned_profile_id) return row.next_action_assigned_profile_id === currentProfileId;
+  return isFacilityManager && row.next_action_code === 'QUALIFY_ASSIGN';
+}
+
 export async function loadOperationalSnapshot(
   client: SupabaseClient<Database>,
   isTest = false,
@@ -231,6 +239,7 @@ export async function loadOperationalSnapshot(
   if (roleResult.error) throw roleResult.error;
   const activeRoles = new Map((roleResult.data ?? []).map(role => [role.id, role.code]));
   const scopes = (scopeResult.data ?? []).filter(scope => activeRoles.has(scope.role_id));
+  const isFacilityManager = scopes.some(scope => activeRoles.get(scope.role_id) === 'facility_manager');
   const perimeter = {
     all: scopes.some(scope => ['facility_manager', 'direction'].includes(activeRoles.get(scope.role_id) ?? '')),
     equipmentIds: [...new Set(scopes.flatMap(scope => scope.equipment_id ? [scope.equipment_id] : []))],
@@ -331,8 +340,8 @@ export async function loadOperationalSnapshot(
   const diagnosisAssignees = readDiagnosisAssignees(diagnosisAssigneeResult.data);
 
   const visibleAnomalyIds = (anomalyResult.data ?? []).map((item) => item.id);
-  const ge01Ids = (anomalyResult.data ?? []).filter(item =>
-    equipmentResult.data?.some(e => e.id === item.equipment_id && e.code === 'GE-01')).map(item => item.id);
+  // 30/09/2026 : exigences de preuve et continuité lues pour tous les équipements (plus seulement GE-01).
+  const ge01Ids = visibleAnomalyIds;
   const ge01Requirements = ge01Ids.length ? await client.from('anomaly_proof_requirements')
     .select('anomaly_id,label_snapshot,state').in('anomaly_id', ge01Ids).in('state', ['pending','satisfied'])
     : { data: [], error: null };
@@ -462,21 +471,21 @@ export async function loadOperationalSnapshot(
           ? vendor.operational_alias ?? vendor.legal_name ?? vendor.code
           : "Non affectée",
       delayed: mappedStatus !== "Clôturée" && Boolean(dueAt && new Date(dueAt).getTime() < Date.now()),
-      proof: intervention || equipment?.code === 'GE-01' ? currentProof?.verification_status === 'accepted' : provenAnomalies.has(item.id),
-      proofPending: intervention || equipment?.code === 'GE-01' ? currentProof?.verification_status === 'pending' : pendingProofAnomalies.has(item.id),
+      proof: intervention || equipment ? currentProof?.verification_status === 'accepted' : provenAnomalies.has(item.id),
+      proofPending: intervention || equipment ? currentProof?.verification_status === 'pending' : pendingProofAnomalies.has(item.id),
       proofs: proofsByAnomalyId.get(item.id) ?? [],
       history: historyByAnomalyId.get(item.id) ?? [],
       description: item.description,
       diagnosis: historyResult.data?.find((event) => event.anomaly_id === item.id && event.change_set && typeof event.change_set === 'object' && !Array.isArray(event.change_set) && event.change_set.completed_action_code === 'PERFORM_DIAGNOSIS')?.comment ?? null,
-      antiZombieSummary: equipment?.code === 'GE-01' && ge01Requirements.data?.some(r => r.anomaly_id === item.id) ? {
+      antiZombieSummary: equipment && ge01Requirements.data?.some(r => r.anomaly_id === item.id) ? {
         ...antiZombieByAnomalyId.get(item.id),
-        expectedProof: [...new Set(ge01Requirements.data.filter(r => r.anomaly_id === item.id).map(r => r.label_snapshot))].join(' · '),
+        expectedProof: [...new Set(ge01Requirements.data.filter(r => r.anomaly_id === item.id).map(r => equipment?.code === 'GE-01' ? r.label_snapshot : r.label_snapshot.replace(/ GE-01/g, '')))].join(' · '),
         expectedProofState: currentProof?.verification_status === 'accepted'
           ? 'Dernier justificatif accepté' : currentProof?.verification_status === 'rejected'
             ? 'Justificatif refusé — correction attendue' : currentProof?.verification_status === 'pending'
               ? 'Justificatif déposé — contrôle du Facility Manager attendu' : 'Justificatif à déposer',
       } : antiZombieByAnomalyId.get(item.id),
-      workflow: { version: item.version_no, actionId: antiZombieResult.data?.find((row) => row.anomaly_id === item.id)?.next_action_id ?? null, actionCode: antiZombieResult.data?.find((row) => row.anomaly_id === item.id)?.next_action_code ?? null, assignedProfileId: item.assigned_profile_id, assignedToCurrentUser: item.assigned_profile_id === currentProfileId, actionAssignedToCurrentUser: Boolean(currentProfileId) && antiZombieResult.data?.find((row) => row.anomaly_id === item.id)?.next_action_assigned_profile_id === currentProfileId },
+      workflow: { version: item.version_no, actionId: antiZombieResult.data?.find((row) => row.anomaly_id === item.id)?.next_action_id ?? null, actionCode: antiZombieResult.data?.find((row) => row.anomaly_id === item.id)?.next_action_code ?? null, assignedProfileId: item.assigned_profile_id, assignedToCurrentUser: item.assigned_profile_id === currentProfileId, actionAssignedToCurrentUser: actionIsForCurrentUser(antiZombieResult.data?.find((row) => row.anomaly_id === item.id), currentProfileId, isFacilityManager) },
     } satisfies OperationalAnomaly;
   });
 

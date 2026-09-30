@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { normalizeAntiZombieSummary, type AntiZombieSummaryData } from '../app/components/anti-zombie-contract.ts';
+import { adaptCanonicalAntiZombieSummary, indexCanonicalAntiZombieSummaries, type AntiZombieProjectionRow } from '../app/lib/supabase/anti-zombie.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -56,11 +57,89 @@ for (const testCase of cases) {
   console.log(`✓ ${testCase.name}`);
 }
 
-const [page, component, contract, css] = await Promise.all([
+const canonicalProjectionRow = {
+  anomaly_id:'anomaly-c7',
+  is_closed:false,
+  stage_label:'Qualification',
+  status_label:'À qualifier',
+  responsible_name:'Évariste DJE',
+  responsible_missing:false,
+  next_action_label:'Réaliser et confirmer le diagnostic',
+  next_action_comment:'Contrôler la tension batterie',
+  next_action_missing:false,
+  due_at:'2026-08-30T10:00:00.000Z',
+  deadline_missing:false,
+  is_delayed:true,
+  is_blocked:true,
+  blocking_actor_label:'Exploitant technique externe',
+  blocking_or_delay_reason:'Diagnostic technique attendu — accès requis',
+  blocking_information_incomplete:false,
+  expected_proof_label:'Au moins une preuve acceptée conforme au dossier',
+  expected_proof_missing:false,
+  pending_proof_requirement_count:1,
+  history_missing:false,
+  last_activity_label:'Blocage déclaré',
+  last_activity_occurred_at:'2026-08-30T09:00:00.000Z',
+  last_activity_actor_label:'Évariste DJE',
+  last_activity_stage_label:'Qualification',
+} as AntiZombieProjectionRow;
+const canonical = normalizeAntiZombieSummary(adaptCanonicalAntiZombieSummary(canonicalProjectionRow));
+assert.equal(canonical.status, 'Qualification · À qualifier');
+assert.equal(canonical.nextActionDetail, 'Contrôler la tension batterie');
+assert.equal(canonical.expectedProofState, '1 exigence en attente');
+assert.match(canonical.lastActivityMeta ?? '', /Évariste DJE · Qualification$/);
+assert.equal(canonical.blockingInformationIncomplete, false);
+console.log('✓ projection canonique C6 adaptée sans recalcul métier');
+
+const hiddenManager = { ...canonicalProjectionRow, next_action_assigned_profile_id:'fm-profile', next_action_assigned_profile_name:null };
+for (const action of ['QUALIFY_ASSIGN', 'CHOOSE_TREATMENT_BRANCH', 'GE01_REVIEW_PROOF', 'GE01_CLOSE']) {
+  const row = { ...hiddenManager, next_action_code:action };
+  assert.equal(adaptCanonicalAntiZombieSummary(row).nextActionAssignee, 'Facility Manager');
+  assert.equal(adaptCanonicalAntiZombieSummary({ ...row, next_action_assigned_profile_name:'Faustin SIAPO' }).nextActionAssignee, 'Faustin SIAPO');
+  assert.equal(adaptCanonicalAntiZombieSummary({ ...row, is_closed:true }).nextActionAssignee, null);
+  assert.equal(adaptCanonicalAntiZombieSummary({ ...row, next_action_missing:true }).nextActionAssignee, null);
+  // Seule la qualification revient au rôle FM sans titulaire (constat créé par un agent) ; aucun nom n'est inventé.
+  assert.equal(adaptCanonicalAntiZombieSummary({ ...row, next_action_assigned_profile_id:null }).nextActionAssignee, action === 'QUALIFY_ASSIGN' ? 'Facility Manager' : null);
+  assert.equal(adaptCanonicalAntiZombieSummary({ ...row, next_action_assigned_profile_name:'   ' }).nextActionAssignee, 'Facility Manager');
+  const normalized = normalizeAntiZombieSummary(adaptCanonicalAntiZombieSummary(row));
+  assert.equal(normalized.expectedActor, 'Facility Manager');
+  assert.equal(normalized.responsible, 'Évariste DJE');
+}
+for (const action of ['PERFORM_DIAGNOSIS', 'GE01_REPLACE_PROOF', 'GE01_SUBMIT_PROOF', 'GE01_EXECUTE', 'GE01_FOLLOW_VENDOR', 'SUBMIT_ADMIN_ARBITRATION', 'UNKNOWN', null]) {
+  assert.equal(adaptCanonicalAntiZombieSummary({ ...hiddenManager, next_action_code:action }).nextActionAssignee, null);
+}
+assert.equal(adaptCanonicalAntiZombieSummary({ ...hiddenManager, next_action_code:'GE01_REPLACE_PROOF', next_action_assigned_profile_name:'Évariste DJE' }).nextActionAssignee, 'Évariste DJE');
+console.log('✓ rôle FM pour quatre actions garanties, nom visible prioritaire, responsable distinct, aucune affectation inventée');
+const proofReviewSummary = normalizeAntiZombieSummary({ responsible:'Agent Électricité', nextActionAssignee:'Facility Manager', status:'En validation' });
+assert.equal(proofReviewSummary.expectedActor, 'Facility Manager');
+assert.equal(proofReviewSummary.responsible, 'Agent Électricité');
+assert.equal(normalizeAntiZombieSummary({ responsible:'Agent Électricité' }).expectedActor, 'Acteur attendu non renseigné');
+assert.equal(normalizeAntiZombieSummary({ status:'Clôturée', nextActionAssignee:null }).expectedActor, 'Aucun acteur attendu');
+console.log('✓ acteur attendu distinct du responsable, sans attribution inventée');
+
+const canonicalIndex = indexCanonicalAntiZombieSummaries(
+  [canonicalProjectionRow],
+  [{ id:'anomaly-c7', reference:'ANO-C7' }],
+);
+assert.equal(canonicalIndex.size, 1);
+assert.equal(canonicalIndex.get('anomaly-c7')?.responsible, 'Évariste DJE');
+assert.throws(
+  () => indexCanonicalAntiZombieSummaries([], [{ id:'anomaly-c7', reference:'ANO-C7' }]),
+  /Projection de continuité manquante pour l'anomalie ANO-C7/,
+);
+assert.throws(
+  () => indexCanonicalAntiZombieSummaries([canonicalProjectionRow, canonicalProjectionRow], [{ id:'anomaly-c7', reference:'ANO-C7' }]),
+  /Projection de continuité dupliquée/,
+);
+console.log('✓ chargement live refusé si la projection est absente ou dupliquée');
+
+const [page, component, contract, css, dataSource, canonicalAdapter] = await Promise.all([
   readFile(path.join(root, 'app', 'page.tsx'), 'utf8'),
   readFile(path.join(root, 'app', 'components', 'AntiZombieSummary.tsx'), 'utf8'),
   readFile(path.join(root, 'app', 'components', 'anti-zombie-contract.ts'), 'utf8'),
   readFile(path.join(root, 'app', 'globals.css'), 'utf8'),
+  readFile(path.join(root, 'app', 'lib', 'supabase', 'data.ts'), 'utf8'),
+  readFile(path.join(root, 'app', 'lib', 'supabase', 'anti-zombie.ts'), 'utf8'),
 ]);
 
 const managerSource = page.slice(page.indexOf('function Manager('), page.indexOf('function Detail('));
@@ -69,13 +148,22 @@ const detailSource = page.slice(page.indexOf('function Detail('), page.indexOf('
 
 assert.equal((page.match(/<AntiZombieSummary\s/g) ?? []).length, 3, 'Le composant doit être intégré dans Facility Manager, le registre et le dossier central.');
 assert.match(managerSource, /<AntiZombieSummary\s/, 'AntiZombieSummary doit être intégré dans Manager.');
+assert.match(managerSource, /resolveAntiZombieSummary\(focus\)/, 'Facility Manager doit consommer la projection canonique avec repli démo explicite.');
 assert.match(registrySource, /<AntiZombieSummary\s/, 'Le registre doit intégrer la variante compacte.');
+assert.match(registrySource, /resolveAntiZombieSummary\(a\)/, 'Le registre doit consommer le même résolveur canonique que Facility Manager.');
 assert.match(detailSource, /<AntiZombieSummary\s/, 'Le dossier central doit intégrer la variante détaillée.');
+assert.match(detailSource, /resolveAntiZombieSummary\(anomaly\)/, 'Le dossier central doit consommer le même résolveur canonique que Facility Manager.');
+assert.equal((page.match(/resolveAntiZombieSummary\(/g) ?? []).length, 4, 'Un seul résolveur doit alimenter les trois surfaces.');
+assert.equal((page.match(/adaptDemoDossierToAntiZombieSummary\(/g) ?? []).length, 2, 'L’adaptateur de démonstration ne doit être appelé que par le résolveur partagé.');
+assert.match(dataSource, /from\("anti_zombie_summary_v"\)\.select\("\*"\)/, 'Le chargement Supabase doit lire la projection canonique unique.');
+assert.match(dataSource, /indexCanonicalAntiZombieSummaries/, 'Le chargement live doit vérifier la complétude de la projection canonique.');
+assert.match(canonicalAdapter, /adaptCanonicalAntiZombieSummary/, 'L’adaptateur Supabase dédié doit rester distinct du composant visuel.');
+assert.doesNotMatch(canonicalAdapter, /Date\.now|new Date\(\)\.getTime/, 'L’adaptateur ne doit pas recalculer le retard avec l’horloge du navigateur.');
 
-for (const label of ['Étape actuelle','Responsable','Acteur attendu','Prochaine action','SLA / Échéance','Acteur bloquant','Motif du blocage ou du retard','Preuve attendue','Dernière activité']) {
+for (const label of ['Étape actuelle','Responsable interne','Acteur attendu','Prochaine action','SLA / Échéance','Acteur bloquant','Motif du blocage ou du retard','Preuve attendue','Dernière activité']) {
   assert.ok(component.includes(label), `Libellé manquant : ${label}`);
 }
-for (const fallback of ['Responsable non attribué','Acteur attendu non renseigné','Prochaine action non renseignée','Échéance non renseignée','Aucun blocage déclaré','Motif non renseigné','Preuve attendue non définie','Historique indisponible','Informations de blocage à compléter']) {
+for (const fallback of ['Responsable non attribué','Prochaine action non renseignée','Échéance non renseignée','Aucun blocage déclaré','Motif non renseigné','Preuve attendue non définie','Historique indisponible','Informations de blocage à compléter']) {
   assert.ok(`${component}\n${contract}`.includes(fallback), `Valeur de repli manquante : ${fallback}`);
 }
 
@@ -89,7 +177,7 @@ assert.match(css, /\.anti-zombie-fields dd\{[^}]*font-size:var\(--font-size-body
 assert.match(component, /CONTINUITÉ DE TRAITEMENT/, 'Le libellé métier validé doit remplacer le vocabulaire anti-zombie.');
 assert.match(component, /NORMALE/, 'La continuité normale doit être distinguée du statut du workflow.');
 
-console.log('✓ intégration partagée Facility Manager, registre et dossier central');
-console.log('✓ huit informations visibles, valeurs de repli et alerte de blocage présentes');
+console.log('✓ projection canonique partagée Facility Manager, registre et dossier central');
+console.log('✓ neuf informations visibles, valeurs de repli et alerte de blocage présentes');
 console.log('✓ contrôle statique desktop, mobile, clavier et absence de tooltip');
-console.log(`\n${cases.length + 3} contrôles AntiZombieSummary réussis.`);
+console.log(`\n${cases.length + 5} contrôles AntiZombieSummary réussis.`);

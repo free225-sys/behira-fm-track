@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {runnerImport} from 'vite';
+import {fileURLToPath} from 'node:url';
+import {createElement} from 'react';
+import {renderToStaticMarkup} from 'react-dom/server';
+const {module:{DomainPointsSummary}}=await runnerImport(fileURLToPath(new URL('../app/components/DomainPointsSummary.tsx',import.meta.url)),{configFile:false,logLevel:'silent'});
+const render=section=>renderToStaticMarkup(createElement(DomainPointsSummary,{section}));
+const data=[['equipment',70,0],['safety',15,12.34],['zones',10,null],['continuity',5,5]].map(([domain,max,obtained])=>({domain,max,weight:max,obtained,status:obtained===null?'insufficient':'ok',reasonCode:obtained===null?'domain_data_missing':null}));
+const html=render({status:'ready',data});
+assert.match(html,/0 \/ 70/);assert.match(html,/12,34 \/ 15/);assert.match(html,/Données insuffisantes/);assert.doesNotMatch(html,/0 \/ 10/);
+assert.match(render({status:'not_authorized',data:null}),/non disponibles/);
+assert.match(render(undefined),/non disponibles/);
+console.log('Domain points: actual zero, decimal display, missing evidence and access states passed.');

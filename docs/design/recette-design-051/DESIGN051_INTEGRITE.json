@@ -1,0 +1,127 @@
+{
+  "source": "8c5512a",
+  "target": "feat/ge01-pilot",
+  "businessFilesUnchanged": 14,
+  "businessFiles": [
+    {
+      "file": "app/lib/connected-data-policy.ts",
+      "before": "16d99f1729c1d31a030f3378b156daec8db8ef273be0fbce7bfa87a80e8442f4",
+      "after": "16d99f1729c1d31a030f3378b156daec8db8ef273be0fbce7bfa87a80e8442f4"
+    },
+    {
+      "file": "app/lib/ge01/report.ts",
+      "before": "3b57baebf9bb42ceee13a24e326886d219d6edb916efe53e70ad9ae39659f9fa",
+      "after": "3b57baebf9bb42ceee13a24e326886d219d6edb916efe53e70ad9ae39659f9fa"
+    },
+    {
+      "file": "app/lib/ge01/review.ts",
+      "before": "2f2d034ccd1e854a40637112ef83ac8c7433d26ff054be2cb18cee97faa09523",
+      "after": "2f2d034ccd1e854a40637112ef83ac8c7433d26ff054be2cb18cee97faa09523"
+    },
+    {
+      "file": "app/lib/offline/store.ts",
+      "before": "506094ca06b8e8467d20eee9c49e389e97bf94f06c5bda00ff487b37030f28b4",
+      "after": "506094ca06b8e8467d20eee9c49e389e97bf94f06c5bda00ff487b37030f28b4"
+    },
+    {
+      "file": "app/lib/offline/sync.ts",
+      "before": "aac6d7728c961c3eb5cc7fd1aa78896ff37d0c50c9eabd46e8caa438606c4b40",
+      "after": "aac6d7728c961c3eb5cc7fd1aa78896ff37d0c50c9eabd46e8caa438606c4b40"
+    },
+    {
+      "file": "app/lib/offline/types.ts",
+      "before": "46603b29e06eb30c8568d5f67da9da20deb480a98fef603c62249c7b809d0df8",
+      "after": "46603b29e06eb30c8568d5f67da9da20deb480a98fef603c62249c7b809d0df8"
+    },
+    {
+      "file": "app/lib/offline/useOfflineSync.ts",
+      "before": "00325a3a21f3835a343fdc1051ec9baed0d556ff743501fc9efc3eb84f5bb152",
+      "after": "00325a3a21f3835a343fdc1051ec9baed0d556ff743501fc9efc3eb84f5bb152"
+    },
+    {
+      "file": "app/lib/supabase/anti-zombie.ts",
+      "before": "6d4cfd0e03b21abfc7af86b273918a66d36cf1ae3f183590aa7f62252270c26b",
+      "after": "6d4cfd0e03b21abfc7af86b273918a66d36cf1ae3f183590aa7f62252270c26b"
+    },
+    {
+      "file": "app/lib/supabase/auth.ts",
+      "before": "835d9c35cb46b39056447abeacd93db2af21812aca194d92d6627d0f9261fd3d",
+      "after": "835d9c35cb46b39056447abeacd93db2af21812aca194d92d6627d0f9261fd3d"
+    },
+    {
+      "file": "app/lib/supabase/client.ts",
+      "before": "375495ef52754c177764cc21218408968fc46f71155941b5a3f60876511fc382",
+      "after": "375495ef52754c177764cc21218408968fc46f71155941b5a3f60876511fc382"
+    },
+    {
+      "file": "app/lib/supabase/config.ts",
+      "before": "39626a39101e99296d7a66560e3d8b0b4812097046b85a20dac6bc080c1e55c6",
+      "after": "39626a39101e99296d7a66560e3d8b0b4812097046b85a20dac6bc080c1e55c6"
+    },
+    {
+      "file": "app/lib/supabase/data.ts",
+      "before": "6358489732dbe9ce4268e541fe2381f4b760103a80305a0b8db5e01a56773d69",
+      "after": "6358489732dbe9ce4268e541fe2381f4b760103a80305a0b8db5e01a56773d69"
+    },
+    {
+      "file": "app/lib/supabase/database.types.ts",
+      "before": "36d775132edf51877e38d0da6389b24d78a7594b5f3ae32f79d0f600ce60f229",
+      "after": "36d775132edf51877e38d0da6389b24d78a7594b5f3ae32f79d0f600ce60f229"
+    },
+    {
+      "file": "app/lib/supabase/mutations.ts",
+      "before": "47e7dd4ebc6b531eaabbba3c6668c4bc1a3af35904f228991c1eadab08353591",
+      "after": "47e7dd4ebc6b531eaabbba3c6668c4bc1a3af35904f228991c1eadab08353591"
+    }
+  ],
+  "sharedPrimitives": [
+    {
+      "file": "app/components/ui/badge.tsx",
+      "identical": true
+    },
+    {
+      "file": "app/components/ui/button.tsx",
+      "identical": true
+    },
+    {
+      "file": "app/components/ui/card.tsx",
+      "identical": true
+    },
+    {
+      "file": "app/components/ui/field.tsx",
+      "identical": true
+    },
+    {
+      "file": "app/components/ui/icon-button.tsx",
+      "identical": true
+    },
+    {
+      "file": "app/components/ui/icon.tsx",
+      "identical": true
+    }
+  ],
+  "changedApplicationFiles": [
+    "app/components/AccessWorkspace.tsx",
+    "app/components/AntiZombieSummary.tsx",
+    "app/components/BuildingHealthCockpit.tsx",
+    "app/components/CostsWorkspace.tsx",
+    "app/components/DossierContinuity.tsx",
+    "app/components/EquipmentWorkspace.tsx",
+    "app/components/Ge01Pilot.tsx",
+    "app/components/Ge01ReviewPanel.tsx",
+    "app/components/Ge01WorkflowPanel.tsx",
+    "app/components/NotificationCenter.tsx",
+    "app/components/ParametersWorkspace.tsx",
+    "app/components/SyncStatusNotice.tsx",
+    "app/components/ui/card.tsx",
+    "app/components/ui/date-input.tsx",
+    "app/components/ui/field.tsx",
+    "app/components/ui/icon.tsx",
+    "app/components/ui/index.ts",
+    "app/components/ui/select.tsx",
+    "app/components/WorkflowAnalytics.tsx",
+    "app/design-system/page.tsx",
+    "app/globals.css",
+    "app/page.tsx"
+  ]
+}

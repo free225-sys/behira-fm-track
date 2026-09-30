@@ -1,0 +1,35 @@
+{
+  "scope": "Composants partagés isolés, sans accès serveur",
+  "layout": [
+    {
+      "contained": true,
+      "scrollWidth": 390,
+      "visibleNativeTimes": 0,
+      "width": 390
+    },
+    {
+      "contained": true,
+      "scrollWidth": 768,
+      "visibleNativeTimes": 0,
+      "width": 768
+    },
+    {
+      "contained": true,
+      "scrollWidth": 1440,
+      "visibleNativeTimes": 0,
+      "width": 1440
+    }
+  ],
+  "checks": {
+    "midnight": "00:00",
+    "lastMinute": "23:59",
+    "partialInput": "invalid, no submission, minutes focused",
+    "partialCompletion": "00:05",
+    "controlledDraftRefresh": "06:07",
+    "minBound": "07:00 rejected for min 08:00",
+    "keyboard": "ArrowDown, Home, ArrowDown, Enter selects 00",
+    "dateTimeMidnight": "2026-09-11T00:00",
+    "disabled": "both selectors disabled; excluded from FormData",
+    "nativeClock": "hidden form proxy only"
+  }
+}

@@ -1,5 +1,5 @@
 import { Field } from './ui';
-import { activeWiloFields, type WiloAnswers } from '../lib/wilo/report';
+import { activeWiloFields, isWiloFieldHidden, type WiloAnswers } from '../lib/wilo/report';
 import { RoundDateTimeFields } from './shared/RoundDateTimeFields';
 
 const TONES = ['normal', 'watch', 'critical'] as const;
@@ -33,7 +33,7 @@ export function WiloSupplement({ step, answers, reasons, pressure, onChange, onR
   step:number; answers:WiloAnswers; reasons:WiloAnswers; pressure:string;
   onChange:(code:string,value:string)=>void; onReason:(code:string,value:string)=>void;
 }) {
-  const fields = activeWiloFields(answers,pressure).filter(field=>field[3]===step);
+  const fields = activeWiloFields(answers,pressure).filter(field=>field[3]===step && !isWiloFieldHidden(field[0], answers));
   if (fields.length === 0) return null;
   return <div className="surpresseur-fields wilo-supplement">
     <h4 className="wilo-supplement-title">Observations complémentaires</h4>
