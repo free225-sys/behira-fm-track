@@ -5,26 +5,32 @@ import {getBrowserSupabaseClient} from '../lib/supabase/client';
 import {reportStageLabel} from '../lib/report-stage';
 
 type Round={id:string;isTest:boolean;reference:string;updatedAt:string;performedAt:string;summary:string|null;readAt:string|null;returnReason:string|null;anomalyReference:string|null;checks:{code:string;label?:string;status:string;valueNumeric?:number;valueText?:string;valueBoolean?:boolean;notes?:string}[]};
-/** Rapports de ronde WILO-01 ou IRR-01 : historique agent, lecture et retour motivé par le FM (même circuit d'examen). */
-export function WiloRoundInbox({isTest,manager,enabled,receiptId,onOpenAnomaly,equipment='WILO-01'}:{isTest:boolean;manager:boolean;enabled:boolean;receiptId?:string;onOpenAnomaly:(reference:string)=>void;equipment?:'WILO-01'|'IRR-01'}){
- const short=equipment==='IRR-01'?'IRR':'WILO';
+type InboxEquipment='WILO-01'|'IRR-01'|'ASC';
+function inboxQuery(equipment:InboxEquipment){
+ if(equipment==='IRR-01')return {rpc:'get_irr_rounds' as const,short:'IRR'};
+ if(equipment==='ASC')return {rpc:'get_asc_rounds' as const,short:'ASC'};
+ return {rpc:'get_wilo_rounds' as const,short:'WILO'};
+}
+/** Rapports WILO-01, IRR-01 ou ASC : historique agent, lecture et retour motivé par le FM (même circuit d'examen). */
+export function WiloRoundInbox({isTest,manager,enabled,receiptId,onOpenAnomaly,equipment='WILO-01'}:{isTest:boolean;manager:boolean;enabled:boolean;receiptId?:string;onOpenAnomaly:(reference:string)=>void;equipment?:InboxEquipment}){
+ const {rpc,short}=inboxQuery(equipment);
  const [rounds,setRounds]=useState<Round[]>([]),[selected,setSelected]=useState(''),[reason,setReason]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
  const lock=useRef(false);
  const fetchRounds=useCallback(async()=>{
   if(!enabled)return [];
-  const result=await getBrowserSupabaseClient(isTest).rpc(equipment==='IRR-01'?'get_irr_rounds':'get_wilo_rounds');
+  const result=await getBrowserSupabaseClient(isTest).rpc(rpc as 'get_wilo_rounds');
   if(result.error)throw result.error;
   return (result.data??[]) as unknown as Round[];
- },[enabled,isTest]);
+ },[enabled,isTest,rpc]);
  const refresh=useCallback(async()=>{
   try{const rows=await fetchRounds();setRounds(rows);setError('');}
   catch(e){setError(e instanceof Error?e.message:`Chargement des rapports ${short} impossible.`);}
- },[fetchRounds]);
+ },[fetchRounds,short]);
  useEffect(()=>{
   let active=true;
   void fetchRounds().then(rows=>{if(active){setRounds(rows);setError('');}},()=>{if(active)setError(`Chargement des rapports ${short} impossible.`);});
   return ()=>{active=false;};
- },[fetchRounds,receiptId]);
+ },[fetchRounds,receiptId,short]);
  const round=rounds.find(r=>r.id===selected&&r.isTest===isTest);
  const examine=async(decision:'read'|'return')=>{
   if(!round||lock.current)return;lock.current=true;setBusy(true);setError('');

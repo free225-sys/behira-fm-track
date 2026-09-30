@@ -80,7 +80,7 @@ export function ParametersWorkspace({ parameter, onOpenCosts, users }: {
           <span><b>Coûts</b>Classement des dossiers au-dessus du seuil</span>
           <span><b>À traiter</b>Choix de la branche de décision</span>
         </div>
-        <Button variant="secondary" onClick={onOpenCosts}>Examiner les dossiers concernés</Button>
+        <Button variant="secondary" onClick={onOpenCosts}>Ouvrir les coûts</Button>
         <details className="parameter-tech-details">
           <summary>Détails techniques</summary>
           <dl className="parameter-facts">

@@ -38,13 +38,13 @@ export function dossierActionLabel(item: DossierQueueItem, threshold: number): s
 export function DossierQueueRow({
   item,
   active = false,
-  threshold = 400000,
+  threshold,
   onOpen,
   actionClassName,
 }: {
   item: DossierQueueItem;
   active?: boolean;
-  threshold?: number;
+  threshold: number;
   onOpen: () => void;
   actionClassName?: string;
 }) {

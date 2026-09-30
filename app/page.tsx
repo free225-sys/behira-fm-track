@@ -25,17 +25,17 @@ import { BuildingHealthCockpit, ScoreRing } from './components/BuildingHealthCoc
 import { DomainPointsSummary } from './components/DomainPointsSummary';
 import { RoundDateTimeFields } from './components/shared/RoundDateTimeFields';
 import { reasonProblem } from './lib/input-rules';
-import { DemoScenarioProvider, DemoScenarioSelect, EquipmentTable, InsufficientNote, ReportTrackingLine, RoundModeBadge, RoundPilotHeader, RoundStepRail, SegmentedControl, StartRoundPicker, ROUND_CHOICES, useDemoScoreScenario, type RoundChoiceId } from './components/shared';
+import { DemoScenarioProvider, DemoScenarioSelect, EquipmentTable, InsufficientNote, ReportTrackingLine, RoundModeBadge, RoundPilotHeader, RoundStepRail, SegmentedControl, StartRoundPicker, ROUND_CHOICES, useDemoScoreScenario, type RoundChoice, type RoundChoiceId } from './components/shared';
 import { DEMO_THRESHOLD, demoHomeSnapshot, demoReportTracking, demoRoundsFor, sessionForAudience } from './lib/ui-contract/fixtures.ts';
 import type { TodaysRound, UiSession } from './lib/ui-contract/building-health.ts';
-import { asciiInitials, displayAssetCode, displayAssetText, formatCompactMoney, formatTime, formatWeekdayDate, palierFromScore, roundStateLabel, roundSubjectLabel, scoreFigure, statusBadgeTone, statusLabel, thresholdPosition } from './lib/ui-contract/display.ts';
+import { asciiInitials, displayAssetCode, displayAssetText, formatCompactMoney, formatTime, palierFromScore, roundStateLabel, roundSubjectLabel, scoreFigure, statusBadgeTone, statusLabel, thresholdPosition } from './lib/ui-contract/display.ts';
 import { reportStageLabel } from './lib/report-stage';
 import { WiloSupplement } from './components/WiloSupplement';
 import { activeWiloFields, buildWiloChecks, measuredNumber, noActiveLeak, pumpAvailability, WILO_DERIVED_CONTROLS, wiloPressureState, wiloSupplementFindings, type WiloAnswers } from './lib/wilo/report';
 import { EauRounds } from './components/EauRounds';
 import { EauRoundDesk } from './components/EauRoundDesk';
 import { Ge01AgentForm, Ge01ReportInbox } from './components/Ge01Pilot';
-import { RiaRoundNavigation, RiaRoundSpace } from './components/RiaRound';
+import { RiaRoundSpace } from './components/RiaRound';
 import { CostsWorkspace, type CostReviewInput, type CostSubmissionInput } from './components/CostsWorkspace';
 import { EquipmentWorkspace } from './components/EquipmentWorkspace';
 import { NotificationBell } from './components/NotificationCenter';
@@ -339,8 +339,8 @@ const fallbackEquipment: EquipmentItem[] = [
   { code:'DEMO-EAU', label:'Surpresseur', health:78, state:'Intervention' },
   { code:'DEMO-SSI', label:'Pompe incendie', health:61, state:'Critique' },
   { code:'DEMO-ASC-1/2', label:'Ascenseurs', health:84, state:'Surveillance' },
-  { code:'DEMO-ESP', label:'Irrigation', health:98, state:'Sain' },
-  { code:'DEMO-RND', label:'Rondes & constats', health:93, state:'Sain' },
+  { code:'DEMO-ESP', label:'Irrigation', health:98, state:'Disponible' },
+  { code:'DEMO-RND', label:'Rondes & constats', health:93, state:'Disponible' },
 ];
 
 
@@ -1063,7 +1063,7 @@ export default function Home() {
     }
     setMoreNavOpen(false);
     if (next === 'report' && options?.round) setReportChoice(options.round);
-    if (next === 'registry' || next === 'costs') {
+    if (next === 'registry') {
       setDossiersTab('tous');
       setView('manager');
     } else if (next === 'access' && personaId === 'administration') {
@@ -2379,7 +2379,7 @@ function RoundsAssistanceWorkspace({ fieldRequests, equipment, anomalies, onNavi
   return <>
     <LiveHealthCockpit session={useUiSession('rondes_assistance', 'Agente Rondes & Assistance Démo')} onNavigate={onNavigate} />
     <div className="mission-switch" role="tablist" aria-label="Fonction de Agente Rondes & Assistance"><button type="button" role="tab" aria-selected={missionTab === 'terrain'} className={missionTab === 'terrain' ? 'active' : ''} onClick={() => setMissionTab('terrain')}><BrandIcon name="mapPin" size={16} /><b>Terrain</b><small>Rondes, constats et brouillons de démonstration</small></button><button type="button" role="tab" aria-selected={missionTab === 'administration'} className={missionTab === 'administration' ? 'active' : ''} onClick={() => setMissionTab('administration')}><BrandIcon name="files" size={16} /><b>Administratif</b><small>Devis, paiements et autorisations</small></button></div>
-    {missionTab === 'terrain' && <><section className="rondes_assistance-grid"><article className="panel zone-rounds"><div className="panel-head"><div><h3>Zones du jour</h3><p>Ronde du jour · {formatWeekdayDate('2026-09-16T08:00:00Z')}</p></div><span className="panel-count">4 / 6 contrôlées</span></div>{['Hall & accueil|Terminé','Atrium restaurant|À vérifier','Jardinières RDC|En cours','Sanitaires R+2|Terminé','Terrasse R+4|À faire','Parking sous-sol|À faire'].map((item) => {const [label,status] = item.split('|'); return <button key={label}><span className={status === 'Terminé' ? 'done' : status === 'En cours' ? 'current' : ''}>{status === 'Terminé' ? '✓' : '○'}</span><div><b>{label}</b><small>Propreté · plantes · fuite · dégradation</small></div><Badge tone={status === 'Terminé' ? 'success' : status === 'À vérifier' ? 'critical' : status === 'En cours' ? 'blue' : 'neutral'}>{status}</Badge></button>})}</article><article className="panel quick-finding"><div className="panel-head"><div><h3>Saisie dans Rondes</h3><p>Un seul formulaire de constat, pour éviter une double saisie.</p></div><Badge tone="blue">RONDES</Badge></div><p className="finding-pointer-copy">Les zones du jour restent ici. La création et la photo se font dans la destination Rondes.</p><button type="button" className="secondary-button" onClick={() => onNavigate('report')}>Ouvrir la ronde</button></article></section><section className="panel signal-tracker"><div className="panel-head"><div><h3>Mes signalements</h3><p>Statuts visibles sans accès aux décisions techniques</p></div><Badge>{submitted.length} dossiers</Badge></div><div className="signal-list">{submitted.map((item,index) => <article key={`${item.title}-${index}`}><div><b>{item.title}</b><p>{item.zone} · {item.category}</p></div><Badge tone={item.status === 'Complément demandé' && !complementDone ? 'orange' : item.status === 'À qualifier' ? 'blue' : 'success'}>{item.status === 'Complément demandé' && complementDone ? 'Complément transmis' : item.status}</Badge>{item.status === 'Complément demandé' && !complementDone && <button onClick={() => {setComplementDone(true);flash('Complément photo transmis à Facility Manager — simulation locale.')}}>Ajouter la photo demandée</button>}</article>)}</div><div className="field-feed-note">{fieldRequests.filter((request) => request.from === 'Agente Rondes & Assistance Démo').length} remontée(s) visible(s) dans la file de Facility Manager.</div></section></>}
+    {missionTab === 'terrain' && <><section className="rondes_assistance-grid"><article className="panel zone-rounds"><div className="panel-head"><div><h3>Exemple d’écran</h3><p>Ce n’est pas la ronde du jour. Aucun planning de zones n’est raccordé.</p></div></div><div role="list" aria-label="Exemple de zones, sans planning">{['Hall & accueil|Terminé','Atrium restaurant|À vérifier','Jardinières RDC|En cours','Sanitaires R+2|Terminé','Terrasse R+4|À faire','Parking sous-sol|À faire'].map((item) => {const [label,status] = item.split('|'); return <div className="zone-line" role="listitem" key={label}><span className={status === 'Terminé' ? 'done' : status === 'En cours' ? 'current' : ''}>{status === 'Terminé' ? '✓' : '○'}</span><div><b>{label}</b><small>Propreté · plantes · fuite · dégradation</small></div><Badge tone={status === 'Terminé' ? 'success' : status === 'À vérifier' ? 'critical' : status === 'En cours' ? 'blue' : 'neutral'}>{status}</Badge></div>})}</div></article><article className="panel quick-finding"><div className="panel-head"><div><h3>Saisie RND-LET</h3><p>Un seul formulaire de constat, pour éviter une double saisie.</p></div><Badge tone="blue">RONDES</Badge></div><p className="finding-pointer-copy">La création et la photo se font dans la saisie RND-LET. L’exemple à côté n’ouvre aucune zone.</p><button type="button" className="secondary-button" onClick={() => onNavigate('report')}>Ouvrir la saisie RND-LET</button></article></section><section className="panel signal-tracker"><div className="panel-head"><div><h3>Mes signalements</h3><p>Statuts visibles sans accès aux décisions techniques</p></div><Badge>{submitted.length} dossiers</Badge></div><div className="signal-list">{submitted.map((item,index) => <article key={`${item.title}-${index}`}><div><b>{item.title}</b><p>{item.zone} · {item.category}</p></div><Badge tone={item.status === 'Complément demandé' && !complementDone ? 'orange' : item.status === 'À qualifier' ? 'blue' : 'success'}>{item.status === 'Complément demandé' && complementDone ? 'Complément transmis' : item.status}</Badge>{item.status === 'Complément demandé' && !complementDone && <button onClick={() => {setComplementDone(true);flash('Complément photo transmis à Facility Manager — simulation locale.')}}>Ajouter la photo demandée</button>}</article>)}</div><div className="field-feed-note">{fieldRequests.filter((request) => request.from === 'Agente Rondes & Assistance Démo').length} remontée(s) visible(s) dans la file de Facility Manager.</div></section></>}
     {missionTab === 'administration' && <><section className="mission-permission-note"><span>i</span><div><b>Fonction administrative, sans décision technique</b><p>Agente Rondes & Assistance prépare et suit les pièces. Facility Manager et l’Administration conservent leurs validations respectives.</p></div></section><section className="rondes_assistance-admin-grid"><article className="panel"><div className="panel-head"><div><p className="design-kicker">SUIVI ADMINISTRATIF</p><h3>Devis et autorisations</h3></div><span className="panel-count is-alert">3 à suivre</span></div>{[['DEV-031','PREST-EAU','280 000 FCFA','Validation Facility Manager'],['DEV-029','PREST-ASC','950 000 FCFA','Arbitrage Administration'],['DEV-026','PREST-ESP','190 000 FCFA','Bon à payer']].map((item) => <button className="admin-follow-row" key={item[0]}><span>{item[0]}</span><p><b>{item[1]}</b><small>{item[2]} · {item[3]}</small></p><em>Voir →</em></button>)}</article><article className="panel"><div className="panel-head"><div><p className="design-kicker">COÛTS & PAIEMENTS</p><h3>Échéances de la semaine</h3></div></div><div className="payment-summary"><strong>2,12 M</strong><span>FCFA à contrôler</span></div><div className="payment-lines"><span><i className="done" /> 3 pièces complètes</span><span><i /> 1 autorisation attendue</span><span><i className="late" /> 1 paiement en retard</span></div><button className="secondary-button">Ouvrir le suivi financier</button></article></section></>}
   </>;
 }
@@ -2721,7 +2721,8 @@ function Manager({ anomalies, tab, setTab, onOpen, escalations = [], fieldReques
             </div>
             <span className="visually-hidden">Qualification requise avant arbitrage financier</span>
             <Field label="Recommandation"><textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Votre recommandation motivée" rows={2} /></Field>
-            <div className="fm-decision-actions"><Button variant="secondary">Demander un complément</Button><Button variant="secondary">Refuser</Button><Button onClick={() => setDecisionDone(true)}>{(focusAmount ?? 0) >= DECISION_THRESHOLD_FCFA ? 'Soumettre à l’Administration' : 'Valider'}</Button></div>
+            <p id="fm-decision-unavailable" className="hint" role="status">Décision non disponible dans cet écran.</p>
+            <div className="fm-decision-actions"><Button variant="secondary" disabled aria-describedby="fm-decision-unavailable">Demander un complément</Button><Button variant="secondary" disabled aria-describedby="fm-decision-unavailable">Refuser</Button><Button disabled aria-describedby="fm-decision-unavailable">{(focusAmount ?? 0) >= DECISION_THRESHOLD_FCFA ? 'Soumettre à l’Administration' : 'Valider'}</Button></div>
           </>
         )}
 
@@ -2893,6 +2894,44 @@ function DemoEauForm({ asset }: { asset: 'wilo' | 'ria' }) {
   </div>;
 }
 
+const FM_REVIEW_QUEUES: RoundChoice[] = [
+  { id: 'GE-01', label: 'GE-01 · Électricité', hint: 'File des rapports reçus' },
+  { id: 'WILO-01', label: 'WILO-01 · Eau', hint: 'File des rapports reçus' },
+  { id: 'RIA-01', label: 'RIA-01 · Incendie', hint: 'File des rapports reçus' },
+  { id: 'IRR-01', label: 'IRR-01 · Irrigation', hint: 'File des rapports reçus' },
+  { id: 'ASC', label: 'ASC · Ascenseurs', hint: 'File des rapports reçus' },
+];
+
+function offlineReviewNote(label: string) {
+  return <Card role="status">Les rapports {label} nécessitent une connexion avec le compte réel habilité. Aucun contrôle n’est simulé.</Card>;
+}
+
+function FacilityRoundQueues({ isTest, connected, onOpenAnomaly, ria, reports, onReview, onRead, onLoadProof, planning, onAssign, onRefresh }: {
+  isTest: boolean;
+  connected: boolean;
+  onOpenAnomaly: (reference: string) => void;
+  ria: ReactNode;
+  reports: OperationalReport[];
+  onReview: Ge01ReviewHandler;
+  onRead: (report: OperationalReport) => Promise<void>;
+  onLoadProof: (path: string) => Promise<Blob>;
+  planning?: Ge01Operations;
+  onAssign: Ge01AssignmentHandler;
+  onRefresh: () => void;
+}) {
+  const [queue, setQueue] = useState<RoundChoiceId>('GE-01');
+  return <>
+    <div className="round-choice-bar">
+      <StartRoundPicker rounds={[]} choices={FM_REVIEW_QUEUES} value={queue} onChoose={setQueue} legend="File à examiner" />
+    </div>
+    {queue === 'GE-01' && <Ge01ReportInbox reports={reports.filter((report) => report.equipmentCode === 'GE-01')} connected={connected} onReview={onReview} onRead={onRead} onLoadProof={onLoadProof} planning={planning} onAssign={onAssign} onOpenAnomaly={onOpenAnomaly} onRefresh={onRefresh} />}
+    {queue === 'WILO-01' && (connected ? <WiloRoundInbox key={String(isTest)} equipment="WILO-01" isTest={isTest} manager enabled={connected} onOpenAnomaly={onOpenAnomaly} /> : offlineReviewNote('WILO-01'))}
+    {queue === 'RIA-01' && ria}
+    {queue === 'IRR-01' && (connected ? <WiloRoundInbox key={`irr-${isTest}`} equipment="IRR-01" isTest={isTest} manager enabled={connected} onOpenAnomaly={onOpenAnomaly} /> : offlineReviewNote('IRR-01'))}
+    {queue === 'ASC' && (connected ? <WiloRoundInbox key={`asc-${isTest}`} equipment="ASC" isTest={isTest} manager enabled={connected} onOpenAnomaly={onOpenAnomaly} /> : offlineReviewNote('ASC'))}
+  </>;
+}
+
 function Report({ initialRound = null, isTest = false, persona, agentName, reports, connected, onNavigate, persistenceEnabled, offlineSync, flash, onReview, onRead, onLoadProof, planning, onAssign, onOpenAnomaly, onRefresh }: {
   initialRound?: RoundChoiceId | null;
   isTest?:boolean;
@@ -2914,7 +2953,7 @@ function Report({ initialRound = null, isTest = false, persona, agentName, repor
 }) {
   const current = useContext(ConnectedPresentation);
   const ria = <RiaRoundSpace isTest={isTest} manager={persona.id==='facility'} enabled={connected} offlineSync={offlineSync} onRefresh={onRefresh} onOpenAnomaly={onOpenAnomaly}/>;
-  if (persona.id === 'facility') return <><WiloRoundInbox key={String(isTest)} isTest={isTest} manager enabled={connected} onOpenAnomaly={onOpenAnomaly}/><WiloRoundInbox key={`irr-${isTest}`} equipment="IRR-01" isTest={isTest} manager enabled={connected} onOpenAnomaly={onOpenAnomaly}/><RiaRoundNavigation ria={ria}><Ge01ReportInbox reports={reports.filter(r=>r.equipmentCode==='GE-01')} connected={connected} onReview={onReview} onRead={onRead} onLoadProof={onLoadProof} planning={planning} onAssign={onAssign} onOpenAnomaly={onOpenAnomaly} onRefresh={onRefresh} /></RiaRoundNavigation></>;
+  if (persona.id === 'facility') return <FacilityRoundQueues isTest={isTest} connected={connected} onOpenAnomaly={onOpenAnomaly} ria={ria} reports={reports} onReview={onReview} onRead={onRead} onLoadProof={onLoadProof} planning={planning} onAssign={onAssign} onRefresh={onRefresh} />;
   if (persona.id === 'electricite') return <><div className="round-choice-bar"><StartRoundPicker rounds={[]} choices={ROUND_CHOICES.electricite} value="GE-01" /></div><Ge01AgentForm equipment={current.health?.equipment.find(item => item.code === 'GE-01')} reports={current.source?.reports} isTest={isTest} agentName={agentName} persistenceEnabled={persistenceEnabled} offlineSync={offlineSync} flash={flash} /></>;
   if (isTest && persona.id!=='eau_incendie') return <Card role="status">La saisie des rondes de votre périmètre n’est pas encore disponible dans l’espace Recette. Aucune donnée de test ne sera envoyée en Exploitation.</Card>;
   if (persona.id === 'eau_incendie') return <EauRoundDesk

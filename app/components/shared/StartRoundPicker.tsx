@@ -6,7 +6,7 @@ import type { EquipmentCode, TodaysRound } from '../../lib/ui-contract/building-
 import { EQUIPMENT_META } from '../../lib/ui-contract/fixtures.ts';
 import { formatTime, roundResultLabel, roundStateLabel, roundSubjectLabel } from '../../lib/ui-contract/display.ts';
 
-export type RoundChoiceId = 'WILO-01' | 'RIA-01' | 'IRR-01' | 'GE-01' | 'RND-LET';
+export type RoundChoiceId = 'WILO-01' | 'RIA-01' | 'IRR-01' | 'GE-01' | 'RND-LET' | 'ASC';
 
 export type RoundChoice = { id: RoundChoiceId; label: string; hint: string };
 
@@ -58,6 +58,7 @@ export function StartRoundPicker({
   onSelect,
   onChoose,
   onOffPlan,
+  legend = 'Ronde à effectuer',
 }: {
   rounds: TodaysRound[];
   choices?: RoundChoice[];
@@ -65,6 +66,7 @@ export function StartRoundPicker({
   onSelect?: (round: TodaysRound) => void;
   onChoose?: (id: RoundChoiceId) => void;
   onOffPlan?: () => void;
+  legend?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [catalog, setCatalog] = useState(false);
@@ -125,7 +127,7 @@ export function StartRoundPicker({
     return (
       <div className="start-round-picker is-switch is-readonly field is-select" ref={rootRef}>
         <p className="start-round-switch is-readonly">
-          <span>{only ? `Ronde à effectuer : ${only.label}` : 'Aucune ronde disponible pour ce profil.'}</span>
+          <span>{only ? `${legend} : ${only.label}` : 'Aucune ronde disponible pour ce profil.'}</span>
         </p>
         <small>{only ? 'Seule ronde de votre périmètre.' : 'Aucune ronde de ce périmètre n’est livrée.'}</small>
       </div>
@@ -208,7 +210,7 @@ export function StartRoundPicker({
 
   return (
     <div className={`start-round-picker${switching ? ' is-switch field is-select' : ''}${open ? ' is-open' : ''}`} ref={rootRef}>
-      {switching ? <span id={fieldLabelId}>Ronde à effectuer</span> : null}
+      {switching ? <span id={fieldLabelId}>{legend}</span> : null}
       <div className="start-round-actions">
         {opensPanel ? (
           <button ref={triggerRef} type="button" className={switching ? 'start-round-switch' : 'primary-button'} onClick={startPrimary} onKeyDown={onTriggerKeyDown} aria-expanded={open} aria-haspopup="listbox" aria-controls={open ? listId : undefined} aria-labelledby={switching ? fieldLabelId : undefined} aria-invalid={switching && choices.length === 0 ? true : undefined} disabled={switching && choices.length === 0}>
