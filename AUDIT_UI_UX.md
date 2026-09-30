@@ -253,9 +253,9 @@ Acceptation : un bouton grisé dit pourquoi et qui agit ; la fiche montre la mes
 
 ### Lot 3 — Formulaires de ronde alignés
 
-UX-007, UX-008, UX-009, UX-010, UX-012, UX-018, UX-027, UX-028, UX-029, UX-030.
+UX-007, UX-008, UX-009, UX-010, UX-012, UX-018, UX-027, UX-028, UX-029, UX-030, UX-035.
 
-Acceptation : la maquette Eau ne contredit plus le connecté, et « Valider la maquette » n’a pas l’air disponible si la saisie est incomplète ; le réarmement ne s’invente pas ; RIA et IRR suivent le geste WILO pour « non vérifié » sans toucher DEC-020 ni DEC-022 ; « Terminer » et « Transmettre » (WILO et RND-LET) reflètent la condition d’envoi déjà codée ; pastilles harmonisées ; le toast de succès et la bulle de saisie ne recouvrent pas le bouton d’envoi.
+Acceptation : la maquette Eau ne contredit plus le connecté, et « Valider la maquette » n’a pas l’air disponible si la saisie est incomplète ; le réarmement ne s’invente pas ; RIA et IRR suivent le geste WILO pour « non vérifié » sans toucher DEC-020 ni DEC-022 ; « Terminer » et « Transmettre » (WILO et RND-LET) reflètent la condition d’envoi déjà codée ; pastilles harmonisées ; le toast de succès et la bulle de saisie ne recouvrent pas le bouton d’envoi ; un seul modèle de rail d’étapes pour GE-01, WILO, RIA et IRR.
 
 ### Lot 4 — Files, accueil terrain, destinations
 
@@ -265,11 +265,11 @@ Acceptation : l’accueil R ne présente plus une ronde du 16 septembre comme r�
 
 ### Lot 5 — Responsive, chrome fixe, toasts
 
-UX-016, UX-017, UX-020, UX-023, UX-025, UX-031, UX-032, UX-033, puis contrôle 1440 / 1024 / 834 / 390 / 360 des écrans touchés par les lots 1 à 4.
+UX-016, UX-017, UX-020, UX-023, UX-025, UX-031, UX-032, UX-033, UX-034, puis contrôle 1440 / 1024 / 834 / 390 / 360 des écrans touchés par les lots 1 à 4.
 
 UX-019 n’est plus dans ce lot (DEC-023).
 
-Acceptation : la cloche et les actions de panneau restent atteignables à 390 et 360 ; le contenu mobile n’est pas masqué par la barre du bas ; cibles 44 px ; pas de débordement horizontal de page sur les formulaires WILO, RIA, IRR, GE ; le titre de page n’est pas coupé à 834. Les bandeaux navy d’Accueil et de Dossiers restent. Paramètres : la pastille « Lecture seule » ne contredit plus les interrupteurs, l’onglet ne laisse plus le bloc Accès dessous, et « Préparer » n’a pas l’air prêt à vide.
+Acceptation : la cloche et les actions de panneau restent atteignables à 390 et 360 ; le contenu mobile n’est pas masqué par la barre du bas ; cibles 44 px ; pas de débordement horizontal de page sur les formulaires WILO, RIA, IRR, GE ; le titre de page n’est pas coupé à 834. Les bandeaux navy d’Accueil et de Dossiers restent. Paramètres : la pastille « Lecture seule » ne contredit plus les interrupteurs, l’onglet ne laisse plus le bloc Accès dessous, et « Préparer » n’a pas l’air prêt à vide. Le sélecteur à une seule ronde (GE-01, RND-LET) a le même libellé au-dessus que la liste déroulante, sans l’aspect d’un champ éditable.
 
 ### Lot 6 — Seconde passe
 
@@ -299,12 +299,12 @@ Axes du §4 de la mission. Chaque case est un `UX-xxx` ou « RAS » suivi de ce 
 | Réception | RAS — panneau dans la fiche, pas une page | RAS — champs du panneau `InterventionReceptionPanel` | UX-006 — « Enregistrement… » seul | RAS — choix déjà posés, pas un nouveau sélecteur | RAS — reste sur la fiche | RAS — boutons en pile sous 700 px | RAS — `Button` primaire / secondaire | RAS — on voit ce qu’on réceptionne | UX-006 — pas de `role="status"` | RAS — occupé, erreur, succès |
 | Réouverture | RAS — `ReopenDossierPanel` sous la fiche close | RAS — motif obligatoire | UX-006 | RAS — aucun | RAS — reste sur la fiche | RAS — même pile | RAS — bouton dangereux distinct | RAS — réouvrir n’est pas l’action par défaut | UX-006 | RAS — droit réservé FM/A connectés, sinon panneau absent |
 | Rapport prestataire | RAS — panneau sous la ronde des agents habilités | RAS — fichier, motif, libellés | RAS — déposer désactivé sans droit (`page.tsx`) | RAS — choix du constat déjà listé | RAS — pas une destination de barre | RAS — formulaire en une colonne sous 700 px | RAS — mêmes champs que le dépôt de preuve | RAS — le refus de droit est une phrase, pas un bouton mort silencieux | RAS — input fichier a un libellé | RAS — non habilité, envoi, erreur |
-| Rondes GE-01 agent | RAS — formulaire + aside contexte, `demo/098` | RAS — date, mesures, DEC-020, brouillon | RAS — Continuer / Terminer reflètent l’étape | RAS — une seule ronde (GE-01), même composant que l’accueil (lot 1) | RAS — Rondes actif | UX-017 — fil d’étapes étroit (`demo/112`) | UX-007 — pastille « DÉMO SANS SAUVEGARDE » | RAS — l’étape courante est marquée | RAS — progression `aria-current` | RAS — brouillon, recette, transmis |
-| WILO connecté | UX-003 — historique sous la grille, colonne droite vide (`connecte/wilo-1440.jpg`, INDEX préproduction 01) | UX-007, UX-009, UX-010, UX-012 | UX-012 ; UX-029 — toast sur le bouton | UX-001, UX-002 | RAS — retour Accueil | UX-003 sous 1100 px ; UX-017 | UX-007 | UX-009 | UX-018 — erreurs en flash | RAS — brouillon, file, transmis |
+| Rondes GE-01 agent | RAS — formulaire + aside contexte, `demo/098` | RAS — date, mesures, DEC-020, brouillon | RAS — Continuer / Terminer reflètent l’étape | UX-034 — lecture seule GE-01 ressemble à un champ | RAS — Rondes actif | UX-017 — fil d’étapes étroit (`demo/112`) | UX-007 — pastille « DÉMO SANS SAUVEGARDE » ; UX-035 — rail différent de WILO | RAS — l’étape courante est marquée | RAS — progression `aria-current` | RAS — brouillon, recette, transmis |
+| WILO connecté | UX-003 — historique sous la grille, colonne droite vide (`connecte/wilo-1440.jpg`, INDEX préproduction 01) | UX-007, UX-009, UX-010, UX-012 | UX-012 ; UX-029 — toast sur le bouton | UX-001, UX-002 | RAS — retour Accueil | UX-003 sous 1100 px ; UX-017 | UX-007 ; UX-035 — étape active pleine pétrole | UX-009 | UX-018 — erreurs en flash | RAS — brouillon, file, transmis |
 | WILO / RIA maquette | UX-008 — maquette différente du connecté (`demo/119`, `demo/125`) | UX-008 — plage 3,0–4,5, bascules | UX-027 — Valider actif à vide (`demo/123`) | UX-002 — second jeu d’onglets | RAS — même page Rondes | UX-017 — « Cinq étapes » et trois puces visibles (`demo/135`) | UX-008 — score avec État / Variation | UX-008 | RAS — onglets `tablist` quand ils sont là | RAS — brouillon local, succès simulé |
-| RIA-01 connecté | UX-003 — historique sous la carte, pas en colonne | UX-010 — Non vérifié dans la rangée | RAS — Transmettre désactivé sans confirmation | UX-002 — onglet local | RAS — même page | UX-017 | UX-007 — toujours « Saisie terrain » | RAS — cadence marquée « à confirmer » | RAS — erreur `role="alert"` dans la carte | RAS — non connecté, chargement, vide, transmis |
-| IRR-01 | UX-003 — pas de colonne (`connecte/irr-1440.jpg`) | UX-010 | RAS — Terminer suit les manques | UX-002 | RAS — même page | UX-017 ; UX-030 — bulle sur les boutons | UX-007 — badge Recette à part | RAS — étapes nommées | UX-030 — la bulle n’est pas un `role="alert"` dans la carte | RAS — chargement du brouillon, non connecté |
-| Saisie rapide RND-LET | RAS — formulaire + aside « Après l’envoi » (`demo/144`) | UX-028 — motif photo vide | UX-028 — Transmettre a l’air prêt | RAS — sélecteur de ronde à une option (lot 1) | RAS — Rondes | RAS — une colonne sous 1100 px | UX-007 — pastille DÉMO / SAISIE RÉELLE | RAS — le circuit après envoi est dans l’aside | UX-018 — refus en flash | RAS — simulation ou file |
+| RIA-01 connecté | UX-003 — historique sous la carte, pas en colonne | UX-010 — Non vérifié dans la rangée | RAS — Transmettre désactivé sans confirmation | UX-002 — onglet local | RAS — même page | UX-017 | UX-007 — toujours « Saisie terrain » ; UX-035 | RAS — cadence marquée « à confirmer » | RAS — erreur `role="alert"` dans la carte | RAS — non connecté, chargement, vide, transmis |
+| IRR-01 | UX-003 — pas de colonne (`connecte/irr-1440.jpg`) | UX-010 | RAS — Terminer suit les manques | UX-002 | RAS — même page | UX-017 ; UX-030 — bulle sur les boutons | UX-007 — badge Recette à part ; UX-035 | RAS — étapes nommées | UX-030 — la bulle n’est pas un `role="alert"` dans la carte | RAS — chargement du brouillon, non connecté |
+| Saisie rapide RND-LET | RAS — formulaire + aside « Après l’envoi » (`demo/144`) | UX-028 — motif photo vide | UX-028 — Transmettre a l’air prêt | UX-034 — lecture seule RND-LET ressemble à un champ | RAS — Rondes | RAS — une colonne sous 1100 px | UX-007 — pastille DÉMO / SAISIE RÉELLE | RAS — le circuit après envoi est dans l’aside | UX-018 — refus en flash | RAS — simulation ou file |
 | Accueil R — zones du jour | UX-013 — liste figée (`demo/142`) | RAS — pas de saisie sur les lignes | UX-013 — lignes boutons sans destination | RAS — pas le sélecteur de ronde | UX-013 — ne mène pas à RND-LET | RAS — pile en 390 (`demo/148`) | RAS — badges de statut habituels | UX-026 — « 4 / 6 » contredit les pastilles | RAS — le compteur n’est pas le nom accessible des lignes | RAS — la liste n’a pas d’état vide (elle est en dur) |
 | File FM des rondes | UX-014 — quatre historiques empilés (`demo/061`, `demo/062`) | RAS — l’examen est dans la carte, pas un second formulaire | RAS — lire / retourner sont dans la carte d’historique | UX-014 — pas le sélecteur du §3.2 | RAS — onglets GE / RIA seulement | UX-014 — page très longue en 390 (`demo/089`) | RAS — mêmes cartes d’inbox | UX-014 | RAS — boutons d’examen nommés | RAS — liste vide « aucun rapport » |
 | Équipements | RAS — tuiles et filtres, `demo/008`, `demo/063` | RAS — recherche et filtre ont un libellé | RAS — une tuile ouvre le détail | RAS — filtre de risque, pas un sélecteur de ronde | RAS — Équipements ou Plus selon le profil | RAS — 2 colonnes puis 1 (`demo/044`, `demo/091`) | UX-015 — repli « Sain » hors de cet écran, vocabulaire de tuile correct ici | RAS — le parc et le compteur d’inconnu sont visibles | RAS — filtre associé à son libellé | RAS — démo, live et liste vide |
@@ -392,6 +392,20 @@ Les UX-001 à UX-024 restent valables. Les captures qui les montrent sont citée
 - Constat : `demo/017`, `demo/018`, `demo/053`, `demo/054`. « Préparer la création » et « Préparer la désactivation » sont actifs sans nom ni justification. Le refus n’arrive qu’après le clic (`validateAccessCreate` / `validateAccessAction`). Même idée que UX-027. La mention « Simulation locale » est juste : aucun compte n’est créé.
 - Correction : désactiver le bouton tant que les champs exigés sont vides, ou le dire avant le clic. Ne pas créer de compte.
 - Fichiers : `app/components/AccessWorkspace.tsx`.
+
+### UX-034 — Le sélecteur en lecture seule ressemble à un champ
+
+- Écrans : page Rondes, et l’accueil quand il n’y a qu’une ronde hors planning. Profils : E (GE-01), R (RND-LET). Largeurs : toutes. Catégorie : design system. Gravité : mineur.
+- Constat : la reprise du lot 1 affiche GE-01 et RND-LET en lecture seule, sans chevron. Cette version a un bord blanc et le libellé dans la case, comme un champ de saisie. La version déroulante (« Choisir la ronde ») a son libellé au-dessus de la liste. Revue Claude du lot 1, reprise.
+- Correction : même libellé au-dessus dans les deux cas. La valeur lecture seule ne doit pas avoir l’aspect d’un champ éditable (pas de bord de saisie, pas de libellé dans la case). Ne pas rouvrir une liste d’une seule option.
+- Fichiers : `app/components/shared/StartRoundPicker.tsx`, `app/globals.css`.
+
+### UX-035 — Le rail d’étapes n’est pas le même selon la ronde
+
+- Écrans : GE-01, WILO, RIA, IRR. Profils : E, W. Largeurs : toutes. Catégorie : formulaire. Gravité : mineur.
+- Constat : le rail GE-01 montre des cases claires avec un contour bleu. Le rail WILO, RIA et IRR marque l’étape active en plein pétrole. Deux modèles pour la même progression. Revue Claude du lot 1, reprise.
+- Correction : un seul modèle de rail pour toutes les rondes, en réutilisant le composant déjà partagé. Ne pas changer l’ordre des étapes ni les conditions d’avancement.
+- Fichiers : `app/components/Ge01Pilot.tsx`, `app/components/EauRounds.tsx`, `app/components/RiaRound.tsx`, `app/components/IrrRound.tsx`, `app/globals.css` seulement pour réutiliser la règle existante.
 
 ### Ce qui a été regardé et ne devient pas un constat
 

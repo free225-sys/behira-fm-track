@@ -67,6 +67,9 @@ export type OperationalAnomaly = {
   proofs: OperationalProof[];
   history: OperationalHistoryEvent[];
   description: string;
+  sourceReportId?: string | null;
+  sourceReportReference?: string | null;
+  originChecks?: OperationalReportCheck[];
   antiZombieSummary?: AntiZombieSummaryData;
 };
 
@@ -273,7 +276,7 @@ export async function loadOperationalSnapshot(
     managerActionsResult,
     interventionResult,
   ] = await Promise.all([
-    client.from("anomalies").select("is_test, id, reference, title, description, equipment_id, zone_id, priority_id, current_status_id, assigned_profile_id, assigned_vendor_id, detected_at, qualification_due_at, intervention_due_at, closed_at, version_no").eq("is_test", isTest).order("detected_at", { ascending: false }),
+    client.from("anomalies").select("is_test, id, reference, title, description, equipment_id, zone_id, priority_id, current_status_id, assigned_profile_id, assigned_vendor_id, detected_at, qualification_due_at, intervention_due_at, closed_at, version_no, source_report_id").eq("is_test", isTest).order("detected_at", { ascending: false }),
     client.from("equipment").select("id, code, name, location_label, health_score, health_status, lifecycle_scope").eq("lifecycle_scope", "mvp").order("code"),
     client.from("zones").select("id", { count: "exact", head: true }),
     client.from("profiles").select("id, display_name", { count: "exact" }),
@@ -374,6 +377,21 @@ export async function loadOperationalSnapshot(
   const reviewUnavailable = reviewResult.error?.code === "42P01" || reviewResult.error?.code === "PGRST205";
   if (reviewResult.error && !reviewUnavailable) throw reviewResult.error;
   const reviewByReportId = new Map((reviewResult.data ?? []).map((review) => [review.report_id, review]));
+  const reportById = new Map((reportResult.data ?? []).map((report) => [report.id, report]));
+  const checksByReportId = new Map<string, OperationalReportCheck[]>();
+  for (const check of reportCheckResult.data ?? []) {
+    const item = {
+      code: check.check_code,
+      label: check.label,
+      status: check.check_status as OperationalReportCheck["status"],
+      ...(check.value_numeric === null ? {} : { valueNumeric: Number(check.value_numeric) }),
+      ...(check.value_text === null ? {} : { valueText: check.value_text }),
+      ...(check.value_boolean === null ? {} : { valueBoolean: check.value_boolean }),
+      ...(check.unit === null ? {} : { unit: check.unit }),
+      ...(check.notes === null ? {} : { notes: check.notes }),
+    } satisfies OperationalReportCheck;
+    checksByReportId.set(check.report_id, [...(checksByReportId.get(check.report_id) ?? []), item]);
+  }
 
   const equipmentById = new Map((equipmentResult.data ?? []).map((item) => [item.id, item]));
   const profileById = new Map((profileResult.data ?? []).map((item) => [item.id, item.display_name]));
@@ -476,6 +494,9 @@ export async function loadOperationalSnapshot(
       proofs: proofsByAnomalyId.get(item.id) ?? [],
       history: historyByAnomalyId.get(item.id) ?? [],
       description: item.description,
+      sourceReportId: item.source_report_id,
+      sourceReportReference: item.source_report_id ? reportById.get(item.source_report_id)?.reference ?? null : null,
+      originChecks: item.source_report_id ? checksByReportId.get(item.source_report_id) ?? [] : [],
       diagnosis: historyResult.data?.find((event) => event.anomaly_id === item.id && event.change_set && typeof event.change_set === 'object' && !Array.isArray(event.change_set) && event.change_set.completed_action_code === 'PERFORM_DIAGNOSIS')?.comment ?? null,
       antiZombieSummary: equipment && ge01Requirements.data?.some(r => r.anomaly_id === item.id) ? {
         ...antiZombieByAnomalyId.get(item.id),
@@ -502,21 +523,6 @@ export async function loadOperationalSnapshot(
     code: item.code,
     label: item.operational_alias ?? item.legal_name ?? item.code,
   } satisfies OperationalVendor));
-
-  const checksByReportId = new Map<string, OperationalReportCheck[]>();
-  for (const check of reportCheckResult.data ?? []) {
-    const item = {
-      code: check.check_code,
-      label: check.label,
-      status: check.check_status as OperationalReportCheck["status"],
-      ...(check.value_numeric === null ? {} : { valueNumeric: Number(check.value_numeric) }),
-      ...(check.value_text === null ? {} : { valueText: check.value_text }),
-      ...(check.value_boolean === null ? {} : { valueBoolean: check.value_boolean }),
-      ...(check.unit === null ? {} : { unit: check.unit }),
-      ...(check.notes === null ? {} : { notes: check.notes }),
-    } satisfies OperationalReportCheck;
-    checksByReportId.set(check.report_id, [...(checksByReportId.get(check.report_id) ?? []), item]);
-  }
 
   const reports = (reportResult.data ?? []).flatMap((item) => {
     if (item.reference.startsWith('DEMO-')) return [];

@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Button, Card, Field, Select } from './ui';
+import { SavingStatus } from './DossierContinuity';
 import { RoundPilotHeader } from './shared/RoundPilotHeader';
 import { RoundDateTimeFields } from './shared/RoundDateTimeFields';
 import { OfflineSyncStatus } from './OfflineSyncStatus';
@@ -134,7 +135,7 @@ export function RiaReview({isTest=false,report:r,manager,onDone,onOpenAnomaly}:{
   {preview&&<img src={preview} alt="Preuve du contrôle RIA-01" style={{maxWidth:'100%',maxHeight:480,objectFit:'contain'}}/>}
   {missing.length>0&&<p>Photo d’anomalie ou motif d’impossibilité manquant : {missing.map(k=>RIA_PHOTOS[k as keyof typeof RIA_PHOTOS]).join(', ')}. Nouvelle ronde complète nécessaire pour alimenter le score.</p>}
   {manager&&!r.reviewedAt&&!r.returnReason&&r.confirmedAt&&<Field label="Commentaire de revue FM"><textarea disabled={busy} value={reason} onChange={e=>setReason(e.target.value)}/></Field>}
-  {canReview&&<><label><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/> J’ai examiné les observations, les photos éventuelles et le motif d’impossibilité éventuel ; je confirme le constat technique proposé.</label><Button disabled={busy||!confirmed||!reason.trim()||manifest.some(m=>!seen.includes(m.id))} onClick={()=>void review()}>{busy?'Enregistrement…':'Valider le contrôle RIA'}</Button></>}
+  {canReview&&<><label><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/> J’ai examiné les observations, les photos éventuelles et le motif d’impossibilité éventuel ; je confirme le constat technique proposé.</label><Button aria-busy={busy} disabled={busy||!confirmed||!reason.trim()||manifest.some(m=>!seen.includes(m.id))} onClick={()=>void review()}>{busy?'Enregistrement…':'Valider le contrôle RIA'}</Button><SavingStatus busy={busy} /></>}
   {manager&&!r.reviewedAt&&!r.returnReason&&r.confirmedAt&&<Button variant="secondary" disabled={busy||!reason.trim()} onClick={()=>void examine('return')}>Demander un nouveau contrôle</Button>}
   {error&&<p role="alert">{error}</p>}
  </Card>;

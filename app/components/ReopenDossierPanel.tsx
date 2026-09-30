@@ -2,6 +2,7 @@
 
 import { useRef, useState, type FormEvent } from 'react';
 import { Button, Card, Field } from './ui';
+import { SavingStatus } from './DossierContinuity';
 
 export function ReopenDossierPanel({ mode, busy, onSubmit }: {
   mode: 'reopen' | 'review';
@@ -28,7 +29,8 @@ export function ReopenDossierPanel({ mode, busy, onSubmit }: {
     <form onSubmit={submit}>
       <Field label={isReopen ? 'Motif de réouverture' : 'Conclusion du réexamen'}><textarea required minLength={10} maxLength={4000} rows={3} placeholder={isReopen ? 'Expliquez la réouverture — 10 caractères minimum.' : 'Décrivez votre conclusion — 10 caractères minimum.'} value={comment} onChange={(event) => { setComment(event.target.value); requestId.current=null; setError(''); }} /><small>10 caractères minimum, hors espaces en début et fin.</small></Field>
       {error ? <p role="alert" className="hint is-bad">{error}</p> : null}
-      <Button type="submit" disabled={busy || comment.trim().length < 10}>{busy ? 'Enregistrement…' : isReopen ? 'Rouvrir et transmettre au FM' : 'Confirmer le réexamen'}</Button>
+      <Button type="submit" aria-busy={busy} disabled={busy || comment.trim().length < 10}>{busy ? 'Enregistrement…' : isReopen ? 'Rouvrir et transmettre au FM' : 'Confirmer le réexamen'}</Button>
+      <SavingStatus busy={busy} />
     </form>
   </Card>;
 }

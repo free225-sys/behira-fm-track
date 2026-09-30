@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { Button, Field, Select, Card } from './ui';
-import { DossierActionBoard } from './DossierContinuity';
+import { DossierActionBoard, SavingStatus } from './DossierContinuity';
 import { normalizeAntiZombieSummary } from './anti-zombie-contract';
 import type { OperationalAnomaly } from '../lib/supabase/data';
 
@@ -40,6 +40,12 @@ export function Ge01WorkflowPanel({ anomaly, isManager, isAgent, onSubmit, onRef
   const labels = { assign: 'Affecter le diagnostic', diagnose: 'Confirmer le diagnostic', branch: 'Autoriser le traitement choisi', start: vendorWork ? 'Confirmer le début de l’intervention prestataire' : 'Démarrer l’intervention', finish: vendorWork ? 'Consigner le résultat de l’intervention prestataire' : 'Transmettre le compte rendu', close: 'Clôturer le dossier' };
   const permitted = command && (['assign', 'branch', 'close'].includes(command) ? isManager : (isAgent && anomaly.workflow?.assignedToCurrentUser) || isManager);
   const proofLocked = command === 'close' && !anomaly.proof;
+  const holdReasons: string[] = [];
+  if (permitted && !proofLocked && command && !confirming) {
+    if (!comment.trim()) holdReasons.push('Le commentaire est obligatoire.');
+    if (command === 'assign' && !selectedAgent && (anomaly.eligibleDiagnosisAssignees?.length ?? 0) > 0) holdReasons.push('Choisissez le responsable du diagnostic.');
+  }
+  const actionHold = holdReasons.length ? `${holdReasons.join(' ')} Acteur attendu : ${summary.expectedActor}.` : '';
   const submit = async () => {
     if (submitting.current || busy || (command === 'assign' && !selectedAgent)) return;
     submitting.current = true;
@@ -63,7 +69,7 @@ export function Ge01WorkflowPanel({ anomaly, isManager, isAgent, onSubmit, onRef
     {anomaly.treatment && <div className="ge01-treatment-summary"><p><strong>{treatmentLabel} autorisée</strong> · {anomaly.treatment.workOrderReference}</p>{anomaly.treatment.branch !== 'internal_without_cost' && <p>{anomaly.treatment.costReference} · {money(anomaly.treatment.amount)}{anomaly.treatment.vendorLabel ? ` · ${anomaly.treatment.vendorLabel}` : ''}</p>}<p>{anomaly.treatment.comment}</p>{vendorWork && <p>Évariste reste responsable du suivi interne. Il consigne le début, le résultat et le justificatif à contrôler par Faustin.</p>}</div>}
     {command === 'branch' && <p>Faustin choisit le traitement après le diagnostic. Une intervention avec coût nécessite une décision financière approuvée de ce dossier.</p>}
     {proofLocked && <p role="status">{isManager ? 'Consultez et acceptez la preuve dans l’onglet Preuves avant de clôturer.' : 'Déposez le justificatif dans l’onglet Preuves. Faustin pourra ensuite le vérifier et clôturer le dossier.'}</p>}
-    {command && !permitted && <p>Cette étape attend {command === 'diagnose' ? 'le diagnostic de l’agent affecté' : 'le Facility Manager'}.</p>}
+    {command && !permitted && <p role="status">Cette étape attend {command === 'diagnose' ? 'le diagnostic de l’agent affecté' : 'le Facility Manager'}. Acteur attendu : {summary.expectedActor}.</p>}
     {permitted && !proofLocked && <>
       {command === 'assign' && <Field label="Responsable du diagnostic">
         <Select value={employeeCode} disabled={busy || confirming} onChange={e => { setEmployeeCode(e.target.value); requestId.current = null; }}>
@@ -95,8 +101,8 @@ export function Ge01WorkflowPanel({ anomaly, isManager, isAgent, onSubmit, onRef
       <Field label={command === 'diagnose' ? 'Diagnostic et constat terrain' : command === 'finish' ? 'Intervention réalisée et résultat' : 'Commentaire de décision'}>
         <textarea required value={comment} disabled={busy || confirming} onChange={(event) => { setComment(event.target.value); requestId.current = null; }} />
       </Field>
-      {confirming ? <div><p>Confirmer l’enregistrement : {labels[command!]}. Le commentaire sera conservé dans le dossier.</p>{command === 'assign' && <p>Responsable : {selectedAgent?.label}</p>}{command === 'branch' && <p>{treatment.branch === 'internal_without_cost' ? 'Intervention interne sans coût' : `${treatment.branch === 'vendor' ? 'Prestataire' : 'Interne avec coût'} · ${selectedCost?.reference} · ${money(selectedCost?.amount ?? 0)}${selectedVendor && treatment.branch === 'vendor' ? ` · ${selectedVendor.label}` : ''}`}</p>}<Button variant="secondary" disabled={busy} onClick={() => { setConfirming(false); requestId.current = null; }}>Modifier le choix ou le commentaire</Button><Button disabled={busy || (command === 'assign' && !selectedAgent) || (command === 'branch' && !branchReady)} onClick={() => void submit()}>{busy ? 'Enregistrement…' : 'Confirmer l’enregistrement'}</Button></div>
-        : <Button disabled={busy || !comment.trim() || (command === 'assign' && !selectedAgent) || (command === 'branch' && !branchReady)} onClick={() => setConfirming(true)}>{labels[command!]}</Button>}
+      {confirming ? <div><p>Confirmer l’enregistrement : {labels[command!]}. Le commentaire sera conservé dans le dossier.</p>{command === 'assign' && <p>Responsable : {selectedAgent?.label}</p>}{command === 'branch' && <p>{treatment.branch === 'internal_without_cost' ? 'Intervention interne sans coût' : `${treatment.branch === 'vendor' ? 'Prestataire' : 'Interne avec coût'} · ${selectedCost?.reference} · ${money(selectedCost?.amount ?? 0)}${selectedVendor && treatment.branch === 'vendor' ? ` · ${selectedVendor.label}` : ''}`}</p>}<Button variant="secondary" disabled={busy} onClick={() => { setConfirming(false); requestId.current = null; }}>Modifier le choix ou le commentaire</Button><Button aria-busy={busy} disabled={busy || (command === 'assign' && !selectedAgent) || (command === 'branch' && !branchReady)} onClick={() => void submit()}>{busy ? 'Enregistrement…' : 'Confirmer l’enregistrement'}</Button><SavingStatus busy={busy} /></div>
+        : <>{actionHold ? <p id="ge01-action-reason" role="status">{actionHold}</p> : null}<Button aria-busy={busy} aria-describedby={actionHold ? 'ge01-action-reason' : undefined} disabled={busy || !comment.trim() || (command === 'assign' && !selectedAgent) || (command === 'branch' && !branchReady)} onClick={() => setConfirming(true)}>{labels[command!]}</Button></>}
     </>}
     </DossierActionBoard>
   </Card>;

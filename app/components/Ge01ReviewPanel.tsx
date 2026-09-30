@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import type { OperationalReport } from "../lib/supabase/data";
 import { GE01_PRIORITIES, ge01ConformityBlocker, validateGe01Review, type Ge01Review, type Ge01ReviewInput } from "../lib/ge01/review";
 import { Button, Field, Select } from "./ui";
+import { SavingStatus } from "./DossierContinuity";
 
 export type Ge01ReviewHandler = (report: OperationalReport, input: Ge01ReviewInput) => Promise<Ge01Review>;
 
@@ -69,7 +70,8 @@ export function Ge01ReviewPanel({ report, onReview, onOpenAnomaly }: {
       <Field label={decision === "anomaly" ? "Écart constaté et motif de la décision" : "Motif de l’examen"}><textarea aria-label={decision === "anomaly" ? "Écart constaté et motif de la décision" : "Motif de l’examen"} required maxLength={4000} value={comment} onChange={(event) => setComment(event.target.value)} /></Field>
       <label className="ge-review-confirm"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />J’ai examiné les réponses et je confirme cette décision.</label>
       {error ? <p role="alert" className="ge-field-error">{error}</p> : null}
-      <Button type="submit" disabled={busy || !decision || !confirmed}>{busy ? "Enregistrement…" : decision === "anomaly" ? "Enregistrer et ouvrir l’anomalie" : "Enregistrer l’examen"}</Button>
+      <Button type="submit" aria-busy={busy} disabled={busy || !decision || !confirmed}>{busy ? "Enregistrement…" : decision === "anomaly" ? "Enregistrer et ouvrir l’anomalie" : "Enregistrer l’examen"}</Button>
+      <SavingStatus busy={busy} />
     </fieldset>
   </form>;
 }

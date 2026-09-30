@@ -1,6 +1,7 @@
 'use client';
 import { useRef, useState, type FormEvent } from 'react';
 import { Button, Card, Field, Select } from './ui';
+import { SavingStatus } from './DossierContinuity';
 
 export type ReceptionHandler = (decision:'accepted'|'returned',comment:string,requestId:string)=>Promise<boolean>;
 export function InterventionReceptionPanel({summary,proofRequired,proofAccepted,busy,onSubmit,onOpenProofs}:{
@@ -34,7 +35,8 @@ export function InterventionReceptionPanel({summary,proofRequired,proofAccepted,
       {decision==='returned'&&<p>L’agent retrouvera le travail à reprendre et votre motif. L’échéance existante est conservée.</p>}
       <label className="ge-confirmation"><input type="checkbox" checked={confirmed} disabled={busy} onChange={e=>setConfirmed(e.target.checked)} /><span>{decision==='accepted'?'Je confirme la réception et la clôture de ce dossier.':'Je confirme le retour de cette intervention à l’agent.'}</span></label>
       {error&&<p role="alert">{error}</p>}
-      <Button type="submit" disabled={busy||!confirmed||comment.trim().length<10||(decision==='accepted'&&!canAccept)}>{busy?'Enregistrement…':decision==='accepted'?'Accepter et clôturer':'Renvoyer pour reprise'}</Button>
+      <Button type="submit" aria-busy={busy} disabled={busy||!confirmed||comment.trim().length<10||(decision==='accepted'&&!canAccept)}>{busy?'Enregistrement…':decision==='accepted'?'Accepter et clôturer':'Renvoyer pour reprise'}</Button>
+      <SavingStatus busy={busy} />
     </form>
   </Card>;
 }

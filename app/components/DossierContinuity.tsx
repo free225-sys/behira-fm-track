@@ -12,6 +12,13 @@ const BRANCH_COPY: Record<TreatmentBranch, { label: string; hint: string }> = {
   'non-choisie': { label: 'Branche non choisie', hint: 'Une approbation financière ne démarre pas l’intervention. Le diagnostic précède le choix de branche.' },
 };
 
+export const SAVING_STATUS_TEXT = 'Enregistrement en cours. Restez sur cette page.';
+
+export function SavingStatus({ busy }: { busy: boolean }) {
+  if (!busy) return null;
+  return <p className="saving-status" role="status">{SAVING_STATUS_TEXT}</p>;
+}
+
 export function DossierActionBoard({
   nextAction,
   expectedActor,
@@ -60,7 +67,7 @@ export function DossierActionBoard({
       <p className="dossier-action-hint">Le responsable interne du dossier n’est pas forcément l’acteur de la prochaine action.</p>
       {children ?? (readOnly
         ? <div className="next-step-read-only" role="note">Consultation uniquement · aucune action métier accordée</div>
-        : <Button disabled={busy} onClick={onPrimary}>{busy ? 'Enregistrement…' : primaryLabel}</Button>)}
+        : <><Button aria-busy={busy} disabled={busy} onClick={onPrimary}>{busy ? 'Enregistrement…' : primaryLabel}</Button><SavingStatus busy={busy} /></>)}
     </article>
   );
 }

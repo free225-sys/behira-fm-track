@@ -23,7 +23,8 @@
     "verify:water:ui": "node scripts/verify-connected-water-ui.mjs",
     "preview:water:ui": "node scripts/verify-connected-water-ui.mjs --serve",
     "verify:wilo": "node scripts/verify-wilo-observations.mjs",
-    "verify:round-choice": "node scripts/verify-round-choice-ui.mjs"
+    "verify:round-choice": "node scripts/verify-round-choice-ui.mjs",
+    "verify:dossier-fiche": "node scripts/verify-dossier-fiche-ui.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",
