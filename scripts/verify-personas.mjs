@@ -13,7 +13,8 @@ const accessWorkspace = await readFile(path.join(root, 'app', 'components', 'Acc
 const parametersWorkspace = await readFile(path.join(root, 'app', 'components', 'ParametersWorkspace.tsx'), 'utf8')
 const syncStatusNotice = await readFile(path.join(root, 'app', 'components', 'SyncStatusNotice.tsx'), 'utf8')
 const dossiersWorkspace = await readFile(path.join(root, 'app', 'components', 'DossiersWorkspace.tsx'), 'utf8')
-const appSource = `${page}\n${css}\n${badge}\n${equipmentWorkspace}\n${costsWorkspace}\n${accessWorkspace}\n${parametersWorkspace}\n${syncStatusNotice}\n${dossiersWorkspace}`
+const dossierContinuity = await readFile(path.join(root, 'app', 'components', 'DossierContinuity.tsx'), 'utf8')
+const appSource = `${page}\n${css}\n${badge}\n${equipmentWorkspace}\n${costsWorkspace}\n${accessWorkspace}\n${parametersWorkspace}\n${syncStatusNotice}\n${dossiersWorkspace}\n${dossierContinuity}`
 
 const checks = []
 const requireAll = (label, source, values) => {
@@ -120,7 +121,7 @@ requireAll('Résilience terrain sans promesse hors ligne fictive', appSource, [
   'Aucun mode hors ligne ni reprise automatique', 'Échec de l’enregistrement', 'Réessayer',
 ])
 requireAll('Mesures Surpresseur explicables', eauRounds, [
-  'MeasureRange', 'DANS LA PLAGE', 'HORS PLAGE', 'Variation</b>Indisponible', 'Fraîcheur</b>Indisponible',
+  'MeasureRange', 'DANS LA PLAGE', 'HORS PLAGE', '4,5 à 5,5', 'Indisponible',
 ])
 requireAll('Verrou critique et retour Direction', page, [
   "selected.priority === 'Critique' && !selected.proof", 'retour envoyé à Facility Manager', 'Confirmer et notifier Facility Manager',

@@ -88,7 +88,7 @@ try {
     await page.getByRole('button', { name: 'Ronde hors planning' }).click();
     await page.getByRole('option', { name: /IRR-01/ }).click();
     await page.getByRole('heading', { name: /IRR-01 · Ronde irrigation/ }).waitFor();
-    await page.getByText('RECETTE — DONNÉES FICTIVES').waitFor();
+    await page.getByText('Saisie recette').waitFor();
     await page.getByRole('button', { name: 'Continuer →' }).click();
     await page.locator('.irr-field').filter({ hasText: 'Coffret irrigation' }).getByRole('button', { name: 'Sec', exact: true }).click();
     await page.waitForFunction(() => Object.keys(window.saved).includes('round:eau_incendie:IRR-01:recette'));
@@ -132,7 +132,7 @@ try {
     await page.getByRole('option', { name: /WILO-01/ }).click();
     await page.getByText('Formulaire WILO-01').waitFor();
     assert.equal(await page.getByRole('button', { name: 'Ronde à effectuer' }).getAttribute('aria-expanded'), 'false', 'la liste se ferme après le choix');
-    assert.equal(await page.getByText('RECETTE — DONNÉES FICTIVES').count(), 1, 'le mode Recette reste monté avec le brouillon IRR');
+    assert.equal(await page.getByText('Saisie recette').count(), 1, 'le mode Recette reste monté avec le brouillon IRR');
     await page.getByRole('button', { name: 'Ronde à effectuer' }).click();
     await page.getByRole('option', { name: /IRR-01/ }).click();
     const sec = page.locator('.irr-field').filter({ hasText: 'Coffret irrigation' }).getByRole('button', { name: 'Sec', exact: true });

@@ -3,6 +3,9 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Button, Card, Field, Select } from './ui';
 import { SavingStatus } from './DossierContinuity';
 import { RoundPilotHeader } from './shared/RoundPilotHeader';
+import { RoundModeBadge } from './shared/RoundModeBadge';
+import { RoundStepRail } from './shared/RoundStepRail';
+import { ObservationChoices } from './WiloSupplement';
 import { RoundDateTimeFields } from './shared/RoundDateTimeFields';
 import { OfflineSyncStatus } from './OfflineSyncStatus';
 import { RIA_FIELDS, RIA_PHOTOS, riaHasAnomaly, emptyRiaDraft, riaPayload, type RiaDraft, type RiaPhoto } from '../lib/ria/report';
@@ -40,7 +43,7 @@ export function RiaRoundSpace({isTest=false,manager,enabled,offlineSync,onRefres
   </Card>;
  const review=report?<RiaReview isTest={isTest} key={report.id} report={report} manager={manager} onOpenAnomaly={onOpenAnomaly} onDone={()=>{void refresh();onRefresh();}}/>:null;
  const main=<>
-  <RoundPilotHeader title="RIA-01 · Réseau incendie" subtitle="Cinq étapes · contrôle quotidien" badge={<span className="mockup-label">Saisie terrain</span>}/><Card><p>Cadence à confirmer · heure d’Abidjan. Les réglages des pressostats et les essais spécialisés relèvent de SECURISYS.</p><p>Valeur de pression de référence à confirmer par SECURISYS.</p></Card>
+  <RoundPilotHeader title="RIA-01 · Réseau incendie" subtitle="Cinq étapes · contrôle quotidien" badge={<RoundModeBadge persistenceEnabled isTest={isTest} />}/><Card><p>Cadence à confirmer · heure d’Abidjan. Les réglages des pressostats et les essais spécialisés relèvent de SECURISYS.</p><p>Valeur de pression de référence à confirmer par SECURISYS.</p></Card>
   {!manager&&<RiaForm key={String(isTest)} isTest={isTest} offlineSync={offlineSync} rounds={rounds} hideScore={columnHistory}/>}
  </>;
  if(columnHistory&&!manager)return <section className="surpresseur-layout" aria-label="Ronde RIA-01"><div className="round-column">{main}</div><aside className="surpresseur-aside"><RoundScoreCard code="RIA-01"/>{history}{review}</aside></section>;
@@ -80,14 +83,24 @@ export function RiaForm({isTest=false,offlineSync:s,rounds=[],hideScore=false}:{
  return <Card><div className="panel-head"><div><h3>{draft.queued?'Ronde transmise':'Contrôle quotidien du réseau incendie'}</h3><p>Réalisation : {stamp(draft.performedAt)}</p></div></div>
   <OfflineSyncStatus enabled online={s.online} running={s.running} counts={s.counts} latestIssue={s.latestIssue} latestRoundReceipt={receipt} onRetry={()=>void s.retryFailed().then(()=>s.synchronize())}/>
   {draft.queued?<><p role="status">{confirmedReference?`${confirmedReference} — rapport et photos confirmés par le serveur.`:'Rapport protégé dans la file d’envoi. Attendez la confirmation serveur.'}</p><Button variant="secondary" disabled={!confirmedReference} onClick={()=>{const next=emptyRiaDraft();setTestAttested(false);change(next);setStep(0);setFurthestStep(0);}}>Nouvelle ronde hors planning</Button></>:<>
-   <div className="surpresseur-progress connected-round-progress" aria-label="Étapes RIA">{labels.map((label,i)=><button type="button" key={label} className={i===step?'active':i<step?'done':''} disabled={i>Math.max(step,furthestStep)} aria-current={i===step?'step':undefined} onClick={()=>setStep(i)}><span>{i<step?'✓':i+1}</span><b>{label}</b></button>)}</div>
+   <RoundStepRail labels={labels} step={step} furthest={furthestStep} onStep={setStep} label="Étapes RIA" />
   <fieldset disabled={busy}><legend>{labels[step]}</legend><div className="two-fields">
     {step===0&&<RoundDateTimeFields value={draft.performedAt} onChange={performedAt=>change({...draft,performedAt})}/>}
-    {sections[step].map(([code,label,type])=><div key={code}><Field label={label}>{type==='number'?<input inputMode="decimal" value={draft.answers[code]==='unknown'?'':draft.answers[code]??''} disabled={draft.answers[code]==='unknown'} onChange={e=>change({...draft,answers:{...draft.answers,[code]:e.target.value}})}/>:<div className="choice-row" role="group" aria-label={label}>{[...(type==='bool'?[['yes','Oui'],['no','Non']]:type.split('|').map(v=>[v,v])),['unknown','Non vérifié']].map(([value,text])=><button type="button" key={value} className={`choice-button ${draft.answers[code]===value?'is-selected':''}`} aria-pressed={draft.answers[code]===value} onClick={()=>change({...draft,answers:{...draft.answers,[code]:value}})}>{text}</button>)}</div>}</Field>
-     {type==='number'&&(!draft.answers[code]?.trim()||draft.answers[code]==='unknown')&&<p className="measure-empty"><span>Valeur non renseignée</span> · <b>À COMPLÉTER</b></p>}
-     {type==='number'&&<label><input type="checkbox" checked={draft.answers[code]==='unknown'} onChange={e=>change({...draft,answers:{...draft.answers,[code]:e.target.checked?'unknown':''}})}/> Non relevé</label>}
-     {draft.answers[code]==='unknown'&&<Field label="Motif de non-vérification"><input value={draft.reasons[code]??''} onChange={e=>change({...draft,reasons:{...draft.reasons,[code]:e.target.value}})}/></Field>}
-    </div>)}
+    {sections[step].map(([code,label,type])=>{
+      const unverified=draft.answers[code]==='unknown';
+      const answered=Boolean(draft.answers[code])&&!unverified;
+      const options:[string,string][]=type==='bool'?[['yes','Oui'],['no','Non']]:type==='number'?[]:type.split('|').map(v=>[v,v] as [string,string]);
+      return <div key={code} className={`wilo-field ${unverified?'is-unverified':''}`}>
+        {type==='number'
+          ? <Field label={label}><input inputMode="decimal" value={unverified?'':draft.answers[code]??''} disabled={unverified} onChange={e=>change({...draft,answers:{...draft.answers,[code]:e.target.value}})}/></Field>
+          : <><span className="field-label">{label}</span><ObservationChoices code={code} label={label} options={options} value={unverified?'':draft.answers[code]??''} onChange={value=>change({...draft,answers:{...draft.answers,[code]:value}})}/></>}
+        {type==='number'&&(!draft.answers[code]?.trim()||unverified)&&<p className="measure-empty"><span>Valeur non renseignée</span> · <b>À COMPLÉTER</b></p>}
+        {type==='number'
+          ? <label className="wilo-unverified-toggle"><input type="checkbox" checked={unverified} onChange={e=>change({...draft,answers:{...draft.answers,[code]:e.target.checked?'unknown':''}})}/> Mesure impossible à relever</label>
+          : <div className="wilo-field-foot">{answered?null:<small className="field-hint">{unverified?'Contrôle non effectué : précisez pourquoi.':'À renseigner pendant la ronde.'}</small>}<button type="button" className="linkbtn wilo-unverified-link" aria-pressed={unverified} onClick={()=>change({...draft,answers:{...draft.answers,[code]:unverified?'':'unknown'}})}>{unverified?'Je peux finalement vérifier':'Je ne peux pas vérifier'}</button></div>}
+        {unverified&&<Field label={`Motif — ${label}`}><input value={draft.reasons[code]??''} onChange={e=>change({...draft,reasons:{...draft.reasons,[code]:e.target.value}})} placeholder="Précisez pourquoi le contrôle n’a pas pu être effectué"/></Field>}
+      </div>;
+    })}
    </div>
    {step===4&&<><p>Sans anomalie : aucune photo requise. En cas d’anomalie : joignez une photo ou expliquez pourquoi elle est impossible.</p>
     {Object.entries(RIA_PHOTOS).filter(([purpose])=>(riaHasAnomaly(draft)&&purpose==='defect')||draft.photos.some(p=>p.purpose===purpose)).map(([purpose,label])=><Field key={purpose} label={label}><input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>void addPhoto(purpose as RiaPhoto['purpose'],e.target.files?.[0])}/><small>{draft.photos.find(p=>p.purpose===purpose)?.file.name??'Aucune photo'}</small></Field>)}

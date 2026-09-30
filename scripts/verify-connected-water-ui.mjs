@@ -21,10 +21,11 @@ const s={online:false,running:false,counts:{pending:0,syncing:0,synced:0,failed:
 createRoot(document.getElementById('root')).render(<main style={{maxWidth:1180,padding:16,margin:'auto'}}><>{!wilo&&<RoundPilotHeader title="RIA-01 · Réseau incendie" subtitle="Cinq étapes · contrôle quotidien" badge={<span className="mockup-label">Saisie terrain</span>}/>}</><>{wilo?<LegacyReport isTest={isTest} persona={{id:"eau_incendie",name:"Agent de test",role:"Eau et incendie"}} persistenceEnabled={true} offlineSync={s} onNavigate={()=>{}} flash={()=>{}} history={<div className="round-history">Historique WILO-01</div>}/>:<RiaForm isTest={isTest} offlineSync={s}/>}</></main>);
 `);
 const server=await createServer({configFile:false,define:{"process.env":{}},root:dir,plugins:[{name:'test-only-export',enforce:'pre',transform(code,id){if(id.replaceAll('\\','/').endsWith('/app/page.tsx'))return code.replace('function LegacyReport(', 'export function LegacyReport(');}},react()],resolve:{dedupe:['react','react-dom'],alias:{react:resolve(root,'node_modules/react'),'react-dom':resolve(root,'node_modules/react-dom')}},server:{host:'127.0.0.1',port:4187,strictPort:true,fs:{allow:[root,dir]}}});
-const {chromium}=await import(pathToFileURL(resolve(root,'../../.analysis_runtime/node_modules/playwright/index.mjs')).href);
+const playwright=process.env.PLAYWRIGHT_MODULE ?? pathToFileURL(resolve(root,'../../.analysis_runtime/node_modules/playwright/index.mjs')).href;
+const {chromium}=await import(playwright);
 let browser;
 try{
- await server.listen();browser=await chromium.launch({channel:'chrome',headless:true});
+ await server.listen();browser=await chromium.launch(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH,headless:true}:{channel:'chrome',headless:true});
  for(const width of [1440,380]){
  const page=await browser.newPage({viewport:{width,height:900},timezoneId:'Europe/Paris'});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
@@ -105,7 +106,7 @@ try{
   const attestation=page.getByRole('checkbox',{name:/fictives/});assert.equal(await attestation.isChecked(),false);
   const confirm=page.getByRole('checkbox',{name:/observations correspondent|valeurs correspondent/});await confirm.check();
   const send=page.getByRole('button',{name:equipment==='wilo'?'Terminer la ronde':'Transmettre le rapport RIA'});
-  if(equipment==='wilo')await send.click();else assert.equal(await send.isDisabled(),true);
+  assert.equal(await send.isDisabled(),true,'envoi refusé tant que la recette n’est pas attestée');
   assert.equal(await page.evaluate(()=>window.calls),0,'no un-attested enqueue');
   await attestation.check();await send.click();await page.waitForFunction(()=>window.calls===1);
   const data=await page.evaluate(()=>window.payload);assert.equal(data.isTest,true);assert.equal(data.testAttested,true);

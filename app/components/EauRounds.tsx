@@ -4,20 +4,23 @@ import { useState, type CSSProperties } from 'react';
 
 import { ge01NowStamp } from '../lib/ge01/report';
 import { displayAssetCode } from '../lib/ui-contract/display.ts';
+import { wiloPressureState } from '../lib/wilo/report';
 import { SyncStatusNotice } from './SyncStatusNotice';
-import { RoundPilotHeader, SegmentedControl } from './shared';
-import { Badge, BrandIcon, Button, Select } from './ui';
+import { RoundModeBadge, RoundPilotHeader, RoundStepRail, SegmentedControl } from './shared';
+import { Badge, BrandIcon, Button, Field, Select } from './ui';
 
-type Answer = '' | 'ok' | 'alert';
+type ControlAnswer = '' | 'ok' | 'ko' | 'unknown';
 type Asset = 'wilo' | 'ria';
 
 const wiloSteps = ['Contexte', 'Pression', 'Pompes', 'Sécurité', 'Synthèse'];
 const riaSteps = ['Local', 'Coffret'];
 const observationOptions = [
   { value: 'ok' as const, label: 'Conforme' },
-  { value: 'alert' as const, label: 'À signaler' },
-  { value: 'unseen' as const, label: 'Non observé' },
+  { value: 'alert' as const, label: 'Anomalie' },
+  { value: 'unknown' as const, label: 'Non vérifié' },
 ];
+const roundTypes = ['Quotidienne', 'Après intervention', 'Contrôle exceptionnel'];
+const pumpKeys = ['auto', 'p1', 'p2', 'leak', 'valves', 'alarm'];
 
 function readMeasure(raw: string) {
   const trimmed = raw.trim().replace(',', '.');
@@ -37,15 +40,15 @@ function initials(name: string) {
   return `${letter(parts[0])}${letter(parts[1])}` || '—';
 }
 
-function MeasureRange({ label, value, min, max, unit }: { label: string; value: number; min: number; max: number; unit: string }) {
+function MeasureRange({ label, value, min, max, unit, embedded = false }: { label: string; value: number; min: number; max: number; unit: string; embedded?: boolean }) {
   const valid = Number.isFinite(value);
   const inRange = valid && value >= min && value <= max;
   const span = max - min;
   const position = !valid ? 0 : span === 0 ? (value === min ? 50 : value < min ? 0 : 100) : Math.max(0, Math.min(100, ((value - min) / span) * 100));
   return (
-    <article className={`measure-range ${!valid ? 'unknown' : inRange ? 'in-range' : 'out-range'}`}>
+    <article className={`measure-range ${embedded ? 'is-embedded' : ''} ${!valid ? 'unknown' : inRange ? 'in-range' : 'out-range'}`}>
       <div>
-        <span>{label}</span>
+        {embedded ? null : <span>{label}</span>}
         <b>{valid ? `${value.toLocaleString('fr-FR')} ${unit}` : 'Valeur non renseignée'}</b>
         <em>{valid ? (inRange ? 'DANS LA PLAGE' : 'HORS PLAGE') : 'À COMPLÉTER'}</em>
       </div>
@@ -57,42 +60,20 @@ function MeasureRange({ label, value, min, max, unit }: { label: string; value: 
   );
 }
 
-function StepRail({ labels, step, onStep }: { labels: string[]; step: number; onStep: (index: number) => void }) {
+function MockControl({ title, detail, value, reason, onChoose, onReason }: {
+  title: string; detail: string; value: ControlAnswer; reason: string;
+  onChoose: (value: ControlAnswer) => void; onReason: (value: string) => void;
+}) {
   return (
-    <nav className={`surpresseur-progress${labels.length === 2 ? ' is-two' : ''}`} aria-label="Progression de la ronde">
-      {labels.map((item, index) => (
-        <button
-          key={item}
-          type="button"
-          className={index === step ? 'active' : index < step ? 'done' : ''}
-          aria-current={index === step ? 'step' : undefined}
-          disabled={index > step}
-          onClick={() => index <= step && onStep(index)}
-        >
-          <span>{index < step ? '✓' : index + 1}</span>
-          <b>{item}</b>
-        </button>
-      ))}
-    </nav>
-  );
-}
-
-function CheckGrid({ items, checks, onCycle }: { items: Array<[string, string, string]>; checks: Record<string, Answer>; onCycle: (key: string) => void }) {
-  return (
-    <div className="check-grid">
-      {items.map(([key, title, detail]) => {
-        const answer = checks[key] ?? '';
-        const tone = answer === 'ok' ? 'checked' : answer === 'alert' ? 'unchecked' : 'unset';
-        const mark = answer === 'ok' ? '✓' : answer === 'alert' ? '!' : '·';
-        const caption = answer === 'ok' ? 'Conforme' : answer === 'alert' ? 'À signaler' : 'À renseigner';
-        return (
-          <button type="button" key={key} className={tone} onClick={() => onCycle(key)}>
-            <span>{mark}</span>
-            <p><b>{title}</b><small>{detail}</small></p>
-            <em>{caption}</em>
-          </button>
-        );
-      })}
+    <div className={`control-choice ${value === 'ko' ? 'is-anomaly' : ''}`} role="group" aria-label={title}>
+      <p><b>{title}</b><small>{detail}</small></p>
+      <div className="choice-set">
+        <button type="button" className={`choice-chip ${value === 'ok' ? 'is-selected' : ''}`} aria-pressed={value === 'ok'} onClick={() => onChoose(value === 'ok' ? '' : 'ok')}>Conforme</button>
+        <button type="button" className={`choice-chip ${value === 'ko' ? 'is-selected is-anomaly' : ''}`} aria-pressed={value === 'ko'} onClick={() => onChoose(value === 'ko' ? '' : 'ko')}>Anomalie</button>
+        <button type="button" className={`choice-chip ${value === 'unknown' ? 'is-selected' : ''}`} aria-pressed={value === 'unknown'} onClick={() => onChoose(value === 'unknown' ? '' : 'unknown')}>Non vérifié</button>
+      </div>
+      {value === '' ? <small className="field-hint">À contrôler pendant la ronde.</small> : null}
+      {value === 'unknown' ? <Field label={`Motif — ${title}`}><input value={reason} onChange={(event) => onReason(event.target.value)} placeholder="Précisez pourquoi le contrôle n’a pas pu être effectué" /></Field> : null}
     </div>
   );
 }
@@ -107,29 +88,44 @@ export function EauRounds({ agentName, draftNote, onSubmit, asset: assetProp, sh
   const [wiloTime, setWiloTime] = useState(stamp.time);
   const [riaDate, setRiaDate] = useState(stamp.date);
   const [riaTime, setRiaTime] = useState(stamp.time);
+  const [roundType, setRoundType] = useState('');
   const [pressure, setPressure] = useState('');
   const [tankLevel, setTankLevel] = useState('');
   const [observation, setObservation] = useState('');
   const [confirmed, setConfirmed] = useState(false);
-  const [checks, setChecks] = useState<Record<string, Answer>>({});
-  const [riaAnswers, setRiaAnswers] = useState<Record<string, '' | 'ok' | 'alert' | 'unseen'>>({});
+  const [riaConfirmed, setRiaConfirmed] = useState(false);
+  const [photoReason, setPhotoReason] = useState('');
+  const [checks, setChecks] = useState<Record<string, ControlAnswer>>({});
+  const [reasons, setReasons] = useState<Record<string, string>>({});
+  const [riaAnswers, setRiaAnswers] = useState<Record<string, '' | 'ok' | 'alert' | 'unknown'>>({});
   const [riaPressure, setRiaPressure] = useState('');
 
   const pressureValue = readMeasure(pressure);
   const tankValue = readMeasure(tankLevel);
   const riaPressureValue = readMeasure(riaPressure);
-  const hasPressureAlert = Number.isFinite(pressureValue) && pressureValue < 3;
-  const pumpKeys = ['auto', 'p1', 'p2', 'leak', 'valves', 'alarm'];
-  const answeredChecks = pumpKeys.filter((key) => checks[key] === 'ok' || checks[key] === 'alert').length;
-  const wiloComplete = Number.isFinite(pressureValue) && Number.isFinite(tankValue) && answeredChecks === pumpKeys.length;
-  const cycle = (key: string) => setChecks((items) => {
-    const order: Answer[] = ['', 'ok', 'alert'];
-    const next = order[(order.indexOf(items[key] ?? '') + 1) % order.length];
-    return { ...items, [key]: next };
-  });
+  const pressureState = wiloPressureState(pressure);
+  const hasPressureAlert = pressureState === 'alert' || pressureState === 'critical';
+  const controlDone = (key: string) => checks[key] === 'ok' || checks[key] === 'ko' || (checks[key] === 'unknown' && Boolean(reasons[key]?.trim()));
+  const answeredChecks = pumpKeys.filter((key) => controlDone(key)).length;
+  const measuresDone = (Number.isFinite(pressureValue) || Boolean(reasons.pressure?.trim())) && (Number.isFinite(tankValue) && tankValue >= 0 && tankValue <= 100 || Boolean(reasons.tank?.trim()));
+  const hasFinding = hasPressureAlert || pumpKeys.some((key) => checks[key] === 'ko');
+  const wiloComplete = measuresDone && answeredChecks === pumpKeys.length && (!hasFinding || Boolean(photoReason.trim()));
+  const choose = (key: string, value: ControlAnswer) => {
+    setChecks((items) => ({ ...items, [key]: value }));
+    if (value !== 'unknown') setReasons((items) => ({ ...items, [key]: '' }));
+    setConfirmed(false);
+  };
 
   const wiloCode = displayAssetCode('DEMO-EAU');
   const riaCode = displayAssetCode('DEMO-SSI');
+  const controls: Array<[string, string, string]> = [
+    ['auto', 'Mode automatique actif', 'Commande générale'],
+    ['p1', 'Pompe P1 disponible', 'Pompe prioritaire'],
+    ['p2', 'Pompe P2 disponible', 'Pompe de secours'],
+    ['leak', 'Absence de fuite active', 'Collecteur et raccords'],
+    ['valves', 'Vannes en position normale', 'Aspiration et refoulement'],
+    ['alarm', 'Aucune alarme active', 'Coffret et supervision'],
+  ];
 
   return (
     <>
@@ -143,13 +139,13 @@ export function EauRounds({ agentName, draftNote, onSubmit, asset: assetProp, sh
           <RoundPilotHeader
             title={`${wiloCode} · Ronde quotidienne du surpresseur`}
             subtitle="Cinq étapes · fréquence quotidienne"
-            badge={<Badge tone="neutral">BROUILLON LOCAL</Badge>}
+            badge={<RoundModeBadge persistenceEnabled={false} />}
           />
           <SyncStatusNotice state="demo-volatile" label="État de la ronde Surpresseur" />
-          <StepRail labels={wiloSteps} step={wiloStep} onStep={setWiloStep} />
+          <RoundStepRail labels={wiloSteps} step={wiloStep} onStep={setWiloStep} label="Progression de la ronde" />
           <section className="surpresseur-layout">
             <article className="panel surpresseur-form-card">
-              <div className="surpresseur-section-head"><div><span>ÉTAPE {wiloStep + 1} SUR 5</span><h3>{wiloSteps[wiloStep]}</h3></div><span className="mockup-label">MAQUETTE INTERACTIVE</span></div>
+              <div className="surpresseur-section-head"><div><span>ÉTAPE {wiloStep + 1} SUR 5</span><h3>{wiloSteps[wiloStep]}</h3></div></div>
 
               {wiloStep === 0 && (
                 <div className="surpresseur-fields ge-fields">
@@ -175,7 +171,12 @@ export function EauRounds({ agentName, draftNote, onSubmit, asset: assetProp, sh
                       </div>
                     </div>
                   </div>
-                  <label className="field">Type de ronde<Select defaultValue="Quotidienne"><option>Quotidienne</option><option>Après intervention</option><option>Contrôle exceptionnel</option></Select></label>
+                  <div className="control-choice" role="group" aria-label="Type de ronde">
+                    <p><b>Type de ronde</b><small>Aucune réponse n’est présélectionnée.</small></p>
+                    <div className="choice-set">
+                      {roundTypes.map((item) => <button key={item} type="button" className={`choice-chip ${roundType === item ? 'is-selected' : ''}`} aria-pressed={roundType === item} onClick={() => setRoundType(roundType === item ? '' : item)}>{item}</button>)}
+                    </div>
+                  </div>
                   <div className="surpresseur-callout"><span>i</span><p><b>Contrôle terrain</b><small>Vérifier les pompes et relever la pression observée. Ne déclarez que les écarts constatés. Aucune réponse n’est présélectionnée.</small></p></div>
                 </div>
               )}
@@ -183,31 +184,27 @@ export function EauRounds({ agentName, draftNote, onSubmit, asset: assetProp, sh
               {wiloStep === 1 && (
                 <div className="surpresseur-fields">
                   <div className="measure-grid">
-                    <label><span>Pression réseau</span><div><input value={pressure} inputMode="decimal" placeholder="—" aria-label="Pression réseau" onChange={(event) => setPressure(event.target.value)} /><b>bar</b></div><small>Plage attendue : 3,0 à 4,5 bar. Vide ≠ 0.</small></label>
-                    <label><span>Niveau bâche</span><div><input value={tankLevel} inputMode="decimal" placeholder="—" aria-label="Niveau bâche" onChange={(event) => setTankLevel(event.target.value)} /><b>%</b></div><small>Plage de contrôle : 40 à 100 %. Vide ≠ 0.</small></label>
+                    <label><span>Pression affichée au coffret</span><div><input value={pressure} inputMode="decimal" placeholder="—" aria-label="Pression réseau" onChange={(event) => { setPressure(event.target.value); setConfirmed(false); }} /><b>bar</b></div><small>Plage normale : 4,5 à 5,5 bar, bornes incluses. Critique sous 4 ou au-dessus de 6. Vide ≠ 0.</small><MeasureRange embedded label="Pression affichée au coffret" value={pressure.trim() === '' ? Number.NaN : pressureValue} min={4.5} max={5.5} unit="bar" /></label>
+                    <label><span>Niveau bâche</span><div><input value={tankLevel} inputMode="decimal" placeholder="—" aria-label="Niveau bâche" onChange={(event) => { setTankLevel(event.target.value); setConfirmed(false); }} /><b>%</b></div><small>Pourcentage réellement mesuré, de 0 à 100 %. Vide ≠ 0.</small><MeasureRange embedded label="Niveau de bâche" value={tankLevel.trim() === '' ? Number.NaN : tankValue} min={0} max={100} unit="%" /></label>
                   </div>
-                  <div className="measure-range-grid">
-                    <MeasureRange label="Pression réseau" value={pressureValue} min={3} max={4.5} unit="bar" />
-                    <MeasureRange label="Niveau de bâche" value={tankValue} min={40} max={100} unit="%" />
-                  </div>
-                  {hasPressureAlert && <div className="measure-alert"><span>!</span><div><b>Écart constaté</b><small>La pression saisie est inférieure au seuil. Un constat sera proposé à Facility Manager.</small></div></div>}
+                  {hasPressureAlert && <div className="measure-alert"><span>!</span><div><b>Écart constaté</b><small>{pressureState === 'critical' ? 'Pression critique (sous 4 ou au-dessus de 6 bar). Un constat critique sera proposé à Facility Manager.' : 'La pression saisie est hors de la plage métier. Un constat sera proposé à Facility Manager.'}</small></div></div>}
                   <label className="field">Stabilité du manomètre<Select defaultValue=""><option value="">Choisir</option><option>Stable</option><option>Oscillation légère</option><option>Oscillation importante</option></Select></label>
                 </div>
               )}
 
               {wiloStep === 2 && (
                 <div className="surpresseur-fields">
-                  <CheckGrid
-                    checks={checks}
-                    onCycle={cycle}
-                    items={[['auto', 'Mode automatique actif', 'Commande générale'], ['p1', 'Pompe P1 disponible', 'Pompe prioritaire'], ['p2', 'Pompe P2 disponible', 'Pompe de secours'], ['leak', 'Absence de fuite active', 'Collecteur et raccords']]}
-                  />
+                  <div className="control-choice-grid">
+                    {controls.slice(0, 4).map(([key, title, detail]) => <MockControl key={key} title={title} detail={detail} value={checks[key] ?? ''} reason={reasons[key] ?? ''} onChoose={(value) => choose(key, value)} onReason={(value) => setReasons((items) => ({ ...items, [key]: value }))} />)}
+                  </div>
                 </div>
               )}
 
               {wiloStep === 3 && (
                 <div className="surpresseur-fields">
-                  <CheckGrid checks={checks} onCycle={cycle} items={[['valves', 'Vannes en position normale', 'Aspiration et refoulement'], ['alarm', 'Aucune alarme active', 'Coffret et supervision']]} />
+                  <div className="control-choice-grid">
+                    {controls.slice(4).map(([key, title, detail]) => <MockControl key={key} title={title} detail={detail} value={checks[key] ?? ''} reason={reasons[key] ?? ''} onChoose={(value) => choose(key, value)} onReason={(value) => setReasons((items) => ({ ...items, [key]: value }))} />)}
+                  </div>
                   <label className="field">Observation terrain<textarea value={observation} placeholder="Observation factuelle ou précision sur un écart." onChange={(event) => setObservation(event.target.value)} /></label>
                 </div>
               )}
@@ -215,17 +212,21 @@ export function EauRounds({ agentName, draftNote, onSubmit, asset: assetProp, sh
               {wiloStep === 4 && (
                 <div className="surpresseur-fields">
                   <div className="round-summary">
-                    <div><span>MESURES</span><b className={hasPressureAlert ? 'warning' : ''}>{Number.isFinite(pressureValue) ? `${pressureValue.toLocaleString('fr-FR')} bar` : '— bar'}</b><small>Pression réseau</small></div>
-                    <div><span>NIVEAU</span><b>{Number.isFinite(tankValue) ? `${tankValue.toLocaleString('fr-FR')} %` : '— %'}</b><small>Bâche de stockage</small></div>
+                    <div><span>MESURES</span><b className={hasPressureAlert ? 'warning' : ''}>{Number.isFinite(pressureValue) ? `${pressureValue.toLocaleString('fr-FR')} bar` : 'Valeur non renseignée'}</b><small>{Number.isFinite(pressureValue) ? 'Pression réseau' : 'À COMPLÉTER'}</small></div>
+                    <div><span>NIVEAU</span><b>{Number.isFinite(tankValue) ? `${tankValue.toLocaleString('fr-FR')} %` : 'Valeur non renseignée'}</b><small>{Number.isFinite(tankValue) ? 'Bâche de stockage' : 'À COMPLÉTER'}</small></div>
                     <div><span>CONTRÔLES</span><b>{answeredChecks}/6</b><small>Réponses saisies</small></div>
                   </div>
                   {!wiloComplete ? (
                     <div className="surpresseur-callout"><span>i</span><p><b>Contrôle incomplet</b><small>Renseignez les deux mesures et les six contrôles avant de conclure. Une case vide n’est ni un zéro ni un écart.</small></p></div>
                   ) : hasPressureAlert ? (
-                    <div className="proposed-finding"><span>!</span><div><p>CONSTAT PROPOSÉ</p><h4>Pression surpresseur sous le seuil attendu</h4><small>Priorité proposée : Haute · Transmission à la file de qualification de Facility Manager.</small></div><Badge tone="orange">À QUALIFIER</Badge></div>
+                    <div className="proposed-finding"><span>!</span><div><p>CONSTAT PROPOSÉ</p><h4>Pression surpresseur hors plage attendue</h4><small>Priorité proposée : {pressureState === 'critical' ? 'Critique' : 'Haute'} · Transmission à la file de qualification de Facility Manager.</small></div><Badge tone="orange">À QUALIFIER</Badge></div>
+                  ) : hasFinding ? (
+                    <div className="proposed-finding"><span>!</span><div><p>CONSTAT PROPOSÉ</p><h4>Écart constaté pendant la ronde</h4><small>Transmission à la file de qualification de Facility Manager.</small></div><Badge tone="orange">À QUALIFIER</Badge></div>
                   ) : (
                     <div className="surpresseur-callout"><span>i</span><p><b>Aucun écart déclaré</b><small>Les mesures saisies sont dans la plage. Aucun constat n’est proposé automatiquement.</small></p></div>
                   )}
+                  {hasFinding && <Field label="Photo non jointe — motif obligatoire"><textarea maxLength={2000} value={photoReason} onChange={(event) => setPhotoReason(event.target.value)} /></Field>}
+                  {hasFinding && !photoReason.trim() && <p role="status">Indiquez le motif d’absence de photo ; vous pourrez joindre une preuve au dossier après synchronisation.</p>}
                   <label className="confirmation-line"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} /><span>Je confirme que les valeurs correspondent à la ronde réalisée sur {wiloCode}.</span></label>
                 </div>
               )}
@@ -233,12 +234,12 @@ export function EauRounds({ agentName, draftNote, onSubmit, asset: assetProp, sh
               <div className="surpresseur-actions">
                 <button className="secondary-button" type="button" disabled={wiloStep === 0} onClick={() => setWiloStep((value) => Math.max(0, value - 1))}>← Précédent</button>
                 <p>{draftNote}</p>
-                {wiloStep < 4 ? <button className="primary-button" type="button" onClick={() => setWiloStep((value) => Math.min(4, value + 1))}>Continuer →</button> : <button className="primary-button" type="button" onClick={onSubmit}>Valider la maquette</button>}
+                {wiloStep < 4 ? <button className="primary-button" type="button" onClick={() => setWiloStep((value) => Math.min(4, value + 1))}>Continuer →</button> : <button className="primary-button" type="button" disabled={!wiloComplete || !confirmed} onClick={onSubmit}>Valider la maquette</button>}
               </div>
             </article>
             <aside className="surpresseur-aside">
-              <article className="panel next-action-card"><p className="design-kicker">À SURVEILLER</p><span className="next-action-icon">!</span><h3>Réarmement provisoire</h3><p>Un réarmement ne suffit pas à clôturer une anomalie. Le diagnostic et la preuve restent nécessaires.</p><div><span>Responsable pressenti</span><b>{agentName}</b></div></article>
-              <article className="panel score-explain-card"><div><span>SCORE WILO</span><b>Indisponible</b></div><div className="score-freshness"><span><b>État</b>À confirmer</span><span><b>Variation</b>Indisponible</span><span><b>Fraîcheur</b>Indisponible</span></div><p className="analytics-note">Aucune valeur de score n’est affichée avant validation de la méthode et de ses données sources.</p></article>
+              <article className="panel next-action-card"><p className="design-kicker">À SURVEILLER</p><h3>Aucun réarmement déclaré</h3><p>Aucun réarmement n’a été indiqué pour cette ronde.</p></article>
+              <article className="panel score-explain-card is-compact"><div><span>{wiloCode}</span><b>Indisponible</b></div><p className="analytics-note">Aucune valeur de score n’est affichée avant validation de la méthode et de ses données sources.</p></article>
             </aside>
           </section>
         </>
@@ -247,14 +248,14 @@ export function EauRounds({ agentName, draftNote, onSubmit, asset: assetProp, sh
           <RoundPilotHeader
             title={`${riaCode} · Ronde quotidienne du réseau incendie`}
             subtitle="Deux étapes · local et coffret"
-            badge={<Badge tone="neutral">BROUILLON LOCAL</Badge>}
+            badge={<RoundModeBadge persistenceEnabled={false} />}
           />
-          <p className="ria-round-note">Contrôle quotidien, lundi à samedi · échéance 23:59 · heure d’Abidjan. Les réglages des pressostats et les essais spécialisés relèvent de SECURISYS. Pression de référence retenue : 5 bar, confirmation SECURISYS attendue.</p>
+          <p className="ria-round-note">Cadence à confirmer · heure d’Abidjan. Les réglages des pressostats et les essais spécialisés relèvent de SECURISYS. Valeur de pression de référence à confirmer par SECURISYS.</p>
           <SyncStatusNotice state="demo-volatile" label="État de la ronde incendie" />
-          <StepRail labels={riaSteps} step={riaStep} onStep={setRiaStep} />
+          <RoundStepRail labels={riaSteps} step={riaStep} onStep={setRiaStep} label="Progression de la ronde" />
           <section className="surpresseur-layout">
             <article className="panel surpresseur-form-card">
-              <div className="surpresseur-section-head"><div><span>ÉTAPE {riaStep + 1} SUR 2</span><h3>{riaSteps[riaStep]}</h3></div><span className="mockup-label">MAQUETTE INTERACTIVE</span></div>
+              <div className="surpresseur-section-head"><div><span>ÉTAPE {riaStep + 1} SUR 2</span><h3>{riaSteps[riaStep]}</h3></div></div>
               {riaStep === 0 && (
                 <div className="surpresseur-fields ge-fields">
                   <div className="field">
@@ -296,20 +297,21 @@ export function EauRounds({ agentName, draftNote, onSubmit, asset: assetProp, sh
                     <label>
                       <span>Pression manomètre</span>
                       <div><input value={riaPressure} inputMode="decimal" placeholder="—" aria-label="Pression manomètre" onChange={(event) => setRiaPressure(event.target.value)} /><b>bar</b></div>
-                      <small>Référence affichée : 5 bar. Une case vide n’est pas un zéro.</small>
+                      <small>Valeur de pression de référence à confirmer par SECURISYS. Une case vide n’est pas un zéro.</small>
                     </label>
                   </div>
-                  <MeasureRange label="Pression manomètre" value={riaPressureValue} min={5} max={5} unit="bar" />
+                  <MeasureRange label="Pression manomètre" value={riaPressureValue} min={4.5} max={5.5} unit="bar" />
+                  <label className="confirmation-line"><input type="checkbox" checked={riaConfirmed} onChange={(event) => setRiaConfirmed(event.target.checked)} /><span>Je confirme que ces observations correspondent au contrôle réalisé.</span></label>
                 </div>
               )}
               <div className="surpresseur-actions">
                 <button className="secondary-button" type="button" disabled={riaStep === 0} onClick={() => setRiaStep((value) => Math.max(0, value - 1))}>← Précédent</button>
                 <p>{draftNote}</p>
-                {riaStep < 1 ? <button className="primary-button" type="button" onClick={() => setRiaStep(1)}>Continuer →</button> : <button className="primary-button" type="button" onClick={onSubmit}>Valider la maquette</button>}
+                {riaStep < 1 ? <button className="primary-button" type="button" onClick={() => setRiaStep(1)}>Continuer →</button> : <button className="primary-button" type="button" disabled={!riaConfirmed} onClick={onSubmit}>Valider la maquette</button>}
               </div>
             </article>
             <aside className="surpresseur-aside">
-              <article className="panel score-explain-card"><div><span>SCORE RIA</span><b>Indisponible</b></div><p className="analytics-note">RIA-01 n’est pas tranché. Aucun score n’est inventé pour cette ronde.</p></article>
+              <article className="panel score-explain-card is-compact"><div><span>SCORE RIA</span><b>Indisponible</b></div><p className="analytics-note">RIA-01 n’est pas tranché. Aucun score n’est inventé pour cette ronde.</p></article>
             </aside>
           </section>
         </>

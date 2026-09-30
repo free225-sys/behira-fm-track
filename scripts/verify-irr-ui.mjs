@@ -38,7 +38,7 @@ try{
   const q=(label)=>page.locator('.irr-field').filter({hasText:label});
   await q('Coffret irrigation').getByRole('button',{name:'Sec',exact:true}).click();
   await q('Programmateur Rain Bird').getByRole('button',{name:'Oui',exact:true}).click();
-  await q('Pompe d’irrigation').getByRole('button',{name:'Non vérifié',exact:true}).click();
+  await q('Pompe d’irrigation').getByRole('button',{name:'Je ne peux pas vérifier',exact:true}).click();
   // Garde-fou de saisie (30/09) : émoji tapé et symbole collé retirés, message affiché, texte utile conservé.
   const motif=page.getByLabel('Motif — Pompe d’irrigation disponible');
   await motif.pressSequentially('Local 😀 fermé');

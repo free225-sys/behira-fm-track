@@ -5532,3 +5532,11 @@ h1{
 .origin-measures li em{font-style:normal;color:var(--foreground-muted)}
 .next-step-reminder{margin:0;color:var(--foreground-muted)}
 
+/* UX-007 — pastille de saisie en casse de phrase, taille du corps, tons de badge déjà là. */
+.badge.round-mode-badge{letter-spacing:0;text-transform:none}
+.badge.round-mode-badge .badge-label{font-size:var(--font-size-body);letter-spacing:0;font-style:normal;text-transform:none}
+
+/* UX-029 — le succès reste dans le flux, sous le formulaire, sans couvrir le bouton. */
+.prototype-success{position:static;left:auto;right:auto;bottom:auto;z-index:auto;max-width:none;margin:16px 0 0}
+
+

@@ -38,7 +38,25 @@ function selection(el: Field): [number, number] {
 }
 
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
-function notify(message: string) {
+function placeNear(box: HTMLElement, anchor: HTMLElement) {
+  const rect = anchor.getBoundingClientRect();
+  const width = Math.min(360, window.innerWidth - 16);
+  const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+  box.style.position = 'fixed';
+  box.style.transform = 'none';
+  box.style.right = 'auto';
+  box.style.width = `${width}px`;
+  box.style.maxWidth = `${width}px`;
+  box.style.left = `${left}px`;
+  if (rect.top > 72) {
+    box.style.top = 'auto';
+    box.style.bottom = `${Math.max(8, window.innerHeight - rect.top + 8)}px`;
+  } else {
+    box.style.bottom = 'auto';
+    box.style.top = `${Math.min(rect.bottom + 8, window.innerHeight - 48)}px`;
+  }
+}
+function notify(message: string, anchor?: Field) {
   let box = document.getElementById('input-guard-message');
   if (!box) {
     box = document.createElement('div');
@@ -49,6 +67,7 @@ function notify(message: string) {
     document.body.appendChild(box);
   }
   box.textContent = message;
+  if (anchor?.isConnected) placeNear(box, anchor);
   box.dataset.visible = 'true';
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { if (box) box.dataset.visible = 'false'; }, 3500);
@@ -75,12 +94,12 @@ function onBeforeInput(event: Event) {
       setValue(el, value, start + kept.length);
       el.dispatchEvent(new Event('input', { bubbles: true }));
     }
-    notify(TEXT_REJECTED_MESSAGE);
+    notify(TEXT_REJECTED_MESSAGE, el);
     return;
   }
   const next = el.value.slice(0, start) + e.data + el.value.slice(end);
   const ok = el instanceof HTMLInputElement && el.type === 'number' ? /^\d*$/.test(e.data) || (kind === 'decimal' && /^[\d.]*$/.test(e.data)) : (kind === 'decimal' ? sanitizeDecimal(next) : sanitizeInteger(next)) !== null;
-  if (!ok) { e.preventDefault(); notify(kind === 'decimal' ? NUMBER_REJECTED_MESSAGE : INTEGER_REJECTED_MESSAGE); }
+  if (!ok) { e.preventDefault(); notify(kind === 'decimal' ? NUMBER_REJECTED_MESSAGE : INTEGER_REJECTED_MESSAGE, el); }
 }
 
 /** Filet de sécurité : saisie prédictive, glisser-déposer, remplissage automatique, fin de composition. */
@@ -92,13 +111,13 @@ function sanitizeNow(el: Field) {
     if (isCleanText(el.value)) return;
     const before = el.value.slice(0, end);
     setValue(el, cleanText(el.value), cleanText(before).length);
-    notify(TEXT_REJECTED_MESSAGE);
+    notify(TEXT_REJECTED_MESSAGE, el);
     return;
   }
   const valid = kind === 'decimal' ? sanitizeDecimal(el.value) : sanitizeInteger(el.value);
   if (valid !== null) return;
   setValue(el, numericFix(kind, el.value), numericFix(kind, el.value.slice(0, end)).length);
-  notify(kind === 'decimal' ? NUMBER_REJECTED_MESSAGE : INTEGER_REJECTED_MESSAGE);
+  notify(kind === 'decimal' ? NUMBER_REJECTED_MESSAGE : INTEGER_REJECTED_MESSAGE, el);
 }
 
 function onInput(event: Event) {

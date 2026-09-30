@@ -56,7 +56,7 @@ import {
   type MeasureStatus,
 } from '../lib/ge01/thresholds';
 import { Badge, BrandIcon, Button, Card, Field } from './ui';
-import { CountStepper, MetierStatusBadge, RoundPilotHeader, SegmentedControl, useDemoScoreScenario } from './shared';
+import { CountStepper, MetierStatusBadge, RoundPilotHeader, RoundStepRail, SegmentedControl, useDemoScoreScenario } from './shared';
 import type { EquipmentCard } from '../lib/ui-contract/building-health.ts';
 import { controlValidityLabel, formatDayTime } from '../lib/ui-contract/display.ts';
 import { EQUIPMENT_META, demoHomeSnapshot, sessionForAudience } from '../lib/ui-contract/fixtures.ts';
@@ -596,9 +596,7 @@ export function Ge01AgentForm({
     <RoundPilotHeader title="GE-01 · Ronde quotidienne du groupe électrogène" subtitle="Quatre étapes · essai de démarrage prévu" badge={<Badge tone={draftStatus.tone}>{draftStatus.badge}</Badge>} />
     <OfflineSyncStatus enabled={persistenceEnabled} online={offlineSync.online} running={offlineSync.running} counts={offlineSync.counts} latestIssue={offlineSync.latestIssue} latestRoundReceipt={Boolean(offlineSync.latestRoundReceipt?.isTest) === isTest ? offlineSync.latestRoundReceipt : null} onRetry={() => void offlineSync.retryFailed().then(() => offlineSync.synchronize())} />
     {isTest && <Card role="status"><Badge tone="orange">RECETTE — DONNÉES FICTIVES</Badge><p>Aucun contrôle matériel réel n’est attesté.</p></Card>}
-    <nav ref={progressRef} className="ge-progress" aria-label="Étapes du rapport GE-01">
-      {steps.map((label, index) => <button key={label} type="button" className={index === draft.step ? 'active' : index < draft.step ? 'done' : 'is-upcoming'} aria-current={index === draft.step ? 'step' : undefined} disabled={index > draft.step} onClick={() => index <= draft.step && update('step', index)}><span>{index < draft.step ? '✓' : index + 1}</span><b>{label}</b></button>)}
-    </nav>
+    <RoundStepRail ref={progressRef} labels={steps} step={draft.step} onStep={(index) => update('step', index)} label="Étapes du rapport GE-01" />
     <section className="ge-form-layout">
       <Card className="ge-form-card">
         <div ref={formCardRef} className="ge-form-card-body">

@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Badge, Button, Card, Field } from './ui';
-import { RoundPilotHeader } from './shared';
+import { RoundModeBadge, RoundPilotHeader, RoundStepRail } from './shared';
+import { ObservationChoices } from './WiloSupplement';
 import { RoundDateTimeFields } from './shared/RoundDateTimeFields';
 import { OfflineSyncStatus } from './OfflineSyncStatus';
 import { reasonProblem } from '../lib/input-rules';
@@ -28,16 +29,16 @@ function IrrQuestion({ field, draft, onAnswer, onReason }: {
       ? <Field label={`${label} (bar)`}><input inputMode="decimal" value={unverified ? '' : value} disabled={unverified} onChange={(e) => onAnswer(code, e.target.value)} /></Field>
       : <>
         <span className="field-label" id={`irr-${code}`}>{label}</span>
-        <div className="choice-set" role="group" aria-labelledby={`irr-${code}`}>
-          {options.map(([option, text]) => <button key={option} type="button" className={`choice-chip ${value === option ? 'is-selected' : ''}`} aria-pressed={value === option} onClick={() => onAnswer(code, value === option ? '' : option)}>{text}</button>)}
-          <button type="button" className={`choice-chip ${unverified ? 'is-selected' : ''}`} aria-pressed={unverified} onClick={() => onAnswer(code, unverified ? '' : 'unknown')}>Non vérifié</button>
+        <ObservationChoices code={code} label={label} options={options} value={unverified ? '' : value} onChange={(next) => onAnswer(code, next)} />
+        <div className="wilo-field-foot">
+          {value && !unverified ? null : <small className="field-hint">{unverified ? 'Contrôle non effectué : précisez pourquoi.' : 'À renseigner pendant la ronde.'}</small>}
+          <button type="button" className="linkbtn wilo-unverified-link" aria-pressed={unverified} onClick={() => onAnswer(code, unverified ? '' : 'unknown')}>{unverified ? 'Je peux finalement vérifier' : 'Je ne peux pas vérifier'}</button>
         </div>
       </>}
     {type === 'bar' && <label className="wilo-unverified-toggle"><input type="checkbox" checked={unverified} onChange={(e) => onAnswer(code, e.target.checked ? 'unknown' : '')} /> Mesure impossible à relever</label>}
     {pressureState === 'alert' && <p className="measure-alert" role="status">Pression hors plage attendue : un constat sera proposé au FM.</p>}
     {pressureState === 'critical' && <p className="measure-alert" role="status">Pression critique (moins de 0,5 bar) : un constat urgent sera proposé au FM.</p>}
     {hint && <small className="field-hint">{hint}</small>}
-    {!value && <small className="field-hint">À renseigner pendant la ronde.</small>}
     {unverified && <Field label={`Motif — ${label}`}><input value={draft.reasons[code] ?? ''} onChange={(e) => onReason(code, e.target.value)} placeholder="Précisez pourquoi le contrôle n’a pas pu être effectué" /></Field>}
   </div>;
 }
@@ -56,7 +57,7 @@ export function IrrForm({ isTest = false, demonstration = false, offlineSync, fl
   const lock = useRef(false);
   // Dernier brouillon connu : évite qu'une réponse saisie rapidement écrase la précédente (état périmé).
   const draftRef = useRef<IrrDraft | null>(null);
-  const progressRef = useRef<HTMLDivElement | null>(null);
+  const progressRef = useRef<HTMLElement | null>(null);
   const { loadDraft, saveDraft, deleteDraft, enqueueRound } = offlineSync;
 
   useEffect(() => {
@@ -77,8 +78,8 @@ export function IrrForm({ isTest = false, demonstration = false, offlineSync, fl
 
   if (!draft) return <Card role="status">Chargement du brouillon IRR-01…</Card>;
   const syncStatus = <OfflineSyncStatus enabled={!demonstration} online={offlineSync.online} running={offlineSync.running} counts={offlineSync.counts} latestIssue={offlineSync.latestIssue} latestRoundReceipt={offlineSync.latestRoundReceipt} onRetry={() => void offlineSync.retryFailed().then(() => offlineSync.synchronize())} />;
-  const badge = <span className="mockup-label">{demonstration ? 'Démo' : 'Saisie terrain'}</span>;
-  if (simulated) return <section aria-label="Ronde IRR-01"><RoundPilotHeader title="IRR-01 · Ronde irrigation et jardinières" subtitle="Quatre étapes · local technique puis jardinières" badge={badge} />{isTest && <Badge tone="orange">RECETTE — DONNÉES FICTIVES</Badge>}{syncStatus}<Card role="status"><h3>Simulation de ronde terminée</h3><p>Aucune donnée enregistrée.</p></Card></section>;
+  const badge = <RoundModeBadge persistenceEnabled={!demonstration} isTest={isTest} />;
+  if (simulated) return <section aria-label="Ronde IRR-01"><RoundPilotHeader title="IRR-01 · Ronde irrigation et jardinières" subtitle="Quatre étapes · local technique puis jardinières" badge={badge} />{syncStatus}<Card role="status"><h3>Simulation de ronde terminée</h3><p>Aucune donnée enregistrée.</p></Card></section>;
   if (draft.queued) return <>{syncStatus}<Card role="status"><h3>Ronde IRR-01 enregistrée</h3><p>Elle sera transmise une seule fois dès que la connexion le permet. Facility Manager pourra ensuite la lire.</p><Button variant="secondary" onClick={() => { const next = emptyIrrDraft(); change(next); setStep(0); }}>Nouvelle ronde</Button></Card></>;
 
   const latest = () => draftRef.current ?? draft;
@@ -121,11 +122,8 @@ export function IrrForm({ isTest = false, demonstration = false, offlineSync, fl
 
   return <section aria-label="Ronde IRR-01">
     <RoundPilotHeader title="IRR-01 · Ronde irrigation et jardinières" subtitle="Quatre étapes · local technique puis jardinières" badge={badge} />
-    {isTest && <Badge tone="orange">RECETTE — DONNÉES FICTIVES</Badge>}
     {syncStatus}
-    <div ref={progressRef} className="surpresseur-progress connected-round-progress" aria-label="Étapes IRR">
-      {IRR_STEPS.map((label, index) => <button type="button" key={label} className={index === step ? 'active' : index < step ? 'done' : ''} disabled={index > step} aria-current={index === step ? 'step' : undefined} onClick={() => goTo(index)}><span>{index < step ? '✓' : index + 1}</span><b>{label}</b></button>)}
-    </div>
+    <RoundStepRail ref={progressRef} labels={[...IRR_STEPS]} step={step} onStep={goTo} label="Étapes IRR" />
     <Card className="surpresseur-form-card">
       <div className="surpresseur-section-head"><div><span>ÉTAPE {step + 1} SUR {IRR_STEPS.length}</span><h3>{IRR_STEPS[step]}</h3></div></div>
       {step === 0 && <div className="surpresseur-fields"><RoundDateTimeFields value={draft.performedAt} onChange={(value) => { const d = latest(); change({ ...d, performedAt: value }); }} /></div>}

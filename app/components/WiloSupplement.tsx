@@ -12,7 +12,7 @@ function toneFor(index: number, total: number) {
   return TONES[1];
 }
 
-function ChoiceSet({ code, label, options, value, onChange }: {
+export function ObservationChoices({ code, label, options, value, onChange }: {
   code: string; label: string; options: [string, string][]; value: string; onChange: (value: string) => void;
 }) {
   return <div className="choice-set" role="group" aria-label={label}>
@@ -46,7 +46,7 @@ export function WiloSupplement({ step, answers, reasons, pressure, onChange, onR
       {type==='datetime' ? <fieldset disabled={unverified}><legend>{label}</legend><RoundDateTimeFields value={unverified?'':answers[code]??''} onChange={v=>onChange(code,v)}/><p className="field-hint">Au moins 10 minutes après le premier relevé. Ce contrôle ne demande aucun réglage du coffret.</p></fieldset>
         : numeric || type==='time'
           ? <Field label={label}><input inputMode={numeric?'decimal':'text'} placeholder={type==='time'?'HH:MM':undefined} disabled={unverified} value={unverified?'':answers[code]??''} onChange={e=>onChange(code,e.target.value)}/></Field>
-          : <><span className="field-label" id={`${code}-label`}>{label}</span><ChoiceSet code={code} label={label} options={options} value={unverified?'':answers[code]??''} onChange={v=>onChange(code,v)}/></>}
+          : <><span className="field-label" id={`${code}-label`}>{label}</span><ObservationChoices code={code} label={label} options={options} value={unverified?'':answers[code]??''} onChange={v=>onChange(code,v)}/></>}
       {(numeric || type==='time' || type==='datetime')
         ? <><p className="measure-empty">{!answers[code]||unverified?'Valeur non renseignée · À COMPLÉTER':null}</p><label className="wilo-unverified-toggle"><input type="checkbox" checked={unverified} onChange={e=>onChange(code,e.target.checked?'unknown':'')}/> Mesure impossible à relever</label></>
         : <div className="wilo-field-foot">
