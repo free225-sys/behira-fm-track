@@ -1,6 +1,6 @@
 # AUDIT UI/UX — BEHIRA FM Track
 
-Phase A, version 2 (30/09/2026). L’inventaire et les constats UX-001 à UX-024 sont inchangés dans leur fond. Cette version ajoute la matrice de couverture (§6) et la passe visuelle de l’atlas (§7, à partir de UX-025). Le lot 1 est livré à part dans `LOT-1.md`.
+Phase A, version 2 (30/09/2026). L’inventaire et les constats UX-001 à UX-024 sont inchangés dans leur fond. Cette version ajoute la matrice de couverture (§6), la passe visuelle de l’atlas (§7, à partir de UX-025) et la seconde passe du lot 6 (§8, UX-039 à UX-046, bilan final). Le lot 1 est livré à part dans `LOT-1.md`.
 
 - Référence code : commit `478c846` (zip, arbre identique à `c8821ad`). Branche de travail `grok/audit-ui-2026-09-30`.
 - Atlas : `atlas-captures-jpg.zip`, 150 JPEG de démonstration (1440, 834, 390) + 8 JPEG connectés WILO/IRR. `INDEX.md` décrit chaque fichier. Le dossier `preproduction/` du zip est vide (compte réel, non versionné) ; les trois vues y sont décrites. La coupe jointe hors dépôt confirme la plage 3,0–4,5 bar de la maquette (UX-008).
@@ -413,4 +413,76 @@ Les UX-001 à UX-024 restent valables. Les captures qui les montrent sont citée
 - `demo/103_agent-electricite_desktop_rondes-unique-etape-6.jpg` : « 09/30/2026 » et « 12:23 PM » sont le même input natif. Non retenu.
 - Bandeau navy « au milieu » de `demo/018` : artefact de capture pleine page sur un en-tête fixe. Non retenu.
 - Double libellé « Arbitrages » sur `demo/001` et `demo/003` : le bandeau est celui que DEC-023 conserve. Non retenu comme défaut à corriger.
+
+## 8. Seconde passe — lot 6
+
+30/09/2026. Branche `grok/audit-ui-2026-09-30`. Toute l’application, les cinq comptes de démonstration, largeurs 1440, 1024, 834, 390 et 360, clavier compris. Le détail écran par écran est dans `LOT-6.md`. Ici, seulement les constats nouveaux.
+
+### UX-039 — Le rail coupe un mot en deux
+
+- Écrans : rails d’étapes. Profils : E, W, et la ronde ascenseurs du porteur via le même composant. Largeurs : 390 et 360. Catégorie : responsive. Gravité : mineur.
+- Constat : `.connected-round-progress button b` avait `overflow-wrap:anywhere`. À 390, « Ascenseur » devenait « Ascenseu / r ».
+- Correction : `overflow-wrap:normal`, `word-break:normal`, `hyphens:auto`. Coupure entre les mots, césure seulement si un mot ne tient pas. Vérifié ici sur GE-01 (« Essai & AUTO »), WILO, RIA démo (Local, Coffret) et IRR (« Local technique »). `RoundStepRail` porte cette classe : la ronde ascenseurs du porteur en hérite. Elle n’est pas recréée dans ce miroir.
+- Fichiers : `app/globals.css`.
+
+### UX-040 — « Aucun import » est tronqué
+
+- Écran : Rondes, Rondes & Assistance. Largeurs : 390, et encore 834. Catégorie : responsive. Gravité : mineur.
+- Constat : la pastille à droite de « SAISIE DIRECTE · DÉMONSTRATION » se terminait par « Au… ».
+- Correction : `.section-heading.round-heading` passe à la ligne. La pastille « Aucun import » reste entière, sous le titre si elle ne tient pas à côté.
+- Fichiers : `app/globals.css`.
+
+### UX-041 — « Normale » tient dans 18 px
+
+- Écran : Dossiers, carte de décision, synthèse anti-zombie. Profils : F, A. Largeurs : sous 700. Catégorie : responsive. Gravité : mineur.
+- Constat : sous 700 px l’en-tête repasse à deux colonnes. La pastille, troisième enfant, tombait dans la colonne de 34 px. « Normale » était illisible.
+- Correction : la pastille occupe la ligne suivante, marge alignée sur le titre, libellé sans ellipse.
+- Fichiers : `app/globals.css`.
+
+### UX-042 — « Clôture » sort de l’écran à 360
+
+- Écran : Dossiers, carte de décision, les six étapes. Profils : F, A. Largeur : 360. Catégorie : responsive. Gravité : mineur.
+- Constat : la rangée `.dossier-steps` ne passait pas à la ligne. « Clôture » dépassait de 6 px.
+- Correction : sous 430 px la rangée passe à la ligne. Les six mots restent entiers.
+- Fichiers : `app/globals.css`.
+
+### UX-043 — Le nom du compte est coupé
+
+- Écran : barre du haut, tous les comptes. Largeurs : sous 700. Catégorie : responsive. Gravité : mineur.
+- Constat : `.persona-trigger-copy b` ellipsait « Facility Manager Dé… », « Agent Eau & Incendi… », « Agente Rondes & As… ».
+- Correction : le nom passe à la ligne. La cible reste au moins 44 px.
+- Fichiers : `app/globals.css`.
+
+### UX-044 — Pastilles d’en-tête « RON… » et « 2 dossi… »
+
+- Écran : Accueil Rondes & Assistance, cartes « Saisie RND-LET » et « Mes signalements ». Largeurs : 390 et 360. Catégorie : responsive. Gravité : mineur.
+- Constat : `.badge .badge-label` ellipise dès que la case flex rétrécit. « RONDES » et « 2 dossiers » n’étaient plus lisibles.
+- Correction : sous 700 px l’en-tête de panneau passe à la ligne. La pastille directe ne rétrécit plus et son libellé n’ellipise plus. Les boutons d’en-tête restent visibles (lot 5).
+- Fichiers : `app/globals.css`.
+
+### UX-045 — « Équipements » déborde sur le voisin
+
+- Écran : barre du bas. Profils : F (six entrées), A (cinq). Largeurs : 360 et 390. Catégorie : responsive. Gravité : mineur.
+- Constat : le libellé avait `overflow:visible` et `max-width:none`. « Équipements » (72 px) sortait de sa case (55 px à 360) et recouvrait « Pilotage ».
+- Correction : le libellé reste dans la case. Une césure douce, seulement dans la barre, coupe « Équipe- / ments » quand le mot ne tient pas. À 1440 le mot reste entier, sans trait. La barre reste haute de 72 px. Le libellé des autres écrans ne change pas.
+- Fichiers : `app/globals.css`, `app/page.tsx`.
+
+### UX-046 — La fiche coupe « Qualification » et « Intervention »
+
+- Écran : fiche dossier, cycle en six cases. Profils : F, A. Largeurs : sous 600. Catégorie : responsive. Gravité : mineur.
+- Constat : la grille 3 × 2 mettait le numéro à côté du mot, et `overflow-wrap:anywhere` coupait « Qualificati / on » et « Interventi / on ».
+- Correction : le numéro passe au-dessus du mot. Coupure normale, plus `anywhere`. Les six libellés tiennent entiers à 360 et 390.
+- Fichiers : `app/globals.css`.
+
+### Bilan final
+
+| Statut | Constats |
+|---|---|
+| Corrigés | UX-001 à UX-018, UX-020 à UX-046 |
+| Rejeté, hors lot | UX-019 (DEC-023). Les bandeaux navy d’Accueil et de Dossiers restent. |
+| Ouverts | aucun |
+| Reportés, décision du porteur | aucun nouveau |
+
+La ronde ascenseurs n’est pas dans ce miroir. Seul le composant partagé `RoundStepRail` est concerné par UX-039 (et déjà par UX-036). Pas de planning d’ascenseur inventé.
+
 

@@ -26,7 +26,8 @@
     "verify:round-choice": "node scripts/verify-round-choice-ui.mjs",
     "verify:dossier-fiche": "node scripts/verify-dossier-fiche-ui.mjs",
     "verify:lot4": "node scripts/verify-lot4-ui.mjs",
-    "verify:lot5": "node scripts/verify-lot5-ui.mjs"
+    "verify:lot5": "node scripts/verify-lot5-ui.mjs",
+    "verify:lot6": "node scripts/verify-lot6-ui.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",

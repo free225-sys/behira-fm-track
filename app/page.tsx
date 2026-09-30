@@ -1705,7 +1705,7 @@ export default function Home() {
         <nav className="primary-navigation" aria-label="Navigation principale">
           {primaryNav.map((item) => {
             const active = isNavigationActive(item.key);
-            return <button key={item.key} type="button" className={`nav-item ${active ? 'active' : ''}`} aria-current={active ? 'page' : undefined} onClick={() => navigate(item.key)}><NavigationIcon view={item.key} active={active}/><span className="nav-item-label">{navItemLabel(item, personaId)}</span></button>;
+            return <button key={item.key} type="button" className={`nav-item ${active ? 'active' : ''}`} aria-current={active ? 'page' : undefined} onClick={() => navigate(item.key)}><NavigationIcon view={item.key} active={active}/><span className="nav-item-label">{navItemLabel(item, personaId).replace('Équipements', 'Équipe\u00ADments')}</span></button>;
           })}
           {overflowNav.length > 0 && <div className="nav-overflow" ref={moreNavRef}>
             <button ref={moreNavTriggerRef} type="button" className={`nav-item nav-more-trigger ${overflowIsActive ? 'active' : ''}`} aria-current={overflowIsActive ? 'page' : undefined} aria-haspopup="menu" aria-expanded={moreNavOpen} aria-controls="navigation-more-menu" onKeyDown={(event) => {if (event.key === 'ArrowDown') {event.preventDefault();setMoreNavOpen(true);window.requestAnimationFrame(() => focusOverflowItem(0))}}} onClick={() => setMoreNavOpen((open) => !open)}><BrandIcon name="more" className="nav-icon nav-more-icon" size={18} strokeWidth={overflowIsActive ? 2.25 : 1.75} /><span className="nav-item-label">Plus</span></button>

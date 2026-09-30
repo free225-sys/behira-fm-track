@@ -671,7 +671,10 @@ button:focus,input:focus,select:focus,textarea:focus{outline:none}
   .anti-zombie-fields>div:first-child{border-top:0}
   .anti-zombie-fields>div.secondary{background:var(--surface-muted)}
   .anti-zombie-summary-head{grid-template-columns:34px minmax(0,1fr)}
+  .anti-zombie-summary-head>.badge,
   .anti-zombie-summary-head>strong{grid-column:1/-1;justify-self:start;margin-left:44px}
+  .anti-zombie-summary-head>.badge{max-width:100%}
+  .anti-zombie-summary-head>.badge .badge-label{overflow:visible;text-overflow:unset;white-space:nowrap;max-width:none}
   .manager-pilot .fm-section-title{padding-inline:16px}
   .manager-pilot .branch-selector{display:flex;overflow-x:auto;padding-inline:16px}
   .manager-pilot .branch-selector button{min-width:152px}
@@ -5400,7 +5403,7 @@ h1{
 }
 
 /* Connected rounds retain the shared design rail, including readable long labels. */
-.connected-round-progress button b{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+.connected-round-progress button b{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:normal;word-break:normal;hyphens:auto}
 .connected-round-progress button{align-items:flex-start}
 
 /* DESIGN-080 — formulaires connectés WILO et RIA */
@@ -5497,11 +5500,11 @@ h1{
 .ge-abandon .vendor-cancel-confirm{width:100%}
 .ge-abandon-button{min-height:var(--touch-min,44px);color:var(--danger)}
 .danger-button,.vendor-cancel-confirm .secondary-button{min-height:var(--control-height-lg);font-size:var(--font-size-body)}
-/* Dossier — étapes du cycle lisibles sur mobile : grille 3 × 2 au lieu d'un rail tronqué sans barre de défilement */
+/* Dossier — étapes du cycle lisibles sur mobile : grille 3 × 2, mot entier sous le numéro. */
 @media (max-width:600px){
   .dossier-workflow{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-2);overflow:visible}
-  .dossier-workflow>div{min-width:0!important;white-space:normal}
-  .dossier-workflow>div b{overflow:visible;text-overflow:clip;white-space:normal;overflow-wrap:anywhere}
+  .dossier-workflow>div{min-width:0!important;white-space:normal;flex-direction:column;align-items:flex-start;gap:4px}
+  .dossier-workflow>div b{overflow:visible;text-overflow:clip;white-space:normal;overflow-wrap:normal;word-break:normal;hyphens:auto}
 }
 /* DEC-020 — contrôles de base WILO à trois choix explicites */
 .control-choice-grid{display:grid;gap:var(--space-3);grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
@@ -5559,3 +5562,35 @@ h1{
 .start-round-picker.is-readonly .start-round-legend{color:var(--foreground-muted);font-size:var(--font-size-label);font-weight:700}
 .start-round-picker.is-readonly .start-round-switch{width:auto;min-height:0;display:block;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;cursor:default}
 .start-round-picker.is-readonly .start-round-switch>span{overflow:visible;text-overflow:unset;white-space:normal}
+
+/* UX-040 — « Aucun import » reste entier, sous le titre s’il ne tient pas à côté. */
+.section-heading.round-heading{flex-wrap:wrap;align-items:flex-start;gap:8px 12px}
+.section-heading.round-heading>.badge{flex:0 0 auto;max-width:100%;min-width:max-content}
+.section-heading.round-heading>.badge .badge-label{overflow:visible;text-overflow:unset;white-space:nowrap;max-width:none}
+
+/* UX-042 — les six étapes du dossier ne dépassent pas à 360. UX-043 — le nom du persona reste lisible. */
+@media (max-width:430px){
+  .dossier-steps{flex-wrap:wrap;margin-inline:16px}
+  .dossier-steps>div{flex:1 1 30%;min-width:72px}
+}
+@media (max-width:700px){
+  .persona-trigger{height:auto;min-height:44px}
+  .persona-trigger-copy b{white-space:normal;overflow:visible;text-overflow:unset}
+  /* UX-044 — pastille d’en-tête entière, sous le titre si la ligne est trop courte. */
+  .panel-head{flex-wrap:wrap;align-items:flex-start;gap:8px 12px}
+  .panel-head>div:first-child{flex:1 1 12rem;min-width:0}
+  .panel-head>.badge{flex:0 0 auto;max-width:100%}
+  .panel-head>.badge .badge-label{overflow:visible;text-overflow:unset;white-space:nowrap;max-width:none}
+  /* UX-045 — « Équipements » reste dans sa case : césure manuelle, pas de débordement sur le voisin. */
+  .app-navigation .nav-item{padding-block:2px;gap:1px}
+  .app-navigation .nav-item-label{
+    max-width:100%;
+    overflow:hidden;
+    text-overflow:unset;
+    white-space:normal;
+    overflow-wrap:normal;
+    word-break:normal;
+    hyphens:manual;
+    line-height:1.05;
+  }
+}
